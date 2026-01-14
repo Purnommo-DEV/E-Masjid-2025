@@ -20,108 +20,91 @@
         </div>
     </div>
 
-    <div class="min-h-screen bg-gradient-to-br from-emerald-50 via-slate-50 to-sky-50">
+    <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 relative overflow-hidden">
 
         {{-- HERO --}}
-        <section class="relative overflow-hidden py-16 lg:py-24">
-            <div class="absolute inset-0">
-                <div class="absolute -top-24 -left-10 w-80 h-80 bg-emerald-200 rounded-full blur-3xl opacity-60"></div>
-                <div class="absolute top-40 -right-24 w-96 h-96 bg-sky-200 rounded-full blur-3xl opacity-60"></div>
-                <div class="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[600px] h-40 bg-gradient-to-r from-emerald-200/60 via-teal-200/60 to-sky-200/60 blur-3xl opacity-70"></div>
+        <section class="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
+            <div class="absolute inset-0 pointer-events-none">
+                <div class="absolute -top-20 -left-20 w-96 h-96 bg-teal-200 rounded-full blur-3xl opacity-30 animate-pulse"></div>
+                <div class="absolute top-40 right-0 w-[600px] h-[600px] bg-cyan-200 rounded-full blur-3xl opacity-25 animate-pulse delay-1000"></div>
             </div>
 
-            <div class="container mx-auto px-4 lg:px-6 relative">
-                <div class="grid lg:grid-cols-[1.25fr_minmax(0,1fr)] gap-12 items-center">
-                    {{-- HERO TEXT --}}
-                    <div class="space-y-8">
-                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-[12px] text-emerald-800 shadow-sm">
-                            <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+            <div class="container mx-auto px-5 lg:px-8 relative">
+                <div class="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
+                    <!-- Hero Text -->
+                    <div class="space-y-8 text-center lg:text-left">
+                        <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/60 backdrop-blur-sm border border-emerald-200/50 shadow-sm text-sm text-emerald-800">
+                            <span class="relative flex h-3 w-3">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
                             </span>
-                            Selamat datang di {{ $profil->nama ?? 'Masjid Al-Ikhlas' }}
+                            Selamat Datang di {{ $profil->nama ?? 'Masjid Al-Ikhlas' }}
                         </div>
 
-                        <div class="space-y-4">
-                            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                                Pusat Ibadah,
-                                <span class="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600">
-                                    Dakwah & Layanan Umat.
-                                </span>
-                            </h1>
-                            <p class="text-sm sm:text-base text-slate-600 max-w-xl leading-relaxed">
-                                {{ $profil->tagline ?? 'Menghidupkan shalat berjamaah, menguatkan ukhuwah, dan menebar manfaat melalui program-program masjid.' }}
-                            </p>
-                        </div>
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                            Masjid yang Hidup,
+                            <span class="block bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent mt-2">
+                                Pusat Ibadah & Ukhuwah
+                            </span>
+                        </h1>
 
-                        {{-- CTA --}}
-                        <div class="flex flex-wrap gap-3">
-                            <a href="#donasi"
-                               class="btn btn-sm sm:btn-md bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-700 hover:via-teal-700 hover:to-emerald-600 border-none text-white shadow-lg shadow-emerald-500/40">
+                        <p class="text-base sm:text-lg text-slate-700 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                            {{ $profil->tagline ?? 'Menghidupkan shalat berjamaah, mempererat silaturahmi, dan menebar kebaikan bagi umat.' }}
+                        </p>
+
+                        <div class="flex flex-wrap justify-center lg:justify-start gap-4 mt-8">
+                            <a href="#donasi" class="btn btn-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white shadow-xl shadow-teal-500/30 px-10 py-4 text-base font-bold rounded-full transition-all">
                                 🌟 Donasi Sekarang
                             </a>
-                            <a href="#acara"
-                               class="btn btn-sm sm:btn-md btn-outline border-emerald-400/70 text-emerald-700 hover:bg-emerald-50">
+                            <a href="#acara" class="btn btn-lg btn-outline border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-600">
                                 Lihat Agenda
                             </a>
                         </div>
 
-                        {{-- STATS --}}
-                        <div class="grid grid-cols-3 gap-4 pt-4 text-[11px] sm:text-xs">
-                            <div class="stat bg-white/80 backdrop-blur-sm rounded-2xl border border-emerald-100 shadow-sm p-3 flex flex-col gap-1">
-                                <div class="flex items-center justify-between">
-                                    <div class="stat-title text-[11px] text-slate-500">Program Rutin</div>
-                                    <span class="text-[11px] text-emerald-500">📘</span>
-                                </div>
-                                <div class="stat-value text-base sm:text-lg text-emerald-700">
-                                    +{{ $profil->jumlah_program ?? 12 }}
-                                </div>
+                        <!-- Stats -->
+                        <div class="grid grid-cols-3 gap-4 pt-6 max-w-md mx-auto lg:mx-0">
+                            <div class="bg-white/70 backdrop-blur-md rounded-2xl border border-emerald-100/50 shadow-sm p-4 text-center">
+                                <p class="text-xs text-slate-500">Program Rutin</p>
+                                <p class="text-2xl font-bold text-emerald-700 mt-1">+{{ $profil->jumlah_program ?? 12 }}</p>
                             </div>
-
-                            <div class="stat bg-white/80 backdrop-blur-sm rounded-2xl border border-teal-100 shadow-sm p-3 flex flex-col gap-1">
-                                <div class="flex items-center justify-between">
-                                    <div class="stat-title text-[11px] text-slate-500">Jamaah Aktif</div>
-                                    <span class="text-[11px] text-teal-500">🕌</span>
-                                </div>
-                                <div class="stat-value text-base sm:text-lg text-teal-700">
-                                    +{{ $profil->jumlah_jamaah ?? 300 }}
-                                </div>
+                            <div class="bg-white/70 backdrop-blur-md rounded-2xl border border-teal-100/50 shadow-sm p-4 text-center">
+                                <p class="text-xs text-slate-500">Jamaah Aktif</p>
+                                <p class="text-2xl font-bold text-teal-700 mt-1">+{{ $profil->jumlah_jamaah ?? 300 }}</p>
                             </div>
-
-                            <div class="stat bg-white/80 backdrop-blur-sm rounded-2xl border border-amber-100 shadow-sm p-3 flex flex-col gap-1">
-                                <div class="flex items-center justify-between">
-                                    <div class="stat-title text-[11px] text-slate-500">Program Sosial</div>
-                                    <span class="text-[11px] text-amber-500">🤝</span>
-                                </div>
-                                <div class="stat-value text-base sm:text-lg text-amber-700">
-                                    +{{ $profil->jumlah_program_sosial ?? 8 }}
-                                </div>
+                            <div class="bg-white/70 backdrop-blur-md rounded-2xl border border-cyan-100/50 shadow-sm p-4 text-center">
+                                <p class="text-xs text-slate-500">Program Sosial</p>
+                                <p class="text-2xl font-bold text-cyan-700 mt-1">+{{ $profil->jumlah_program_sosial ?? 8 }}</p>
                             </div>
                         </div>
                     </div>
 
-                    {{-- JADWAL SHOLAT --}}
-                    <div id="jadwal" class="lg:justify-self-end">
-                        <div class="card w-full max-w-md bg-white/90 backdrop-blur-sm border border-emerald-100 rounded-3xl shadow-xl shadow-emerald-100/60">
-                            <div class="card-body p-5 sm:p-6">
-                                <h2 class="font-semibold text-sm sm:text-base text-slate-900 mb-2">Waktu Sholat Hari Ini</h2>
-                                <p class="text-[11px] text-slate-500 mb-4">{{ now()->translatedFormat('l, d M Y') }}</p>
+                    <!-- JADWAL SHOLAT – VERSI BARU & RESPONSIF -->
+                    <!-- JADWAL SHOLAT – VERSI BARU & RESPONSIF -->
+                    <div id="jadwal" class="w-full max-w-3xl mx-auto lg:mx-0 lg:max-w-none">  <!-- lebar lebih fleksibel di desktop -->
+                        <div class="bg-white/85 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-teal-200/40 border border-white/30 overflow-hidden">
+                            <div class="p-6 lg:p-8">
+                                <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+                                    <h2 class="text-xl lg:text-2xl font-bold text-emerald-900">Jadwal Sholat Hari Ini</h2>
+                                    <span class="text-sm font-medium bg-emerald-100 text-emerald-800 px-4 py-1.5 rounded-full whitespace-nowrap">
+                                        {{ now()->translatedFormat('l, d M Y') }}
+                                    </span>
+                                </div>
 
-                                <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
-                                    @foreach(['subuh','dzuhur','ashar','maghrib','isya'] as $p)
-                                        <div class="p-2.5 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 text-center">
-                                            <div class="text-[11px] text-emerald-700 font-medium">
-                                                {{ ucfirst($p) }}
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-5 lg:gap-6">
+                                    @foreach(['subuh' => 'Subuh', 'dzuhur' => 'Dzuhur', 'ashar' => 'Ashar', 'maghrib' => 'Maghrib', 'isya' => 'Isya'] as $key => $nama)
+                                        <div class="relative bg-white/90 rounded-2xl p-4 md:p-5 text-center border border-emerald-100/60 hover:border-emerald-400 transition-all group shadow-sm hover:shadow-md flex flex-col items-center justify-center min-h-[100px] md:min-h-[120px]">
+                                            <div class="text-xs md:text-sm font-semibold text-emerald-700 uppercase tracking-wide mb-2 md:mb-3">
+                                                {{ $nama }}
                                             </div>
-                                            <div class="text-base font-semibold text-emerald-800">
-                                                {{ $jadwalSholat[$p] }}
+                                            <div class="text-xl md:text-2xl lg:text-3xl font-extrabold text-emerald-900 group-hover:text-teal-700 transition-colors whitespace-nowrap">
+                                                {{ $jadwalSholat[$key] ?? '--:--' }}
                                             </div>
                                         </div>
                                     @endforeach
                                 </div>
 
-                                <p class="mt-3 text-[10px] text-slate-500 text-center">
-                                    * Waktu sholat mengikuti pengaturan lokasi masjid.
+                                <p class="text-center text-xs md:text-sm text-slate-500 mt-6 md:mt-8 italic">
+                                    Waktu sholat berdasarkan lokasi masjid • Sumber: {{ $sumberJadwal ?? 'Kemenag' }}
                                 </p>
                             </div>
                         </div>
@@ -239,166 +222,190 @@
             </div>
         </section>
 
-        {{-- AGENDA (menggunakan array $acaras dari AcaraService) --}}
-        <section id="acara" class="py-16 bg-white/90">
+        {{-- SECTION AGENDA --}}
+        <section id="acara" class="py-12 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
             <div class="container mx-auto px-4 lg:px-6">
-
-                <div class="flex items-center justify-between mb-8">
+                <div class="flex items-center justify-between mb-6">
                     <div>
-                        <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-600 mb-1">Agenda</p>
-                        <h2 class="text-xl sm:text-2xl font-semibold text-slate-900 flex items-center gap-3">
+                        <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">AGENDA</p>
+                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-3">
                             Agenda Kegiatan Terdekat
-                            <span class="h-px w-12 bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full hidden sm:inline-block"></span>
+                            <span class="h-1 w-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full hidden sm:block"></span>
                         </h2>
                     </div>
-                    <a href="{{ route('acara.index') }}" class="text-xs sm:text-[13px] text-emerald-600 hover:text-emerald-800 font-medium inline-flex items-center gap-1">
-                        Lihat semua
-                        <span>→</span>
+                    <a href="{{ route('acara.index') }}" class="text-sm text-emerald-600 hover:text-emerald-800 font-medium inline-flex items-center gap-2 hover:underline transition">
+                        Lihat semua →
                     </a>
                 </div>
 
-                {{-- layout grid: list + sidebar --}}
-                <div class="grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
-
-                    {{-- List utama acara --}}
-                    <div class="space-y-4">
-                        @forelse($acaras as $acara)
-                            {{-- setiap $acara diasumsikan array dengan key:
-                                 title, tanggal_label, waktu_label, image, kategori, pemateri, excerpt, lokasi, url --}}
-                            <div class="bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-lg transition p-4 hover:border-emerald-200">
-                                <div class="flex items-start gap-3">
-                                    {{-- gambar (desktop) --}}
-                                    <img
-                                        src="{{ $acara['image'] ?? asset('images/masjid-banner.jpg') }}"
-                                        alt="{{ $acara['title'] ?? 'Acara' }}"
-                                        class="w-20 h-16 object-cover rounded-md hidden sm:block"
-                                    >
-
-                                    <div class="flex-1">
-                                        <div class="flex justify-between text-[11px] mb-1">
-                                            <span class="badge bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                {{ $acara['kategori'] ?? 'Acara' }}
-                                            </span>
-                                            <span class="text-slate-500">
-                                                {{ $acara['tanggal_label'] ?? ($acara['tanggal'] ?? '-') }}
-                                            </span>
-                                        </div>
-
-                                        <h3 class="font-semibold text-sm text-slate-900">
-                                            {{ $acara['title'] ?? ($acara['judul'] ?? '-') }}
-                                        </h3>
-
-                                        @if(!empty($acara['pemateri']))
-                                            <p class="text-[11px] text-emerald-600">{{ $acara['pemateri'] }}</p>
-                                        @endif
-
-                                        <p class="text-[12px] text-slate-600 mt-1 line-clamp-2">
-                                            {!! $acara['excerpt'] ?? \Illuminate\Support\Str::limit(strip_tags($acara['deskripsi'] ?? ''), 90) !!}
-                                        </p>
-
-                                        <div class="flex justify-between text-[11px] text-slate-500 my-2">
-                                            <div>⏰ {{ $acara['waktu_label'] ?? ($acara['waktu'] ?? '-') }} 
-                                                @if(!empty($acara['waktu_teks']))
-                                                    ( {{ $acara['waktu_teks'] }} )
-                                                @endif
-                                            </div>
-                                            <div>📍 
-                                                {{ $acara['lokasi'] ?? '-' }}
-                                            </div>
-                                        </div>
-                                        <a href="{{ $acara['url'] ?? (isset($acara['slug']) ? route('acara.show', $acara['slug']) : '#') }}"
-                                           class="btn btn-xs btn-outline border-emerald-500 text-emerald-700 w-full rounded-full">
-                                            Detail
-                                        </a>                            
+                <div class="grid lg:grid-cols-[3fr_1fr] gap-6 xl:gap-8">
+                    {{-- List Acara Utama - Maksimal 3 card --}}
+                    <div class="space-y-5">
+                        @forelse(array_slice($acaras, 0, 3) as $acara)
+                            <div class="bg-white rounded-xl border border-emerald-100/60 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden group w-full">
+                                <div class="p-5 lg:p-6"> <!-- padding dikecilkan agar card tidak terlalu besar -->
+                                    <!-- Badge Kategori & Tanggal -->
+                                    <div class="flex flex-wrap items-center justify-between mb-3 gap-3">
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
+                                            {{ $acara['kategori'] ?? 'Acara' }}
+                                        </span>
+                                        <span class="text-sm text-slate-600 font-medium">
+                                            {{ $acara['tanggal_label'] ?? ($acara['tanggal'] ?? '-') }}
+                                        </span>
                                     </div>
+
+                                    <!-- Judul Acara -->
+                                    <h3 class="text-lg lg:text-xl font-semibold text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors line-clamp-2">
+                                        {{ $acara['title'] ?? ($acara['judul'] ?? 'Judul Acara') }}
+                                    </h3>
+
+                                    <!-- Deskripsi -->
+                                    <p class="text-slate-600 mb-4 line-clamp-3 text-sm leading-relaxed">
+                                        {!! $acara['excerpt'] ?? \Illuminate\Support\Str::limit(strip_tags($acara['deskripsi'] ?? 'Tidak ada deskripsi.'), 140) !!}
+                                    </p>
+
+                                    <!-- Waktu & Lokasi -->
+                                    <div class="flex flex-wrap gap-4 mb-4 text-sm text-slate-700">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-emerald-600 text-lg">⏰</span>
+                                            <span>{{ $acara['waktu_label'] ?? ($acara['waktu'] ?? '-') }}</span>
+                                            @if(!empty($acara['waktu_teks']))
+                                                <span class="text-xs text-slate-500">({{ $acara['waktu_teks'] }})</span>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-rose-600 text-lg">📍</span>
+                                            <span>{{ $acara['lokasi'] ?? 'Masjid Al-Hidaya' }}</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Tombol Detail -->
+                                    <a href="{{ $acara['url'] ?? (isset($acara['slug']) ? route('acara.show', $acara['slug']) : '#') }}"
+                                       class="inline-flex items-center px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-full transition shadow-sm hover:shadow-md text-sm">
+                                        Detail Acara →
+                                    </a>
                                 </div>
                             </div>
                         @empty
-                            <p class="text-sm text-gray-500">Belum ada agenda.</p>
+                            <div class="bg-white rounded-xl border border-dashed border-emerald-200 p-8 text-center text-slate-500">
+                                <p class="text-lg font-medium">Belum ada agenda terdekat</p>
+                                <p class="mt-2 text-sm">Informasi agenda akan segera diperbarui.</p>
+                            </div>
                         @endforelse
+
+                        @if(count($acaras) > 3)
+                            <div class="text-center mt-6">
+                                <a href="{{ route('acara.index') }}" class="inline-flex items-center px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-full transition shadow-md hover:shadow-lg text-sm">
+                                    Lihat Agenda Lainnya →
+                                </a>
+                            </div>
+                        @endif
                     </div>
 
-                    {{-- Sidebar --}}
-                    <div class="space-y-4">
+                    {{-- SIDEBAR - Tanpa sticky, tinggi otomatis mengikuti list agenda --}}
+                    <aside class="space-y-5 h-fit lg:mt-0">
+                        <!-- Shalat Jum'at -->
+                        <div class="rounded-xl bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-600 text-white shadow-lg overflow-hidden">
+                            <div class="p-5 lg:p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div>
+                                        <p class="text-xs uppercase tracking-wider text-emerald-200/90 font-medium">Shalat Jum’at</p>
+                                        <h3 class="text-lg font-bold mt-1">Pekan Ini</h3>
+                                    </div>
+                                    <span class="inline-flex px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
+                                        Segera Hadir
+                                    </span>
+                                </div>
 
-                        {{-- Shalat Jum'at --}}
-                        <div class="rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-500 text-white p-5 shadow-lg">
-                            <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-100 mb-1">Shalat Jum’at</p>
-                            <h3 class="text-sm font-semibold mb-2">Pekan Ini</h3>
-
-                            @php
-                                // fallback data jika service belum kirim
-                                $jumat = $jumat ?? [
-                                    'khatib' => 'Ust. Dr. Muhammad',
-                                    'tema'   => 'Jaga Hati di Era Digital',
-                                    'tgl'    => 'Jum’at, 12 Jan',
-                                    'jam'    => '11.45 - 12.30'
-                                ];
-                            @endphp
-
-                            <dl class="space-y-1 text-[12px]">
-                                <div class="flex gap-2"><dt class="w-10 text-emerald-100/80">Khatib</dt><dd class="flex-1">{{ $jumat['khatib'] }}</dd></div>
-                                <div class="flex gap-2"><dt class="w-10 text-emerald-100/80">Tema</dt><dd class="flex-1">{{ $jumat['tema'] }}</dd></div>
-                                <div class="flex gap-2"><dt class="w-10 text-emerald-100/80">Tanggal</dt><dd class="flex-1">{{ $jumat['tgl'] }}</dd></div>
-                                <div class="flex gap-2"><dt class="w-10 text-emerald-100/80">Waktu</dt><dd class="flex-1">{{ $jumat['jam'] }}</dd></div>
-                            </dl>
+                                <dl class="space-y-3 text-sm">
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl mt-0.5">🕌</span>
+                                        <div>
+                                            <dt class="text-emerald-200/80 text-xs uppercase">Khatib</dt>
+                                            <dd class="font-semibold">{{ $jumat['khatib'] ?? 'Ust. Dr. Muhammad' }}</dd>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl mt-0.5">📖</span>
+                                        <div>
+                                            <dt class="text-emerald-200/80 text-xs uppercase">Tema</dt>
+                                            <dd class="font-semibold">{{ $jumat['tema'] ?? 'Jaga Hati di Era Digital' }}</dd>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl mt-0.5">📅</span>
+                                        <div>
+                                            <dt class="text-emerald-200/80 text-xs uppercase">Tanggal</dt>
+                                            <dd class="font-semibold">{{ $jumat['tgl'] ?? 'Jum’at, 12 Jan' }}</dd>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3">
+                                        <span class="text-2xl mt-0.5">⏰</span>
+                                        <div>
+                                            <dt class="text-emerald-200/80 text-xs uppercase">Waktu</dt>
+                                            <dd class="font-semibold">{{ $jumat['jam'] ?? '11.45 - 12.30' }}</dd>
+                                        </div>
+                                    </div>
+                                </dl>
+                            </div>
                         </div>
 
-                        {{-- Mini Kalender Pekan Ini --}}
-                        @php $today = \Carbon\Carbon::today(); @endphp
-                        <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <h3 class="text-sm font-semibold text-slate-900">Kalender Pekan Ini</h3>
-                                <span class="text-[11px] text-slate-500">{{ $today->translatedFormat('F Y') }}</span>
+                        <!-- Mini Kalender -->
+                        <div class="rounded-xl bg-white border border-emerald-100/50 shadow-sm p-5">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-base font-semibold text-slate-900">Kalender Pekan Ini</h3>
+                                <span class="text-xs text-slate-500">{{ now()->translatedFormat('F Y') }}</span>
                             </div>
-
-                            <div class="grid grid-cols-7 gap-1.5 text-center">
+                            <div class="grid grid-cols-7 gap-1.5 text-center text-xs">
                                 @for($i = 0; $i < 7; $i++)
                                     @php
-                                        $date = $today->copy()->addDays($i);
+                                        $date = now()->addDays($i);
                                         $isToday = $date->isToday();
                                     @endphp
-                                    <div class="flex flex-col items-center text-[11px]">
-                                        <span class="text-[10px] text-slate-400">{{ $date->translatedFormat('D') }}</span>
-                                        <span class="flex h-7 w-7 items-center justify-center rounded-full {{ $isToday ? 'bg-emerald-600 text-white' : 'bg-slate-50 border border-slate-100' }}">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-400 text-[10px] font-medium">{{ $date->translatedFormat('D') }}</span>
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium {{ $isToday ? 'bg-emerald-600 text-white shadow' : 'bg-slate-50 border border-slate-200' }}">
                                             {{ $date->format('d') }}
                                         </span>
                                     </div>
                                 @endfor
                             </div>
                         </div>
-
-                        {{-- Tombol Lihat Semua Acara --}}
-                        <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-4 text-center">
-                            <a href="#!" class="btn btn-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-full w-full">
-                                Lihat semua agenda
-                            </a>
-                        </div>
-
-                    </div>
+                    </aside>
                 </div>
             </div>
         </section>
 
-        {{-- QUOTE HARI INI --}}
-        <section class="py-10">
-            <div class="container mx-auto px-4 lg:px-6">
+{{-- SECTION QUOTE HARI INI - AUTO ROTATE DENGAN ANIMASI --}}
+<section class="py-10">
+    <div class="container mx-auto px-4 lg:px-6">
+        <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-6 py-8 shadow-xl relative overflow-hidden">
+            <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-2">Pengingat Harian</p>
+
+            <!-- Container untuk quote yang akan di-rotate -->
+            <div id="quote-container" class="min-h-[80px] relative">
+                <!-- Quote pertama ditampilkan langsung dari PHP sebagai fallback -->
                 @php
                     $quotes = [
-                        ['title'=>'QS. Al-Baqarah:186','text'=>'“Aku mengabulkan doa orang yang memohon kepada-Ku.”'],
-                        ['title'=>'HR. Muslim','text'=>'“Shalat terbaik setelah wajib adalah shalat malam.”'],
-                        ['title'=>'HR. Tirmidzi','text'=>'“Senyum kepada saudaramu adalah sedekah.”'],
+                        ['title' => 'QS. Al-Baqarah: 186', 'text' => '“Dan apabila hamba-hamba-Ku bertanya kepadamu tentang Aku, maka (jawablah), bahwasanya Aku dekat. Aku mengabulkan permohonan orang yang berdoa apabila ia memohon kepada-Ku.”'],
+                        ['title' => 'HR. Muslim', 'text' => '“Shalat yang paling utama setelah shalat fardhu adalah shalat malam.”'],
+                        ['title' => 'HR. Tirmidzi', 'text' => '“Senyummu di hadapan saudaramu adalah sedekah.”'],
+                        ['title' => 'QS. Ar-Ra’d: 28', 'text' => '“(yaitu) orang-orang yang beriman dan hati mereka menjadi tenteram dengan mengingat Allah. Ingatlah, hanya dengan mengingat Allah-lah hati menjadi tenteram.”'],
+                        ['title' => 'HR. Bukhari', 'text' => '“Sebaik-baik manusia adalah yang paling bermanfaat bagi manusia lainnya.”'],
+                        ['title' => 'QS. Al-Insyirah: 5-6', 'text' => '“Sesungguhnya bersama kesulitan ada kemudahan. Sesungguhnya bersama kesulitan ada kemudahan.”'],
                     ];
-                    $quote=$quotes[array_rand($quotes)];
+                    $initialQuote = $quotes[array_rand($quotes)];
                 @endphp
 
-                <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-6 py-5 shadow-lg">
-                    <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-100">Pengingat Hari Ini</p>
-                    <h3 class="font-semibold text-sm mt-1">{{ $quote['title'] }}</h3>
-                    <p class="text-[13px] mt-2">{{ $quote['text'] }}</p>
+                <!-- Quote awal (fallback jika JS mati) -->
+                <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out">
+                    <h3 class="font-semibold text-base lg:text-lg mt-1">{{ $initialQuote['title'] }}</h3>
+                    <p class="text-base lg:text-lg mt-3 leading-relaxed">{{ $initialQuote['text'] }}</p>
                 </div>
             </div>
-        </section>
+        </div>
+    </div>
+</section>
 
         {{-- === BERITA & PENGUMUMAN === --}}
         <section class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
@@ -596,43 +603,82 @@
         </section>
 
         {{-- === DONASI === --}}
-        <section id="donasi" class="py-16 bg-white">
+        <section id="donasi" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
             <div class="container mx-auto px-4 lg:px-6">
-
-                <div class="text-center mb-8">
-                    <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Donasi</p>
-                    <h2 class="text-2xl font-semibold text-slate-900">Program Donasi Umat</h2>
+                <div class="text-center mb-10">
+                    <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-2">Infaq & Donasi</p>
+                    <h2 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">
+                        Mari Tebar Kebaikan
+                    </h2>
+                    <p class="text-base lg:text-lg text-slate-600 max-w-3xl mx-auto">
+                        Setiap infaq yang kamu berikan adalah investasi akhirat yang tak pernah putus pahalanya. 
+                        Allah berfirman: “Dan barangsiapa yang menafkahkan hartanya karena mencari keridhaan Allah...”
+                    </p>
                 </div>
 
-                {{-- Ringkasan --}}
-                <div class="max-w-xl mx-auto mb-6">
-                    <div class="rounded-2xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-[12px]">
-                        <p class="font-semibold text-emerald-700">Ringkasan Infaq Pekan Ini</p>
-                        <div class="flex justify-between mt-1 text-slate-600">
-                            <span>Masuk: Rp12.500.000</span>
-                            <span>Disalurkan: Rp8.350.000</span>
+                <div class="max-w-4xl mx-auto bg-white rounded-3xl border border-emerald-100/50 shadow-2xl overflow-hidden">
+                    <div class="p-8 lg:p-12">
+                        <!-- Rekening Tunggal -->
+                        <div class="text-center mb-10">
+                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">
+                                Transfer ke Rekening Resmi Masjid
+                            </h3>
+                            <div class="inline-block bg-emerald-50 rounded-2xl p-6 shadow-inner">
+                                <p class="text-xl font-semibold text-emerald-700 mb-2">Bank BCA</p>
+                                <p class="text-3xl lg:text-4xl font-bold text-slate-900 tracking-wide mb-2">
+                                    1234 5678 9010
+                                </p>
+                                <p class="text-base text-slate-600">
+                                    a/n Takmir Masjid Al-Hidaya
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- QRIS -->
+                        <div class="text-center mb-10">
+                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">
+                                Scan QRIS untuk Donasi Instan
+                            </h3>
+                            <div class="mx-auto w-64 h-64 lg:w-72 lg:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100">
+                                <!-- Ganti dengan gambar QRIS asli masjid -->
+                                <img src="{{ asset('images/qris-masjid.png') }}" alt="QRIS Donasi Masjid Al-Hidaya" class="w-full h-full object-contain">
+                            </div>
+                            <p class="text-sm text-slate-600 mt-4">
+                                Scan dengan GoPay, OVO, Dana, ShopeePay, atau aplikasi dompet digital lainnya
+                            </p>
+                        </div>
+
+                        <!-- Quotes tentang Sedekah / Infaq -->
+                        <div class="bg-gradient-to-r from-emerald-600/10 to-teal-600/10 rounded-2xl p-6 lg:p-8 text-center">
+                            @php
+                                $infaqQuotes = [
+                                    ['text' => '“Perumpamaan orang-orang yang menafkahkan hartanya di jalan Allah adalah seperti sebutir benih yang menumbuhkan tujuh tangkai, pada tiap-tiap tangkai seratus biji...”', 'sumber' => 'QS. Al-Baqarah: 261'],
+                                    ['text' => '“Sedekah itu tidak mengurangi harta.”', 'sumber' => 'HR. Muslim'],
+                                    ['text' => '“Janganlah kalian takut miskin karena bersedekah.”', 'sumber' => 'HR. Tirmidzi'],
+                                    ['text' => '“Infakkanlah (hartamu) di jalan Allah, dan janganlah kamu jatuhkan dirimu sendiri ke dalam kebinasaan...”', 'sumber' => 'QS. Al-Baqarah: 195'],
+                                ];
+                                $randomInfaq = $infaqQuotes[array_rand($infaqQuotes)];
+                            @endphp
+                            <p class="text-base lg:text-lg italic text-emerald-800 mb-3">
+                                “{{ $randomInfaq['text'] }}”
+                            </p>
+                            <p class="text-sm text-slate-600 font-medium">
+                                — {{ $randomInfaq['sumber'] }}
+                            </p>
+                        </div>
+
+                        <!-- CTA Besar -->
+                        <div class="text-center mt-10">
+                            <a href="https://wa.me/6281234567890?text=Assalamu'alaikum%20saya%20ingin%20donasi%20untuk%20masjid" 
+                               target="_blank" 
+                               class="inline-flex items-center px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition transform hover:-translate-y-1 text-xl">
+                                <span class="mr-4 text-2xl">💚</span> Donasi Sekarang via WhatsApp
+                            </a>
+                            <p class="text-sm text-slate-600 mt-4">
+                                Konfirmasi donasi melalui WA untuk mendapatkan laporan penyaluran. Jazakumullah khairan.
+                            </p>
                         </div>
                     </div>
-                </div>
-
-                @php
-                    $programs = [
-                        ['judul'=>'Operasional Masjid','desc'=>'Listrik, kebersihan, keamanan.'],
-                        ['judul'=>'Pembangunan & Renovasi','desc'=>'Perbaikan & perluasan masjid.'],
-                        ['judul'=>'Beasiswa Santri','desc'=>'Dukung pendidikan Qur’an.'],
-                        ['judul'=>'Santunan Sosial','desc'=>'Bantuan dhuafa & yatim.'],
-                    ];
-                @endphp
-
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    @foreach($programs as $prog)
-                        <div class="p-5 rounded-2xl bg-gradient-to-b from-white to-emerald-50 border border-emerald-100 text-center shadow-sm hover:shadow-lg">
-                            <div class="w-12 h-12 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-3">💚</div>
-                            <h3 class="font-semibold text-sm">{{ $prog['judul'] }}</h3>
-                            <p class="text-[12px] text-slate-600">{{ $prog['desc'] }}</p>
-                            <a href="#" class="btn btn-xs bg-gradient-to-r from-emerald-600 to-teal-600 text-white w-full rounded-full mt-4">Donasi</a>
-                        </div>
-                    @endforeach
                 </div>
             </div>
         </section>
@@ -734,101 +780,128 @@
         </section>
 
         {{-- === KONTAK === --}}
-        <section id="kontak" class="py-16 bg-white">
-            <div class="container mx-auto px-4 lg:px-6 grid lg:grid-cols-2 gap-10">
-                <div>
-                    <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Lokasi</p>
-                    <h2 class="text-xl sm:text-2xl font-semibold text-slate-900">Lokasi Masjid</h2>
-                    <p class="text-sm text-slate-600 mt-2">{{ $profil->alamat ?? 'Alamat belum tersedia.' }}</p>
-                    <div class="mt-4 rounded-2xl border h-56 sm:h-64 flex items-center justify-center text-[11px] text-slate-500">
-                        {{-- Kalau mau, masukkan embed Google Maps di sini --}}
-                        @if(!empty($profil->latitude) && !empty($profil->longitude))
-                            <iframe
-                                class="w-full h-full rounded-2xl"
-                                frameborder="0"
-                                src="https://www.google.com/maps?q={{ $profil->latitude }},{{ $profil->longitude }}&z=16&output=embed"
-                                allowfullscreen>
-                            </iframe>
-                        @else
-                            [ MAP MASJID ]
-                        @endif
+{{-- SECTION KONTAK - Versi Seimbang --}}
+<section id="kontak" class="py-16 bg-gradient-to-br from-slate-50 to-white">
+    <div class="container mx-auto px-4 lg:px-6">
+        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
+            <!-- Kolom Kiri: Lokasi & Maps -->
+            <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg overflow-hidden flex flex-col min-h-[520px] lg:min-h-[580px]">
+                <div class="p-6 lg:p-8 border-b border-emerald-100/50">
+                    <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Lokasi</p>
+                    <h2 class="text-2xl lg:text-3xl font-bold text-slate-900">Lokasi Masjid</h2>
+                    <p class="text-base text-slate-600 mt-3 leading-relaxed">
+                        {{ $profil->alamat ?? 'Alamat belum tersedia. Hubungi kami untuk info lebih lanjut.' }}
+                    </p>
+                </div>
+
+                <div class="flex-1 bg-slate-50">
+                    @if(!empty($profil->latitude) && !empty($profil->longitude))
+                        <iframe
+                            class="w-full h-full min-h-[400px]"
+                            frameborder="0"
+                            style="border:0"
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0000000000005!2d106.80000000000001!3d-6.200000000000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTInMDAuMCJTIDEwNsKwNDgnMDAuMCJF!5e0!3m2!1sid!2sid!4v{{ time() }}"
+                            allowfullscreen=""
+                            loading="lazy">
+                        </iframe>
+                    @else
+                        <div class="w-full h-full min-h-[400px] flex items-center justify-center text-slate-400 text-lg bg-slate-100">
+                            Peta Masjid Belum Tersedia
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <!-- Kolom Kanan: Kontak & Form Pesan -->
+            <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg p-6 lg:p-8 min-h-[520px] lg:min-h-[580px] flex flex-col">
+                <div class="mb-2">
+                    <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Kontak</p>
+                    <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Kontak & Pesan Jamaah</h2>
+                    <div class="space-y-4 text-base text-slate-700">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl text-emerald-600">📞</span>
+                            <span>WhatsApp: <strong class="text-emerald-700">{{ $profil->telepon ?? ($profil->no_wa ?? '-') }}</strong></span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl text-emerald-600">✉️</span>
+                            <span>Email: <strong class="text-emerald-700">{{ $profil->email ?? '-' }}</strong></span>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Kontak</p>
-                    <h2 class="text-xl sm:text-2xl font-semibold text-slate-900">Kontak & Pesan Jamaah</h2>
+                <!-- Form Pesan - Sudah Diperbaiki -->
+                <form id="contactForm" class="mt-6 space-y-6 bg-white p-7 lg:p-8 rounded-2xl border-2 border-emerald-100/70 shadow-lg">
+                    @csrf
 
-                    <div class="text-sm text-slate-600 mt-3 space-y-1.5">
-                        <div>📞 WhatsApp: <span class="font-medium">{{ $profil->telepon ?? ($profil->no_wa ?? '-') }}</span></div>
-                        <div>✉️ Email: <span class="font-medium">{{ $profil->email ?? '-' }}</span></div>
-                        <div>⏰ Jam Layanan: {{ $profil->jam_layanan ?? 'Ba’da Subuh - Isya' }}</div>
-                    </div>
-                    <form id="contactForm" class="mt-6 space-y-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                        @csrf
-
-                        {{-- NAMA --}}
-                        <div class="form-control">
-                            <label class="label pb-1">
-                                <span class="label-text font-medium text-slate-700">Nama Anda</span>
-                            </label>
+                    <!-- Nama -->
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text font-semibold text-slate-800">Nama Anda <span class="text-red-500">*</span></span>
+                        </label>
+                        <div class="relative">
                             <input
                                 type="text"
                                 name="nama"
                                 id="contactNama"
                                 required
-                                class="input input-bordered w-full rounded-xl focus:border-emerald-500 focus:ring-emerald-300"
+                                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
                                 placeholder="Masukkan nama lengkap"
                             />
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👤</span>
                         </div>
+                    </div>
 
-                        {{-- TELEPON --}}
-                        <div class="form-control">
-                            <label class="label pb-1">
-                                <span class="label-text font-medium text-slate-700">Nomor Telepon (opsional)</span>
-                            </label>
+                    <!-- Telepon -->
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text font-semibold text-slate-800">Nomor Telepon (opsional)</span>
+                        </label>
+                        <div class="relative">
                             <input
                                 type="text"
                                 name="telepon"
                                 id="contactTelp"
-                                class="input input-bordered w-full rounded-xl focus:border-emerald-500 focus:ring-emerald-300"
+                                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
                                 placeholder="Contoh: 08123456789"
                             />
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
                         </div>
+                    </div>
 
-                        {{-- PESAN --}}
-                        <div class="form-control">
-                            <label class="label pb-1">
-                                <span class="label-text font-medium text-slate-700">Pesan atau Saran</span>
-                            </label>
+                    <!-- Pesan -->
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text font-semibold text-slate-800">Pesan atau Saran <span class="text-red-500">*</span></span>
+                        </label>
+                        <div class="relative">
                             <textarea
                                 name="pesan"
                                 id="contactPesan"
-                                rows="4"
+                                rows="5"
                                 required
-                                class="textarea textarea-bordered w-full rounded-xl focus:border-emerald-500 focus:ring-emerald-300"
-                                placeholder="Ketik pesan Anda..."
+                                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
+                                placeholder="Ketik pesan atau saran Anda di sini..."
                             ></textarea>
+                            <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">💬</span>
                         </div>
+                    </div>
 
-                        {{-- BUTTON + STATUS --}}
-                        <div class="flex items-center justify-between pt-2">
-                            <button
-                                id="contactSubmitBtn"
-                                type="submit"
-                                class="btn px-6 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-md border-0"
-                            >
-                                Kirim Pesan
-                            </button>
-
-                            <div id="contactStatus" class="text-sm text-slate-500 ml-3"></div>
-                        </div>
-                    </form>
-
-
-                </div>
+                    <!-- Button & Status -->
+                    <div class="flex items-center justify-between pt-4">
+                        <button
+                            id="contactSubmitBtn"
+                            type="submit"
+                            class="px-10 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base"
+                        >
+                            Kirim Pesan
+                        </button>
+                        <div id="contactStatus" class="text-sm text-slate-600 ml-4"></div>
+                    </div>
+                </form>
             </div>
-        </section>
+        </div>
+    </div>
+</section>
 
         {{-- FLOATING WA --}}
         @php $wa = preg_replace('/[^0-9]/','',$profil->telepon??'6281234567890'); @endphp
@@ -842,91 +915,295 @@
 
 @push('style')
     <style>
-        /* line-clamp util (fallback if plugin tidak tersedia) */
-        .line-clamp-2 { 
-            overflow: hidden; 
-            display: -webkit-box; 
-            -webkit-line-clamp: 2; 
-            -webkit-box-orient: vertical; 
+        /* Seimbangkan tinggi kolom kontak */
+#kontak .grid > div {
+    display: flex;
+    flex-direction: column;
+}
+
+#kontak .grid > div > .flex-1 {
+    flex: 1;
+}
+
+#kontak iframe {
+    min-height: 400px;
+}
+        :root {
+            --primary: #059669;           /* emerald-600 */
+            --primary-dark: #047857;
+            --primary-light: #34d399;
+            --teal: #0d9488;
+            --cyan: #0891b2;
+            --soft-bg: #f0fdfa;
+            --card: rgba(255, 255, 255, 0.92);
+            --card-border: rgba(5, 150, 105, 0.12);
+            --shadow: 0 14px 40px -12px rgba(5, 150, 105, 0.18);
+            --shadow-soft: 0 10px 32px -12px rgba(14, 165, 233, 0.14);
+            --shadow-hover: 0 20px 48px -16px rgba(14, 165, 233, 0.26);
+            --transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* modal-box .prose height */
-        dialog.modal .modal-box .prose { 
-            max-height: 55vh; 
-            overflow:auto; 
+        body {
+            background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 50%, #e0f2fe 100%);
+            font-feature-settings: "cv03", "cv04", "ss01";
         }
 
-        /* Make the preview button not move when the article height changes */
-        article .flex-shrink-0 { 
-            flex-shrink: 0; 
+        .container {
+            max-width: 1400px;
         }
 
-        /* backdrop + modal styling (override default agar konsisten) */
-        dialog#pengumumanModal::backdrop {
-            background: rgba(2,6,23,0.5);
-            backdrop-filter: blur(4px) saturate(1.02);
+        h1, h2, h3 {
+            font-feature-settings: "cv01", "ss01";
         }
 
-        /* For browsers that don't support ::backdrop, use the fallback overlay */
-        dialog#pengumumanModal .modal-backdrop {
-            display:none;
-        }
-        .dialog-polyfill .modal-backdrop { 
-            display:block; 
-        }
-
-        /* ensure modal-box has subtle entrance */
-        dialog#pengumumanModal .modal-box {
-            border-radius: 14px;
-            box-shadow: 0 18px 40px rgba(2,6,23,0.12);
-            transform-origin: center top;
-            animation: modal-in .14s ease-out;
+        /* ==================== JADWAL SHOLAT - FIX UTAMA ==================== */
+        #jadwal {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
         }
 
-        @keyframes modal-in {
-            from { transform: translateY(-6px) scale(.995); opacity: 0.02; }
-            to   { transform: translateY(0) scale(1); opacity: 1; }
+        #jadwal > div {                        /* card utama jadwal */
+            background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(236,253,245,0.90));
+            backdrop-filter: blur(16px);
+            border: none;
+            border-radius: 1.75rem;
+            box-shadow: 0 16px 48px -12px rgba(5,150,105,0.20);
+            overflow: hidden;
+            padding: 1.5rem;
         }
 
-        /* make .prose content scroll nicely */
-        #pengumumanModalBody::-webkit-scrollbar { 
-            height: 6px; 
-            width: 8px; 
-        }
-        
-        #pengumumanModalBody::-webkit-scrollbar-thumb { 
-            background: rgba(15,23,42,0.06); 
-            border-radius: 6px; 
+        #jadwal .grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
         }
 
-        /* ensure close button stays small and not overlapping text on small screens */
-        .btn.btn-circle { 
-            width:36px; 
-            height:36px; 
-            padding:0; 
+        #jadwal .grid > div {
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(5,150,105,0.12);
+            border-radius: 1rem;
+            padding: 1rem 0.75rem;
+            text-align: center;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.25s ease;
+            overflow: hidden;
         }
 
-        /* keep footer buttons fixed height so they don't shift */
-        footer .btn { 
-            height: 36px; 
-            line-height: 1; 
+        #jadwal .grid > div:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 32px -8px rgba(5,150,105,0.25);
+            border-color: #10b981;
         }
 
-        /* fallback for dialog polyfill: center modal */
-        .dialog-polyfill .modal-box { 
-            margin: 6vh auto; 
+        /* Label (SUBUH, DZUHUR, dll) */
+        #jadwal .grid > div .text-xs,
+        #jadwal .grid > div .text-sm {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #065f46;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        /* Modern gallery nav buttons */
-        .galeri-thumb-active {
-            box-shadow: 0 6px 20px rgba(2,6,23,0.18);
-            transform: translateY(-4px);
-            border-color: rgba(13,148,136,0.18); /* emerald-ish */
+        /* Waktu sholat (04:25 dst) */
+        #jadwal .grid > div .text-xl,
+        #jadwal .grid > div .text-2xl,
+        #jadwal .grid > div .text-3xl {
+            font-weight: 800;
+            color: #065f46;
+            line-height: 1.1;
+            white-space: nowrap;
         }
-        
-        /* hide native dialog outline when using showModal fallback */
-        dialog[open] { 
-            outline: none; 
+
+        /* Judul section & tanggal */
+        #jadwal h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #065f46;
+            margin-bottom: 1rem;
+        }
+
+        #jadwal span.bg-emerald-100 {
+            font-size: 0.95rem;
+            padding: 0.5rem 1.25rem;
+            white-space: nowrap;
+        }
+
+        #jadwal p.text-xs,
+        #jadwal p.text-sm {
+            margin-top: 1.25rem;
+            font-size: 0.875rem;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        /* ==================== RESPONSIVE BREAKPOINTS ==================== */
+
+        /* Desktop & tablet besar (md+) */
+        @media (min-width: 768px) {
+            #jadwal .grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 1.25rem;
+            }
+            #jadwal > div {
+                padding: 1.75rem 2rem;
+            }
+            #jadwal .grid > div {
+                padding: 1.25rem 1rem;
+                min-height: 120px;
+            }
+            #jadwal .grid > div .text-3xl {
+                font-size: 2.25rem;          /* 36px, muat di 5 kolom */
+            }
+            #jadwal h2 {
+                font-size: 1.75rem;
+            }
+        }
+
+        /* Large desktop (lg+) */
+        @media (min-width: 1024px) {
+            #jadwal {
+                max-width: 900px;            /* atau sesuaikan agar pas di layar lebar */
+            }
+            #jadwal .grid > div .text-3xl {
+                font-size: 2.5rem;           /* lebih besar jika container lebar */
+            }
+        }
+
+        /* Mobile & tablet kecil */
+        @media (max-width: 767px) {
+            #jadwal .grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1rem;
+            }
+            #jadwal .grid > div {
+                min-height: 105px;
+            }
+            #jadwal .grid > div .text-xl {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #jadwal .grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+            #jadwal .grid > div .text-xl {
+                font-size: 1.35rem;
+            }
+        }
+
+        /* ==================== STYLE UMUM LAINNYA ==================== */
+        .btn {
+            border-radius: 9999px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .rounded-2xl, .rounded-3xl {
+            border-radius: 1.5rem;
+            background: var(--card);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow);
+            transition: all 0.35s ease;
+        }
+
+        .rounded-2xl:hover, .rounded-3xl:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 24px 56px -16px rgba(5,150,105,0.28);
+        }
+
+        /* Hilangkan border kentara di grid kecil (info cepat, layanan, dll) */
+        .grid.gap-3 > div,
+        .grid.gap-4 > div,
+        .grid.gap-5 > div,
+        .grid.gap-6 > div {
+            border: none !important;
+        }
+
+        /* Loader */
+        #page-loader {
+            background: linear-gradient(to bottom, #f0f9ff, #ecfeff, #f0fdfa);
+        }
+
+        /* Scrollbar custom */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(14,165,233,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(14,165,233,0.4);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(14,165,233,0.6);
+        }
+
+        /* Responsive: di mobile tetap 1 kolom, desktop bisa 2 jika banyak agenda */
+        @media (min-width: 768px) {
+            #acara .grid {
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            }
+        }
+
+        /* Agenda - Compact & Seimbang Tanpa Sticky */
+        #acara {
+            position: relative;
+        }
+
+        #acara .grid {
+            gap: 1.5rem;
+        }
+
+        /* Card agenda lebih compact */
+        #acara .bg-white.rounded-2xl {
+            width: 100%;
+            max-width: none;
+        }
+
+        /* Sidebar ukuran normal, tidak terlalu besar */
+        #acara aside {
+            height: fit-content;
+        }
+
+        /* Hilangkan min-height besar agar tinggi mengikuti konten */
+        #acara .space-y-6:first-child,
+        #acara aside {
+            min-height: auto !important;
+        }
+
+        /* Teks lebih kecil & padding lebih ringkas */
+        #acara h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #acara p {
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        #acara .text-base, #acara .text-lg {
+            font-size: 0.95rem;
+        }
+
+        /* Ikon lebih kecil */
+        #acara .text-2xl, #acara .text-3xl {
+            font-size: 1.75rem;
         }
 
     </style>
@@ -935,6 +1212,48 @@
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const quotes = @json($quotes); // ambil array quotes dari PHP
+    const container = document.getElementById('quote-container');
+    let currentIndex = 0;
+
+    // Fungsi untuk membuat elemen quote baru
+    function createQuoteElement(quote) {
+        const div = document.createElement('div');
+        div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out';
+        div.innerHTML = `
+            <h3 class="font-semibold text-base lg:text-lg mt-1">${quote.title}</h3>
+            <p class="text-base lg:text-lg mt-3 leading-relaxed">${quote.text}</p>
+        `;
+        return div;
+    }
+
+    // Fungsi untuk ganti quote dengan animasi
+    function rotateQuote() {
+        const oldQuote = container.querySelector('.quote-item.opacity-100');
+        if (oldQuote) {
+            oldQuote.classList.remove('opacity-100', 'translate-y-0');
+            oldQuote.classList.add('opacity-0', '-translate-y-4');
+            setTimeout(() => oldQuote.remove(), 800); // hapus setelah animasi selesai
+        }
+
+        currentIndex = (currentIndex + 1) % quotes.length;
+        const newQuote = createQuoteElement(quotes[currentIndex]);
+        container.appendChild(newQuote);
+
+        // Trigger animasi masuk
+        setTimeout(() => {
+            newQuote.classList.remove('opacity-0', 'translate-y-4');
+            newQuote.classList.add('opacity-100', 'translate-y-0');
+        }, 50);
+    }
+
+    // Mulai rotasi setiap 6 detik (ubah sesuai keinginan)
+    setInterval(rotateQuote, 6000);
+
+    // Optional: Rotasi pertama setelah 4 detik (biar tidak langsung ganti)
+    setTimeout(rotateQuote, 4000);
+});
         // buka modal menggunakan atribut data dari tombol (sudah ada fungsi openPengumumanPreview sebelumnya)
         function openPengumumanPreview(btn) {
             const title = btn.getAttribute('data-pengumuman-judul') || '';
