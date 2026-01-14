@@ -915,36 +915,25 @@
 
 @push('style')
     <style>
-        /* Seimbangkan tinggi kolom kontak */
-#kontak .grid > div {
-    display: flex;
-    flex-direction: column;
-}
-
-#kontak .grid > div > .flex-1 {
-    flex: 1;
-}
-
-#kontak iframe {
-    min-height: 400px;
-}
         :root {
-            --primary: #059669;           /* emerald-600 */
+            --primary: #059669;           /* emerald-600 - warna utama */
             --primary-dark: #047857;
             --primary-light: #34d399;
             --teal: #0d9488;
+            --teal-dark: #0c7a6e;
             --cyan: #0891b2;
+            --cyan-dark: #077c9c;
             --soft-bg: #f0fdfa;
-            --card: rgba(255, 255, 255, 0.92);
-            --card-border: rgba(5, 150, 105, 0.12);
-            --shadow: 0 14px 40px -12px rgba(5, 150, 105, 0.18);
-            --shadow-soft: 0 10px 32px -12px rgba(14, 165, 233, 0.14);
-            --shadow-hover: 0 20px 48px -16px rgba(14, 165, 233, 0.26);
-            --transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            --card-bg: rgba(255, 255, 255, 0.98);
+            --card-border: rgba(5, 150, 105, 0.25);
+            --shadow: 0 14px 40px -12px rgba(5, 150, 105, 0.25);
+            --shadow-hover: 0 20px 48px -16px rgba(5, 150, 105, 0.4);
+            --transition: all 0.32s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
             background: linear-gradient(135deg, #ecfdf5 0%, #f0fdfa 50%, #e0f2fe 100%);
+            color: #0f172a;
             font-feature-settings: "cv03", "cv04", "ss01";
         }
 
@@ -954,23 +943,25 @@
 
         h1, h2, h3 {
             font-feature-settings: "cv01", "ss01";
+            color: #065f46; /* emerald-900 lebih hidup */
         }
 
-        /* ==================== JADWAL SHOLAT - FIX UTAMA ==================== */
+        /* ==================== JADWAL SHOLAT - Responsif + Lebih Berwarna ==================== */
         #jadwal {
             width: 100%;
             max-width: 100%;
             margin: 0 auto;
         }
 
-        #jadwal > div {                        /* card utama jadwal */
-            background: linear-gradient(145deg, rgba(255,255,255,0.96), rgba(236,253,245,0.90));
+        #jadwal > div {
+            background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(236,253,245,0.96));
             backdrop-filter: blur(16px);
-            border: none;
+            border: 1px solid rgba(5,150,105,0.25);
             border-radius: 1.75rem;
-            box-shadow: 0 16px 48px -12px rgba(5,150,105,0.20);
+            box-shadow: var(--shadow);
             overflow: hidden;
             padding: 1.5rem;
+            transition: var(--transition);
         }
 
         #jadwal .grid {
@@ -979,8 +970,8 @@
         }
 
         #jadwal .grid > div {
-            background: rgba(255,255,255,0.92);
-            border: 1px solid rgba(5,150,105,0.12);
+            background: rgba(255,255,255,0.97);
+            border: 1px solid rgba(5,150,105,0.22);
             border-radius: 1rem;
             padding: 1rem 0.75rem;
             text-align: center;
@@ -989,17 +980,17 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            transition: all 0.25s ease;
+            transition: var(--transition);
             overflow: hidden;
         }
 
         #jadwal .grid > div:hover {
             transform: translateY(-6px);
-            box-shadow: 0 12px 32px -8px rgba(5,150,105,0.25);
+            box-shadow: 0 12px 32px -8px rgba(16,185,129,0.35);
             border-color: #10b981;
         }
 
-        /* Label (SUBUH, DZUHUR, dll) */
+        /* Label */
         #jadwal .grid > div .text-xs,
         #jadwal .grid > div .text-sm {
             font-size: 0.875rem;
@@ -1010,7 +1001,7 @@
             letter-spacing: 0.05em;
         }
 
-        /* Waktu sholat (04:25 dst) */
+        /* Waktu */
         #jadwal .grid > div .text-xl,
         #jadwal .grid > div .text-2xl,
         #jadwal .grid > div .text-3xl {
@@ -1020,7 +1011,7 @@
             white-space: nowrap;
         }
 
-        /* Judul section & tanggal */
+        /* Judul & tanggal */
         #jadwal h2 {
             font-size: 1.5rem;
             font-weight: 700;
@@ -1031,20 +1022,12 @@
         #jadwal span.bg-emerald-100 {
             font-size: 0.95rem;
             padding: 0.5rem 1.25rem;
+            background-color: rgba(5,150,105,0.08);
+            color: #065f46;
             white-space: nowrap;
         }
 
-        #jadwal p.text-xs,
-        #jadwal p.text-sm {
-            margin-top: 1.25rem;
-            font-size: 0.875rem;
-            color: #6b7280;
-            text-align: center;
-        }
-
-        /* ==================== RESPONSIVE BREAKPOINTS ==================== */
-
-        /* Desktop & tablet besar (md+) */
+        /* ==================== RESPONSIVE JADWAL ==================== */
         @media (min-width: 768px) {
             #jadwal .grid {
                 grid-template-columns: repeat(5, 1fr);
@@ -1058,24 +1041,22 @@
                 min-height: 120px;
             }
             #jadwal .grid > div .text-3xl {
-                font-size: 2.25rem;          /* 36px, muat di 5 kolom */
+                font-size: 2.25rem;
             }
             #jadwal h2 {
                 font-size: 1.75rem;
             }
         }
 
-        /* Large desktop (lg+) */
         @media (min-width: 1024px) {
             #jadwal {
-                max-width: 900px;            /* atau sesuaikan agar pas di layar lebar */
+                max-width: 900px;
             }
             #jadwal .grid > div .text-3xl {
-                font-size: 2.5rem;           /* lebih besar jika container lebar */
+                font-size: 2.5rem;
             }
         }
 
-        /* Mobile & tablet kecil */
         @media (max-width: 767px) {
             #jadwal .grid {
                 grid-template-columns: repeat(3, 1fr);
@@ -1103,28 +1084,31 @@
         .btn {
             border-radius: 9999px;
             font-weight: 600;
-            transition: all 0.3s ease;
+            background: linear-gradient(to right, #059669, #0d9488);
+            transition: var(--transition);
         }
 
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(5,150,105,0.35);
+            background: linear-gradient(to right, #047857, #0c7a6e);
         }
 
         .rounded-2xl, .rounded-3xl {
             border-radius: 1.5rem;
-            background: var(--card);
-            backdrop-filter: blur(12px);
+            background: var(--card-bg);
             border: 1px solid var(--card-border);
             box-shadow: var(--shadow);
-            transition: all 0.35s ease;
+            transition: var(--transition);
         }
 
         .rounded-2xl:hover, .rounded-3xl:hover {
             transform: translateY(-6px);
-            box-shadow: 0 24px 56px -16px rgba(5,150,105,0.28);
+            box-shadow: var(--shadow-hover);
+            border-color: #10b981;
         }
 
-        /* Hilangkan border kentara di grid kecil (info cepat, layanan, dll) */
+        /* Hilangkan border grid kecil */
         .grid.gap-3 > div,
         .grid.gap-4 > div,
         .grid.gap-5 > div,
@@ -1143,69 +1127,54 @@
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: rgba(14,165,233,0.05);
+            background: rgba(5,150,105,0.05);
         }
         ::-webkit-scrollbar-thumb {
-            background: rgba(14,165,233,0.4);
+            background: rgba(5,150,105,0.4);
             border-radius: 3px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(14,165,233,0.6);
+            background: rgba(5,150,105,0.6);
         }
 
-        /* Responsive: di mobile tetap 1 kolom, desktop bisa 2 jika banyak agenda */
-        @media (min-width: 768px) {
-            #acara .grid {
-                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            }
+        /* Agenda - Compact & Lebih Berwarna */
+        #acara .bg-white.rounded-xl {
+            background: linear-gradient(to bottom, white, #ecfdf5);
+            border: 1px solid rgba(5,150,105,0.25);
         }
 
-        /* Agenda - Compact & Seimbang Tanpa Sticky */
-        #acara {
-            position: relative;
+        #acara .bg-white.rounded-xl:hover {
+            box-shadow: var(--shadow-hover);
+            border-color: #10b981;
         }
 
-        #acara .grid {
-            gap: 1.5rem;
+        /* Quote - Gradient Lebih Kuat */
+        #quote-container .quote-item {
+            background: linear-gradient(135deg, rgba(5,150,105,0.97), rgba(13,148,136,0.97));
         }
 
-        /* Card agenda lebih compact */
-        #acara .bg-white.rounded-2xl {
-            width: 100%;
-            max-width: none;
+        /* Kontak - Form Lebih Berwarna */
+        #kontak input,
+        #kontak textarea {
+            border-color: #cbd5e1;
+            color: #0f172a;
+            background: white;
         }
 
-        /* Sidebar ukuran normal, tidak terlalu besar */
-        #acara aside {
-            height: fit-content;
+        #kontak input:focus,
+        #kontak textarea:focus {
+            border-color: #059669;
+            box-shadow: 0 0 0 4px rgba(5,150,105,0.18);
         }
 
-        /* Hilangkan min-height besar agar tinggi mengikuti konten */
-        #acara .space-y-6:first-child,
-        #acara aside {
-            min-height: auto !important;
+        /* Galeri - Hover Lebih Hidup */
+        [data-galeri-item] img {
+            transition: transform 0.5s ease;
         }
 
-        /* Teks lebih kecil & padding lebih ringkas */
-        #acara h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.75rem;
+        [data-galeri-item]:hover img {
+            transform: scale(1.15);
         }
-
-        #acara p {
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        #acara .text-base, #acara .text-lg {
-            font-size: 0.95rem;
-        }
-
-        /* Ikon lebih kecil */
-        #acara .text-2xl, #acara .text-3xl {
-            font-size: 1.75rem;
-        }
-
     </style>
 @endpush
 
