@@ -1,26 +1,11 @@
-import './bootstrap';
-import Alpine from 'alpinejs';
+// resources/js/app.js
+import '../css/app.css'; // penting: Vite akan bundle ini
 
-window.Alpine = Alpine;
-Alpine.start();
+import Alpine from 'alpinejs'
+import collapse from '@alpinejs/collapse'
 
-document.addEventListener("DOMContentLoaded", function () {
-    if (typeof window.$ === 'undefined') {
-        console.warn('⚠️ jQuery tidak terdeteksi — pastikan dimuat sebelum app.js');
-    } else {
-        console.log('✅ jQuery aktif, siap pakai.');
-    }
+Alpine.plugin(collapse)
+window.Alpine = Alpine
+Alpine.start()
 
-    // Inisialisasi ulang sidebar
-    if (typeof initSidenav === 'function') {
-        initSidenav();
-    }
-
-    // Scrollbar Material Dashboard
-    if (typeof Scrollbar !== 'undefined') {
-        const scrollbars = document.querySelectorAll('.scrollbar');
-        scrollbars.forEach((el) => {
-            if (el instanceof Element) Scrollbar.init(el);
-        });
-    }
-});
+// setup global axios/jQuery CSRF jika perlu (opsional)

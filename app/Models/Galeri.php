@@ -11,9 +11,7 @@ class Galeri extends Model implements HasMedia
 {
     use InteractsWithMedia;
 
-    protected $fillable = [
-        'judul', 'keterangan', 'tipe', 'url_video', 'is_published', 'published_at', 'created_by'
-    ];
+    protected $guarded = ['id'];
 
     protected static function boot()
     {

@@ -1,29 +1,12 @@
-<footer class="footer">
-    <div class="container-fluid">
-        <div class="row text-muted">
-            <div class="col-6 text-start">
-                <p class="mb-0">
-                    <a class="text-muted" href="https://adminkit.io/" target="_blank"><strong>AdminKit</strong></a> - <a
-                        class="text-muted" href="https://adminkit.io/" target="_blank"><strong>Bootstrap Admin
-                            Template</strong></a> &copy;
-                </p>
-            </div>
-            <div class="col-6 text-end">
-                <ul class="list-inline">
-                    <li class="list-inline-item">
-                        <a class="text-muted" href="https://adminkit.io/" target="_blank">Support</a>
-                    </li>
-                    <li class="list-inline-item">
-                        <a class="text-muted" href="https://adminkit.io/" target="_blank">Help Center</a>
-                    </li>
-                    <li class="list-inline-item">
-                        <a class="text-muted" href="https://adminkit.io/" target="_blank">Privacy</a>
-                    </li>
-                    <li class="list-inline-item">
-                        <a class="text-muted" href="https://adminkit.io/" target="_blank">Terms</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
+<footer class="bg-white border-t mt-6">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between text-sm text-gray-600">
+    <div>
+      <a href="https://adminkit.io/" target="_blank" class="text-gray-600 font-semibold">AdminKit</a> - Bootstrap Admin Template
     </div>
+    <div>
+      <a href="#" class="mr-4">Support</a>
+      <a href="#" class="mr-4">Help Center</a>
+      <a href="#">Privacy</a>
+    </div>
+  </div>
 </footer>

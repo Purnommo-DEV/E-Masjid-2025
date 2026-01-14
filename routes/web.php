@@ -11,7 +11,38 @@ use App\Http\Controllers\Admin\AcaraController;
 use App\Http\Controllers\Admin\GaleriController;
 use App\Http\Controllers\Admin\PengumumanController;
 use App\Http\Controllers\Admin\ProfilMasjidController;
-use App\Http\Controllers\Admin\KeuanganController;
+use App\Http\Controllers\Admin\KotakInfakController;
+use App\Http\Controllers\Admin\AkunKeuanganController;
+use App\Http\Controllers\Admin\JurnalController;
+use App\Http\Controllers\Admin\PettyCashController;
+use App\Http\Controllers\Admin\SaldoAwalController;
+use App\Http\Controllers\Admin\AlokasiDanaController;
+use App\Http\Controllers\Admin\PengeluaranController;
+use App\Http\Controllers\Admin\PenerimaanPemasukanController;
+use App\Http\Controllers\Admin\ZakatController;
+use App\Http\Controllers\Admin\DanaTerikatController;
+use App\Http\Controllers\Admin\DanaTerikatReferensiController;
+use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\LayananController;
+
+use App\Http\Controllers\User\HomeController;
+
+Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('acara', [HomeController::class, 'acaraIndex'])->name('acara.index');
+Route::get('acara-show/{slug}', [HomeController::class, 'acaraShow'])->name('acara.show');
+
+Route::get('berita', [HomeController::class, 'beritaIndex'])->name('berita.index');
+Route::get('berita-show/{slug}', [HomeController::class, 'beritaShow'])->name('berita.show');
+
+Route::get('pengumuman', [HomeController::class, 'pengumumanIndex'])->name('pengumuman.index');
+Route::get('pengumuman-show/{slug}', [HomeController::class, 'pengumumanShow'])->name('pengumuman.show');
+
+Route::get('/home/galeri/{id}', [GaleriController::class, 'apiFotos']);
+
+Route::get('galeri', [HomeController::class, 'galeriIndex'])->name('galeri.index');
+
+Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('kontak.kirim');
 
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {
@@ -55,6 +86,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/pengurus/{id}', [ProfilMasjidController::class, 'destroyPengurus'])->name('admin.profil.pengurus.destroy');
         Route::post('/pengurus/reorder', [ProfilMasjidController::class, 'reorderPengurus'])->name('admin.profil.pengurus.reorder');
 
+        // Banner
+        Route::get('banner',        [BannerController::class, 'index'])->name('admin.banner.index');
+        Route::get('banner/data',   [BannerController::class, 'data'])->name('admin.banner.data');
+        Route::post('banner',       [BannerController::class, 'store'])->name('admin.banner.store');
+        Route::get('banner/{id}',   [BannerController::class, 'edit'])->name('admin.banner.edit');
+        Route::put('banner/{id}',   [BannerController::class, 'update'])->name('admin.banner.update');
+        Route::delete('banner/{id}',[BannerController::class, 'destroy'])->name('admin.banner.destroy');
+
         // Kategori
         Route::get('kategori', [KategoriController::class, 'index'])->name('admin.kategori.index');
         Route::get('kategori/data', [KategoriController::class, 'data'])->name('admin.kategori.data');
@@ -79,6 +118,14 @@ Route::middleware(['auth'])->group(function () {
         Route::put('acara/{id}', [AcaraController::class, 'update'])->name('admin.acara.update');
         Route::delete('acara/{id}', [AcaraController::class, 'destroy'])->name('admin.acara.destroy');
 
+        // Layanan
+        Route::get('layanan', [LayananController::class, 'index'])->name('admin.layanan.index');
+        Route::get('layanan/data', [LayananController::class, 'data'])->name('admin.layanan.data');
+        Route::post('layanan', [LayananController::class, 'store'])->name('admin.layanan.store');
+        Route::get('layanan/{id}/edit', [LayananController::class, 'edit'])->name('admin.layanan.edit');
+        Route::put('layanan/{id}', [LayananController::class, 'update'])->name('admin.layanan.update');
+        Route::delete('layanan/{id}', [LayananController::class, 'destroy'])->name('admin.layanan.destroy');
+
         // Galeri
         Route::get('galeri', [GaleriController::class, 'index'])->name('admin.galeri.index');
         Route::get('galeri/data', [GaleriController::class, 'data'])->name('admin.galeri.data');
@@ -96,23 +143,98 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('pengumuman/{id}', [PengumumanController::class, 'destroy'])->name('admin.pengumuman.destroy');
 
         // Keuangan
-        Route::get('/keuangan', [KeuanganController::class, 'index'])->name('admin.keuangan.index');
-        Route::post('/saldo', [KeuanganController::class, 'storeSaldoAwal'])->name('admin.keuangan.saldo');
-        Route::post('/', [KeuanganController::class, 'storeTransaksi'])->name('admin.keuangan.store');
-        Route::get('/data', [KeuanganController::class, 'data'])->name('admin.keuangan.data');
-        Route::get('/{id}/edit', [KeuanganController::class, 'editTransaksi'])->name('admin.keuangan.edit');
-        Route::put('/{id}', [KeuanganController::class, 'updateTransaksi'])->name('admin.keuangan.update');
-        Route::delete('/{id}', [KeuanganController::class, 'destroyTransaksi'])->name('admin.keuangan.destroy');
+        Route::get('/kotak-infak', [KotakInfakController::class, 'index'])->name('admin.keuangan.kotak-infak');
+        Route::get('/keuangan/kotak-infak/list', [KotakInfakController::class, 'data'])->name('admin.keuangan.kotak-infak.list');
+        Route::post('/kotak-infak', [KotakInfakController::class, 'storeKotak'])->name('admin.keuangan.kotak-infak.store');
 
-        Route::get('/kotak', [KeuanganController::class, 'kotak'])->name('admin.keuangan.kotak');
-        Route::post('/kotak', [KeuanganController::class, 'storeKotak'])->name('admin.keuangan.kotak.store');
-        Route::get('/laporan', [KeuanganController::class, 'laporan'])->name('admin.keuangan.laporan');
-        Route::get('/laporan/pdf', [KeuanganController::class, 'exportPdf'])->name('admin.keuangan.laporan.pdf');
-        Route::get('/saldo/check', [KeuanganController::class, 'cekSaldoAwal'])->name('admin.keuangan.saldo.check');
+        // Akun Keuangan (Chart of Accounts)
+        Route::get('keuangan/akun', [AkunKeuanganController::class, 'index'])->name('admin.keuangan.akun.index');
+        Route::get('keuangan/akun/data', [AkunKeuanganController::class, 'data'])->name('admin.keuangan.akun.data');
+        Route::post('keuangan/akun', [AkunKeuanganController::class, 'store'])->name('admin.keuangan.akun.store');
+        Route::get('keuangan/akun/{id}', [AkunKeuanganController::class, 'edit'])->name('admin.keuangan.akun.edit');
+        Route::put('keuangan/akun/{id}', [AkunKeuanganController::class, 'update'])->name('admin.keuangan.akun.update');
+        Route::delete('keuangan/akun/{id}', [AkunKeuanganController::class, 'destroy'])->name('admin.keuangan.akun.destroy');
+        Route::get('/keuangan/options', [AkunKeuanganController::class, 'options'])->name('admin.keuangan.akun.options');
 
-        Route::get('/keuangan/kotak/list', [KeuanganController::class, 'getKotakList'])->name('admin.keuangan.kotak.list');
-        Route::post('/keuangan/kotak/recount', [KeuanganController::class, 'recountKotak'])->name('admin.keuangan.kotak.recount');
-    });
+        // Jurnal Umum (read-only, bisa difilter bulan)
+        Route::get('keuangan/jurnal', [JurnalController::class, 'index'])->name('admin.keuangan.jurnal.index');
+        Route::get('keuangan/jurnal/data', [JurnalController::class, 'data'])->name('admin.keuangan.jurnal.data');
+
+
+        // Keuangan (Saldo Awal, Petty Cash, Laporan)
+        // Saldo Awal
+        Route::get('keuangan/saldo-awal', [SaldoAwalController::class, 'index'])->name('admin.keuangan.saldo-awal');
+        Route::post('keuangan/saldo-awal', [SaldoAwalController::class, 'store'])->name('admin.keuangan.saldo-awal.store');
+
+        // Petty Cash
+        Route::get('keuangan/petty-cash', [PettyCashController::class, 'index'])->name('admin.keuangan.petty-cash');
+        Route::post('keuangan/petty-cash', [PettyCashController::class, 'store'])->name('admin.keuangan.petty-cash.store');
+        Route::get('keuangan/petty-cash/data', [PettyCashController::class, 'data'])->name('admin.keuangan.petty-cash.data');
+        Route::get('keuangan/petty-cash/saldo', [PettyCashController::class, 'saldo'])->name('admin.keuangan.petty-cash.saldo')
+    ->middleware('auth');
+
+
+        // Pengeluaran Umum
+        Route::get('keuangan/pengeluaran', [PengeluaranController::class, 'index'])->name('admin.keuangan.pengeluaran');
+        Route::get('/pengeluaran/data', [PengeluaranController::class, 'data'])->name('admin.keuangan.pengeluaran.data');
+        Route::post('keuangan/pengeluaran', [PengeluaranController::class, 'store'])->name('admin.keuangan.pengeluaran.store');
+
+        // Alokasi Dana
+        Route::get('keuangan/alokasi-dana', [AlokasiDanaController::class, 'index'])->name('admin.keuangan.alokasi-dana');
+        Route::get('/alokasi-dana/data', [AlokasiDanaController::class, 'data'])->name('admin.keuangan.alokasi-dana.data');
+        Route::post('keuangan/alokasi-dana', [AlokasiDanaController::class, 'store'])->name('admin.keuangan.alokasi-dana.store');
+
+        // Zakat
+        Route::get('keuangan/zakat', [ZakatController::class, 'index'])->name('admin.keuangan.zakat.index');
+        Route::get('zakat/data', [ZakatController::class, 'data'])->name('admin.keuangan.zakat.data');
+        Route::post('zakat/penerimaan', [ZakatController::class, 'storePenerimaan'])->name('admin.keuangan.zakat.store.penerimaan');
+        Route::post('zakat/penyaluran', [ZakatController::class, 'storePenyaluran'])->name('admin.keuangan.zakat.store.penyaluran');
+        Route::get('zakat/kwitansi/{id}', [ZakatController::class, 'kwitansi'])->name('admin.keuangan.zakat.kwitansi');
+
+        // Pendapatan
+        Route::get('keuangan/penerimaan', [PenerimaanPemasukanController::class, 'index'])->name('admin.keuangan.penerimaan');
+        Route::get('penerimaan/data', [PenerimaanPemasukanController::class, 'data'])->name('admin.keuangan.penerimaan.data');
+        Route::post('penerimaan/store', [PenerimaanPemasukanController::class, 'store'])->name('admin.keuangan.penerimaan.store');
+
+        // Dana Terikat & Program Rutin
+        Route::prefix('dana-terikat')->name('admin.keuangan.dana-terikat.')->group(function () {
+
+            Route::get('/', [DanaTerikatController::class, 'index'])->name('index');
+
+            // Data untuk semua tab (saldo, penerima, penerimaan, realisasi)
+            Route::get('/data', [DanaTerikatController::class, 'data'])->name('data');
+
+            Route::get('/akun-options', [DanaTerikatController::class, 'akunOptions'])->name('options');
+
+            Route::post('/penerimaan/store', [DanaTerikatController::class, 'storePenerimaan'])->name('penerimaan.store');
+
+            Route::post('/penerima/store', [DanaTerikatController::class, 'storePenerima'])->name('penerima.store');
+            Route::put('/penerima/update/{id}', [DanaTerikatController::class, 'updatePenerima'])->name('penerima.update');
+            Route::get('/penerima/show', [DanaTerikatController::class, 'showPenerima'])->name('penerima.show');
+            Route::get('/penerima/check-nama', [DanaTerikatController::class, 'cekNamaPenerima'])->name('penerima.check-nama');
+            Route::delete('penerima/{id}',[DanaTerikatController::class, 'destroyPenerima'])->name('penerima.destroy');
+
+            Route::post('/realisasi/store', [DanaTerikatController::class, 'realisasi'])->name('realisasi.store');
+            Route::post('/koreksi/realisasi/store', [DanaTerikatController::class, 'koreksiStore'])->name('koreksi.realisasi.store');
+            Route::get('/realisasi/penerima-aktif', [DanaTerikatController::class, 'penerimaAktif'])->name('realisasi.penerima-aktif');
+
+            Route::post('/program/store', [DanaTerikatController::class, 'storeProgram'])->name('program.store');
+
+            Route::get('/kwitansi/{id}', [DanaTerikatController::class, 'kwitansi'])->name('kwitansi');
+
+            // CRUD referensi
+            Route::resource('referensi', DanaTerikatReferensiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+            
+
+        });
+
+
+        // Neraca Saldo + Export
+        Route::get('keuangan/laporan/neraca-saldo', [LaporanController::class, 'neracaSaldo'])->name('admin.keuangan.laporan.neraca-saldo');
+        Route::get('keuangan/laporan/neraca-saldo/pdf', [LaporanController::class, 'neracaSaldoPdf'])->name('admin.keuangan.laporan.neraca-saldo.pdf');
+        Route::get('keuangan/laporan/neraca-saldo/excel', [LaporanController::class, 'neracaSaldoExcel'])->name('admin.keuangan.laporan.neraca-saldo.excel');
+
+        });
 });
 
 require __DIR__.'/auth.php';

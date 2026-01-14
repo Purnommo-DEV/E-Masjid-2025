@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Interfaces\KeuanganRepositoryInterface;
 use Illuminate\Http\Request;
-use App\Models\{SaldoAwal, JenisKotakInfak, KategoriKeuangan, Transaksi};
-use Yajra\DataTables\Facades\DataTables; // pastikan import ini
+use App\Models\{SaldoAwal, JenisKotakInfak, KategoriKeuangan, Transaksi, KotakInfak};
+use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
-
 
 class KeuanganController extends Controller
 {
@@ -43,19 +43,57 @@ class KeuanganController extends Controller
 
     public function getKotakList()
     {
-        $kotak = $this->keuangan->getKotakList();
-        return response()->json(['data' => $kotak]);
+        $query = KotakInfak::with(['jenis_kotak', 'details', 'media'])
+            ->select('kotak_infaks.*')
+            ->orderBy('tanggal', 'desc')
+            ->orderBy('id', 'asc');
+
+        return DataTables::of($query)
+            ->addColumn('tanggal_group', fn($k) => $k->tanggal->format('d M Y'))
+            ->addColumn('tanggal_raw', fn($k) => $k->tanggal->toDateString())
+            ->addColumn('jenis', fn($k) => $k->jenis_kotak->nama ?? '-')
+            ->addColumn('jumlah', fn($k) => 'Rp ' . number_format($k->total, 0, ',', '.'))
+            ->addColumn('sudah_dihitung', fn($k) => $k->transaksi_id !== null)
+            ->addColumn('detail_btn', function($k) {
+                if ($k->details->isEmpty()) return '<span class="text-muted">—</span>';
+
+                $buktiUrl = $k->getFirstMediaUrl('bukti_kotak'); // INI SUDAH PAKAI CUSTOM PATH!
+
+                return '<button class="btn btn-sm btn-primary detail-kotak-btn rounded-circle shadow-sm"
+                                data-kotak=\''.json_encode([
+                                    "jenis"   => $k->jenis_kotak->nama,
+                                    "total"   => $k->total,
+                                    "bukti"   => $buktiUrl ?: null, // LANGSUNG URL YANG SUDAH BENAR!
+                                    "details" => $k->details->map(fn($d) => [
+                                        "nominal"  => $d->nominal,
+                                        "lembar"   => $d->jumlah_lembar,
+                                        "subtotal" => $d->subtotal
+                                    ])->toArray()
+                                ], JSON_UNESCAPED_SLASHES).'\'>
+                            <i class="fas fa-eye"></i>
+                        </button>';
+            })
+            ->addColumn('aksi', fn() => '') // kosong, tombol ada di rowGroup
+            ->rawColumns(['detail_btn'])
+            ->make(true);
     }
 
-    public function recountKotak(Request $request)
+    public function recountHari(Request $request)
     {
-        $request->validate(['kotak_id' => 'required|exists:kotak_infaks,id']);
-        
+        $request->validate(['tanggal' => 'required|date']);
+
         try {
-            $this->keuangan->recountKotak($request->kotak_id);
-            return response()->json(['success' => true, 'message' => 'Berhasil dihitung ulang!']);
+            $result = $this->keuangan->recountHari($request->tanggal);
+
+            return response()->json([
+                'success' => true,
+                'message' => $result['message']
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
     }
 
@@ -134,6 +172,8 @@ class KeuanganController extends Controller
             ->addColumn('deskripsi', fn($t) => '<small>' . Str::limit($t->deskripsi, 60) . '</small>')
             ->addColumn('dibuat_oleh', fn($t) => $t->creator->name ?? 'Admin')
             ->addColumn('bukti', function($t) {
+
+
                 $url = $t->getBuktiUrl();
                 $thumb = $t->getBuktiThumbUrl() ?: $url;
 

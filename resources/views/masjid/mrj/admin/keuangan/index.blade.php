@@ -512,21 +512,28 @@
         table.ajax.reload();
     });
 
-    // refresh saldo akhir helper
+    // letakkan ini di atas (di dalam IIFE kamu), agar tersedia untuk fungsi lain
+    const serverSaldoInfo = @json($saldoInfo['jumlah'] ?? 0);
+
+    // fungsi refreshSaldoAkhir yang memakai serverSaldoInfo sebagai fallback
     function refreshSaldoAkhir() {
-    $.get(routes.data, {
-        start_date: '{{ now()->startOfMonth()->format("Y-m-d") }}',
-        end_date: '{{ now()->format("Y-m-d") }}'
-    }).done(function(payload) {
-        if (payload && Array.isArray(payload.data) && payload.data.length) {
-            const last = payload.data[payload.data.length - 1];
-            const raw = last.saldo_berjalan_raw ?? last.saldo_berjalan ?? null;
-            if (raw !== null && raw !== undefined) {
-              const num = parseMoneyToInteger(raw);
-              $('#saldo-akhir-display').text(num.toLocaleString('id-ID'));
-            }
+      table.ajax.reload(function(payload) {
+        if (payload && Array.isArray(payload.data) && payload.data.length > 0) {
+          const last = payload.data[payload.data.length - 1];
+          const raw = last.saldo_berjalan_raw ?? last.saldo_berjalan ?? null;
+          const num = parseMoneyToInteger(raw);
+
+          // Gunakan serverSaldoInfo jika num tidak valid atau benar-benar 0
+          // (eksplisit check === 0 supaya bukan falsy check umum)
+          const useServer = (num === 0) || Number.isNaN(num) || num === null || num === undefined;
+          const finalVal = useServer ? Number(serverSaldoInfo || 0) : num;
+
+          $('#saldo-akhir-display').text(finalVal.toLocaleString('id-ID'));
+        } else {
+          // tabel kosong -> tampilkan nilai dari $saldoInfo['jumlah']
+          $('#saldo-akhir-display').text(Number(serverSaldoInfo || 0).toLocaleString('id-ID'));
         }
-        });
+      }, false);
     }
 
     // ----------------------------
@@ -579,6 +586,7 @@
             if (res.saldo_formatted) $('#saldo-awal-display').text(res.saldo_formatted.replace('Rp ', ''));
             $('#status-saldo').removeClass('text-success').addClass('text-warning').text('Koreksi manual');
             refreshSaldoAkhir();
+            table.ajax.reload(null, false);
         }).fail(function(xhr){
             const msg = xhr.responseJSON?.errors ? Object.values(xhr.responseJSON.errors)[0][0] : (xhr.responseJSON?.message || 'Gagal menyimpan');
             toastr.error(msg);
@@ -664,8 +672,12 @@
             }).done(function(res){
                 Swal.close();
                 Swal.fire({ icon: 'success', title: 'Terhapus', text: res.message || 'Transaksi berhasil dihapus', timer: 1400, showConfirmButton: false });
-                table.ajax.reload(null, false);
-                refreshSaldoAkhir();
+                
+                // reload table, lalu setelah selesai baru refresh saldo
+                table.ajax.reload(function() {
+                    refreshSaldoAkhir();
+                }, false);
+
             }).fail(function(xhr){
             Swal.close();
                 const msg = xhr.responseJSON?.errors ? Object.values(xhr.responseJSON.errors)[0][0] : (xhr.responseJSON?.message || 'Gagal menghapus');

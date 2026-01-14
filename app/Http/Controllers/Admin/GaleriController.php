@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Interfaces\GaleriRepositoryInterface;
 use Illuminate\Http\Request;
+use App\Models\Galeri;
 
 class GaleriController extends Controller
 {
@@ -103,4 +104,26 @@ class GaleriController extends Controller
         $this->repo->delete($id);
         return response()->json(['success' => true, 'message' => 'Galeri dihapus!']);
     }
+
+    public function apiFotos($id)
+    {
+        $g = Galeri::with('media')->findOrFail($id);
+
+        $fotos = $g->getMedia('foto')->map(function ($m) {
+            $folder = $m->custom_properties['folder'] ?? 'galeri';
+            $folder = ltrim($folder, '/');
+            return [
+                'file_name' => $m->file_name,
+                'url'       => asset('storage/' . $folder . '/' . $m->file_name),
+                'caption'   => $m->name ?? null,
+            ];
+        })->values()->toArray();
+
+        return response()->json([
+            'id'    => $g->id,
+            'judul' => $g->judul,
+            'fotos' => $fotos,
+        ]);
+    }
+
 }

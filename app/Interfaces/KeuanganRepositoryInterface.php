@@ -8,7 +8,7 @@ interface KeuanganRepositoryInterface
     public function cekSaldoAwalManual($periode);
     public function simpanKoreksiSaldoAwal($periode, $jumlah, $keterangan = 'Koreksi manual');
     public function getKotakList();
-    public function recountKotak($kotakId);
+    public function recountHari($kotakId);
     public function hitungSaldo($start, $end);
     public function hitungKotak(array $data);
     public function createTransaksi(array $data);

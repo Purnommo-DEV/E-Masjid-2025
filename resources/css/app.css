@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ===========================
+   Custom utilities & overrides
+   =========================== */
+
+@layer components {
+  .form-input {
+    @apply px-3 py-2 border border-gray-200 rounded-md bg-white text-sm;
+  }
+
+  /* jika mau form-select terpisah */
+  .form-select {
+    @apply px-3 py-2 border border-gray-200 rounded-md bg-white text-sm;
+  }
+}
+
+/* DataTables small tweaks — sekarang aman karena .form-input sudah didefinisikan */
+.dataTables_wrapper select,
+.dataTables_wrapper .dataTables_filter input {
+  @apply form-input;
+}

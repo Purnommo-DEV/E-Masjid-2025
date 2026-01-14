@@ -15,42 +15,9 @@ class KeuanganRepository implements KeuanganRepositoryInterface
 {
     public function getKotakList()
     {
-        return KotakInfak::with(['jenis', 'transaksi', 'details', 'media'])
+        return KotakInfak::with(['jenis_kotak', 'transaksi', 'details', 'media'])
             ->orderBy('tanggal', 'desc')
             ->get();
-    }
-
-    public function recountKotak($kotakId)
-    {
-        $kotak = KotakInfak::findOrFail($kotakId);
-
-        if ($kotak->transaksi_id) {
-            throw new \Exception('Kotak sudah dihitung!');
-        }
-
-        // Ambil data dari detail
-        $total = $kotak->details->sum('subtotal');
-        $tanggal = Carbon::parse($kotak->tanggal);
-
-        // Buat transaksi ringkasan
-        $kategori = KategoriKeuangan::firstOrCreate(
-            ['nama' => 'Infak Kotak'], ['tipe' => 'pemasukan']
-        );
-
-        $transaksi = Transaksi::updateOrCreate(
-            ['tanggal' => $tanggal->toDateString(), 'kategori_id' => $kategori->id],
-            [
-                'jumlah' => $total,
-                'deskripsi' => "Infak Kotak Harian ({$tanggal->format('d/m/Y')}): {$kotak->jenis_kotak->nama}: Rp " . number_format($total, 0, ',', '.'),
-                'created_by' => Auth::id(),
-                'bukti_media_id' => $kotak->getFirstMedia('bukti_kotak')?->id
-            ]
-        );
-
-        $kotak->transaksi_id = $transaksi->id;
-        $kotak->save();
-
-        return $transaksi;
     }
 
     public function hitungSaldo($start, $end)
@@ -162,6 +129,65 @@ class KeuanganRepository implements KeuanganRepositoryInterface
         );
     }
 
+    public function recountHari($tanggal)
+    {
+        $tanggal = Carbon::parse($tanggal)->startOfDay();
+
+        return DB::transaction(function () use ($tanggal) {
+            // 1. Ambil semua kotak di tanggal ini
+            $kotakHarian = KotakInfak::whereDate('tanggal', $tanggal->toDateString())
+                ->with(['jenis_kotak', 'details'])
+                ->get();
+
+            if ($kotakHarian->isEmpty()) {
+                throw new \Exception('Tidak ada kotak infak di tanggal ini.');
+            }
+
+            // 2. Hitung total harian
+            $totalHarian = $kotakHarian->sum('total');
+
+            // 3. Buat deskripsi yang jelas + link ke detail (opsional di log)
+            $detailParts = $kotakHarian->map(fn($k) =>
+                "{$k->jenis_kotak->nama}: Rp " . number_format($k->total, 0, ',', '.')
+            )->implode(' | ');
+
+            $deskripsi = "Infak Kotak Harian ({$tanggal->format('d/m/Y')}): {$detailParts} | Total: Rp " . number_format($totalHarian, 0, ',', '.') .
+                         " | Detail kotak tersedia di menu Kotak Infak";
+
+            // 4. Kategori
+            $kategori = KategoriKeuangan::firstOrCreate(
+                ['nama' => 'Infak Kotak'],
+                ['tipe' => 'pemasukan']
+            );
+
+            // 5. Buat/update transaksi (TANPA bukti_media_id!)
+            $transaksi = Transaksi::updateOrCreate(
+                [
+                    'tanggal'     => $tanggal->toDateString(),
+                    'kategori_id' => $kategori->id
+                ],
+                [
+                    'jumlah'     => $totalHarian,
+                    'deskripsi'  => $deskripsi,
+                    'created_by' => auth()->id()
+                ]
+            );
+
+            // 6. Hubungkan semua kotak ke transaksi ini
+            $kotakHarian->each(fn($kotak) => $kotak->update([
+                'transaksi_id' => $transaksi->id
+            ]));
+            
+            return [
+                'transaksi'   => $transaksi,
+                'total'       => $totalHarian,
+                'kotak_count' => $kotakHarian->count(),
+                'message'     => "Berhasil! Rp " . number_format($totalHarian, 0, ',', '.') .
+                                " dari {$kotakHarian->count()} kotak telah dijumlahkan."
+            ];
+        });
+    }
+
     public function hitungKotak(array $data)
     {
         $tanggal = isset($data['tanggal']) ? Carbon::parse($data['tanggal']) : Carbon::now();
@@ -241,7 +267,7 @@ class KeuanganRepository implements KeuanganRepositoryInterface
             }
 
             // 4. Ambil semua kotak harian
-            $kotakHarian = KotakInfak::with('jenis')
+            $kotakHarian = KotakInfak::with('jenis_kotak')
                 ->whereDate('tanggal', $tanggal->toDateString())
                 ->get();
 
@@ -456,7 +482,7 @@ class KeuanganRepository implements KeuanganRepositoryInterface
             'kategori', 
             'media', 
             'creator', 
-            'buktiMedia' // PENTING!
+            'buktiMedia'
         ])->whereBetween('tanggal', [$startDate, $endDate])
           ->orderBy('tanggal', 'asc')
           ->orderBy('id', 'asc')

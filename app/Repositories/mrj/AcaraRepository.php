@@ -44,6 +44,8 @@ class AcaraRepository implements AcaraRepositoryInterface
             'selesai' => $data['selesai'],
             'lokasi' => $data['lokasi'],
             'penyelenggara' => $data['penyelenggara'],
+            'waktu_teks' => $data['waktu_teks'],
+            'pemateri' => $data['pemateri'],
             'is_published' => $data['is_published'] ?? false,
             'published_at' => $data['is_published'] ? now() : null,
             'created_by' => auth()->id(),
@@ -107,6 +109,8 @@ class AcaraRepository implements AcaraRepositoryInterface
             'selesai' => $data['selesai'],
             'lokasi' => $data['lokasi'],
             'penyelenggara' => $data['penyelenggara'],
+            'waktu_teks' => $data['waktu_teks'],
+            'pemateri' => $data['pemateri'],
             'is_published' => $data['is_published'] ?? false,
             'published_at' => $data['is_published'] ? now() : null,
         ]);

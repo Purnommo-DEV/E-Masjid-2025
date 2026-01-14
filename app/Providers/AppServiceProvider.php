@@ -104,14 +104,178 @@ class AppServiceProvider extends ServiceProvider
             return $app->make($class);
         });
 
-        // Binding KeuanganRepositoryInterface dinamis sesuai masjid
-        $this->app->bind(\App\Interfaces\KeuanganRepositoryInterface::class, function ($app) {
+        // Binding KotakInfakRepositoryInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\KotakInfakRepositoryInterface::class, function ($app) {
             $masjidName = masjid();
 
-            $class = "\\App\\Repositories\\{$masjidName}\\KeuanganRepository";
+            $class = "\\App\\Repositories\\{$masjidName}\\KotakInfakRepository";
 
             if (!class_exists($class)) {
-                throw new \Exception("KeuanganRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+                throw new \Exception("KotakInfakRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding AkunKeuanganRepositoryInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\AkunKeuanganRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\AkunKeuanganRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("AkunKeuanganRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding SaldoAwalRepositoryInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\SaldoAwalRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\SaldoAwalRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("SaldoAwalRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding JurnalRepositoryInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\JurnalRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\JurnalRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("JurnalRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding ZakatRepositoryInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\ZakatRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\ZakatRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("ZakatRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding DanaTerikatRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\DanaTerikatRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\DanaTerikatRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("DanaTerikatRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding DanaTerikatReferensiRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\DanaTerikatReferensiRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\DanaTerikatReferensiRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("DanaTerikatReferensiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding BannerRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\BannerRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\BannerRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("BannerRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding LayananRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\LayananRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\LayananRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("LayananRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // resolve BannerService dinamis (sesuai lokasi folder kamu)
+        $this->app->bind(\App\Interfaces\BannerServiceInterface::class, function ($app) {
+            $masjid = masjid(); // contoh: "mrj"
+            $class  = "\\App\\Services\\{$masjid}\\BannerService";
+
+            if (!class_exists($class)) {
+                throw new \Exception("BannerService untuk masjid {$masjid} tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // resolve AcaraService dinamis (sesuai lokasi folder kamu)
+        $this->app->bind(\App\Interfaces\AcaraServiceInterface::class, function ($app) {
+            $masjid = masjid(); // contoh: "mrj"
+            $class  = "\\App\\Services\\{$masjid}\\AcaraService";
+
+            if (!class_exists($class)) {
+                throw new \Exception("AcaraService untuk masjid {$masjid} tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // resolve BeritaService dinamis (sesuai lokasi folder kamu)
+        $this->app->bind(\App\Interfaces\BeritaServiceInterface::class, function ($app) {
+            $masjid = masjid(); // contoh: "mrj"
+            $class  = "\\App\\Services\\{$masjid}\\BeritaService";
+
+            if (!class_exists($class)) {
+                throw new \Exception("BeritaService untuk masjid {$masjid} tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // resolve PengumumanService dinamis (sesuai lokasi folder kamu)
+        $this->app->bind(\App\Interfaces\PengumumanServiceInterface::class, function ($app) {
+            $masjid = masjid(); // contoh: "mrj"
+            $class  = "\\App\\Services\\{$masjid}\\PengumumanService";
+
+            if (!class_exists($class)) {
+                throw new \Exception("PengumumanService untuk masjid {$masjid} tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // resolve GaleriService dinamis (sesuai lokasi folder kamu)
+        $this->app->bind(\App\Interfaces\GaleriServiceInterface::class, function ($app) {
+            $masjid = masjid(); // contoh: "mrj"
+            $class  = "\\App\\Services\\{$masjid}\\GaleriService";
+
+            if (!class_exists($class)) {
+                throw new \Exception("GaleriService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
             return $app->make($class);

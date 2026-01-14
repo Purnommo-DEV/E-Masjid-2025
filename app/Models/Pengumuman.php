@@ -11,9 +11,7 @@ class Pengumuman extends Model implements HasMedia
     use InteractsWithMedia;
 
     protected $table = 'pengumumans';
-    protected $fillable = [
-        'judul', 'isi', 'tipe', 'mulai', 'selesai', 'is_active'
-    ];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'mulai' => 'datetime',

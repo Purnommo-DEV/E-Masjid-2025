@@ -1,27 +1,37 @@
 <!DOCTYPE html>
 <html lang="id">
-{{-- 1. HEAD DINAMIS --}}
-@include(admin_layout('_head'))
 
-{{-- 2. SWEETALERT --}}
-@include('sweetalert::alert')
+<head>
+    {{-- HEAD --}}
+    @include(admin_layout('_head'))
 
-{{-- 3. VITE --}}
-@vite(['resources/js/app.js'])
+    {{-- SWEETALERT --}}
+    @include('sweetalert::alert')
 
-<body class="g-sidenav-show bg-gray-200">
+    {{-- VITE --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+
+<body class="bg-base-200 min-h-screen">
+
+    {{-- SIDEBAR --}}
     @if(Auth::check())
         @include(admin_layout('_sidebar'))
     @endif
 
-    <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
+    {{-- MAIN --}}
+    <main class="main-content min-h-screen transition-all lg:ml-64">
+
         @include(admin_layout('_navbar'))
-        <div class="container-fluid py-4">
+
+        <div class="container mx-auto px-4 py-4">
             @yield('content')
         </div>
     </main>
 
-    {{-- 4. SCRIPT DINAMIS --}}
+    {{-- SCRIPT --}}
+    <script> lucide.createIcons(); </script>
     @include(admin_layout('_script'))
+
 </body>
 </html>

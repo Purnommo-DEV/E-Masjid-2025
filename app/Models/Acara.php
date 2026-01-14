@@ -13,10 +13,7 @@ class Acara extends Model implements HasMedia
     use InteractsWithMedia;
 
     protected $table = 'acaras';
-    protected $fillable = [
-        'judul', 'slug', 'deskripsi', 'mulai', 'selesai', 'lokasi', 'penyelenggara',
-        'is_published', 'published_at', 'created_by'
-    ];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'mulai' => 'datetime',
@@ -53,4 +50,46 @@ class Acara extends Model implements HasMedia
     {
         //
     }
+
+    // --- SCOPES ---
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true)
+                     ->where(function($q){
+                         $q->whereNull('published_at')->orWhere('published_at','<=',now());
+                     });
+    }
+
+    public function scopeUpcoming($query)
+    {
+        return $query->where('mulai','>=',now())
+                     ->orderBy('mulai','asc');
+    }
+
+    protected function waktuFormat(): Attribute
+    {
+        return Attribute::get(function () {
+
+            // 1️⃣ Jika waktu_teks terisi, gunakan selalu itu
+            if ($this->waktu_teks) {
+                return $this->waktu_teks;
+            }
+
+            // 2️⃣ Jika punya mulai & selesai
+            if ($this->mulai && $this->selesai) {
+                if ($this->mulai->isSameDay($this->selesai)) {
+                    return $this->mulai->format('H:i') . ' - ' . $this->selesai->format('H:i');
+                }
+                return $this->mulai->format('d M Y H:i');
+            }
+
+            // 3️⃣ Jika hanya mulai
+            if ($this->mulai) {
+                return $this->mulai->format('H:i');
+            }
+
+            return null;
+        });
+    }
+
 }

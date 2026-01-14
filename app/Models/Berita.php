@@ -13,7 +13,7 @@ class Berita extends Model implements HasMedia
     use InteractsWithMedia;
 
     protected $table = 'beritas';
-    protected $fillable = ['judul', 'slug', 'isi', 'gambar', 'excerpt', 'is_published', 'published_at', 'created_by'];
+    protected $guarded = ['id']; // atau protected $guarded = [];
 
     protected $casts = [
         'published_at' => 'datetime',
