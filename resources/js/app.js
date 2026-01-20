@@ -8,11 +8,6 @@ import.meta.env.VITE_VAPID_PUBLIC_KEY // pastikan ada di .env (VITE_VAPID_PUBLIC
 // Tambahkan log konfirmasi VAPID key di sini (paling atas blok push)
 console.log('VITE_VAPID_PUBLIC_KEY:', import.meta.env.VITE_VAPID_PUBLIC_KEY || 'UNDEFINED / KOSONG');
 
-if (!import.meta.env.VITE_VAPID_PUBLIC_KEY) {
-    console.error('VAPID PUBLIC KEY KOSONG! Cek .env dan restart npm run dev.');
-    return;  // stop eksekusi kalau key kosong
-}
-
 Alpine.plugin(collapse)
 window.Alpine = Alpine
 Alpine.start()
