@@ -20,6 +20,14 @@
     {{-- CSRF TOKEN (butuh untuk form/axios/fetch) --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <link rel="canonical" href="{{ url()->current() }}">
+    
+    <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
+    <meta name="theme-color" content="#059669">
+    <meta name="description" content="Sistem Informasi Masjid - Jadwal Sholat, Donasi, Kajian & Komunitas">
+    <!-- iOS support -->
+    <link rel="apple-touch-icon" href="{{ asset('/pwa/icon-192.png') }}">
+
     {{-- OG TAGS (OPTIONAL, BAGUS UNTUK SHARE LINK) --}}
     <meta property="og:type" content="website">
     <meta property="og:title" content="@yield('title', 'E-Masjid — Sistem Informasi Masjid')">
@@ -44,6 +52,23 @@
 
     {{-- KALAU ADA STYLE TAMBAHAN DI HALAMAN2 TERTENTU --}}
     @stack('head')
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "PlaceOfWorship",
+      "name": "Masjid [Nama]",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "{{ $profil->alamat }}",
+        "addressLocality": "Kota",
+        "addressCountry": "ID"
+      },
+      "openingHours": "Mo-Su 00:00-23:59",  // atau spesifik sholat
+      "telephone": "{{ $profil->telepon }}",
+      "url": "{{ url('/') }}"
+    }
+    </script>
 </head>
 
 <body class="bg-slate-950 text-slate-100 overflow-x-hidden min-h-screen">

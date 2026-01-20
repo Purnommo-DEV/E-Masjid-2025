@@ -147,14 +147,14 @@
 
                 @if($totalPages > 0)
                     <div id="bannerCarousel" class="relative">
-                        <div class="rounded-[2rem] bg-gradient-to-r from-emerald-100/70 via-teal-50 to-sky-100/70 p-4 shadow-[0_18px_45px_rgba(15,118,110,0.18)]">
+                        <div class="rounded-[2rem] bg-gradient-to-r from-emerald-100/70 via-teal-50 to-sky-100/70 p-6 lg:p-8 shadow-[0_18px_45px_rgba(15,118,110,0.18)]">
                             <div class="overflow-hidden rounded-[1.7rem]">
-                                <div class="banner-track flex transition-transform duration-500 ease-out">
+                                <div class="banner-track flex transition-transform duration-700 ease-out snap-x snap-mandatory">
                                     @foreach($pages as $pageBanners)
-                                        <div class="banner-page w-full shrink-0">
-                                            <div class="grid gap-4 lg:gap-6 lg:grid-cols-3">
+                                        <div class="banner-page w-full shrink-0 snap-start px-4 lg:px-8">
+                                            <div class="grid gap-5 lg:gap-8 lg:grid-cols-3">
                                                 @foreach($pageBanners as $banner)
-                                                    <div class="relative rounded-3xl overflow-hidden bg-emerald-700 text-white shadow-xl shadow-emerald-900/40 h-full">
+                                                    <div class="relative rounded-3xl overflow-hidden bg-emerald-700 text-white shadow-xl shadow-emerald-900/40 h-full min-h-[250px] flex flex-col">
                                                         <img
                                                             src="{{ $banner['image'] }}"
                                                             alt="{{ $banner['title'] }}"
@@ -376,36 +376,47 @@
             </div>
         </section>
 
-{{-- SECTION QUOTE HARI INI - AUTO ROTATE DENGAN ANIMASI --}}
-<section class="py-10">
-    <div class="container mx-auto px-4 lg:px-6">
-        <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-6 py-8 shadow-xl relative overflow-hidden">
-            <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-2">Pengingat Harian</p>
+        {{-- SECTION QUOTE HARI INI - AUTO ROTATE DENGAN ANIMASI --}}
+        <section class="py-10">
+            <div class="container mx-auto px-4 lg:px-6">
+                <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-5 sm:px-6 py-6 sm:py-8 shadow-xl relative overflow-hidden">
+                    <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-3">Pengingat Harian</p>
 
-            <!-- Container untuk quote yang akan di-rotate -->
-            <div id="quote-container" class="min-h-[80px] relative">
-                <!-- Quote pertama ditampilkan langsung dari PHP sebagai fallback -->
-                @php
-                    $quotes = [
-                        ['title' => 'QS. Al-Baqarah: 186', 'text' => '“Dan apabila hamba-hamba-Ku bertanya kepadamu tentang Aku, maka (jawablah), bahwasanya Aku dekat. Aku mengabulkan permohonan orang yang berdoa apabila ia memohon kepada-Ku.”'],
-                        ['title' => 'HR. Muslim', 'text' => '“Shalat yang paling utama setelah shalat fardhu adalah shalat malam.”'],
-                        ['title' => 'HR. Tirmidzi', 'text' => '“Senyummu di hadapan saudaramu adalah sedekah.”'],
-                        ['title' => 'QS. Ar-Ra’d: 28', 'text' => '“(yaitu) orang-orang yang beriman dan hati mereka menjadi tenteram dengan mengingat Allah. Ingatlah, hanya dengan mengingat Allah-lah hati menjadi tenteram.”'],
-                        ['title' => 'HR. Bukhari', 'text' => '“Sebaik-baik manusia adalah yang paling bermanfaat bagi manusia lainnya.”'],
-                        ['title' => 'QS. Al-Insyirah: 5-6', 'text' => '“Sesungguhnya bersama kesulitan ada kemudahan. Sesungguhnya bersama kesulitan ada kemudahan.”'],
-                    ];
-                    $initialQuote = $quotes[array_rand($quotes)];
-                @endphp
+                    <!-- Container utama quote – tinggi minimal lebih besar di mobile -->
+                    <div id="quote-container" class="relative min-h-[160px] sm:min-h-[120px] lg:min-h-[100px] overflow-hidden">
+                        <!-- Quote fallback awal -->
+                        @php
+                            $quotes = [
+                                ['title' => 'QS. Al-Baqarah: 186', 'text' => '“Dan apabila hamba-hamba-Ku bertanya kepadamu tentang Aku, maka (jawablah), bahwasanya Aku dekat. Aku mengabulkan permohonan orang yang berdoa apabila ia memohon kepada-Ku.”'],
+                                ['title' => 'HR. Muslim', 'text' => '“Shalat yang paling utama setelah shalat fardhu adalah shalat malam.”'],
+                                ['title' => 'HR. Tirmidzi', 'text' => '“Senyummu di hadapan saudaramu adalah sedekah.”'],
+                                ['title' => 'QS. Ar-Ra’d: 28', 'text' => '“(yaitu) orang-orang yang beriman dan hati mereka menjadi tenteram dengan mengingat Allah. Ingatlah, hanya dengan mengingat Allah-lah hati menjadi tenteram.”'],
+                                ['title' => 'HR. Bukhari', 'text' => '“Sebaik-baik manusia adalah yang paling bermanfaat bagi manusia lainnya.”'],
+                                ['title' => 'QS. Al-Insyirah: 5-6', 'text' => '“Sesungguhnya bersama kesulitan ada kemudahan. Sesungguhnya bersama kesulitan ada kemudahan.”'],
 
-                <!-- Quote awal (fallback jika JS mati) -->
-                <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out">
-                    <h3 class="font-semibold text-base lg:text-lg mt-1">{{ $initialQuote['title'] }}</h3>
-                    <p class="text-base lg:text-lg mt-3 leading-relaxed">{{ $initialQuote['text'] }}</p>
+                                // Tambahan quotes
+                                ['title' => 'QS. Az-Zumar: 53', 'text' => '“Wahai hamba-hamba-Ku yang melampaui batas terhadap diri mereka sendiri! Janganlah kamu berputus asa dari rahmat Allah.”'],
+                                ['title' => 'HR. Ahmad', 'text' => '“Sesungguhnya Allah itu Maha Lembut dan menyukai kelembutan dalam segala urusan.”'],
+                                ['title' => 'QS. Al-Ankabut: 69', 'text' => '“Dan orang-orang yang berjihad untuk (mencari keridaan) Kami, benar-benar akan Kami tunjukkan kepada mereka jalan-jalan Kami.”'],
+                                ['title' => 'HR. Bukhari & Muslim', 'text' => '“Barang siapa yang beriman kepada Allah dan hari akhir, hendaklah ia berkata baik atau diam.”'],
+                                ['title' => 'QS. Al-Ahzab: 70', 'text' => '“Wahai orang-orang yang beriman! Bertakwalah kamu kepada Allah dan ucapkanlah perkataan yang benar.”'],
+                                ['title' => 'HR. Muslim', 'text' => '“Allah tidak melihat rupa dan harta kalian, tetapi Dia melihat hati dan amal kalian.”'],
+                                ['title' => 'QS. Ali-Imran: 139', 'text' => '“Janganlah kamu bersikap lemah dan janganlah pula kamu bersedih hati, padahal kamulah orang-orang yang paling tinggi (derajatnya) jika kamu orang-orang yang beriman.”'],
+                            ];
+                            $initialQuote = $quotes[array_rand($quotes)];
+                        @endphp
+                        <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out flex flex-col">
+                            <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                                {{ $initialQuote['title'] }}
+                            </h3>
+                            <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                                {{ $initialQuote['text'] }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-</section>
+        </section>
 
         {{-- === BERITA & PENGUMUMAN === --}}
         <section class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
@@ -605,6 +616,96 @@
         {{-- === DONASI === --}}
         <section id="donasi" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
             <div class="container mx-auto px-4 lg:px-6">
+
+                <!-- Carousel Ajakan Infaq - Versi Mobile Rapi & Rata Tinggi -->
+                <div id="infaqCarousel" class="relative mb-10 lg:mb-16">
+                    <div class="overflow-hidden rounded-3xl">
+                        <div class="infaq-track flex transition-transform duration-700 ease-out">
+                            
+                            <!-- Slide 1 -->
+                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
+                                <div class="bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-600 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-emerald-500/30 overflow-hidden">
+                                    <div class="flex flex-col items-center justify-center flex-grow">
+                                        <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold mb-4 lg:mb-6 leading-tight">
+                                            Setiap kebaikan kecil yang kita tanam...
+                                        </h3>
+                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-4 sm:line-clamp-none">
+                                            akan tumbuh menjadi <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-5xl mt-2">PAHALA</span>  
+                                            yang menemani kita selamanya.
+                                        </p>
+                                    </div>
+                                    <a href="#rekening" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
+                                        Yuk, Tanam Kebaikan Hari Ini
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 2 -->
+                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
+                                <div class="bg-gradient-to-br from-teal-700 via-emerald-700 to-cyan-700 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-teal-500/30 overflow-hidden">
+                                    <div class="flex flex-col items-center justify-center flex-grow">
+                                        <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold mb-4 lg:mb-6">
+                                            Bayangkan senyuman mereka...
+                                        </h3>
+                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-4 sm:line-clamp-none">
+                                            karena <span class="text-yellow-300">sedekah kecilmu</span> hari ini.  
+                                            Doa mereka menjadi <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-5xl mt-2">pembuka rezeki</span> untukmu.
+                                        </p>
+                                    </div>
+                                    <a href="#qris" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
+                                        Mulai dengan Senyuman
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 3 -->
+                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
+                                <div class="bg-gradient-to-br from-cyan-700 via-teal-700 to-emerald-700 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-cyan-500/30 overflow-hidden">
+                                    <div class="flex flex-col items-center justify-center flex-grow">
+                                        <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold mb-4 lg:mb-6">
+                                            Sedekah itu seperti menabur benih...
+                                        </h3>
+                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-4 sm:line-clamp-none">
+                                            yang Allah rawat sendiri.  
+                                            Hasilnya? <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-5xl mt-2">BERKALI-KALI LIPAT</span>  
+                                            di dunia & akhirat.
+                                        </p>
+                                    </div>
+                                    <a href="#rekening" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
+                                        Tabur Benih Kebaikanmu
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Slide 4 -->
+                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
+                                <div class="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-emerald-500/30 overflow-hidden">
+                                    <div class="flex flex-col items-center justify-center flex-grow">
+                                        <h3 class="text-2xl sm:text-3xl lg:text-5xl font-extrabold mb-4 lg:mb-6">
+                                            Malam ini...  
+                                            <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-6xl mt-2">bisa jadi berkah terindahmu</span>
+                                        </h3>
+                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-3 sm:line-clamp-none">
+                                            Satu langkah kecil, pahala tak terhingga.
+                                        </p>
+                                    </div>
+                                    <a href="#donasi" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-12 py-4 sm:py-6 rounded-full shadow-2xl text-lg sm:text-2xl mt-auto w-full sm:w-auto max-w-xs">
+                                        Ayo, Mulai Dari Hati
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dots Navigation -->
+                    <div class="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
+                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="0"></button>
+                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="1"></button>
+                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="2"></button>
+                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="3"></button>
+                    </div>
+                </div>
+
                 <div class="text-center mb-10">
                     <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-2">Infaq & Donasi</p>
                     <h2 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">
@@ -620,32 +721,54 @@
                     <div class="p-8 lg:p-12">
                         <!-- Rekening Tunggal -->
                         <div class="text-center mb-10">
-                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">
-                                Transfer ke Rekening Resmi Masjid
-                            </h3>
-                            <div class="inline-block bg-emerald-50 rounded-2xl p-6 shadow-inner">
-                                <p class="text-xl font-semibold text-emerald-700 mb-2">Bank BCA</p>
-                                <p class="text-3xl lg:text-4xl font-bold text-slate-900 tracking-wide mb-2">
-                                    1234 5678 9010
+                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Transfer ke Rekening Resmi</h3>
+                            <div class="inline-block bg-emerald-50 rounded-2xl p-5 sm:p-6 shadow-inner w-full max-w-md mx-auto">
+                                <p class="text-lg font-semibold text-emerald-700 mb-2">Bank BCA • 014</p>
+                                
+                                <!-- Nomor rekening + copy – dengan chunking & hint -->
+                                <div class="relative flex items-center justify-center gap-3 mb-3 bg-white/70 rounded-xl px-4 py-3 shadow-sm">
+                                    <p 
+                                        id="rekeningNum" 
+                                        class="text-xl sm:text-2xl font-bold text-slate-900 tracking-widest whitespace-nowrap overflow-x-auto touch-pan-x"
+                                        style="max-width: 75%; scrollbar-width: thin;"
+                                    >
+                                        1234 5678 9010  <!-- sudah ada spasi tiap 4 digit -->
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onclick="copyToClipboard('123456789010')"
+                                        class="btn btn-sm btn-circle bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 tooltip tooltip-bottom before:content-[attr(data-tip)]"
+                                        data-tip="Salin nomor rekening"
+                                    >
+                                        📋
+                                    </button>
+
+                                    <!-- Indikator scroll horizontal kecil (hanya muncul jika overflow) -->
+                                    <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 text-xs text-slate-500 hidden sm:block">
+                                        → geser
+                                    </div>
+                                </div>
+
+                                <!-- Instruksi tambahan untuk user yang mungkin bingung -->
+                                <p class="text-xs text-slate-500 mt-1 italic">
+                                    Tekan lama nomor rekening jika ingin salin manual
                                 </p>
-                                <p class="text-base text-slate-600">
-                                    a/n Takmir Masjid Al-Hidaya
-                                </p>
+
+                                <p class="text-base text-slate-600 mt-2">a/n Takmir Masjid Al-Hidaya</p>
                             </div>
                         </div>
 
                         <!-- QRIS -->
                         <div class="text-center mb-10">
-                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">
-                                Scan QRIS untuk Donasi Instan
-                            </h3>
-                            <div class="mx-auto w-64 h-64 lg:w-72 lg:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100">
-                                <!-- Ganti dengan gambar QRIS asli masjid -->
-                                <img src="{{ asset('images/qris-masjid.png') }}" alt="QRIS Donasi Masjid Al-Hidaya" class="w-full h-full object-contain">
+                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Scan QRIS Instan</h3>
+                            <div class="mx-auto w-64 h-64 sm:w-72 sm:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100 relative">
+                                <img src="{{ asset('images/qris-masjid.png') }}" alt="QRIS Donasi" class="w-full h-full object-contain">
+                                <a href="{{ asset('images/qris-masjid.png') }}" download="QRIS_Masjid_Al-Hidaya.png"
+                                   class="absolute -bottom-4 left-1/2 -translate-x-1/2 btn btn-sm bg-emerald-600 text-white shadow-md">
+                                    Simpan QRIS
+                                </a>
                             </div>
-                            <p class="text-sm text-slate-600 mt-4">
-                                Scan dengan GoPay, OVO, Dana, ShopeePay, atau aplikasi dompet digital lainnya
-                            </p>
+                            <p class="text-sm text-slate-600 mt-6">Konfirmasi via WhatsApp setelah transfer</p>
                         </div>
 
                         <!-- Quotes tentang Sedekah / Infaq -->
@@ -669,10 +792,10 @@
 
                         <!-- CTA Besar -->
                         <div class="text-center mt-10">
-                            <a href="https://wa.me/6281234567890?text=Assalamu'alaikum%20saya%20ingin%20donasi%20untuk%20masjid" 
-                               target="_blank" 
-                               class="inline-flex items-center px-12 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-2xl hover:shadow-3xl transition transform hover:-translate-y-1 text-xl">
-                                <span class="mr-4 text-2xl">💚</span> Donasi Sekarang via WhatsApp
+                            <a href="https://wa.me/6281234567890?text=Assalamu'alaikum%20saya%20ingin%20donasi..."
+                               target="_blank"
+                               class="inline-flex items-center px-8 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-full shadow-2xl text-lg sm:text-xl">
+                                💚 Donasi via WhatsApp
                             </a>
                             <p class="text-sm text-slate-600 mt-4">
                                 Konfirmasi donasi melalui WA untuk mendapatkan laporan penyaluran. Jazakumullah khairan.
@@ -780,128 +903,127 @@
         </section>
 
         {{-- === KONTAK === --}}
-{{-- SECTION KONTAK - Versi Seimbang --}}
-<section id="kontak" class="py-16 bg-gradient-to-br from-slate-50 to-white">
-    <div class="container mx-auto px-4 lg:px-6">
-        <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
-            <!-- Kolom Kiri: Lokasi & Maps -->
-            <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg overflow-hidden flex flex-col min-h-[520px] lg:min-h-[580px]">
-                <div class="p-6 lg:p-8 border-b border-emerald-100/50">
-                    <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Lokasi</p>
-                    <h2 class="text-2xl lg:text-3xl font-bold text-slate-900">Lokasi Masjid</h2>
-                    <p class="text-base text-slate-600 mt-3 leading-relaxed">
-                        {{ $profil->alamat ?? 'Alamat belum tersedia. Hubungi kami untuk info lebih lanjut.' }}
-                    </p>
-                </div>
+        <section id="kontak" class="py-16 bg-gradient-to-br from-slate-50 to-white">
+            <div class="container mx-auto px-4 lg:px-6">
+                <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
+                    <!-- Kolom Kiri: Lokasi & Maps -->
+                        <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg p-6 lg:p-10">
+                            <div class="mb-6">
+                                <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Kontak</p>
+                                <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Hubungi Kami</h2>
+                                <p class="text-base text-slate-600 mt-3 leading-relaxed">
+                                    {{ $profil->alamat ?? 'Alamat belum tersedia. Hubungi kami untuk info lebih lanjut.' }}
+                                </p>
+                            </div>
 
-                <div class="flex-1 bg-slate-50">
-                    @if(!empty($profil->latitude) && !empty($profil->longitude))
-                        <iframe
-                            class="w-full h-full min-h-[400px]"
-                            frameborder="0"
-                            style="border:0"
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0000000000005!2d106.80000000000001!3d-6.200000000000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTInMDAuMCJTIDEwNsKwNDgnMDAuMCJF!5e0!3m2!1sid!2sid!4v{{ time() }}"
-                            allowfullscreen=""
-                            loading="lazy">
-                        </iframe>
-                    @else
-                        <div class="w-full h-full min-h-[400px] flex items-center justify-center text-slate-400 text-lg bg-slate-100">
-                            Peta Masjid Belum Tersedia
+                            <div class="flex-1 bg-slate-50">
+                                @if(!empty($profil->latitude) && !empty($profil->longitude))
+                                    <iframe
+                                        class="w-full h-full min-h-[400px]"
+                                        frameborder="0"
+                                        style="border:0"
+                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0000000000005!2d106.80000000000001!3d-6.200000000000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTInMDAuMCJTIDEwNsKwNDgnMDAuMCJF!5e0!3m2!1sid!2sid!4v{{ time() }}"
+                                        allowfullscreen=""
+                                        loading="lazy">
+                                    </iframe>
+                                @else
+                                    <div class="w-full h-full min-h-[400px] flex items-center justify-center text-slate-400 text-lg bg-slate-100">
+                                        Peta Masjid Belum Tersedia
+                                    </div>
+                                @endif
+                            </div>
                         </div>
-                    @endif
+
+                        <!-- Kolom Kanan: Kontak & Form Pesan -->
+                        <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg p-6 lg:p-10">
+                            <div class="mb-6">
+                                <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Kontak</p>
+                                <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Kontak & Pesan Jamaah</h2>
+                            <div class="space-y-4 text-base text-slate-700">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl text-emerald-600">📞</span>
+                                    <span>WhatsApp: <strong class="text-emerald-700">{{ $profil->telepon ?? ($profil->no_wa ?? '-') }}</strong></span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl text-emerald-600">✉️</span>
+                                    <span>Email: <strong class="text-emerald-700">{{ $profil->email ?? '-' }}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Pesan - Sudah Diperbaiki -->
+                        <form id="contactForm" class="mt-3 space-y-6 bg-white">
+                            @csrf
+
+                            <!-- Nama -->
+                            <div class="form-control">
+                                <label class="label pb-1">
+                                    <span class="label-text font-semibold text-slate-800">Nama Anda <span class="text-red-500">*</span></span>
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        type="text"
+                                        name="nama"
+                                        id="contactNama"
+                                        required
+                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                        placeholder="Masukkan nama lengkap"
+                                    />
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👤</span>
+                                </div>
+                            </div>
+
+                            <!-- Telepon -->
+                            <div class="form-control">
+                                <label class="label pb-1">
+                                    <span class="label-text font-semibold text-slate-800">Nomor Telepon (opsional)</span>
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        type="text"
+                                        name="telepon"
+                                        id="contactTelp"
+                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                        placeholder="Contoh: 08123456789"
+                                    />
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
+                                </div>
+                            </div>
+
+                            <!-- Pesan -->
+                            <div class="form-control">
+                                <label class="label pb-1">
+                                    <span class="label-text font-semibold text-slate-800">Pesan atau Saran <span class="text-red-500">*</span></span>
+                                </label>
+                                <div class="relative">
+                                    <textarea
+                                        name="pesan"
+                                        id="contactPesan"
+                                        rows="5"
+                                        required
+                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
+                                        placeholder="Ketik pesan atau saran Anda di sini..."
+                                    ></textarea>
+                                    <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">💬</span>
+                                </div>
+                            </div>
+
+                            <!-- Button & Status -->
+                            <div class="flex items-center justify-between pt-4">
+                                <button
+                                    id="contactSubmitBtn"
+                                    type="submit"
+                                    class="px-10 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base"
+                                >
+                                    Kirim Pesan
+                                </button>
+                                <div id="contactStatus" class="text-sm text-slate-600 ml-4"></div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-
-            <!-- Kolom Kanan: Kontak & Form Pesan -->
-            <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg p-6 lg:p-8 min-h-[520px] lg:min-h-[580px] flex flex-col">
-                <div class="mb-2">
-                    <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Kontak</p>
-                    <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Kontak & Pesan Jamaah</h2>
-                    <div class="space-y-4 text-base text-slate-700">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl text-emerald-600">📞</span>
-                            <span>WhatsApp: <strong class="text-emerald-700">{{ $profil->telepon ?? ($profil->no_wa ?? '-') }}</strong></span>
-                        </div>
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl text-emerald-600">✉️</span>
-                            <span>Email: <strong class="text-emerald-700">{{ $profil->email ?? '-' }}</strong></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Form Pesan - Sudah Diperbaiki -->
-                <form id="contactForm" class="mt-6 space-y-6 bg-white p-7 lg:p-8 rounded-2xl border-2 border-emerald-100/70 shadow-lg">
-                    @csrf
-
-                    <!-- Nama -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Nama Anda <span class="text-red-500">*</span></span>
-                        </label>
-                        <div class="relative">
-                            <input
-                                type="text"
-                                name="nama"
-                                id="contactNama"
-                                required
-                                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                placeholder="Masukkan nama lengkap"
-                            />
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👤</span>
-                        </div>
-                    </div>
-
-                    <!-- Telepon -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Nomor Telepon (opsional)</span>
-                        </label>
-                        <div class="relative">
-                            <input
-                                type="text"
-                                name="telepon"
-                                id="contactTelp"
-                                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                placeholder="Contoh: 08123456789"
-                            />
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
-                        </div>
-                    </div>
-
-                    <!-- Pesan -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Pesan atau Saran <span class="text-red-500">*</span></span>
-                        </label>
-                        <div class="relative">
-                            <textarea
-                                name="pesan"
-                                id="contactPesan"
-                                rows="5"
-                                required
-                                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 focus:border-opacity-100 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
-                                placeholder="Ketik pesan atau saran Anda di sini..."
-                            ></textarea>
-                            <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">💬</span>
-                        </div>
-                    </div>
-
-                    <!-- Button & Status -->
-                    <div class="flex items-center justify-between pt-4">
-                        <button
-                            id="contactSubmitBtn"
-                            type="submit"
-                            class="px-10 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base"
-                        >
-                            Kirim Pesan
-                        </button>
-                        <div id="contactStatus" class="text-sm text-slate-600 ml-4"></div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
+        </section>
 
         {{-- FLOATING WA --}}
         @php $wa = preg_replace('/[^0-9]/','',$profil->telepon??'6281234567890'); @endphp
@@ -944,6 +1066,13 @@
         h1, h2, h3 {
             font-feature-settings: "cv01", "ss01";
             color: #065f46; /* emerald-900 lebih hidup */
+        }
+
+        .banner-track {
+            scroll-snap-type: x mandatory;
+        }
+        .banner-page {
+            scroll-snap-align: start;
         }
 
         /* ==================== JADWAL SHOLAT - Responsif + Lebih Berwarna ==================== */
@@ -1148,11 +1277,93 @@
             border-color: #10b981;
         }
 
+        /* Quote text – area yang bisa discroll jika terlalu panjang */
+        .quote-text {
+            max-height: 11rem;           /* ~10-12 baris di mobile – sesuaikan selera */
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;   /* smooth scroll di iOS */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.5) transparent;
+            padding-right: 0.25rem;      /* ruang untuk scrollbar */
+        }
+
+        /* Hilangkan scrollbar default di WebKit (Chrome, Safari) agar lebih clean */
+        .quote-text::-webkit-scrollbar {
+            width: 5px;
+        }
+        .quote-text::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .quote-text::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.5);
+            border-radius: 10px;
+        }
+        .quote-text::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.8);
+        }
+
+        /* Di desktop – biarkan teks mengembang tanpa batas tinggi */
+        @media (min-width: 640px) {
+            .quote-text {
+                max-height: none;
+                overflow-y: visible;
+            }
+        }
+
+        /* Animasi pergantian lebih mulus – container ikut menyesuaikan tinggi */
+        #quote-container {
+            transition: min-height 0.6s ease-out;
+        }
         /* Quote - Gradient Lebih Kuat */
         #quote-container .quote-item {
             background: linear-gradient(135deg, rgba(5,150,105,0.97), rgba(13,148,136,0.97));
         }
 
+        #quote-container p {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        @media (max-width: 640px) {
+            #quote-container {
+                min-height: 160px !important;
+            }
+            #quote-container p {
+                max-height: 9rem;
+                overflow-y: auto;
+            }
+        }
+
+        #rekeningNum {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: #10b981 transparent;
+        }
+
+        #rekeningNum::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        #rekeningNum::-webkit-scrollbar-thumb {
+            background: #10b981;
+            border-radius: 10px;
+        }
+
+        /* Tampilkan indikator scroll hanya jika benar-benar overflow */
+        @media (max-width: 400px) {
+            #rekeningNum.overflow-scroll {
+                position: relative;
+            }
+            #rekeningNum.overflow-scroll::after {
+                content: "→ geser";
+                position: absolute;
+                right: 8px;
+                top: 50%;
+                transform: translateY(-50%);
+                font-size: 10px;
+                color: rgba(255,255,255,0.7);
+                pointer-events: none;
+            }
+        }
         /* Kontak - Form Lebih Berwarna */
         #kontak input,
         #kontak textarea {
@@ -1165,6 +1376,39 @@
         #kontak textarea:focus {
             border-color: #059669;
             box-shadow: 0 0 0 4px rgba(5,150,105,0.18);
+        }
+
+        #kontak form {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            padding: 0;
+        }
+
+        .infaq-track > div {
+            padding: 0 1rem; /* jarak antar slide lebih jelas */
+        }
+
+        .infaq-track {
+            scroll-snap-type: x mandatory;
+        }
+
+        .infaq-dot.w-4, .infaq-dot[data-active="true"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            background-color: #10b981 !important;
+        }
+
+        @media (max-width: 640px) {
+            #infaqCarousel .min-h-[420px] {
+                min-height: 420px !important;
+            }
+            #infaqCarousel p {
+                font-size: 1.125rem; /* text-lg lebih kecil di mobile */
+            }
+            #infaqCarousel h3 {
+                font-size: 1.5rem; /* text-2xl lebih kecil */
+            }
         }
 
         /* Galeri - Hover Lebih Hidup */
@@ -1181,48 +1425,167 @@
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const quotes = @json($quotes); // ambil array quotes dari PHP
-    const container = document.getElementById('quote-container');
-    let currentIndex = 0;
+        document.addEventListener('DOMContentLoaded', function () {
+            const quotes = @json($quotes); // ambil array quotes dari PHP
+            const container = document.getElementById('quote-container');
+            let currentIndex = 0;
 
-    // Fungsi untuk membuat elemen quote baru
-    function createQuoteElement(quote) {
-        const div = document.createElement('div');
-        div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out';
-        div.innerHTML = `
-            <h3 class="font-semibold text-base lg:text-lg mt-1">${quote.title}</h3>
-            <p class="text-base lg:text-lg mt-3 leading-relaxed">${quote.text}</p>
-        `;
-        return div;
-    }
+            // Fungsi untuk membuat elemen quote baru
+            function createQuoteElement(quote) {
+                const div = document.createElement('div');
+                div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out flex flex-col';
+                div.innerHTML = `
+                    <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                        ${quote.title}
+                    </h3>
+                    <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                        ${quote.text}
+                    </div>
+                `;
+                return div;
+            }
 
-    // Fungsi untuk ganti quote dengan animasi
-    function rotateQuote() {
-        const oldQuote = container.querySelector('.quote-item.opacity-100');
-        if (oldQuote) {
-            oldQuote.classList.remove('opacity-100', 'translate-y-0');
-            oldQuote.classList.add('opacity-0', '-translate-y-4');
-            setTimeout(() => oldQuote.remove(), 800); // hapus setelah animasi selesai
+            // Fungsi untuk ganti quote dengan animasi
+            function rotateQuote() {
+                const oldQuote = container.querySelector('.quote-item.opacity-100');
+                if (oldQuote) {
+                    oldQuote.classList.remove('opacity-100', 'translate-y-0');
+                    oldQuote.classList.add('opacity-0', '-translate-y-4');
+                    setTimeout(() => oldQuote.remove(), 800); // hapus setelah animasi selesai
+                }
+
+                currentIndex = (currentIndex + 1) % quotes.length;
+                const newQuote = createQuoteElement(quotes[currentIndex]);
+                container.appendChild(newQuote);
+
+                // Trigger animasi masuk
+                setTimeout(() => {
+                    newQuote.classList.remove('opacity-0', 'translate-y-4');
+                    newQuote.classList.add('opacity-100', 'translate-y-0');
+                }, 50);
+            }
+
+            // Mulai rotasi setiap 6 detik (ubah sesuai keinginan)
+            setInterval(rotateQuote, 6000);
+
+            // Optional: Rotasi pertama setelah 4 detik (biar tidak langsung ganti)
+            setTimeout(rotateQuote, 4000);
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const infaqCarousel = document.getElementById('infaqCarousel');
+            if (!infaqCarousel) return;
+
+            const track = infaqCarousel.querySelector('.infaq-track');
+            const dots = infaqCarousel.querySelectorAll('.infaq-dot');
+            let current = 0;
+            const total = dots.length;
+            let timer = null;
+
+            function setDot(i) {
+                dots.forEach((d, idx) => {
+                    d.classList.toggle('bg-emerald-600', idx === i);
+                    d.classList.toggle('bg-emerald-300', idx !== i);
+                    d.classList.toggle('w-4', idx === i);
+                    d.classList.toggle('h-4', idx === i);
+                });
+            }
+
+            function go(index) {
+                if (index < 0) index = total - 1;
+                if (index >= total) index = 0;
+                track.style.transform = `translateX(-${index * 100}%)`;
+                setDot(index);
+                current = index;
+            }
+
+            function startAuto() {
+                stopAuto();
+                timer = setInterval(() => go(current + 1), 6000); // 6 detik per slide
+            }
+
+            function stopAuto() {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+            }
+
+            dots.forEach(dot => {
+                dot.addEventListener('click', () => {
+                    go(parseInt(dot.dataset.index));
+                    startAuto();
+                });
+            });
+
+            infaqCarousel.addEventListener('mouseenter', stopAuto);
+            infaqCarousel.addEventListener('mouseleave', startAuto);
+            infaqCarousel.addEventListener('touchstart', stopAuto);
+            infaqCarousel.addEventListener('touchend', startAuto);
+
+            // Mulai
+            go(0);
+            startAuto();
+        });
+
+        function copyToClipboard(text) {
+            const el = document.getElementById('rekeningNum');
+            if (!el) return;
+
+            // Simpan original untuk feedback
+            const originalColor = el.style.color || '';
+
+            // Fungsi feedback sukses
+            function showSuccess() {
+                el.style.color = '#10b981';
+                el.classList.add('font-medium');
+                setTimeout(() => {
+                    el.style.color = originalColor;
+                    el.classList.remove('font-medium');
+                }, 2500);
+            }
+
+            // Coba modern Clipboard API dulu
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(showSuccess)
+                    .catch(err => {
+                        console.warn('Clipboard API gagal:', err);
+                        fallbackCopy();
+                    });
+            } else {
+                // Langsung fallback jika API tidak ada
+                fallbackCopy();
+            }
+
+            function fallbackCopy() {
+                // Buat textarea sementara
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // Untuk mobile
+
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showSuccess();
+                    } else {
+                        alert('Gagal menyalin otomatis. Tekan lama nomor rekening lalu pilih "Salin".');
+                    }
+                } catch (err) {
+                    console.error('Fallback copy gagal:', err);
+                    alert('Gagal menyalin. Tekan lama nomor rekening lalu pilih "Salin".');
+                }
+
+                document.body.removeChild(textarea);
+            }
         }
 
-        currentIndex = (currentIndex + 1) % quotes.length;
-        const newQuote = createQuoteElement(quotes[currentIndex]);
-        container.appendChild(newQuote);
-
-        // Trigger animasi masuk
-        setTimeout(() => {
-            newQuote.classList.remove('opacity-0', 'translate-y-4');
-            newQuote.classList.add('opacity-100', 'translate-y-0');
-        }, 50);
-    }
-
-    // Mulai rotasi setiap 6 detik (ubah sesuai keinginan)
-    setInterval(rotateQuote, 6000);
-
-    // Optional: Rotasi pertama setelah 4 detik (biar tidak langsung ganti)
-    setTimeout(rotateQuote, 4000);
-});
         // buka modal menggunakan atribut data dari tombol (sudah ada fungsi openPengumumanPreview sebelumnya)
         function openPengumumanPreview(btn) {
             const title = btn.getAttribute('data-pengumuman-judul') || '';
