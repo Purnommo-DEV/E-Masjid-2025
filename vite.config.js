@@ -104,7 +104,7 @@ export default defineConfig({
     },
 
     build: {
-        outDir: 'public/build',
+        outDir: 'public/.vite',
         assetsDir: 'assets',
         manifest: true,
     }
