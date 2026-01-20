@@ -12,9 +12,12 @@ export default defineConfig({
         VitePWA({
             registerType: 'autoUpdate',
             devOptions: {
-                enabled: true,  // Aktifkan PWA di dev mode (npm run dev)
+            // ⛔ JANGAN aktifkan PWA saat build production
+                enabled: false,  // Aktifkan PWA di dev mode (npm run dev)
+                // enabled: true,  // Aktifkan PWA di dev mode (npm run dev)                
                 navigateFallback: '/offline.html',  // Halaman fallback offline
             },
+            buildBase: '/build/',   // 🔴 INI KUNCI UTAMA
             includeAssets: [
                 'favicon.ico',
                 'apple-touch-icon.png',
@@ -104,7 +107,7 @@ export default defineConfig({
     },
 
     build: {
-        outDir: 'public/.vite',
+        outDir: 'public/build',
         assetsDir: 'assets',
         manifest: true,
     }
