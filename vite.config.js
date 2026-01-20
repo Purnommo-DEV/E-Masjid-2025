@@ -105,10 +105,4 @@ export default defineConfig({
             host: '192.168.1.14', // IP lokal kamu
         },
     },
-
-    build: {
-        outDir: 'public/build',
-        assetsDir: 'assets',
-        manifest: true,
-    }
 });
