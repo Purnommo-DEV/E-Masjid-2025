@@ -13,50 +13,46 @@ Alpine.start()
 
 if ('serviceWorker' in navigator && 'PushManager' in window) {
     window.addEventListener('load', async () => {
-        try {
-            console.log('Mulai register SW...');
-            const reg = await navigator.serviceWorker.register('/sw.js');
-            console.log('Service Worker registered', reg);
+        console.log('Mulai register SW...');
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        console.log('Service Worker registered', reg);
 
-            console.log('Request izin notifikasi...');
-            const permission = await Notification.requestPermission();
-            console.log('Permission status:', permission);
+        console.log('Request izin notifikasi...');
+        const permission = await Notification.requestPermission();
+        console.log('Permission status:', permission);
 
-            if (permission !== 'granted') {
-                console.log('Izin notifikasi ditolak atau default');
-                return;
-            }
+        if (permission !== 'granted') {
+            console.log('Izin notifikasi ditolak atau default');
+            return;
+        }
 
-            console.log('Cek subscription existing...');
-            let sub = await reg.pushManager.getSubscription();
-            if (!sub) {
-                console.log('Subscribe baru...');
-                sub = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY)
-                });
-                console.log('Subscription baru:', sub);
-            } else {
-                console.log('Subscription existing:', sub);
-            }
-
-            console.log('Kirim subscription ke server...');
-            const response = await fetch('/api/push/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify(sub)
+        console.log('Cek subscription existing...');
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+            console.log('Subscribe baru...');
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(import.meta.env.VITE_VAPID_PUBLIC_KEY)
             });
+            console.log('Subscription baru:', sub);
+        } else {
+            console.log('Subscription existing:', sub);
+        }
 
-            if (response.ok) {
-                console.log('Subscription berhasil dikirim ke server');
-            } else {
-                console.error('Gagal kirim subscription:', await response.text());
-            }
-        } catch (err) {
-            console.error('Push registration gagal di tahap:', err);
+        console.log('Kirim subscription ke server...');
+        const response = await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify(sub)
+        });
+
+        if (response.ok) {
+            console.log('Subscription berhasil dikirim ke server');
+        } else {
+            console.error('Gagal kirim subscription:', await response.text());
         }
     });
 }
