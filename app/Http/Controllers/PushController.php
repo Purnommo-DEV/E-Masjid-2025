@@ -32,10 +32,15 @@ class PushController extends Controller
     // Fungsi statis untuk kirim notif (bisa dipanggil dari mana saja)
     public static function send($title, $body, $url = '/', $endpoint = null, $keys = null)
     {
-        \Log::info('Mulai kirim push', compact('title', 'body', 'endpoint'));
+        \Log::info('Mulai kirim push notification', [
+            'title' => $title,
+            'endpoint' => $endpoint,
+            'p256dh' => substr($keys['p256dh'] ?? '', 0, 10) . '...',  // sensor
+            'auth' => substr($keys['auth'] ?? '', 0, 10) . '...',
+        ]);
 
         if (!$endpoint || empty($keys['p256dh']) || empty($keys['auth'])) {
-            \Log::warning('Subscription tidak lengkap');
+            \Log::warning('Data subscription tidak lengkap');
             return false;
         }
 
@@ -61,14 +66,21 @@ class PushController extends Controller
             'url' => $url,
         ]);
 
-        $report = $webPush->sendOneNotification($subscription, $payload);
-
-        if ($report->isSuccess()) {
-            \Log::info('Push berhasil ke: ' . $endpoint);
-        } else {
-            \Log::error('Push gagal: ' . $report->getReason());
+        try {
+            $report = $webPush->sendOneNotification($subscription, $payload);
+            if ($report->isSuccess()) {
+                \Log::info('Push berhasil terkirim ke endpoint: ' . $endpoint);
+            } else {
+                \Log::error('Push gagal terkirim', [
+                    'reason' => $report->getReason(),
+                    'endpoint' => $endpoint,
+                    'status_code' => $report->getResponse()->getStatusCode(),
+                ]);
+            }
+            return $report->isSuccess();
+        } catch (\Exception $e) {
+            \Log::error('Exception saat kirim push: ' . $e->getMessage());
+            return false;
         }
-
-        return $report->isSuccess();
     }
 }
