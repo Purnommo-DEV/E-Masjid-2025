@@ -34,7 +34,7 @@ function initPushNotifications() {
     window.addEventListener('load', async () => {
         try {
             console.log('Register service worker...');
-            const registration = await navigator.serviceWorker.register('/build/sw.js');
+            const registration = await navigator.serviceWorker.register('/sw.js');
             console.log('Service Worker registered:', registration);
 
             const permission = await Notification.requestPermission();
