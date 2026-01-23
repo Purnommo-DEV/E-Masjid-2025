@@ -4,9 +4,16 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Interfaces\MasjidRepositoryInterface;
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
+
+    protected $listen = [
+        \App\Events\AcaraPublished::class => [
+            \App\Listeners\SendAcaraPublishedNotification::class,
+        ],
+    ];
     /**
      * Register any application services.
      */
@@ -287,6 +294,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Paksa HTTPS kalau lewat Cloudflare / tunnel
+        if (request()->header('x-forwarded-proto') === 'https') {
+            URL::forceScheme('https');
+        }
     }
+
+
 }

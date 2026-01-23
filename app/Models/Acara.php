@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Events\AcaraPublished;
 
 class Acara extends Model implements HasMedia
 {
@@ -30,6 +31,31 @@ class Acara extends Model implements HasMedia
             $acara->created_by = auth()->id();
         });
     }
+
+    protected static function booted()
+    {
+        // set published_at otomatis
+        static::updating(function ($acara) {
+            if (
+                $acara->isDirty('is_published') &&
+                $acara->is_published === true &&
+                $acara->getOriginal('is_published') === false
+            ) {
+                $acara->published_at = now();
+            }
+        });
+
+        // trigger event saat publish pertama
+        static::updated(function ($acara) {
+            if (
+                $acara->wasChanged('is_published') &&
+                $acara->is_published === true
+            ) {
+                event(new AcaraPublished($acara));
+            }
+        });
+    }
+
 
     public function kategoris()
     {

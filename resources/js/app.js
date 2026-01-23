@@ -1,106 +1,98 @@
-// resources/js/app.js
-import '../css/app.css';
+import '../css/app.css'
 
-import Alpine from 'alpinejs';
-import collapse from '@alpinejs/collapse';
+import Alpine from 'alpinejs'
+import collapse from '@alpinejs/collapse'
 
-Alpine.plugin(collapse);
-window.Alpine = Alpine;
-Alpine.start();
+Alpine.plugin(collapse)
+window.Alpine = Alpine
+Alpine.start()
 
 /**
- * ===== PUSH NOTIFICATION SETUP =====
+ * 🔥 REGISTER SERVICE WORKER (WAJIB)
  */
-function initPushNotifications() {
-    const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+async function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return null
+
+    try {
+        const registration = await navigator.serviceWorker.register('/push-sw.js')
+
+        console.log('Service Worker registered:', registration)
+        return registration
+    } catch (err) {
+        console.error('SW register gagal:', err)
+        return null
+    }
+}
+
+async function initPushNotifications() {
+    const VAPID_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY
 
     console.log(
         'VITE_VAPID_PUBLIC_KEY:',
         VAPID_KEY ? 'OK (loaded)' : '❌ UNDEFINED / KOSONG'
-    );
+    )
 
-    // Guard environment
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        console.warn('Browser tidak mendukung Service Worker / Push');
-        return;
+    if (!('PushManager' in window)) {
+        console.warn('PushManager tidak didukung')
+        return
     }
 
-    // Guard VAPID
     if (!VAPID_KEY) {
-        console.error('VAPID Public Key belum diset di .env');
-        return;
+        console.error('VAPID Public Key belum diset')
+        return
     }
 
-    window.addEventListener('load', async () => {
-        try {
-            console.log('Register service worker...');
-            const registration = await navigator.serviceWorker.register('/build/sw.js');
-            console.log('Service Worker registered:', registration);
+    try {
+        console.log('Register Service Worker...')
+        const registration = await registerServiceWorker()
 
-            const permission = await Notification.requestPermission();
-            console.log('Notification permission:', permission);
+        if (!registration) {
+            console.error('Service Worker tidak terdaftar')
+            return
+        }
 
-            if (permission !== 'granted') {
-                console.warn('Izin notifikasi tidak diberikan');
-                return;
-            }
+        console.log('Service Worker aktif')
 
-            let subscription = await registration.pushManager.getSubscription();
+        const permission = await Notification.requestPermission()
+        console.log('Notification permission:', permission)
 
-            if (!subscription) {
-                console.log('Membuat subscription baru...');
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
-                });
-            } else {
-                console.log('Subscription sudah ada');
-            }
+        if (permission !== 'granted') return
 
-            const payload = {
+        let subscription = await registration.pushManager.getSubscription()
+
+        if (!subscription) {
+            console.log('Membuat subscription baru...')
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(VAPID_KEY),
+            })
+        }
+
+        await fetch('/api/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 endpoint: subscription.endpoint,
                 keys: subscription.toJSON().keys,
-            };
+                zona_waktu: 'WIB',
+                kota: 'Jakarta',
+            }),
+        })
 
-            console.log('Kirim subscription ke server:', payload);
-
-            const response = await fetch('/api/push/subscribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            if (!response.ok) {
-                throw new Error(await response.text());
-            }
-
-            console.log('✅ Subscription berhasil disimpan di server');
-        } catch (error) {
-            console.error('❌ Push setup error:', error);
-        }
-    });
+        console.log('✅ Subscription berhasil disimpan')
+    } catch (err) {
+        console.error('❌ Push setup error:', err)
+    }
 }
 
-// Jalankan (tanpa return di top-level)
-initPushNotifications();
+window.addEventListener('load', initPushNotifications)
 
-/**
- * Helper untuk convert VAPID public key
- */
 function urlBase64ToUint8Array(base64String) {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
     const base64 = (base64String + padding)
         .replace(/-/g, '+')
-        .replace(/_/g, '/');
+        .replace(/_/g, '/')
 
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-
-    return outputArray;
+    const rawData = window.atob(base64)
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)))
 }

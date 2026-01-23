@@ -13,9 +13,11 @@ class UserSubscription extends Model
         'endpoint',
         'keys',
         'user_id',
+        'zona_waktu',
+        'kota',
     ];
 
     protected $casts = [
-        'keys' => 'array',  // biar json_decode otomatis jadi array
+        'keys' => 'array',
     ];
 }

@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite';
-import laravel from 'laravel-vite-plugin';
-import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vite'
+import laravel from 'laravel-vite-plugin'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
     plugins: [
@@ -10,13 +10,17 @@ export default defineConfig({
         }),
 
         VitePWA({
-            strategies: 'injectManifest',
-            srcDir: 'resources/js',
-            filename: 'sw.js',
+            strategies: 'generateSW',
+
             registerType: 'autoUpdate',
 
             devOptions: {
                 enabled: false,
+            },
+
+            workbox: {
+                skipWaiting: true,
+                clientsClaim: true,
             },
 
             manifest: {
@@ -35,12 +39,4 @@ export default defineConfig({
             },
         }),
     ],
-
-    server: {
-        host: '0.0.0.0',
-        port: 5173,
-        hmr: {
-            host: '192.168.1.14',
-        },
-    },
-});
+})
