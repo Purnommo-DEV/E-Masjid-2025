@@ -9,7 +9,7 @@ return [
         'primary_color' => '#059669',
         'gradient_from' => '#ecfdf5',
         'gradient_to'   => '#a7f3d0',
-        'logo_path'     => '/pwa/icon-192.png',           // atau path gambar: '/icons/rjtce-logo.png'
+        'logo_path'     => '/pwa/icon-96.png',           // atau path gambar: '/icons/rjtce-logo.png'
         'loading_color' => 'emerald-600',
     ],
 
@@ -21,8 +21,8 @@ return [
         'primary_color' => '#10b981',
         'gradient_from' => '#f0fdfa',
         'gradient_to'   => '#99f6e4',
-        'logo_path'     => '/pwa/icon-192.png',
-        'loading_color' => 'teal-600',
+        'logo_path'     => '/pwa/icon-96.png',
+        'loading_color' => 'cyan-600',
     ],
 
     'muh' => [
@@ -33,7 +33,7 @@ return [
         'primary_color' => '#0ea5e9',
         'gradient_from' => '#f0f9ff',
         'gradient_to'   => '#bae6fd',
-        'logo_path'     => '/pwa/icon-192.png',
+        'logo_path'     => '/pwa/icon-96.png',
         'loading_color' => 'cyan-600',
     ],
 
