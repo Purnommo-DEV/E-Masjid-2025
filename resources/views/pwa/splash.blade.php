@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="theme-color" content="{{ masjid_config('primary_color') }}">
     <title>{{ masjid_config('name') }}</title>
 
@@ -38,7 +41,7 @@
         }
     </style>
 </head>
-<body style="--tw-gradient-stops: {{ str_replace('#', '', masjid_config('primary_color')) }};">
+<body class="overflow-hidden" style="--tw-gradient-stops: {{ str_replace('#', '', masjid_config('primary_color')) }};">
 
     <div class="splash-content text-center px-6 max-w-md">
 

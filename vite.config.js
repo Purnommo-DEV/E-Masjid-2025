@@ -17,7 +17,12 @@ export default defineConfig({
             workbox: {
                 skipWaiting: true,
                 clientsClaim: true,
+                // Tambahkan ini untuk mencegah precache halaman utama yang mengganggu splash
+                navigateFallback: null,  // ← matikan fallback ke '/' agar start_url custom bekerja
+                cleanupOutdatedCaches: true,
             },
+            disable: true,  // ← KUNCI: matikan plugin PWA saat build
+            manifest: false,  // tanpa object manifest sama sekali
             // NONAKTIFKAN manifest injection dari plugin
             // Optional: injectManifest kalau kamu punya SW custom
             // injectManifest: { ... } // kalau perlu SW custom
