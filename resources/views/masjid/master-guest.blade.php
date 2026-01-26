@@ -22,7 +22,7 @@
 
     <link rel="canonical" href="{{ url()->current() }}">
     
-    <link rel="manifest" href="{{ asset('build/manifest.webmanifest') }}">
+    <link rel="manifest" href="{{ route('pwa.manifest') }}">
     <meta name="theme-color" content="#059669">
     <meta name="description" content="Sistem Informasi Masjid - Jadwal Sholat, Donasi, Kajian & Komunitas">
     <!-- iOS support -->
@@ -37,7 +37,7 @@
     <meta property="og:image" content="{{ asset('images/masjid-cover.jpg') }}"> {{-- ganti jika sudah ada --}}
 
     {{-- FAVICON (OPTIONAL) --}}
-    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('/pwa/mrj-logo.png') }}">
 
     {{-- FONT (OPSIONAL, KALAU MAU PAKAI GOOGLE FONT) --}}
     {{-- <link rel="preconnect" href="https://fonts.googleapis.com">
