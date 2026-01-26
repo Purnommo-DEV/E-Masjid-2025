@@ -1,9 +1,14 @@
 <nav class="bg-white shadow px-4 py-3 sticky top-0 z-30">
   <div class="max-w-7xl mx-auto flex items-center justify-between">
     <div class="flex items-center gap-4">
-      <button @click="$dispatch('toggle-sidebar')" class="md:hidden p-2 rounded-md hover:bg-gray-100">
-        <i class="fas fa-bars"></i>
+      <!-- Tombol hamburger - PASTI muncul di < lg -->
+      <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-md hover:bg-gray-100 text-gray-700 z-50">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
       </button>
+
+      <!-- Search tetap -->
       <div class="hidden sm:block">
         <form action="#" method="GET">
           <div class="relative">
@@ -21,7 +26,6 @@
           <span>{{ Auth::user()->name ?? 'User' }}</span>
         </a>
       </div>
-
       <div class="sm:hidden">
         <button @click="$dispatch('toggle-mobile-menu')" class="p-2 rounded-md hover:bg-gray-100">
           <i class="fas fa-ellipsis-v"></i>

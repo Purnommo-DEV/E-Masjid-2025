@@ -47,13 +47,13 @@ Route::get('/manifest.json', function () {
         'orientation'   => 'portrait-primary',
         'icons'         => [
             [
-                'src'     => '/pwa/icon-96.png',
+                'src'     => '/pwa/mrj-logo.png',
                 'sizes'   => '92x92',
                 'type'    => 'image/png',
                 'purpose' => 'maskable',
             ],
             [
-                'src'     => '/pwa/icon-96.png',
+                'src'     => '/pwa/mrj-logo.png',
                 'sizes'   => '92x92',
                 'type'    => 'image/png',
                 'purpose' => 'maskable',

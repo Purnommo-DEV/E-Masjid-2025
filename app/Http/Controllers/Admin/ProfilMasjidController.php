@@ -43,6 +43,7 @@ class ProfilMasjidController extends Controller
             'email' => $request->email,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
+            'singkatan' => $request->singkatan,
             'logo' => $request->file('logo'),
             'struktur' => $request->file('struktur'),
         ]);

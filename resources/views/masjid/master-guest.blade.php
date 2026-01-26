@@ -26,7 +26,7 @@
     <meta name="theme-color" content="#059669">
     <meta name="description" content="Sistem Informasi Masjid - Jadwal Sholat, Donasi, Kajian & Komunitas">
     <!-- iOS support -->
-    <link rel="apple-touch-icon" href="{{ asset('/pwa/icon-96.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('/pwa/icon-128.png') }}">
 
     {{-- OG TAGS (OPTIONAL, BAGUS UNTUK SHARE LINK) --}}
     <meta property="og:type" content="website">

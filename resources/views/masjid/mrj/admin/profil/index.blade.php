@@ -43,54 +43,122 @@
                         @csrf
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {{-- Nama --}}
-                            <div>
-                                <label for="nama" class="block text-sm font-semibold text-emerald-800 mb-2">Nama Masjid <span class="text-red-500">*</span></label>
-                                <input id="nama" type="text" name="nama" required
-                                       class="form-input w-full border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                       value="{{ $profil->nama }}">
-                                <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="nama"></p>
-                            </div>
+                        {{-- Nama + Singkatan + Telepon --}}
+                        <div class="md:col-span-2">
+                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
 
-                            {{-- Telepon --}}
-                            <div>
-                                <label for="telepon" class="block text-sm font-semibold text-emerald-800 mb-2">Telepon</label>
-                                <input id="telepon" type="text" name="telepon"
-                                       class="form-input w-full border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                       value="{{ $profil->telepon }}">
-                                <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="telepon"></p>
+                                {{-- Nama Masjid --}}
+                                <div class="md:col-span-6">
+                                    <label class="label">
+                                        <span class="label-text font-semibold text-emerald-1000">
+                                            Nama Masjid <span class="text-red-500">*</span>
+                                        </span>
+                                    </label>
+                                <input
+                                    id="nama"
+                                    type="text"
+                                    name="nama"
+                                    required
+                                    value="{{ $profil->nama }}"
+                                    class="input input-bordered border-base-800 w-full
+                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-9000"
+                                />
+
+                                    <p class="text-xs text-red-500 hidden field-error" data-for="nama"></p>
+                                </div>
+
+                                {{-- Singkatan --}}
+                                <div class="md:col-span-3">
+                                    <label class="label">
+                                        <span class="label-text font-semibold text-emerald-1000">
+                                            Singkatan
+                                        </span>
+                                    </label>
+                                    <input
+                                        id="singkatan"
+                                        type="text"
+                                        name="singkatan"
+                                        maxlength="4"
+                                        placeholder="MRJ"
+                                        value="{{ $profil->singkatan ?? '' }}"
+                                        class="input input-bordered border-base-900 w-full uppercase tracking-widest
+                                               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                                    />
+
+                                    <p class="text-xs text-gray-500">
+                                        Maks. 4 huruf
+                                    </p>
+                                    <p class="text-xs text-red-500 hidden field-error" data-for="singkatan"></p>
+                                </div>
+
+                                {{-- Telepon --}}
+                                <div class="md:col-span-3">
+                                    <label class="label">
+                                        <span class="label-text font-semibold text-emerald-1000">
+                                            Telepon
+                                        </span>
+                                    </label>
+                                    <input
+                                        id="telepon"
+                                        type="text"
+                                        name="telepon"
+                                        value="{{ $profil->telepon }}"
+                                        class="input input-bordered border-base-900 w-full
+                                               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                                    />
+                                    <p class="text-xs text-red-500 hidden field-error" data-for="telepon"></p>
+                                </div>
+
                             </div>
+                        </div>
+
 
                             {{-- Alamat --}}
                             <div class="md:col-span-2">
-                                <label for="alamat" class="block text-sm font-semibold text-emerald-800 mb-2">Alamat</label>
-                                <textarea id="alamat" name="alamat"
-                                          class="form-input w-full border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                          rows="3">{{ $profil->alamat }}</textarea>
+                                <label for="alamat" class="block text-sm font-semibold text-emerald-1000 mb-2">Alamat</label>
+                                <textarea
+                                    id="alamat"
+                                    name="alamat"
+                                    rows="3"
+                                    class="textarea textarea-bordered border-base-900 w-full
+                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                                >{{ $profil->alamat }}</textarea>
                                 <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="alamat"></p>
                             </div>
 
                             {{-- Latitude --}}
                             <div>
-                                <label for="lat" class="block text-sm font-semibold text-emerald-800 mb-2">Latitude <span class="text-red-500">*</span></label>
-                                <input type="text" id="lat" name="latitude" required
-                                       class="form-input w-full border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                       value="{{ $profil->latitude }}">
+                                <label for="lat" class="block text-sm font-semibold text-emerald-1000 mb-2">Latitude <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="lat"
+                                    name="latitude"
+                                    required
+                                    value="{{ $profil->latitude }}"
+                                    class="input input-bordered border-base-900 w-full
+                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                                />
                                 <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="latitude"></p>
                             </div>
 
                             {{-- Longitude --}}
                             <div>
-                                <label for="lng" class="block text-sm font-semibold text-emerald-800 mb-2">Longitude <span class="text-red-500">*</span></label>
-                                <input type="text" id="lng" name="longitude" required
-                                       class="form-input w-full border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                       value="{{ $profil->longitude }}">
+                                <label for="lng" class="block text-sm font-semibold text-emerald-1000 mb-2">Longitude <span class="text-red-500">*</span></label>
+                                <input
+                                    type="text"
+                                    id="lng"
+                                    name="longitude"
+                                    required
+                                    value="{{ $profil->longitude }}"
+                                    class="input input-bordered border-base-900 w-full
+                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                                />
                                 <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="longitude"></p>
                             </div>
 
                             {{-- Logo --}}
                             <div>
-                                <label class="block text-sm font-semibold text-emerald-800 mb-2">Logo Masjid</label>
+                                <label class="block text-sm font-semibold text-emerald-1000 mb-2">Logo Masjid</label>
                                 <div class="flex items-center gap-3">
                                     <label class="flex items-center gap-2 cursor-pointer">
                                         <input type="file" name="logo" id="logoInput" class="hidden" accept="image/*">
@@ -109,7 +177,7 @@
 
                             {{-- Struktur Organisasi --}}
                             <div>
-                                <label class="block text-sm font-semibold text-emerald-800 mb-2">Struktur Organisasi</label>
+                                <label class="block text-sm font-semibold text-emerald-1000 mb-2">Struktur Organisasi</label>
                                 <div class="flex items-center gap-3">
                                     <label class="flex items-center gap-2 cursor-pointer">
                                         <input type="file" name="struktur" id="strukturInput" class="hidden" accept="image/*,application/pdf">
@@ -131,7 +199,7 @@
                             <div class="text-sm text-gray-500">Terakhir diperbarui: <span class="font-medium text-emerald-700">{{ optional($profil->updated_at)->diffForHumans() ?? '-' }}</span></div>
                             <div class="flex gap-2">
                                 <button type="button" id="resetBtn" class="px-4 py-2 rounded-md border border-gray-200 text-sm">Reset</button>
-                                <button type="submit" id="saveBtn" class="px-6 py-2 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow">
+                                <button type="submit" id="saveBtn" class="px-6 py-2 rounded-md bg-emerald-700 hover:bg-emerald-1000 text-white font-semibold shadow">
                                     <span id="saveBtnText">Simpan Profil</span>
                                 </button>
                             </div>
@@ -141,7 +209,7 @@
                     {{-- ===================== LIST PENGURUS ===================== --}}
                     <div class="mt-10">
                         <div class="flex justify-between items-center">
-                            <h3 class="text-2xl font-bold text-emerald-800">Struktur Kepengurusan</h3>
+                            <h3 class="text-2xl font-bold text-emerald-1000">Struktur Kepengurusan</h3>
 
                             <!-- Panggil helper openPengurus() -->
                             <button onclick="openPengurus()" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow">
@@ -185,7 +253,7 @@
 
                 {{-- MAP --}}
                 <div>
-                    <h3 class="text-xl font-bold text-emerald-800 mb-2">Lokasi di Peta</h3>
+                    <h3 class="text-xl font-bold text-emerald-1000 mb-2">Lokasi di Peta</h3>
 
                     <div id="map" class="rounded-2xl h-80 shadow border border-emerald-100 overflow-hidden"></div>
 
@@ -201,7 +269,7 @@
 <dialog id="pengurusModal" class="modal">
     <div class="modal-box w-11/12 max-w-lg p-6">
         <div class="flex items-start justify-between">
-            <h3 class="text-xl font-semibold text-emerald-800" id="modalPengurusTitle">Pengurus</h3>
+            <h3 class="text-xl font-semibold text-emerald-1000" id="modalPengurusTitle">Pengurus</h3>
             <button id="closePengurusBtn" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
         </div>
 
@@ -223,24 +291,42 @@
 
             <div>
                 <label class="block text-sm font-semibold mb-1">Nama <span class="text-red-500">*</span></label>
-                <input type="text" id="namaModal" name="nama" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500">
+                <input
+                    type="text"
+                    id="namaModal"
+                    name="nama"
+                    class="input input-bordered border-base-900 w-full
+                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                />
                 <p class="mt-1 text-xs text-red-500 hidden field-error-modal" data-for="nama"></p>
             </div>
 
             <div>
                 <label class="block text-sm font-semibold mb-1">Jabatan <span class="text-red-500">*</span></label>
-                <input type="text" id="jabatanModal" name="jabatan" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500">
+                <input
+                    type="text"
+                    id="jabatanModal"
+                    name="jabatan"
+                    class="input input-bordered border-base-900 w-full
+                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                />
                 <p class="mt-1 text-xs text-red-500 hidden field-error-modal" data-for="jabatan"></p>
             </div>
 
             <div>
                 <label class="block text-sm font-semibold mb-1">Keterangan</label>
-                <textarea id="keteranganModal" name="keterangan" rows="3" class="w-full border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500"></textarea>
+                <textarea
+                    id="keteranganModal"
+                    name="keterangan"
+                    rows="3"
+                    class="textarea textarea-bordered border-base-900 w-full
+                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
+                ></textarea>
             </div>
 
             <div class="flex justify-end gap-2 mt-3">
                 <button type="button" id="cancelPengurusBtn" class="px-4 py-2 rounded-md border">Batal</button>
-                <button type="submit" id="savePengurusBtn" class="px-4 py-2 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white">Simpan</button>
+                <button type="submit" id="savePengurusBtn" class="px-4 py-2 rounded-md bg-emerald-700 hover:bg-emerald-1000 text-white">Simpan</button>
             </div>
         </form>
     </div>
@@ -248,7 +334,129 @@
 
 @endsection
 
-{{-- Scripts (tetap sama seperti semula) --}}
+
+@push('style')
+<style>
+
+@layer components {
+  .input,
+  .textarea {
+    @apply border-emerald-400;          /* border normal emerald soft */
+  }
+
+  .input:focus,
+  .textarea:focus {
+    @apply border-emerald-600 ring-2 ring-emerald-500/20;  /* lebih bold + ring */
+  }
+}
+    /* Card wrapper */
+    .card-wrapper {
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 12px 30px rgba(2,6,23,0.06);
+        border: 1px solid rgba(15,23,42,0.04);
+        margin: 1.5rem auto;
+    }
+
+    /* Top header */
+    .card-top {
+        background: linear-gradient(90deg, #065f46 0%, #059669 50%, #10b981 100%);
+        padding: 18px 0;
+        color: white;
+    }
+    .card-top-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+    }
+
+    .card-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin: 0;
+        color: #ffffff;
+        letter-spacing: -0.2px;
+    }
+    .card-sub {
+        margin: 4px 0 0;
+        color: rgba(255,255,255,0.92);
+        font-size: 0.95rem;
+    }
+
+    /* top button */
+    .btn-top {
+        display: inline-flex;
+        gap: .6rem;
+        align-items: center;
+        background: rgba(255,255,255,0.12);
+        color: white;
+        padding: .5rem .9rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 6px 18px rgba(4,120,87,0.06);
+        transition: transform .12s ease, background .12s ease;
+    }
+    .btn-top svg { stroke: currentColor; }
+    .btn-top:hover { transform: translateY(-3px); background: rgba(255,255,255,0.18); }
+
+    /* body */
+    .card-body { background: #fff; }
+
+    .inner { padding: 1.2rem 0 1.8rem; }
+
+    /* Pengurus card */
+    .pengurus-card {
+        transition: transform .12s ease, box-shadow .12s ease;
+    }
+    .pengurus-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(2,6,23,0.06);
+    }
+
+    /* Modal look: slightly larger and rounded */
+    dialog.modal .modal-box {
+        border-radius: 0.9rem;
+        box-shadow: 0 18px 40px rgba(2,6,23,0.12);
+    }
+
+    /* Buttons small tweaks */
+    .btn, .btn-top, button {
+        font-weight: 600;
+        letter-spacing: -0.2px;
+    }
+
+    /* helper kecil untuk preview agar rapi */
+    #logoPreview img, #strukturPreview img, #fotoPreview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    /* responsive compact tweaks */
+    @media (max-width: 1024px) {
+        .w-14 { width: 48px; height: 48px; }
+        #logoPreview, #strukturPreview { width: 56px; height: 56px; }
+        .text-lg { font-size: 1rem; }
+        .card-top-inner { padding-left: 1rem; padding-right: 1rem; }
+        .inner { padding-left: 1rem; padding-right: 1rem; }
+    }
+
+    [x-cloak] { display: none !important; }
+    .field-error { min-height: 1rem; }
+    .field-error-modal { min-height: 1rem; }
+
+    /* COMPACT SIDEBAR STYLES */
+    body.sidebar-collapsed .pengurus-card .nama-jabatan { display: none; }
+    body.sidebar-collapsed .pengurus-card .avatar img,
+    body.sidebar-collapsed .pengurus-card .avatar { width: 36px; height: 36px; }
+    body.sidebar-collapsed #logoPreview, body.sidebar-collapsed #strukturPreview { width: 48px; height: 48px; }
+    body.sidebar-collapsed .text-lg { font-size: 0.95rem; }
+    body.sidebar-collapsed .pengurus-card { padding: 0.5rem; }
+</style>
+@endpush
+
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
@@ -345,6 +553,12 @@
     // ========== PROFILE FORM SUBMIT ==========
     $(function() {
         initMap();
+
+        $('#singkatan').on('input', function () {
+            this.value = this.value
+                .toUpperCase()
+                .replace(/[^A-Z]/g, '');
+        });
 
         // Realtime simple validation on input
         $('#profilForm').on('input change', '.form-input', function() {
@@ -671,114 +885,4 @@
         });
     })();
 </script>
-@endpush
-
-{{-- ===== Design CSS (only design changes) ===== --}}
-@push('style')
-<style>
-    /* Card wrapper */
-    .card-wrapper {
-        border-radius: 1rem;
-        overflow: hidden;
-        box-shadow: 0 12px 30px rgba(2,6,23,0.06);
-        border: 1px solid rgba(15,23,42,0.04);
-        margin: 1.5rem auto;
-    }
-
-    /* Top header */
-    .card-top {
-        background: linear-gradient(90deg, #065f46 0%, #059669 50%, #10b981 100%);
-        padding: 18px 0;
-        color: white;
-    }
-    .card-top-inner {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 0 1.5rem;
-    }
-
-    .card-title {
-        font-size: 1.5rem;
-        font-weight: 800;
-        margin: 0;
-        color: #ffffff;
-        letter-spacing: -0.2px;
-    }
-    .card-sub {
-        margin: 4px 0 0;
-        color: rgba(255,255,255,0.92);
-        font-size: 0.95rem;
-    }
-
-    /* top button */
-    .btn-top {
-        display: inline-flex;
-        gap: .6rem;
-        align-items: center;
-        background: rgba(255,255,255,0.12);
-        color: white;
-        padding: .5rem .9rem;
-        border-radius: 999px;
-        border: 1px solid rgba(255,255,255,0.08);
-        box-shadow: 0 6px 18px rgba(4,120,87,0.06);
-        transition: transform .12s ease, background .12s ease;
-    }
-    .btn-top svg { stroke: currentColor; }
-    .btn-top:hover { transform: translateY(-3px); background: rgba(255,255,255,0.18); }
-
-    /* body */
-    .card-body { background: #fff; }
-
-    .inner { padding: 1.2rem 0 1.8rem; }
-
-    /* Pengurus card */
-    .pengurus-card {
-        transition: transform .12s ease, box-shadow .12s ease;
-    }
-    .pengurus-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 30px rgba(2,6,23,0.06);
-    }
-
-    /* Modal look: slightly larger and rounded */
-    dialog.modal .modal-box {
-        border-radius: 0.9rem;
-        box-shadow: 0 18px 40px rgba(2,6,23,0.12);
-    }
-
-    /* Buttons small tweaks */
-    .btn, .btn-top, button {
-        font-weight: 600;
-        letter-spacing: -0.2px;
-    }
-
-    /* helper kecil untuk preview agar rapi */
-    #logoPreview img, #strukturPreview img, #fotoPreview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    /* responsive compact tweaks */
-    @media (max-width: 1024px) {
-        .w-14 { width: 48px; height: 48px; }
-        #logoPreview, #strukturPreview { width: 56px; height: 56px; }
-        .text-lg { font-size: 1rem; }
-        .card-top-inner { padding-left: 1rem; padding-right: 1rem; }
-        .inner { padding-left: 1rem; padding-right: 1rem; }
-    }
-
-    [x-cloak] { display: none !important; }
-    .field-error { min-height: 1rem; }
-    .field-error-modal { min-height: 1rem; }
-
-    /* COMPACT SIDEBAR STYLES */
-    body.sidebar-collapsed .pengurus-card .nama-jabatan { display: none; }
-    body.sidebar-collapsed .pengurus-card .avatar img,
-    body.sidebar-collapsed .pengurus-card .avatar { width: 36px; height: 36px; }
-    body.sidebar-collapsed #logoPreview, body.sidebar-collapsed #strukturPreview { width: 48px; height: 48px; }
-    body.sidebar-collapsed .text-lg { font-size: 0.95rem; }
-    body.sidebar-collapsed .pengurus-card { padding: 0.5rem; }
-</style>
 @endpush
