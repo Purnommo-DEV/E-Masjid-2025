@@ -19,7 +19,6 @@ export default defineConfig({
                 clientsClaim: true,
             },
             // NONAKTIFKAN manifest injection dari plugin
-            manifest: false, // <-- ini kunci! Jangan inject manifest statis
             // Optional: injectManifest kalau kamu punya SW custom
             // injectManifest: { ... } // kalau perlu SW custom
         }),
