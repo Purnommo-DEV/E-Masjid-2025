@@ -27,6 +27,41 @@ use App\Http\Controllers\Admin\LayananController;
 
 use App\Http\Controllers\User\HomeController;
 
+Route::get('/pwa-splash', function () {
+    return view('pwa.splash');
+})->name('pwa.splash');
+
+Route::get('/manifest.json', function () {
+    $kode = masjid(); // dari helper kamu
+
+    $config = config("masjids.{$kode}", config('masjids.default'));
+
+    return response()->json([
+        'name'          => $config['name'],
+        'short_name'    => $config['short_name'],
+        'description'   => $config['jargon'] . ' – Masjid Era Digital',
+        'start_url'     => '/pwa-splash',
+        'display'       => 'standalone',
+        'background_color' => $config['gradient_from'],
+        'theme_color'   => $config['primary_color'],
+        'orientation'   => 'portrait-primary',
+        'icons'         => [
+            [
+                'src'     => '/pwa/icons/icon-192.png',
+                'sizes'   => '192x192',
+                'type'    => 'image/png',
+                'purpose' => 'any maskable',
+            ],
+            [
+                'src'     => '/pwa/icons/icon-512.png',
+                'sizes'   => '512x512',
+                'type'    => 'image/png',
+                'purpose' => 'any maskable',
+            ],
+        ],
+    ])->header('Content-Type', 'application/manifest+json');
+})->name('pwa.manifest');
+
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('acara', [HomeController::class, 'acaraIndex'])->name('acara.index');

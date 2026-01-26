@@ -12,6 +12,17 @@ if (!function_exists('masjid')) {
     }
 }
 
+if (!function_exists('masjid_config')) {
+    /**
+     * Ambil konfigurasi masjid saat ini
+     */
+    function masjid_config(string $key, $default = null)
+    {
+        $kode = masjid();
+        return config("masjids.{$kode}.{$key}", config("masjids.default.{$key}", $default));
+    }
+}
+
 if (!function_exists('admin_layout')) {
     function admin_layout(string $partial = ''): string
     {

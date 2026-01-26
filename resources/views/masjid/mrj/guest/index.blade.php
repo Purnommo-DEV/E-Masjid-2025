@@ -1025,14 +1025,80 @@
             </div>
         </section>
 
-        {{-- FLOATING WA --}}
-        @php $wa = preg_replace('/[^0-9]/','',$profil->telepon??'6281234567890'); @endphp
-        <a href="https://wa.me/{{ $wa }}" target="_blank"
-           class="fixed bottom-6 right-5 z-40 btn btn-circle bg-emerald-600 text-white shadow-xl">
-            💬
-        </a>
+        {{-- ================= FLOATING ACTION BUTTONS ================= --}}
+        <!-- Floating Action Bar: Install PWA + Notifikasi + Chat WA -->
+        <div class="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4 sm:bottom-8 sm:right-8">
+
+            <!-- Tombol Chat WA (paling bawah) -->
+            @php $wa = preg_replace('/[^0-9]/', '', $profil->telepon ?? '6281234567890'); @endphp
+            <a href="https://wa.me/{{ $wa }}" target="_blank" 
+               class="btn btn-circle btn-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/40 border-none transition-all duration-300 hover:scale-110 active:scale-95">
+                <span class="text-2xl">💬</span>
+            </a>
+
+            <!-- Tombol Notifikasi (tengah) -->
+            <button id="enableNotificationBtn" 
+                    class="btn btn-circle btn-lg bg-cyan-600 hover:bg-cyan-700 text-white shadow-xl shadow-cyan-900/40 border-none transition-all duration-300 hover:scale-110 active:scale-95 relative">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span id="notifBadge" class="absolute -top-1 -right-1 badge badge-error badge-xs animate-ping hidden">!</span>
+            </button>
+
+            <!-- Tombol Install PWA (paling atas) -->
+            <button id="installPwaBtn" 
+                    class="btn btn-circle btn-lg bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-teal-900/50 border-none transition-all duration-300 hover:scale-110 active:scale-95 hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span class="absolute -top-1 -right-1 badge badge-primary badge-xs animate-pulse">App</span>
+            </button>
+
+        </div>
+
+        <!-- Modal Custom Persetujuan Notifikasi -->
+        <dialog id="notifConsentModal" class="modal modal-bottom sm:modal-middle">
+            <div class="modal-box text-center rounded-3xl max-w-md">
+                <!-- Icon -->
+                <div class="mx-auto mb-5 w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-4xl shadow-md">
+                    🔔
+                </div>
+                <!-- Judul -->
+                <h3 class="font-bold text-xl text-slate-900 mb-3">
+                    Aktifkan Notifikasi?
+                </h3>
+                <!-- Deskripsi -->
+                <p class="text-sm text-slate-600 leading-relaxed mb-6 px-4">
+                    Dapatkan <span class="font-semibold text-emerald-700">pengumuman penting</span>, jadwal kajian, pengingat sholat, dan update masjid langsung di perangkat Anda — bahkan saat aplikasi tertutup.
+                </p>
+
+                <!-- Pesan Denied (muncul otomatis kalau denied) -->
+                <div id="permissionDeniedMessage" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-left text-sm text-red-800">
+                    <strong>Izin notifikasi sebelumnya ditolak oleh browser.</strong><br><br>
+                    <span id="resetInstructions"></span>
+                </div>
+
+                <!-- Tombol Aksi -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-center mt-6">
+                    <button id="notifAllow" 
+                            class="btn bg-emerald-600 hover:bg-emerald-700 text-white border-none rounded-full px-10 py-3 font-semibold shadow-md">
+                        Aktifkan Sekarang
+                    </button>
+                    <button id="notifDeny" 
+                            class="btn bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-full px-10 py-3 font-semibold">
+                        Nanti Saja
+                    </button>
+                </div>
+
+                <!-- Catatan kecil -->
+                <p class="text-xs text-slate-400 mt-6 italic">
+                    Anda bisa mengubah pilihan ini kapan saja di pengaturan perangkat/browser.
+                </p>
+            </div>
+        </dialog>
 
     </div>
+
 @endsection
 
 @push('style')
@@ -1425,6 +1491,124 @@
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+
+        // =============================================
+        // PWA Install Prompt
+        // =============================================
+        let deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPwaBtn')?.classList.remove('hidden');
+            console.log('PWA install prompt tersedia');
+        });
+
+        document.getElementById('installPwaBtn')?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`PWA install outcome: ${outcome}`);
+
+            deferredPrompt = null;
+            document.getElementById('installPwaBtn')?.classList.add('hidden');
+
+            if (outcome === 'accepted') {
+                alert('Terima kasih! Aplikasi sedang diinstall.');
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA berhasil diinstall');
+            document.getElementById('installPwaBtn')?.classList.add('hidden');
+        });
+
+        // =============================================
+        // Custom Notifikasi Modal + Permission Handling (Versi B: Pesan di Modal)
+        // =============================================
+        const notifModal       = document.getElementById('notifConsentModal');
+        const btnNotifTrigger  = document.getElementById('enableNotificationBtn');
+        const btnAllow         = document.getElementById('notifAllow');
+        const btnDeny          = document.getElementById('notifDeny');
+        const notifBadge       = document.getElementById('notifBadge');
+        const deniedMessage    = document.getElementById('permissionDeniedMessage');
+        const resetInstructions = document.getElementById('resetInstructions');
+
+        // Fungsi open/close modal
+        function openNotifModal() { notifModal?.showModal(); }
+        function closeNotifModal() { notifModal?.close(); }
+
+        // Reset UI modal saat dibuka
+        function resetModalUI() {
+            deniedMessage?.classList.add('hidden');
+            btnAllow.disabled = false;
+            btnAllow.textContent = 'Aktifkan Sekarang';
+        }
+
+        // Cek status permission saat halaman dimuat
+        if ("Notification" in window) {
+            const permission = Notification.permission;
+
+            if (permission === "granted") {
+                notifBadge?.classList.add('hidden');
+            } 
+            else if (permission === "denied") {
+                notifBadge?.classList.remove('hidden');
+            } 
+            else {
+                notifBadge?.classList.remove('hidden');
+            }
+        }
+
+        // Event: tombol floating → buka modal + reset UI
+        btnNotifTrigger?.addEventListener('click', () => {
+            resetModalUI();
+            
+            // Kalau sudah denied, langsung tampilkan pesan panduan di modal
+            if ("Notification" in window && Notification.permission === "denied") {
+                deniedMessage?.classList.remove('hidden');
+                const isPwa = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+                resetInstructions.textContent = isPwa 
+                    ? "Cara mengaktifkan: Tekan lama ikon app di home screen → App info → Notifikasi → ubah ke Diizinkan. Lalu buka ulang aplikasi."
+                    : "Cara mengaktifkan: Klik ikon gembok di address bar → Notifications → ubah ke Allow atau Ask (default). Lalu refresh halaman.";
+                
+                // Nonaktifkan tombol Aktifkan (karena browser tidak akan tampilkan popup lagi)
+                btnAllow.disabled = true;
+                btnAllow.textContent = 'Sudah Diblokir (Aktifkan Manual)';
+            }
+
+            openNotifModal();
+        });
+
+        // Tombol "Aktifkan" di modal → hanya request kalau bukan denied
+        btnAllow?.addEventListener('click', async () => {
+            if ("Notification" in window && Notification.permission === "denied") {
+                // Jangan request lagi, user harus reset manual
+                return;
+            }
+
+            closeNotifModal();
+
+            try {
+                const permission = await Notification.requestPermission();
+
+                if (permission === "granted") {
+                    alert("Notifikasi berhasil diaktifkan!\nAnda akan menerima update masjid.");
+                    notifBadge?.classList.add('hidden');
+                } 
+                else if (permission === "denied") {
+                    // Setelah request, kalau denied lagi → tampilkan pesan di modal saat dibuka ulang
+                    notifBadge?.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Error request notification:", err);
+            }
+        });
+
+        // Tombol "Nanti Saja" → tutup modal
+        btnDeny?.addEventListener('click', closeNotifModal);
+
         document.addEventListener('DOMContentLoaded', function () {
             const quotes = @json($quotes); // ambil array quotes dari PHP
             const container = document.getElementById('quote-container');
