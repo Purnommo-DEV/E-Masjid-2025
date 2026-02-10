@@ -161,51 +161,51 @@
                         </div>
 
                         <!-- Tanggal Lahir & Umur -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="form-control">
-        <label class="label pb-1">
-            <span class="label-text font-semibold text-slate-800">Tanggal Lahir <span class="text-red-500">*</span></span>
-        </label>
-        <div class="relative">
-            <input
-                type="text"
-                name="tanggal_lahir_text"
-                id="tanggal_lahir_text"
-                placeholder="Hari/Bulan/Tahun"
-                required
-                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300
-                       focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
-                       transition-all duration-300 outline-none text-slate-900 bg-white"
-            />
-            <input type="hidden" name="tanggal_lahir" id="tanggal_lahir_hidden" />
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📅</span>
-        </div>
-        <label class="label">
-            <span class="label-text-alt text-sm text-slate-500 italic">
-                Ketik dalam format Hari/Bulan/Tahun (contoh: 15/08/2015)
-            </span>
-        </label>
-    </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-control">
+                                <label class="label pb-1">
+                                    <span class="label-text font-semibold text-slate-800">Tanggal Lahir <span class="text-red-500">*</span></span>
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        type="text"
+                                        name="tanggal_lahir_text"
+                                        id="tanggal_lahir_text"
+                                        placeholder="Hari/Bulan/Tahun"
+                                        required
+                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300
+                                               focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
+                                               transition-all duration-300 outline-none text-slate-900 bg-white"
+                                    />
+                                    <input type="hidden" name="tanggal_lahir" id="tanggal_lahir_hidden" />
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📅</span>
+                                </div>
+                                <label class="label">
+                                    <span class="label-text-alt text-sm text-slate-500 italic">
+                                        Ketik dengan format Hari/Bulan/Tahun<br>(contoh: 15/08/2015)
+                                    </span>
+                                </label>
+                            </div>
 
-    <div class="form-control">
-        <label class="label pb-1">
-            <span class="label-text font-semibold text-slate-800">Umur Saat Ini <span class="text-red-500">*</span></span>
-        </label>
-        <div class="relative">
-            <input type="number" name="umur" id="umur" min="0" max="13" required
-                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 
-                          focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 
-                          transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                   placeholder="Akan otomatis ter-update" />
-            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🎂</span>
-        </div>
-        <label class="label">
-            <span class="label-text-alt text-sm text-slate-500 italic" id="umurHelper">
-                Akan otomatis ter-update jika tanggal lahir diisi
-            </span>
-        </label>
-    </div>
-</div>
+                            <div class="form-control">
+                                <label class="label pb-1">
+                                    <span class="label-text font-semibold text-slate-800">Umur Saat Ini <span class="text-red-500">*</span></span>
+                                </label>
+                                <div class="relative">
+                                    <input type="number" name="umur" id="umur" min="0" max="13" required
+                                           class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 
+                                                  focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 
+                                                  transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                           placeholder="Akan otomatis ter-update" />
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🎂</span>
+                                </div>
+                                <label class="label">
+                                    <span class="label-text-alt text-sm text-slate-500 italic" id="umurHelper">
+                                        Akan otomatis ter-update jika tanggal lahir diisi
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
 
                         <!-- Nama Orang Tua & Pekerjaan -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

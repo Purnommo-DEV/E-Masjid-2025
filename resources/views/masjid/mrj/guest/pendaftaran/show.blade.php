@@ -229,7 +229,7 @@
                         </div>
                         <label class="label">
                             <span class="label-text-alt text-sm text-slate-500 italic">
-                                Ketik Hari/Bulan/Tahun (contoh: 15/08/2015)
+                                Ketik dengan format Hari/Bulan/Tahun<br>(contoh: 15/08/2015)
                             </span>
                         </label>
                     </div>
