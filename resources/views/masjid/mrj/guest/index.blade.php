@@ -976,12 +976,11 @@
                             <div class="flex-1 bg-slate-50">
                                 @if(!empty($profil->latitude) && !empty($profil->longitude))
                                     <iframe
-                                        class="w-full h-full min-h-[400px]"
-                                        frameborder="0"
-                                        style="border:0"
-                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d{{ $profil->zoom ?? 15 }}!2d{{ $profil->longitude ?? '106.8' }}!3d{{ $profil->latitude ?? '-6.2' }}"
-                                        allowfullscreen=""
-                                        loading="lazy">
+                                        class="w-full h-full min-h-[400px] rounded-2xl shadow-xl shadow-emerald-200/30 border border-emerald-100/50"
+                                        loading="lazy"
+                                        allowfullscreen
+                                        referrerpolicy="no-referrer-when-downgrade"
+                                        src="https://www.google.com/maps?q={{ $profil->latitude }},{{ $profil->longitude }}&z=20&output=embed">
                                     </iframe>
                                 @else
                                     <div class="w-full h-full min-h-[400px] flex items-center justify-center text-slate-400 text-lg bg-slate-100">
