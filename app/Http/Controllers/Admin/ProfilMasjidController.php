@@ -26,29 +26,53 @@ class ProfilMasjidController extends Controller
     public function updateProfil(Request $request)
     {
         $request->validate([
-            'nama' => 'required|string|max:255',
-            'alamat' => 'required|string',
-            'telepon' => 'nullable|string|max:20',
-            'email' => 'nullable|email',
-            'latitude' => 'required|numeric|between:-90,90',
-            'longitude' => 'required|numeric|between:-180,180',
-            'logo' => 'nullable|image|mimes:jpeg,png,webp|max:2048',
-            'struktur' => 'nullable|image|mimes:jpeg,png,webp|max:3072',
+            'nama'          => 'required|string|max:255',
+            'alamat'        => 'required|string',
+            'telepon'       => 'nullable|string|max:20',
+            'email'         => 'nullable|email',
+            'latitude'      => 'required|numeric|between:-90,90',
+            'longitude'     => 'required|numeric|between:-180,180',
+            'singkatan'     => 'nullable|string|max:10', // tambahkan jika ada
+            'logo'          => 'nullable|image|mimes:jpeg,png,webp|max:3048',
+            'struktur'      => 'nullable|image|mimes:jpeg,png,webp|max:3072',
+
+            // Validasi field donasi baru
+            'bank_name'     => 'nullable|string|max:100',
+            'bank_code'     => 'nullable|string|max:10',
+            'rekening'      => 'nullable|string|max:50',
+            'atas_nama'     => 'nullable|string|max:100',
+            'qris'          => 'nullable|image|mimes:png,jpeg,jpg|max:3048',
+            'wa_konfirmasi' => 'nullable|string|max:20',
         ]);
 
-        $this->repo->updateProfil([
-            'nama' => $request->nama,
-            'alamat' => $request->alamat,
-            'telepon' => $request->telepon,
-            'email' => $request->email,
-            'latitude' => $request->latitude,
-            'longitude' => $request->longitude,
-            'singkatan' => $request->singkatan,
-            'logo' => $request->file('logo'),
-            'struktur' => $request->file('struktur'),
+        // Kumpulkan SEMUA data yang akan disimpan (profil + donasi)
+        $data = $request->only([
+            'nama',
+            'singkatan',
+            'alamat',
+            'telepon',
+            'email',
+            'latitude',
+            'longitude',
+            'bank_name',
+            'bank_code',
+            'rekening',
+            'atas_nama',
+            'wa_konfirmasi',
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Profil diperbarui!']);
+        // Kirim file upload (logo, struktur, qris) secara terpisah
+        $data['logo']     = $request->file('logo');
+        $data['struktur'] = $request->file('struktur');
+        $data['qris']     = $request->file('qris');
+
+        // Panggil repository dengan data lengkap
+        $this->repo->updateProfil($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profil dan data donasi berhasil diperbarui!'
+        ]);
     }
 
     public function storePengurus(Request $request)

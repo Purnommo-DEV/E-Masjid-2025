@@ -53,6 +53,21 @@ class Berita extends Model implements HasMedia
         return parent::getUrl($conversion);
     }
 
+    // Di model Berita.php
+    public function getGambarUrlAttribute(): ?string
+    {
+        //Cara Panggil d blade $berita->gambar_url
+        $media = $this->getFirstMedia('gambar');
+        if (!$media) {
+            return null;
+        }
+        if ($media->hasCustomProperty('folder')) {
+            $folder = $media->getCustomProperty('folder');
+            return asset('storage/' . $folder . '/' . $media->file_name);
+        }
+        return $media->getUrl();
+    }
+
     public function registerMediaConversions(Media $media = null): void
     {
 

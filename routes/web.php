@@ -25,7 +25,12 @@ use App\Http\Controllers\Admin\DanaTerikatReferensiController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\LayananController;
 
+
 use App\Http\Controllers\User\HomeController;
+use App\Http\Controllers\User\AcaraGuestController;
+use App\Http\Controllers\User\BeritaGuestController;
+
+use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
 
 Route::get('/pwa-splash', function () {
     return view('pwa.splash');
@@ -64,11 +69,11 @@ Route::get('/manifest.json', function () {
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-Route::get('acara', [HomeController::class, 'acaraIndex'])->name('acara.index');
-Route::get('acara-show/{slug}', [HomeController::class, 'acaraShow'])->name('acara.show');
+Route::get('acara', [AcaraGuestController::class, 'index'])->name('acara.index');
+Route::get('acara-show/{slug}', [AcaraGuestController::class, 'show'])->name('acara.show');
 
-Route::get('berita', [HomeController::class, 'beritaIndex'])->name('berita.index');
-Route::get('berita-show/{slug}', [HomeController::class, 'beritaShow'])->name('berita.show');
+Route::get('berita', [BeritaGuestController::class, 'index'])->name('berita.index');
+Route::get('berita-show/{slug}', [BeritaGuestController::class, 'show'])->name('berita.show');
 
 Route::get('pengumuman', [HomeController::class, 'pengumumanIndex'])->name('pengumuman.index');
 Route::get('pengumuman-show/{slug}', [HomeController::class, 'pengumumanShow'])->name('pengumuman.show');
@@ -78,6 +83,14 @@ Route::get('/home/galeri/{id}', [GaleriController::class, 'apiFotos']);
 Route::get('galeri', [HomeController::class, 'galeriIndex'])->name('galeri.index');
 
 Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('kontak.kirim');
+
+Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function () {
+    Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])
+        ->name('form');
+        
+    Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])
+        ->name('submit');
+});
 
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {
@@ -200,7 +213,8 @@ Route::middleware(['auth'])->group(function () {
         // Saldo Awal
         Route::get('keuangan/saldo-awal', [SaldoAwalController::class, 'index'])->name('admin.keuangan.saldo-awal');
         Route::post('keuangan/saldo-awal', [SaldoAwalController::class, 'store'])->name('admin.keuangan.saldo-awal.store');
-
+        Route::post('saldo-awal/create-new', [SaldoAwalController::class, 'createNewPeriod'])->name('admin.keuangan.saldo-awal.create-new');
+        
         // Petty Cash
         Route::get('keuangan/petty-cash', [PettyCashController::class, 'index'])->name('admin.keuangan.petty-cash');
         Route::post('keuangan/petty-cash', [PettyCashController::class, 'store'])->name('admin.keuangan.petty-cash.store');

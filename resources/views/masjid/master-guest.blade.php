@@ -42,6 +42,7 @@
     {{-- FONT (OPSIONAL, KALAU MAU PAKAI GOOGLE FONT) --}}
     {{-- <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.x/dist/full.min.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> --}}
 
     {{-- VITE (TAILWIND + DAISYUI) --}}
@@ -60,12 +61,12 @@
       "name": "Masjid [Nama]",
       "address": {
         "@type": "PostalAddress",
-        "streetAddress": "{{ $profil->alamat }}",
+        "streetAddress": "{{ profil('alamat') }}",
         "addressLocality": "Kota",
         "addressCountry": "ID"
       },
       "openingHours": "Mo-Su 00:00-23:59",  // atau spesifik sholat
-      "telephone": "{{ $profil->telepon }}",
+      "telephone": "{{ profil('telepon') }}",
       "url": "{{ url('/') }}"
     }
     </script>

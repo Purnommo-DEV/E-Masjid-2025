@@ -17,56 +17,56 @@ class ProfilMasjidRepository implements ProfilMasjidRepositoryInterface
     {
         $profil = ProfilMasjid::updateOrCreate(
             ['id' => 1],
-            collect($data)->except(['logo', 'struktur'])->toArray()
+            collect($data)->except(['logo', 'struktur', 'qris'])->toArray()
         );
 
         $disk = Storage::disk('public');
 
-        foreach (['logo', 'struktur'] as $type) {
-            if (empty($data[$type])) continue;
+        // Fungsi helper untuk upload & replace media
+        $uploadAndReplace = function ($file, $type, $folder) use ($profil, $disk) {
+            if (!$file instanceof \Illuminate\Http\UploadedFile) {
+                return;
+            }
 
-            $folder = "profil/{$type}";
-            $file   = $data[$type];
-            $name   = $file->getClientOriginalName();
+            $name = $file->getClientOriginalName();
             $targetPath = "{$folder}/{$name}";
 
-            if (!$disk->exists($folder)) $disk->makeDirectory($folder);
-
-            // === HAPUS FILE LAMA ===
+            // Hapus file & media lama jika ada
             $oldMedia = $profil->getFirstMedia($type);
             if ($oldMedia) {
-                $oldPath = "{$folder}/{$oldMedia->file_name}";
-                // dd('Hapus Lama', $oldPath, $disk->exists($oldPath));
-                if ($disk->exists($oldPath)) $disk->delete($oldPath);
+                $oldPath = $oldMedia->getPath(); // path relatif dari storage
+                if ($disk->exists($oldPath)) {
+                    $disk->delete($oldPath);
+                }
                 $oldMedia->delete();
             }
 
-            $media = $profil->addMedia($file)
-                ->usingFileName($name)
-                ->preservingOriginal()
-                ->toMediaCollection($type);
+            // Simpan file baru ke folder custom
+            $disk->putFileAs($folder, $file, $name);
 
-            $tempPath = $media->getPath();
-            $finalPath = storage_path("app/public/{$targetPath}");
+            // Jika pakai Spatie Media Library untuk logo/struktur (opsional, bisa dihapus jika tidak perlu)
+            if (in_array($type, ['logo', 'struktur'])) {
+                $media = $profil->addMedia($file)
+                    ->usingFileName($name)
+                    ->preservingOriginal()
+                    ->toMediaCollection($type);
 
-            if (file_exists($tempPath)) {
-                if (!is_dir(dirname($finalPath))) mkdir(dirname($finalPath), 0755, true);
-                rename($tempPath, $finalPath);
-                $tempDir = dirname($tempPath);
-                if (is_dir($tempDir) && count(scandir($tempDir)) == 2) rmdir($tempDir);
+                $media->setCustomProperty('folder', $folder);
+                $media->setCustomProperty('original_name', $name);
+                $media->save();
             }
 
-            $media->setCustomProperty('folder', $folder);
-            $media->setCustomProperty('original_name', $name);
-            $media->save();
+            // Untuk QRIS, simpan path ke kolom qris
+            if ($type === 'qris') {
+                $profil->qris = $targetPath;
+                $profil->save();
+            }
+        };
 
-            // === DEBUG ===
-            // dd([
-            //     'Final File' => $finalPath,
-            //     'Exists?' => file_exists($finalPath),
-            //     'Files in Folder' => $disk->files($folder),
-            // ]);
-        }
+        // Proses upload untuk logo, struktur, dan qris
+        $uploadAndReplace($data['logo'] ?? null, 'logo', 'profil/logo');
+        $uploadAndReplace($data['struktur'] ?? null, 'struktur', 'profil/struktur');
+        $uploadAndReplace($data['qris'] ?? null, 'qris', 'donasi/qris');
 
         return $profil;
     }

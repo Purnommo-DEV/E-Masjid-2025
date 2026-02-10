@@ -102,4 +102,42 @@ protected $jurnalRepo;
         $periode->details()->delete();
         $periode->delete();
     }
+
+    /**
+     * Membuat periode saldo awal baru (otomatis tahun berikutnya)
+     * Hanya bisa dilakukan jika periode terakhir sudah locked
+     *
+     * @return SaldoAwalPeriode
+     * @throws \Exception
+     */
+    public function createNewPeriod()
+    {
+        $periodeTerakhir = $this->allPeriodes()->first();
+
+        if (!$periodeTerakhir) {
+            throw new \Exception('Belum ada periode sebelumnya.');
+        }
+
+        if ($periodeTerakhir->status !== 'locked') {
+            throw new \Exception('Periode sebelumnya (' . $periodeTerakhir->periode->format('d M Y') . ') belum di-lock!');
+        }
+
+        $tanggalBaru = $periodeTerakhir->periode->addYear()->startOfYear();
+
+        // Cek duplikat dengan query langsung (pakai exists() di Query Builder)
+        if (SaldoAwalPeriode::where('periode', $tanggalBaru)->exists()) {
+            throw new \Exception('Periode untuk tahun ' . $tanggalBaru->year . ' sudah ada.');
+        }
+
+        return DB::transaction(function () use ($tanggalBaru) {
+            $periodeBaru = SaldoAwalPeriode::create([
+                'periode'     => $tanggalBaru,
+                'keterangan'  => 'Saldo awal tahun ' . $tanggalBaru->year,
+                'status'      => 'draft',
+                'created_by'  => auth()->id(),
+            ]);
+
+            return $periodeBaru;
+        });
+    }
 }

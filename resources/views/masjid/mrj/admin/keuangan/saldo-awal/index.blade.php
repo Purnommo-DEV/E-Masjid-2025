@@ -1,392 +1,484 @@
 @extends('masjid.master')
 @section('title', 'Saldo Awal Periode')
 
-@section('content')
 @push('style')
 <style>
-  /* Outer card wrapper (seragam dengan UI sebelumnya) */
-  .card-wrapper { max-width:1100px; margin:1.5rem auto; border-radius:14px; overflow:visible; box-shadow:0 12px 30px rgba(2,6,23,0.06); border:1px solid rgba(15,23,42,0.04); background:#fff; }
-
-  .card-head {
-    padding:1.25rem 1.5rem; display:flex; align-items:center; justify-content:space-between;
-    background: linear-gradient(90deg,#0f766e 0%, #10b981 100%); color:#fff; border-top-left-radius:14px; border-top-right-radius:14px;
-  }
-  .card-head .title { margin:0; font-weight:700; font-size:1.125rem; display:flex; gap:.5rem; align-items:center; }
-  .card-head .subtitle { margin:0; opacity:.95; font-size:.95rem; }
-
-  .card-body { padding:1.5rem; background:#f8fbfa; border-bottom-left-radius:14px; border-bottom-right-radius:14px; }
-
-  /* Form panel inside card — visible border and modern */
-  .form-panel {
-    background: #ffffff;
-    border: 1px solid rgba(15,23,42,0.06);
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 8px 20px rgba(2,6,23,0.03);
-    margin-bottom: .75rem;
-  }
-
-  /* Inputs modern */
-  .form-control {
-    width:100%;
-    display:block;
-    padding:.65rem .75rem;
-    border-radius:10px;
-    border:1px solid rgba(15,23,42,0.08);
-    background:#fff;
-    font-size:.95rem;
-    transition:box-shadow .12s ease, border-color .12s ease, transform .06s ease;
-    box-shadow:none;
-  }
-  .form-control:focus {
-    outline: none;
-    border-color: rgba(16,185,129,0.9);
-    box-shadow: 0 6px 20px rgba(16,185,129,0.06);
-    transform: translateY(-1px);
-  }
-  label.small { font-size:.9rem; color:#064e3b; font-weight:600; display:block; margin-bottom:.35rem; }
-
-  /* Form top layout */
-  .form-top { display:flex; gap:1rem; align-items:flex-start; flex-wrap:wrap; }
-  .form-left { flex:1 1 520px; }
-  .form-right { width:320px; display:flex; flex-direction:column; gap:.75rem; align-items:flex-end; }
-
-  /* Table modern and column color separation */
-  .table-clean { width:100%; border-collapse: separate; border-spacing:0 10px; }
-  .table-clean thead th { text-align:left; padding:.6rem 1rem; color:#0f766e; font-weight:700; font-size:.95rem; }
-  .table-clean tbody tr { background:transparent; }
-  .table-clean td { padding:.6rem 0; vertical-align:middle; border:none; }
-
-  /* make each row visually card-like with separated colored columns */
-  .row-card {
-    display:flex;
-    gap:1rem;
-    align-items:center;
-    background: linear-gradient(180deg,#ffffff,#fbfffb);
-    border:1px solid rgba(15,23,42,0.08); /* stronger border so edge visible */
-    border-radius:10px;
-    padding:.65rem .9rem;
-    box-shadow: 0 10px 22px rgba(2,6,23,0.04); /* slightly stronger shadow */
-  }
-  .row-card .col-akun { flex:1; background:transparent; padding-right: .6rem; }
-  .row-card .col-input { width:240px; text-align:right; display:flex; justify-content:flex-end; align-items:center; }
-
-  /* add subtle background to left column so columns look separated (more visible now) */
-  .col-akun-box {
-    background: linear-gradient(180deg,#f0fff4,#ecfff8);      /* slightly stronger green tint */
-    padding:.6rem .9rem;
-    border-radius:8px;
-    border:1px solid rgba(16,185,129,0.14); /* stronger border */
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
-  }
-
-  /* add a visible vertical divider between columns */
-  .row-card::after {
-    content: "";
-    position: absolute;
-    pointer-events: none;
-  }
-  /* ensure row-card is positioned relative for pseudo element if needed */
-  .row-card { position: relative; }
-
-  /* add a right-border on the akun box to emphasize separation */
-  .col-akun-box { border-right: 3px solid rgba(6,95,70,0.06); }
-
-  /* Currency input styling — give soft bg so it stands out */
-  .currency {
-    text-align:right;
+  .currency-input {
+    text-align: right;
     font-variant-numeric: tabular-nums;
-    font-weight:700;
-    padding:.5rem .8rem;
-    border-radius:10px;
-    border:1px solid rgba(15,23,42,0.08);
-    background: #fbffff; /* slightly different bg for contrast */
-    min-width:160px;
-  }
-  .currency:focus { border-color: rgba(16,185,129,0.95); box-shadow: 0 8px 26px rgba(16,185,129,0.07); }
-
-  /* Preview total */
-  .preview-total {
-    display:flex; justify-content:space-between; align-items:center;
-    background: linear-gradient(90deg, rgba(16,185,129,0.06), rgba(6,95,70,0.02));
-    border:1px solid rgba(16,185,129,0.12); padding:.65rem .9rem; border-radius:10px; margin-top:.9rem;
-    font-weight:700; color:#064e3b; font-size:.98rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    padding-right: 1rem !important; /* ruang ekstra di kanan agar tidak mentok */
   }
 
-  /* Button styles: modern, consistent */
-  .btn {
-    display:inline-flex; align-items:center; gap:.6rem; padding:.56rem .9rem; font-weight:700; border-radius:10px; font-size:.95rem; cursor:pointer; transition:transform .08s ease, box-shadow .12s ease;
-  }
-  .btn:focus { outline:none; box-shadow:0 8px 26px rgba(2,6,23,0.08); transform:translateY(-2px); }
-
-  .btn-ghost { background:#fff; color:#0f766e; border:1px solid rgba(2,6,23,0.06); }
-  .btn-ghost:hover { background:#f8fdf9; }
-
-  .btn-warning {
-    background: linear-gradient(180deg,#f59e0b,#d97706);
-    color:#fff; border:none;
-  }
-  .btn-warning:hover { filter:brightness(.98); }
-
-  .btn-success {
-    background: linear-gradient(180deg,#059669,#047857);
-    color:#fff; border:none;
-  }
-  .btn-success:hover { filter:brightness(.98); }
-
-  .btn-icon {
-    display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:10px;
+  .currency-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
   }
 
-  /* Disabled state */
-  .disabled { opacity:.6; pointer-events:none; }
+  /* Prefix Rp lebih rapi */
+  .input-group .prefix {
+    background-color: hsl(var(--b3));
+    color: hsl(var(--bc) / 0.9);
+    font-weight: 600;
+    border-color: hsl(var(--bc) / 0.15);
+    min-width: 3.5rem;          /* lebar tetap agar konsisten */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.75rem;
+    font-size: 0.95rem;
+  }
 
-  /* Locked badge */
-  .badge-locked { background:#ecfdf5; color:#065f46; padding:.35rem .6rem; border-radius:999px; font-weight:700; border:1px solid rgba(16,185,129,0.12); }
+  /* Pastikan input-group tidak punya border dobel atau gap aneh */
+  .input-group {
+    border-radius: var(--rounded-btn, 0.5rem);
+    overflow: hidden;
+  }
 
-  @media (max-width:900px) {
-    .form-right { width:100%; align-items:stretch; }
-    .card-head { flex-direction:column; gap:.5rem; align-items:flex-start; }
+  .input-group > * {
+    border-radius: 0;
+  }
+
+  .input-group > :first-child {
+    border-top-left-radius: var(--rounded-btn, 0.5rem);
+    border-bottom-left-radius: var(--rounded-btn, 0.5rem);
+  }
+
+  .input-group > :last-child {
+    border-top-right-radius: var(--rounded-btn, 0.5rem);
+    border-bottom-right-radius: var(--rounded-btn, 0.5rem);
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #0f766e 0%, #065f46 100%);
+  }
+
+  .account-item {
+    transition: all 0.2s ease;
+  }
+
+  .account-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+    border-color: hsl(var(--p) / 0.45) !important;
+  }
+
+  .account-item .kode {
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.6px;
+  }
+
+  @media (max-width: 640px) {
+    .form-actions {
+      flex-direction: column !important;
+      gap: 0.75rem !important;
+    }
+    .form-actions .btn {
+      width: 100%;
+    }
+    .stat {
+      margin-top: 1.75rem !important;
+    }
   }
 </style>
 @endpush
 
-<div class="card-wrapper">
-  <div class="card-head">
-    <div>
-      <div class="title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="opacity:.95"><path d="M12 3v18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Input Saldo Awal Periode
+@section('content')
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+  <div class="card bg-base-100 shadow-xl border border-base-200 rounded-2xl overflow-hidden">
+    <div class="card-header px-6 py-6 sm:py-7 text-white">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div class="space-y-2">
+          <h1 class="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <svg class="w-8 h-8 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Input Saldo Awal Periode
+          </h1>
+          <p class="opacity-90 text-sm sm:text-base">
+            Masukkan saldo awal tiap akun. Data ini akan menjadi jurnal pembuka saat periode dikunci.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3 flex-wrap justify-end sm:justify-start">
+          @if($periodeTerakhir?->status === 'locked')
+            <div class="badge badge-lg badge-success gap-2 px-4 py-3 text-sm font-medium">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Terkunci — {{ $periodeTerakhir->periode->format('d M Y') }}
+            </div>
+          @endif
+
+          @if($periodeTerakhir?->status === 'locked')
+            <button id="btnCreateNewPeriod" class="btn btn-primary gap-2 shadow-md min-w-[140px]">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Periode {{ now()->year }}
+            </button>
+          @endif
+
+          <button class="btn btn-outline gap-2 min-w-[100px]" onclick="location.reload()">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reset
+          </button>
+        </div>
       </div>
-      <div class="subtitle">Masukkan saldo awal untuk akun — angka akan dipakai untuk jurnal pembuka jika di-lock.</div>
     </div>
 
-    <div style="display:flex;gap:.75rem;align-items:center;">
-      @if($periodeTerakhir?->status === 'locked')
-        <div class="badge-locked">🔒 Ter-lock — Periode {{ $periodeTerakhir->periode->format('d M Y') }}</div>
-      @endif
-      <button class="btn btn-ghost" onclick="window.location.reload()" title="Reset form">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 12A9 9 0 1 1 12 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        Reset
-      </button>
-    </div>
-  </div>
-
-  <div class="card-body">
-    <div class="form-panel">
-      <form id="formSaldo">
+    <div class="card-body p-6 lg:p-8">
+      <form id="formSaldo" class="space-y-10">
         @csrf
-        <div class="form-top">
-          <div class="form-left">
-            <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-              <div style="flex:0 0 240px">
-                <label class="small">Periode Awal <span style="color:#ef4444">*</span></label>
-                <input type="date" name="periode" class="form-control" required {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}>
+
+        {{-- ================= HEADER FORM ================= --}}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
+
+          {{-- LEFT : PERIODE --}}
+          <div class="lg:col-span-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              <div>
+                <label class="label">
+                  <span class="label-text font-semibold">
+                    Periode Awal <span class="text-error">*</span>
+                  </span>
+                </label>
+                <input
+                  type="date"
+                  name="periode"
+                  required
+                  class="input input-bordered w-full focus:input-primary"
+                  {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
+                >
               </div>
 
-              <div style="flex:1 1 380px">
-                <label class="small">Keterangan</label>
-                <input type="text" name="keterangan" class="form-control" placeholder="Contoh: Saldo awal tahun 2025" {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}>
+              <div>
+                <label class="label">
+                  <span class="label-text font-semibold">Keterangan</span>
+                </label>
+                <input
+                  type="text"
+                  name="keterangan"
+                  class="input input-bordered w-full"
+                  placeholder="Contoh: Saldo awal tahun 2025"
+                  {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
+                >
               </div>
+
             </div>
           </div>
 
-          <div class="form-right">
-            <div style="width:100%; display:flex; gap:.6rem; justify-content:flex-end;">
-              <button type="button" id="btnDraft" class="btn btn-warning" {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7v10a2 2 0 0 0 2 2h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                Simpan Draft
-              </button>
+          {{-- RIGHT : ACTION BUTTON --}}
+          <div class="lg:col-span-4 flex flex-col gap-4 lg:items-end">
 
-              <button type="button" id="btnLock" class="btn btn-success" {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 11v6M8 11v6M4 7h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-                Simpan & Lock
-              </button>
+            <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+
+                    <button
+                      type="button"
+                      id="btnDraft"
+                      class="btn btn-warning flex-1 inline-flex flex-row items-center justify-center gap-2 shadow-sm"
+                      {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
+                    >
+                      <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                      </svg>
+                      <span class="leading-none">Simpan Draft</span>
+                    </button>
+
+                <button
+                  type="button"
+                  id="btnLock"
+                  class="btn btn-success flex-1 shadow-sm"
+                  {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
+                >
+                  <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                    <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span class="leading-none text-sm">Kunci Periode</span>
+                  </span>
+                </button>
+
             </div>
 
-            <div style="margin-top:.5rem; font-size:.9rem; color:#6b7280;">
-              <div>Draft: simpan tanpa membuat jurnal.</div>
-              <div style="color:#065f46;font-weight:600;margin-top:.35rem;">Lock: membuat jurnal pembuka dan menutup input pada periode ini.</div>
+            {{-- HELPER TEXT --}}
+            <div class="text-sm opacity-70 space-y-1 text-right hidden lg:block">
+              <div>Draft → simpan sementara</div>
+              <div class="text-success font-medium">
+                Kunci → buat jurnal & kunci permanen
+              </div>
             </div>
+
           </div>
         </div>
 
-        <div style="margin-top:1.1rem; overflow:auto;">
-          <table class="table-clean" role="presentation">
-            <thead>
-              <tr>
-                <th>Akun</th>
-                <th style="width:240px; text-align:right;">Saldo Awal (Rp)</th>
-              </tr>
-            </thead>
-            <tbody>
-              @foreach($akuns as $akun)
-              <tr>
-                <td style="padding:0">
-                  <div class="row-card">
-                    <div class="col-akun">
-                      <div class="col-akun-box">
-                        <div style="font-weight:700;">{{ $akun->kode }}</div>
-                        <div style="color:#6b7280;">{{ $akun->nama }}</div>
-                      </div>
-                    </div>
+        {{-- ================= DIVIDER ================= --}}
+        <div class="divider my-10 text-base-content/50 font-medium">
+          Daftar Akun dan Saldo Awal
+        </div>
 
-                    <div class="col-input">
-                      <input type="text"
-                            name="saldo[{{ $akun->id }}]"
-                            class="currency"
-                            value="0"
-                            data-id="{{ $akun->id }}"
-                            {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-              @endforeach
-            </tbody>
-          </table>
+        {{-- ================= ACCOUNT LIST ================= --}}
+<div class="space-y-2 max-h-[62vh] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
+    @foreach($akuns as $akun)
+    <div class="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-3.5
+                bg-base-100/50 hover:bg-base-200/50 rounded-xl border border-base-300/40
+                transition-all duration-200 hover:shadow-sm
+                {{ !$loop->last ? 'border-b border-base-300/30 pb-5' : '' }}">  <!-- border-b di item kecuali terakhir -->
 
-          <div class="preview-total" id="previewTotal">
-            <div>Total Saldo Awal</div>
-            <div id="totalAmount">Rp 0</div>
+        <!-- Kode + Nama Akun -->
+        <div class="flex items-center gap-3.5 flex-1 min-w-0">
+            <div class="font-mono font-semibold text-base lg:text-lg tracking-tight text-base-content/90 whitespace-nowrap min-w-[90px] sm:min-w-[110px]">
+                {{ $akun->kode }}
+            </div>
+            <div class="text-sm opacity-80 line-clamp-1 flex-1">
+                {{ $akun->nama }}
+            </div>
+        </div>
+
+        <!-- Input Saldo -->
+        <div class="w-full sm:w-auto sm:min-w-[200px] lg:min-w-[220px] shrink-0">
+            <div class="join w-full">
+                <span class="join-item btn btn-sm lg:btn-md px-4 min-w-[50px] flex items-center justify-center text-base-content/80 font-medium">
+                    Rp
+                </span>
+                <input
+                    type="text"
+                    name="saldo[{{ $akun->id }}]"
+                    class="join-item input currency-input input-bordered input-md lg:input-md font-medium text-right flex-1
+                           max-w-[160px] md:max-w-[170px] lg:max-w-[190px]
+                           focus:border-primary group-hover:border-primary/40 transition-colors"
+                    value="{{ number_format($saldoAwal[$akun->id] ?? 0, 0, ',', '.') }}"
+                    data-id="{{ $akun->id }}"
+                    {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
+                >
+            </div>
+        </div>
+
+        <!-- Garis tipis di dalam box (opsional, jika ingin lebih presisi) -->
+        @if(!$loop->last)
+        <div class="absolute bottom-0 left-4 right-4 h-px bg-base-300/30 pointer-events-none"></div>
+        @endif
+    </div>
+    @endforeach
+</div>
+
+        {{-- ================= TOTAL ================= --}}
+        <div
+          class="stat bg-gradient-to-br from-base-100 to-base-200/60
+                 border border-base-300 rounded-2xl shadow-md mt-8"
+          >
+          <div class="stat-figure text-success opacity-90">
+            <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2
+                   3 .895 3 2-1.343 2-3 2m0-8
+                   c1.11 0 2.08.402 2.599 1M12 8V7
+                   m0 1v8m0 0v1m0-1
+                   c-1.11 0-2.08-.402-2.599-1
+                   M21 12a9 9 0 11-18 0
+                   9 9 0 0118 0z" />
+            </svg>
+          </div>
+
+          <div class="stat-title text-base-content/70">
+            Total Saldo Awal Periode
+          </div>
+          <div id="totalAmount" class="stat-value text-success">
+            Rp 0
           </div>
         </div>
 
         <input type="hidden" name="lock" id="lockFlag" value="0">
+
       </form>
     </div>
   </div>
 </div>
-
 @endsection
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-  // helper: format angka ke tampilan Rupiah "Rp 1.234.567"
-  function formatRupiahDigits(digitsStr) {
-    if (!digitsStr) return 'Rp 0';
-    digitsStr = digitsStr.replace(/^0+(?=\d)/, '');
-    let n = digitsStr;
-    return 'Rp ' + n.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  }
+// Format Rupiah (tetap sama, tapi pastikan output konsisten)
+const formatRupiah = num => isNaN(num) || num === '' ? '' : new Intl.NumberFormat('id-ID').format(num);
+const parseRupiah  = str => parseInt((str||'').replace(/\D/g,'')) || 0;
 
-  function findCaretPosFromDigitIndex(formatted, digitIndex) {
-    if (digitIndex <= 0) return 0;
-    let count = 0;
-    for (let i = 0; i < formatted.length; i++) {
-      if (/\d/.test(formatted[i])) count++;
-      if (count === digitIndex) return i + 1;
-    }
-    return formatted.length;
-  }
+function initCurrencyInputs() {
+  document.querySelectorAll('.currency-input').forEach(input => {
+    let raw = parseRupiah(input.value);
+    input.value = raw ? formatRupiah(raw) : '0';
 
-  function liveFormatInput(el) {
-    const prev = el.value || '';
-    const selStart = el.selectionStart || prev.length;
-    const digitsBefore = prev.slice(0, selStart).replace(/\D/g, '').length;
-    let digits = prev.replace(/\D/g, '');
-    if (digits === '') {
-      el.value = '';
-      el.setSelectionRange(0,0);
+    input.addEventListener('input', e => {
+      let val = parseRupiah(e.target.value);
+      e.target.value = formatRupiah(val);
       calculateTotal();
-      return;
-    }
-    const formattedDigits = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    el.value = formattedDigits;
-    const newPos = findCaretPosFromDigitIndex(formattedDigits, digitsBefore);
-    el.setSelectionRange(newPos, newPos);
-    calculateTotal();
-  }
-
-  function cleanInputForSubmitValue(el) {
-    return String(el.value).replace(/\D/g, '') || '0';
-  }
-
-  function initCurrencyInputs() {
-    document.querySelectorAll('.currency').forEach(function(el) {
-      let initialDigits = String(el.value || '').replace(/\D/g, '');
-      if (!initialDigits) initialDigits = '0';
-      el.value = initialDigits === '0' ? '' : initialDigits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
-      el.addEventListener('focus', function() {
-        if (this.value === '' || this.value === '0') { this.value = ''; return; }
-        this.setSelectionRange(this.value.length, this.value.length);
-      });
-
-      el.addEventListener('input', function(e) {
-        if (e.isComposing) return;
-        liveFormatInput(this);
-      });
-
-      el.addEventListener('blur', function() {
-        let digits = String(this.value).replace(/\D/g, '');
-        if (!digits || digits === '') { this.value = '0'; }
-        else { this.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
-        calculateTotal();
-      });
     });
-  }
 
-  function calculateTotal() {
-    let total = 0;
-    document.querySelectorAll('.currency').forEach(function(el) {
-      let n = Number(String(el.value).replace(/\D/g, '') || 0);
-      total += n;
+    input.addEventListener('focus', () => {
+      if (input.value === '0') input.select();
     });
-    const totalEl = document.getElementById('totalAmount');
-    totalEl.textContent = formatRupiahDigits(String(total));
+
+    input.addEventListener('blur', () => {
+      let val = parseRupiah(input.value);
+      input.value = val ? formatRupiah(val) : '0';
+      calculateTotal();
+    });
+  });
+}
+
+function calculateTotal() {
+  let total = 0;
+  document.querySelectorAll('.currency-input').forEach(el => {
+    total += parseRupiah(el.value);
+  });
+  document.getElementById('totalAmount').textContent = 'Rp ' + formatRupiah(total);
+}
+
+function cleanInputsForSubmit() {
+  document.querySelectorAll('.currency-input').forEach(el => {
+    el.value = parseRupiah(el.value);
+  });
+}
+
+// Fungsi umum AJAX submit (bisa dipakai draft & lock)
+function submitSaldo(isLock = false) {
+  if ({{ $periodeTerakhir?->status === 'locked' ? 'true' : 'false' }}) {
+    Swal.fire('Dilarang', 'Periode ini sudah dikunci.', 'warning');
+    return;
   }
 
-  function kirimSaldo(lock) {
-    if ({{ $periodeTerakhir?->status === 'locked' ? 'true' : 'false' }}) {
-      Swal.fire('Dilarang', 'Periode ini sudah di-lock.', 'warning');
-      return;
-    }
+  document.getElementById('lockFlag').value = isLock ? '1' : '0';
 
-    document.getElementById('lockFlag').value = lock ? 1 : 0;
+  const titleText = isLock ? 'Kunci Periode Ini?' : 'Simpan sebagai Draft?';
+  const textMsg   = isLock 
+    ? 'Ini akan membuat jurnal pembuka dan periode dikunci permanen.' 
+    : 'Data akan disimpan sebagai draft (belum terkunci, bisa diedit lagi).';
+  const iconType  = isLock ? 'warning' : 'question';
+  const btnColor  = isLock ? '#10b981' : '#f59e0b';
+
+  Swal.fire({
+    title: titleText,
+    text: textMsg,
+    icon: iconType,
+    showCancelButton: true,
+    confirmButtonColor: btnColor,
+    confirmButtonText: 'Ya, Lanjutkan',
+    cancelButtonText: 'Batal'
+  }).then(result => {
+    if (!result.isConfirmed) return;
+
+    // Tampilkan loading di tombol
+    const btn = isLock ? $('#btnLock') : $('#btnDraft');
+    const originalText = btn.html();
+    btn.html('<span class="loading loading-spinner loading-sm"></span> Memproses...').prop('disabled', true);
+
+    cleanInputsForSubmit();
+
+    $.ajax({
+      url: '{{ route("admin.keuangan.saldo-awal.store") }}',
+      type: 'POST',
+      data: $('#formSaldo').serialize(),
+      success: function(res) {
+        Swal.fire({
+          title: 'Berhasil!',
+          text: res.message || (isLock ? 'Periode berhasil dikunci.' : 'Draft berhasil disimpan.'),
+          icon: 'success',
+          timer: isLock ? 2000 : 1500,
+          showConfirmButton: false
+        });
+
+        // Draft → tidak reload, biar bisa lanjut edit
+        // Lock  → reload supaya form disabled
+        if (isLock) {
+          setTimeout(() => location.reload(), 1800);
+        } else {
+          // Kembalikan tombol ke semula
+          btn.html(originalText).prop('disabled', false);
+        }
+      },
+      error: function(xhr) {
+        let msg = xhr.responseJSON?.message || 'Terjadi kesalahan saat menyimpan.';
+        if (xhr.responseJSON?.errors) {
+          msg = Object.values(xhr.responseJSON.errors)[0][0] || msg;
+        }
+        Swal.fire('Gagal', msg, 'error');
+
+        // Kembalikan tombol
+        btn.html(originalText).prop('disabled', false);
+      }
+    });
+  });
+}
+
+$(function() {
+  initCurrencyInputs();
+  calculateTotal();
+
+  // Event tombol Draft & Lock
+  $('#btnDraft').on('click', () => submitSaldo(false));
+  $('#btnLock').on('click', () => submitSaldo(true));
+
+  // Buat periode baru (tetap sama)
+  $('#btnCreateNewPeriod').on('click', function() {
     Swal.fire({
-      title: lock ? 'Simpan dan Lock saldo?' : 'Simpan draft saldo?',
-      text: lock ? 'Aksi ini akan membuat jurnal pembuka dan mengunci periode.' : '',
-      icon: lock ? 'warning' : 'question',
+      title: 'Buat Periode Baru?',
+      text: 'Ini akan membuat periode baru tahun {{ now()->year }}. Pastikan periode sebelumnya sudah di-lock.',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Ya'
-    }).then((r) => {
-      if (!r.isConfirmed) return;
-
-      document.querySelectorAll('.currency').forEach(function(el) {
-        el.value = cleanInputForSubmitValue(el);
-      });
-
+      confirmButtonColor: '#10b981',
+      confirmButtonText: 'Ya, Buat',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (!result.isConfirmed) return;
       $.ajax({
-        url: '{{ route("admin.keuangan.saldo-awal.store") }}',
+        url: '{{ route("admin.keuangan.saldo-awal.create-new") }}',
         type: 'POST',
-        data: $('#formSaldo').serialize(),
-        success: function(res) {
-          Swal.fire('Sukses!', res.message || 'Data tersimpan', 'success').then(() => location.reload());
+        data: { _token: '{{ csrf_token() }}' },
+        success: function(response) {
+          if (response.success) {
+            Swal.fire({
+              title: 'Sukses!',
+              text: response.message || 'Periode baru berhasil dibuat.',
+              icon: 'success',
+              timer: 2500,
+              showConfirmButton: false
+            }).then(() => location.reload());
+          } else {
+            Swal.fire('Info', response.message || 'Operasi selesai tapi ada catatan.', 'info');
+          }
         },
         error: function(xhr) {
-          let msg = 'Terjadi kesalahan';
-          try { msg = xhr.responseJSON?.message || Object.values(xhr.responseJSON?.errors || { })[0]?.[0] || msg; } catch(e){}
-          Swal.fire('Error', msg, 'error');
+          let errorMessage = 'Terjadi kesalahan tidak diketahui';
+          if (xhr.responseJSON && xhr.responseJSON.message) {
+            errorMessage = xhr.responseJSON.message;
+          } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+            errorMessage = Object.values(xhr.responseJSON.errors)[0][0] || 'Validasi gagal';
+          } else {
+            errorMessage = xhr.statusText || 'Gagal terhubung ke server';
+          }
+          Swal.fire({
+            title: 'Gagal',
+            html: errorMessage.replace(/\n/g, '<br>'),
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
         }
       });
     });
-  }
-
-  // binding
-  $(function() {
-    initCurrencyInputs();
-    calculateTotal();
-
-    $('#btnDraft').on('click', function() { kirimSaldo(0); });
-    $('#btnLock').on('click', function() { kirimSaldo(1); });
-
-    $(document).on('input', '.currency', function() { calculateTotal(); });
-
-    @if($periodeTerakhir?->status === 'locked')
-      document.querySelectorAll('#formSaldo input, #formSaldo select, #formSaldo button').forEach(function(i){ i.disabled = true; i.classList.add('disabled'); });
-    @endif
   });
+
+  @if($periodeTerakhir?->status === 'locked')
+    document.querySelectorAll('#formSaldo input, #formSaldo button').forEach(el => {
+      el.disabled = true;
+      el.classList.add('opacity-60', 'cursor-not-allowed');
+    });
+  @endif
+});
+
 </script>
 @endpush

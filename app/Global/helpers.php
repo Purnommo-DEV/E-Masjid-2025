@@ -1,5 +1,6 @@
 <?php
 use App\Models\AkunKeuangan;
+use App\Models\ProfilMasjid;
 
 if (!function_exists('masjid')) {
     /**
@@ -9,6 +10,25 @@ if (!function_exists('masjid')) {
     function masjid(): string
     {
         return strtolower(env('APP_MASJID', 'default'));
+    }
+}
+
+if (!function_exists('profil')) {
+    function profil(string $key = null): ?string
+    {
+        $profil = ProfilMasjid::first();
+
+        if (!$profil) {
+            return null;
+        }
+
+        // Jika tidak ada $key, kembalikan seluruh object
+        if (is_null($key)) {
+            return $profil;
+        }
+
+        // Ambil attribute yang diminta
+        return $profil->$key ?? null;
     }
 }
 

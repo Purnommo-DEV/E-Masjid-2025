@@ -49,6 +49,7 @@ class AcaraService implements AcaraServiceInterface
                 'excerpt'       => (string) $excerpt,
                 'lokasi'        => (string) ($a->lokasi ?? '-'),
                 'image'         => $image,
+                'slug'          => $a->slug,
                 // 'url'           => route('acara.show', $a->slug),
             ];
         })->toArray();
@@ -59,9 +60,22 @@ class AcaraService implements AcaraServiceInterface
      */
     public function paginate(int $perPage = 12)
     {
-        return Acara::query()
-            ->with(['kategoris','media'])
-            ->orderBy('mulai', 'desc')
-            ->paginate($perPage);
+        $query = Acara::query()
+            ->with(['kategoris', 'media'])
+            ->where('is_published', true);  // tambah kalau ada flag active
+
+        // Contoh sort default + support dari query string (?sort=mulai_asc)
+        if (request()->has('sort')) {
+            $sort = request('sort');
+            if ($sort === 'mulai_asc') {
+                $query->orderBy('mulai', 'asc');
+            } elseif ($sort === 'mulai_desc') {
+                $query->orderBy('mulai', 'desc');
+            }
+        } else {
+            $query->orderBy('mulai', 'desc'); // default terbaru dulu
+        }
+
+        return $query->paginate($perPage);
     }
 }

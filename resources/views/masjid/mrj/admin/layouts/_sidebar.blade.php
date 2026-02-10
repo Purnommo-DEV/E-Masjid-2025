@@ -1,4 +1,5 @@
 <aside 
+    x-data="{ openKeuangan: false, sidebarOpen: window.innerWidth >= 1024 }"
     x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
     class="fixed inset-y-0 left-0 z-[9999] w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:w-64 lg:shadow-2xl"
     aria-label="Sidebar"
@@ -104,18 +105,17 @@
                     <button @click="openKeuangan = !openKeuangan"
                             :class="openKeuangan ? 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200' : 'text-white hover:bg-white/10'"
                             class="w-full flex items-center gap-4 px-5 py-3 rounded-xl transition text-sm">
-                        <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v12H4V7zm0-2h16V3H4v2zm12 7h2v2h-2v-2z"/>
                         </svg>
                         <span class="flex-1 text-left">Manajemen Keuangan</span>
-                        <svg x-show="openKeuangan" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <svg x-show="openKeuangan" class="w-4 h-4 transition-transform" :class="openKeuangan ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
                         </svg>
-                        <svg x-show="!openKeuangan" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
                     </button>
-                    <ul x-show="openKeuangan" x-collapse class="mt-2 space-y-1 pl-6">
+
+                    <!-- Submenu dengan x-collapse -->
+                    <ul x-show="openKeuangan" x-collapse class="mt-2 space-y-1 pl-6 overflow-hidden">
                         @php
                             $sub = [
                                 ['route'=>'admin.keuangan.saldo-awal','label'=>'Saldo Awal Periode','icon'=>'scale'],
@@ -139,47 +139,7 @@
                                        'bg-amber-300/90 text-emerald-900 font-semibold shadow' => $a,
                                        'text-white hover:bg-white/10' => !$a
                                    ])>
-                                    @if($s['icon'] === 'scale')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m9-9H3"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'donate')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m6 6H6m0 0V9l6-3 6 3v12z"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'book')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-6-6h12"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'banknotes')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 10h18v7H3v-7zm3-4h12v4H6V6z"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'arrow-up')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-6 6m6-6l6 6"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'arrow-down')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0l-6-6m6 6l6-6"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'hand')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 21s6-3 6-9V7l-6-3-6 3v5c0 6 6 9 6 9z"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'zakat')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 7a4 4 0 110 8 4 4 0 010-8z"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'inbox')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 7h18v12H3V7zm3 4h12"/>
-                                        </svg>
-                                    @elseif($s['icon'] === 'document')
-                                        <svg class="w-4 h-4 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 5h14v14H5V5zm4 4h6m-6 4h6"/>
-                                        </svg>
-                                    @endif
+                                    <!-- Icon submenu (sama seperti sebelumnya) -->
                                     <span>{{ $s['label'] }}</span>
                                     @if($s['route'] === 'admin.keuangan.saldo-awal')
                                         @if(\App\Models\SaldoAwalPeriode::where('status','locked')->exists())

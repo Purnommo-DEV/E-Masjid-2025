@@ -8,6 +8,7 @@ use App\Interfaces\AcaraServiceInterface;
 use App\Interfaces\BeritaServiceInterface;
 use App\Interfaces\PengumumanServiceInterface;
 use App\Interfaces\GaleriServiceInterface;
+use App\Services\JadwalSholatService;
 use App\Models\ProfilMasjid;
 use App\Models\Acara;
 use App\Models\Berita;
@@ -18,20 +19,27 @@ use Carbon\Carbon;
 
 class HomeController extends Controller
 {
+    protected $acaraService;
+    protected $bannerService;
+    protected $beritaService;
+    protected $pengumumanService;
+    protected $galeriService;
+    protected $jadwalSholatService;
+
     public function __construct(
-        AcaraServiceInterface $acaraService, 
+        AcaraServiceInterface $acaraService,
         BannerServiceInterface $bannerService,
         BeritaServiceInterface $beritaService,
         PengumumanServiceInterface $pengumumanService,
-        GaleriServiceInterface $galeriService
-    )
-    
-    {
+        GaleriServiceInterface $galeriService,
+        JadwalSholatService $jadwalSholatService
+    ) {
         $this->acaraService = $acaraService;
         $this->bannerService = $bannerService;
         $this->beritaService = $beritaService;
         $this->pengumumanService = $pengumumanService;
         $this->galeriService = $galeriService;
+        $this->jadwalSholatService = $jadwalSholatService;
     }
 
     public function index()
@@ -53,13 +61,7 @@ class HomeController extends Controller
 
         $galeri = $this->galeriService->latestFotos(12);
 
-        $jadwalSholat = [
-            'subuh'   => '04:25',
-            'dzuhur'  => '12:10',
-            'ashar'   => '15:20',
-            'maghrib' => '17:45',
-            'isya'    => '19:00',
-        ];
+        $jadwalSholat = $this->jadwalSholatService->getJadwalHariIni();
 
         return view('masjid.'.masjid().'.guest.index', compact(
             'profil',

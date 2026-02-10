@@ -49,7 +49,7 @@
                         </h1>
 
                         <p class="text-base sm:text-lg text-slate-700 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                            {{ $profil->tagline ?? 'Menghidupkan shalat berjamaah, mempererat silaturahmi, dan menebar kebaikan bagi umat.' }}
+                            {{ e($profil->tagline ?? 'Menghidupkan shalat berjamaah, mempererat silaturahmi, dan menebar kebaikan bagi umat.') }}
                         </p>
 
                         <div class="flex flex-wrap justify-center lg:justify-start gap-4 mt-8">
@@ -79,7 +79,6 @@
                     </div>
 
                     <!-- JADWAL SHOLAT – VERSI BARU & RESPONSIF -->
-                    <!-- JADWAL SHOLAT – VERSI BARU & RESPONSIF -->
                     <div id="jadwal" class="w-full max-w-3xl mx-auto lg:mx-0 lg:max-w-none">  <!-- lebar lebih fleksibel di desktop -->
                         <div class="bg-white/85 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-teal-200/40 border border-white/30 overflow-hidden">
                             <div class="p-6 lg:p-8">
@@ -90,13 +89,23 @@
                                     </span>
                                 </div>
 
-                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 md:gap-5 lg:gap-6">
-                                    @foreach(['subuh' => 'Subuh', 'dzuhur' => 'Dzuhur', 'ashar' => 'Ashar', 'maghrib' => 'Maghrib', 'isya' => 'Isya'] as $key => $nama)
-                                        <div class="relative bg-white/90 rounded-2xl p-4 md:p-5 text-center border border-emerald-100/60 hover:border-emerald-400 transition-all group shadow-sm hover:shadow-md flex flex-col items-center justify-center min-h-[100px] md:min-h-[120px]">
-                                            <div class="text-xs md:text-sm font-semibold text-emerald-700 uppercase tracking-wide mb-2 md:mb-3">
-                                                {{ $nama }}
+                                @php
+                                    $sholat = [
+                                        'subuh'    => ['label' => 'Subuh',    'color' => 'emerald'],
+                                        'dzuhur'   => ['label' => 'Dzuhur',   'color' => 'teal'],
+                                        'ashar'    => ['label' => 'Ashar',    'color' => 'cyan'],
+                                        'maghrib'  => ['label' => 'Maghrib',  'color' => 'amber'],
+                                        'isya'     => ['label' => 'Isya',     'color' => 'emerald'],
+                                    ];
+                                @endphp
+
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                                    @foreach($sholat as $key => $data)
+                                        <div class="relative bg-white/90 rounded-2xl p-4 md:p-4 text-center border border-emerald-100/60 hover:border-emerald-400 transition-all group shadow-sm hover:shadow-md flex flex-col items-center justify-center min-h-[100px] md:min-h-[120px]">
+                                            <div class="text-xs md:text-sm font-semibold text-{{ $data['color'] }}-700 uppercase uppercase tracking-wide mb-2 md:mb-3">
+                                                {{ $data['label'] }}
                                             </div>
-                                            <div class="text-xl md:text-2xl lg:text-3xl font-extrabold text-emerald-900 group-hover:text-teal-700 transition-colors whitespace-nowrap">
+                                            <div class="text-2xl font-extrabold text-slate-900 group-hover:text-teal-700 transition-colors whitespace-nowrap">
                                                 {{ $jadwalSholat[$key] ?? '--:--' }}
                                             </div>
                                         </div>
@@ -104,7 +113,10 @@
                                 </div>
 
                                 <p class="text-center text-xs md:text-sm text-slate-500 mt-6 md:mt-8 italic">
-                                    Waktu sholat berdasarkan lokasi masjid • Sumber: {{ $sumberJadwal ?? 'Kemenag' }}
+                                    Waktu sholat berdasarkan lokasi masjid • Sumber: {{ $jadwalSholat['sumber'] ?? 'Kemenag' }}
+                                    @if(!empty($jadwalSholat['tanggal_hijriah']))
+                                        <br>Hijriah: {{ $jadwalSholat['tanggal_hijriah'] }}
+                                    @endif
                                 </p>
                             </div>
                         </div>
@@ -223,123 +235,131 @@
         </section>
 
         {{-- SECTION AGENDA --}}
-        <section id="acara" class="py-12 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        <section id="acara" class="py-12 sm:py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50/50 relative overflow-hidden">
+            <!-- Optional subtle background pattern atau blob -->
+            <div class="absolute inset-0 opacity-10 pointer-events-none">
+                <div class="absolute -top-20 -left-20 w-96 h-96 bg-teal-200 rounded-full blur-3xl"></div>
+            </div>
+
             <div class="container mx-auto px-4 lg:px-6">
-                <div class="flex items-center justify-between mb-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-10 gap-4">
                     <div>
-                        <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">AGENDA</p>
-                        <h2 class="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-3">
-                            Agenda Kegiatan Terdekat
-                            <span class="h-1 w-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full hidden sm:block"></span>
+                        <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">AGENDA TERDEKAT</p>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-3">
+                            Kegiatan & Kajian Mendatang
+                            <span class="hidden sm:block h-1.5 w-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></span>
                         </h2>
                     </div>
-                    <a href="{{ route('acara.index') }}" class="text-sm text-emerald-600 hover:text-emerald-800 font-medium inline-flex items-center gap-2 hover:underline transition">
-                        Lihat semua →
+                    <a href="{{ route('acara.index') }}" 
+                       class="text-sm sm:text-base text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-2 hover:underline transition">
+                        Lihat Semua Agenda →
                     </a>
                 </div>
 
                 <div class="grid lg:grid-cols-[3fr_1fr] gap-6 xl:gap-8">
-                    {{-- List Acara Utama - Maksimal 3 card --}}
-                    <div class="space-y-5">
+                    <!-- List Acara Utama -->
+                    <div class="space-y-5 sm:space-y-6">
                         @forelse(array_slice($acaras, 0, 3) as $acara)
-                            <div class="bg-white rounded-xl border border-emerald-100/60 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden group w-full">
-                                <div class="p-5 lg:p-6"> <!-- padding dikecilkan agar card tidak terlalu besar -->
-                                    <!-- Badge Kategori & Tanggal -->
-                                    <div class="flex flex-wrap items-center justify-between mb-3 gap-3">
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium">
-                                            {{ $acara['kategori'] ?? 'Acara' }}
+                            <div class="group bg-white rounded-2xl sm:rounded-3xl border border-emerald-100/60 shadow-md hover:shadow-xl hover:border-emerald-300/70 transition-all duration-300 overflow-hidden hover:-translate-y-1.5">
+
+                                <div class="p-5 sm:p-6 lg:p-7">
+                                    <!-- Badge & Tanggal -->
+                                    <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
+                                        <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-sm font-medium shadow-sm">
+                                            {{ $acara['kategori'] ?? 'Kajian' }}
                                         </span>
-                                        <span class="text-sm text-slate-600 font-medium">
-                                            {{ $acara['tanggal_label'] ?? ($acara['tanggal'] ?? '-') }}
+                                        <span class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                                            {{ $acara['tanggal_label'] ?? $acara['tanggal'] ?? 'Segera' }}
                                         </span>
                                     </div>
 
-                                    <!-- Judul Acara -->
-                                    <h3 class="text-lg lg:text-xl font-semibold text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors line-clamp-2">
-                                        {{ $acara['title'] ?? ($acara['judul'] ?? 'Judul Acara') }}
+                                    <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-tight">
+                                        {{ $acara['title'] ?? $acara['judul'] ?? 'Judul Acara' }}
                                     </h3>
 
-                                    <!-- Deskripsi -->
-                                    <p class="text-slate-600 mb-4 line-clamp-3 text-sm leading-relaxed">
-                                        {!! $acara['excerpt'] ?? \Illuminate\Support\Str::limit(strip_tags($acara['deskripsi'] ?? 'Tidak ada deskripsi.'), 140) !!}
+                                    <p class="text-sm sm:text-base text-slate-600 mb-5 line-clamp-3 leading-relaxed">
+                                        {{ Str::limit(strip_tags($acara['excerpt'] ?? $acara['deskripsi'] ?? ''), 140) }}
                                     </p>
 
-                                    <!-- Waktu & Lokasi -->
-                                    <div class="flex flex-wrap gap-4 mb-4 text-sm text-slate-700">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-emerald-600 text-lg">⏰</span>
-                                            <span>{{ $acara['waktu_label'] ?? ($acara['waktu'] ?? '-') }}</span>
-                                            @if(!empty($acara['waktu_teks']))
-                                                <span class="text-xs text-slate-500">({{ $acara['waktu_teks'] }})</span>
-                                            @endif
+                                    <div class="flex flex-wrap gap-6 mb-6 text-sm text-slate-700">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-xl text-emerald-600">⏰</span>
+                                            <span class="font-medium">{{ $acara['waktu_label'] ?? $acara['waktu'] ?? '-' }}</span>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-rose-600 text-lg">📍</span>
-                                            <span>{{ $acara['lokasi'] ?? 'Masjid Al-Hidaya' }}</span>
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-xl text-rose-600">📍</span>
+                                            <span class="font-medium">{{ $acara['lokasi'] ?? 'Masjid' }}</span>
                                         </div>
                                     </div>
 
-                                    <!-- Tombol Detail -->
-                                    <a href="{{ $acara['url'] ?? (isset($acara['slug']) ? route('acara.show', $acara['slug']) : '#') }}"
-                                       class="inline-flex items-center px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-full transition shadow-sm hover:shadow-md text-sm">
+                                    <a href="{{ $acara['url'] ?? route('acara.show', $acara['slug'] ?? '#') }}"
+                                       class="inline-flex items-center px-6 py-2.5 
+                                              border-2 border-emerald-600 text-emerald-700 
+                                              hover:bg-emerald-50 hover:text-emerald-800 
+                                              font-medium rounded-full transition-all duration-300 text-sm shadow-sm hover:shadow">
                                         Detail Acara →
                                     </a>
                                 </div>
                             </div>
                         @empty
-                            <div class="bg-white rounded-xl border border-dashed border-emerald-200 p-8 text-center text-slate-500">
-                                <p class="text-lg font-medium">Belum ada agenda terdekat</p>
-                                <p class="mt-2 text-sm">Informasi agenda akan segera diperbarui.</p>
+                            <div class="bg-white/80 rounded-2xl border border-dashed border-emerald-200 p-10 text-center text-slate-500">
+                                <p class="text-xl font-medium mb-2">Belum ada agenda terdekat</p>
+                                <p class="text-sm">Pantau terus untuk update kegiatan terbaru</p>
                             </div>
                         @endforelse
 
                         @if(count($acaras) > 3)
-                            <div class="text-center mt-6">
-                                <a href="{{ route('acara.index') }}" class="inline-flex items-center px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-full transition shadow-md hover:shadow-lg text-sm">
-                                    Lihat Agenda Lainnya →
+                            <div class="text-center mt-10 sm:mt-12">
+                                <a href="{{ route('acara.index') }}" 
+                                   class="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 
+                                          bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 
+                                          hover:brightness-110 hover:scale-[1.04] 
+                                          text-white font-bold rounded-full 
+                                          shadow-xl hover:shadow-2xl transition-all duration-300 text-base sm:text-lg">
+                                    <span class="text-xl sm:text-2xl">📅</span>
+                                    Lihat Semua Agenda & Kajian →
                                 </a>
                             </div>
                         @endif
                     </div>
 
-                    {{-- SIDEBAR - Tanpa sticky, tinggi otomatis mengikuti list agenda --}}
-                    <aside class="space-y-5 h-fit lg:mt-0">
-                        <!-- Shalat Jum'at -->
-                        <div class="rounded-xl bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-600 text-white shadow-lg overflow-hidden">
-                            <div class="p-5 lg:p-6">
-                                <div class="flex items-center justify-between mb-4">
+                    <!-- Sidebar -->
+                    <aside class="space-y-6 lg:space-y-8 h-fit">
+                        <!-- Shalat Jum'at – Lebih menonjol -->
+                        <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-800 text-white shadow-2xl overflow-hidden ring-1 ring-emerald-500/30">
+                            <div class="p-6 sm:p-7 lg:p-8">
+                                <div class="flex items-center justify-between mb-5">
                                     <div>
-                                        <p class="text-xs uppercase tracking-wider text-emerald-200/90 font-medium">Shalat Jum’at</p>
-                                        <h3 class="text-lg font-bold mt-1">Pekan Ini</h3>
+                                        <p class="text-xs uppercase tracking-widest text-emerald-200/90 font-medium">Shalat Jum’at</p>
+                                        <h3 class="text-xl font-bold mt-1">Pekan Ini</h3>
                                     </div>
-                                    <span class="inline-flex px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-medium">
+                                    <span class="inline-flex px-4 py-1.5 bg-white/25 backdrop-blur-md rounded-full text-xs font-semibold shadow-sm">
                                         Segera Hadir
                                     </span>
                                 </div>
-
                                 <dl class="space-y-3 text-sm">
-                                    <div class="flex items-start gap-3">
-                                        <span class="text-2xl mt-0.5">🕌</span>
+                                    <div class="flex items-start gap-4">
+                                        <span class="text-2xl">🕌</span>
                                         <div>
                                             <dt class="text-emerald-200/80 text-xs uppercase">Khatib</dt>
-                                            <dd class="font-semibold">{{ $jumat['khatib'] ?? 'Ust. Dr. Muhammad' }}</dd>
+                                            <dd class="font-bold">{{ $jumat['khatib'] ?? 'Ust. Dr. Muhammad' }}</dd>
                                         </div>
                                     </div>
-                                    <div class="flex items-start gap-3">
+                                    <div class="flex items-start gap-4">
                                         <span class="text-2xl mt-0.5">📖</span>
                                         <div>
                                             <dt class="text-emerald-200/80 text-xs uppercase">Tema</dt>
                                             <dd class="font-semibold">{{ $jumat['tema'] ?? 'Jaga Hati di Era Digital' }}</dd>
                                         </div>
                                     </div>
-                                    <div class="flex items-start gap-3">
+                                    <div class="flex items-start gap-4">
                                         <span class="text-2xl mt-0.5">📅</span>
                                         <div>
                                             <dt class="text-emerald-200/80 text-xs uppercase">Tanggal</dt>
                                             <dd class="font-semibold">{{ $jumat['tgl'] ?? 'Jum’at, 12 Jan' }}</dd>
                                         </div>
                                     </div>
-                                    <div class="flex items-start gap-3">
+                                    <div class="flex items-start gap-4">
                                         <span class="text-2xl mt-0.5">⏰</span>
                                         <div>
                                             <dt class="text-emerald-200/80 text-xs uppercase">Waktu</dt>
@@ -350,21 +370,22 @@
                             </div>
                         </div>
 
-                        <!-- Mini Kalender -->
-                        <div class="rounded-xl bg-white border border-emerald-100/50 shadow-sm p-5">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-base font-semibold text-slate-900">Kalender Pekan Ini</h3>
-                                <span class="text-xs text-slate-500">{{ now()->translatedFormat('F Y') }}</span>
+                        <!-- Mini Kalender – Lebih hidup -->
+                        <div class="rounded-2xl sm:rounded-3xl bg-white border border-emerald-100/60 shadow-md p-6">
+                            <div class="flex items-center justify-between mb-5">
+                                <h3 class="text-lg font-semibold text-slate-900">Kalender Minggu Ini</h3>
+                                <span class="text-sm text-slate-500">{{ now()->translatedFormat('F Y') }}</span>
                             </div>
-                            <div class="grid grid-cols-7 gap-1.5 text-center text-xs">
+                            <div class="grid grid-cols-7 gap-2 text-center text-sm">
                                 @for($i = 0; $i < 7; $i++)
                                     @php
                                         $date = now()->addDays($i);
                                         $isToday = $date->isToday();
                                     @endphp
                                     <div class="flex flex-col items-center">
-                                        <span class="text-slate-400 text-[10px] font-medium">{{ $date->translatedFormat('D') }}</span>
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium {{ $isToday ? 'bg-emerald-600 text-white shadow' : 'bg-slate-50 border border-slate-200' }}">
+                                        <span class="text-slate-400 text-xs font-medium">{{ $date->translatedFormat('D') }}</span>
+                                        <span class="mt-1 flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold 
+                                                     {{ $isToday ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400' : 'bg-slate-50 border border-slate-200 hover:bg-emerald-50' }}">
                                             {{ $date->format('d') }}
                                         </span>
                                     </div>
@@ -422,32 +443,47 @@
         <section class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
             <div class="container mx-auto px-4 lg:px-6 grid lg:grid-cols-[1.5fr_minmax(0,1fr)] gap-10">
 
-                {{-- BERITA --}}
+                <!-- BERITA -->
                 <div>
                     <div class="flex justify-between mb-5">
                         <div>
                             <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Berita</p>
-                            <h2 class="text-xl font-semibold text-slate-900">Berita Masjid</h2>
+                            <h2 class="text-xl font-semibold text-slate-900">Berita</h2>
                         </div>
                         <a href="{{ route('berita.index') }}" class="text-xs text-emerald-700">Semua →</a>
                     </div>
 
-                    <div class="space-y-3">
+                    <div class="space-y-4">   <!-- tambah space-y lebih besar biar terlihat rapi -->
                         @forelse($beritas as $b)
-                            <a href="{{ $b['url'] }}" class="block group bg-white border border-slate-100 p-3 rounded-2xl shadow-sm hover:border-emerald-300 transition">
-                                <div class="flex gap-3 items-start">
-                                    <div class="w-20 h-16 rounded overflow-hidden flex-shrink-0">
-                                        <img src="{{ $b['gambar'] }}" alt="{{ $b['judul'] }}" class="w-full h-full object-cover">
+                            <a href="{{ $b['url'] }}" 
+                               class="block group bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-emerald-300 transition-all duration-200 overflow-hidden w-full max-w-full">
+
+                                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4">  <!-- ubah ke column di mobile, row di sm+ -->
+
+                                    <div class="w-full sm:w-32 h-40 sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
+                                        <img src="{{ $b['gambar'] ?? 'https://via.placeholder.com/300x200?text=Berita' }}" 
+                                             loading="lazy" 
+                                             alt="{{ $b['judul'] ?? 'Berita masjid' }}" 
+                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                                     </div>
-                                    <div class="flex-1">
-                                        <h3 class="text-sm font-semibold text-slate-900">{{ $b['judul'] }}</h3>
-                                        <p class="text-[12px] text-slate-600 mt-1">{{ $b['ringkas'] }}</p>
-                                        <div class="mt-2 text-[10px] text-slate-400">{{ $b['waktu'] }}</div>
+
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-sm sm:text-base font-semibold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors">
+                                            {{ $b['judul'] }}
+                                        </h3>
+                                        <p class="text-xs sm:text-[13px] text-slate-600 mt-1.5 line-clamp-3 sm:line-clamp-2">
+                                            {{ $b['ringkas'] ?? Str::limit(strip_tags($b['isi'] ?? ''), 120) }}
+                                        </p>
+                                        <div class="mt-2 text-[10px] sm:text-xs text-slate-400">
+                                            {{ $b['waktu'] ?? 'Baru saja' }}
+                                        </div>
                                     </div>
                                 </div>
                             </a>
                         @empty
-                            <div class="text-sm text-slate-500">Belum ada berita.</div>
+                            <div class="bg-slate-50 rounded-xl p-6 text-center text-slate-500 text-sm">
+                                Belum ada berita terbaru.
+                            </div>
                         @endforelse
                     </div>
                 </div>
@@ -456,70 +492,66 @@
                      PENGUMUMAN — Tampilan rapi + preview modal
                      ================================================= --}}
                 <div>
-                    <div class="flex items-center justify-between mb-3">
-                        <h2 class="text-sm font-semibold text-slate-900">Pengumuman</h2>
-                        <a href="{{ route('pengumuman.index') }}" class="text-xs text-emerald-700 inline-flex items-center gap-1">
-                            Semua
-                            <span>→</span>
+                    <div class="flex items-center justify-between mb-3 sm:mb-4">
+                        <h2 class="text-base sm:text-lg font-semibold text-slate-900">Pengumuman</h2>
+                        <a href="{{ route('pengumuman.index') }}" 
+                           class="text-xs sm:text-sm text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 hover:underline">
+                            Semua →
                         </a>
                     </div>
 
-                    <div class="space-y-2">
+                    <div class="space-y-3 sm:space-y-4">
                         @forelse($pengumuman as $p)
                             @php
-                                // safety: ambil excerpt / strip tags untuk preview singkat
-                                $short = \Illuminate\Support\Str::limit(strip_tags($p['isi'] ?? ''), 120);
-                                $tanggal = $p['tanggal'] ?? (isset($p['created_at']) ? \Carbon\Carbon::parse($p['created_at'])->translatedFormat('d M Y') : '-');
+                                $short = Str::limit(strip_tags($p['isi'] ?? ''), 100); // dikecilin lagi biar lebih aman di mobile
+                                $tanggal = $p['tanggal'] ?? ($p['created_at'] ?? now())->translatedFormat('d M Y');
                             @endphp
 
-                            <article
-                                class="bg-white rounded-2xl border border-amber-100 shadow-sm p-3 transition hover:shadow-md hover:-translate-y-0.5 flex items-start gap-3"
-                                role="article"
-                            >
-                                {{-- ikon --}}
-                                <div class="flex-shrink-0">
-                                    <div class="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 text-lg">
-                                        📢
-                                    </div>
-                                </div>
+                            <article class="bg-white rounded-xl sm:rounded-2xl border border-amber-100/70 shadow-sm 
+                                           hover:shadow-md hover:border-amber-300 transition-all duration-200 
+                                           group w-full max-w-full overflow-hidden">
 
-                                {{-- konten --}}
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div class="min-w-0">
-                                            <h3 class="text-sm font-semibold text-slate-900 leading-snug truncate">
-                                                {{ $p['judul'] }}
-                                            </h3>
-                                            <p class="text-[12px] text-slate-600 mt-1 line-clamp-2">
-                                                {{ $short }}
-                                            </p>
+                                <div class="p-3 sm:p-4 flex items-start gap-3 sm:gap-4">
+                                    <!-- Ikon tetap kecil & fixed width -->
+                                    <div class="flex-shrink-0">
+                                        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-amber-50 border border-amber-200/80 
+                                                    flex items-center justify-center text-amber-700 text-xl sm:text-2xl">
+                                            📢
                                         </div>
+                                    </div>
 
-                                        <div class="flex flex-col items-end gap-2 flex-shrink-0">
-                                            <div class="text-[11px] text-amber-700 font-medium">
-                                                {{ $tanggal }}
-                                            </div>
+                                    <!-- Konten utama -->
+                                    <div class="flex-1 min-w-0">
+                                        <h3 class="text-sm sm:text-base font-semibold text-slate-900 leading-tight 
+                                                   line-clamp-2 group-hover:text-amber-700 transition-colors mb-1.5">
+                                            {{ $p['judul'] }}
+                                        </h3>
 
-                                            <div class="flex items-center gap-2">
-                                                {{-- tombol preview (buka modal) --}}
-                                                <button
-                                                    type="button"
-                                                    class="btn btn-xs bg-amber-100 text-amber-800 border-none rounded-full px-3 py-1"
-                                                    data-pengumuman-id="{{ e($p['id'] ?? '') }}"
+                                        <p class="text-xs sm:text-[13px] text-slate-600 line-clamp-3 sm:line-clamp-2 leading-relaxed">
+                                            {{ $short }}
+                                        </p>
+
+                                        <!-- Baris tanggal + tombol → dibuat lebih compact di mobile -->
+                                        <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                                            <span class="whitespace-nowrap">{{ $tanggal }}</span>
+                                            <button type="button"
+                                                    class="text-amber-700 hover:text-amber-800 font-medium 
+                                                           px-2.5 py-1 rounded-md hover:bg-amber-50 transition-colors text-xs sm:text-sm"
+                                                    data-pengumuman-id="{{ $p['id'] ?? '' }}"
                                                     data-pengumuman-judul="{{ e($p['judul'] ?? '') }}"
                                                     data-pengumuman-isi="{{ e(strip_tags($p['isi'] ?? '')) }}"
                                                     data-pengumuman-url="{{ e($p['url'] ?? '#') }}"
-                                                    onclick="openPengumumanPreview(this)"
-                                                    aria-label="Lihat pengumuman {{ e($p['judul'] ?? '') }}">
-                                                    Lihat
-                                                </button>
-                                            </div>
+                                                    onclick="openPengumumanPreview(this)">
+                                                Lihat →
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </article>
                         @empty
-                            <div class="text-xs text-slate-500">Belum ada pengumuman.</div>
+                            <div class="bg-amber-50/40 rounded-xl p-5 sm:p-6 text-center text-slate-500 text-sm border border-amber-100/70">
+                                Belum ada pengumuman terbaru.
+                            </div>
                         @endforelse
                     </div>
                 </div>
@@ -564,51 +596,38 @@
         </section>
 
         {{-- === LAYANAN MASJID === --}}
-        <section class="py-16 bg-white">
-            <div class="container mx-auto px-4 lg:px-6 text-center">
+        <section class="py-16 bg-gradient-to-b from-white to-emerald-50/30">
+            <div class="container mx-auto px-4 lg:px-8">
+                <div class="text-center mb-12">
+                    <span class="inline-block px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium mb-3">
+                        Layanan Terpercaya
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+                        Layanan Masjid untuk Umat
+                    </h2>
+                    <p class="text-slate-600 max-w-3xl mx-auto">
+                        Kami menyediakan berbagai layanan untuk memudahkan ibadah dan kebutuhan sosial jamaah
+                    </p>
+                </div>
 
-                <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">
-                    Layanan Masjid
-                </p>
-                <h2 class="text-2xl font-semibold text-slate-900">
-                    Kami Hadir untuk Melayani
-                </h2>
-
-                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-8">
-
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
                     @forelse($layanans as $l)
-                        @php
-                            $icon = $l->icon ?? '🕌';
-                        @endphp
-
-                        <div class="rounded-2xl bg-gradient-to-b from-white to-emerald-50 
-                            border border-emerald-100 p-6 shadow-sm hover:shadow-lg transition">
-
-                            {{-- ICON --}}
-                            <div
-                                class="flex items-center justify-center mx-auto mb-3
-                                bg-emerald-50 border border-emerald-100 rounded-xl 
-                                w-12 h-12 text-xl">
-                                {{ $icon }}
+                        <div class="service-card group rounded-3xl bg-white border border-emerald-100/50 shadow-lg overflow-hidden">
+                            <div class="p-8 lg:p-10 text-center">
+                                <div class="service-icon-bg mx-auto mb-6 w-20 h-20 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-4xl shadow-md group-hover:shadow-xl transition">
+                                    {{ $l->icon ?? '🕌' }}
+                                </div>
+                                <h3 class="text-xl font-bold text-slate-800 mb-4 group-hover:text-emerald-700 transition">
+                                    {{ $l->judul }}
+                                </h3>
+                                <p class="text-sm text-slate-600 leading-relaxed line-clamp-4">
+                                    {{ Str::limit(strip_tags($l->deskripsi ?? ''), 120) }}
+                                </p>
                             </div>
-
-                            {{-- Judul --}}
-                            <h3 class="text-sm font-semibold text-slate-900">
-                                {{ $l->judul }}
-                            </h3>
-
-                            {{-- Deskripsi --}}
-                            <p class="text-[12px] text-slate-600 mt-1">
-                                {!! \Illuminate\Support\Str::limit(strip_tags($l->deskripsi ?? ''), 90) !!}
-                            </p>
-
                         </div>
                     @empty
-                        <p class="col-span-full text-sm text-slate-500">
-                            Belum ada layanan tersedia.
-                        </p>
+                        ...
                     @endforelse
-
                 </div>
             </div>
         </section>
@@ -689,7 +708,7 @@
                                             Satu langkah kecil, pahala tak terhingga.
                                         </p>
                                     </div>
-                                    <a href="#donasi" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-12 py-4 sm:py-6 rounded-full shadow-2xl text-lg sm:text-2xl mt-auto w-full sm:w-auto max-w-xs">
+                                    <a href="#donasi" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-12 py-4 sm:py-6 rounded-full shadow-2xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
                                         Ayo, Mulai Dari Hati
                                     </a>
                                 </div>
@@ -723,7 +742,7 @@
                         <div class="text-center mb-10">
                             <h3 class="text-2xl font-bold text-emerald-800 mb-4">Transfer ke Rekening Resmi</h3>
                             <div class="inline-block bg-emerald-50 rounded-2xl p-5 sm:p-6 shadow-inner w-full max-w-md mx-auto">
-                                <p class="text-lg font-semibold text-emerald-700 mb-2">Bank BCA • 014</p>
+                                <p class="text-lg font-semibold text-emerald-700 mb-2">Bank {!! profil('bank_name') !!} • {!! profil('bank_code') !!}</p>
                                 
                                 <!-- Nomor rekening + copy – dengan chunking & hint -->
                                 <div class="relative flex items-center justify-center gap-3 mb-3 bg-white/70 rounded-xl px-4 py-3 shadow-sm">
@@ -732,7 +751,7 @@
                                         class="text-xl sm:text-2xl font-bold text-slate-900 tracking-widest whitespace-nowrap overflow-x-auto touch-pan-x"
                                         style="max-width: 75%; scrollbar-width: thin;"
                                     >
-                                        1234 5678 9010  <!-- sudah ada spasi tiap 4 digit -->
+                                        {!! profil('rekening') !!}  <!-- sudah ada spasi tiap 4 digit -->
                                     </p>
                                     <button
                                         type="button"
@@ -754,20 +773,58 @@
                                     Tekan lama nomor rekening jika ingin salin manual
                                 </p>
 
-                                <p class="text-base text-slate-600 mt-2">a/n Takmir Masjid Al-Hidaya</p>
+                                <p class="text-base text-slate-600 mt-2">a/n {!! profil('atas_nama') !!}</p>
                             </div>
                         </div>
 
                         <!-- QRIS -->
                         <div class="text-center mb-10">
                             <h3 class="text-2xl font-bold text-emerald-800 mb-4">Scan QRIS Instan</h3>
-                            <div class="mx-auto w-64 h-64 sm:w-72 sm:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100 relative">
-                                <img src="{{ asset('images/qris-masjid.png') }}" alt="QRIS Donasi" class="w-full h-full object-contain">
-                                <a href="{{ asset('images/qris-masjid.png') }}" download="QRIS_Masjid_Al-Hidaya.png"
+                            <div class="mx-auto w-64 h-64 sm:w-72 sm:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100 relative cursor-pointer group"onclick="document.getElementById('qris-modal').showModal()">
+                                <img src="{{ asset('storage/'.profil('qris')) }}" loading="lazy" alt="QRIS Donasi" class="w-full h-full object-contain group-hover:scale-105 pb-3">
+                                <a href="{{ asset('storage/'.profil('qris')) }}" download="QRIS_{{ profil('nama') }}.png"
                                    class="absolute -bottom-4 left-1/2 -translate-x-1/2 btn btn-sm bg-emerald-600 text-white shadow-md">
                                     Simpan QRIS
                                 </a>
                             </div>
+                            <!-- Modal Preview QRIS -->
+                            <dialog id="qris-modal" class="modal">
+                                <div class="modal-box bg-white rounded-3xl shadow-2xl max-w-md sm:max-w-lg p-0 overflow-hidden">
+                                    <!-- Header Modal -->
+                                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-center">
+                                        <h3 class="text-2xl font-bold text-white">Preview QRIS Donasi</h3>
+                                        <p class="text-emerald-100/90 text-sm mt-1">
+                                            Scan untuk donasi ke {{ profil('nama') ?? 'Masjid' }}
+                                        </p>
+                                    </div>
+
+                                    <!-- Gambar Besar -->
+                                    <div class="p-6 sm:p-8 bg-white">
+                                        <img src="{{ asset('storage/' . profil('qris')) }}" 
+                                             alt="QRIS Donasi" 
+                                             class="w-full h-auto max-h-[500px] object-contain mx-auto rounded-xl shadow-inner">
+                                    </div>
+
+                                    <!-- Footer Modal -->
+                                    <div class="modal-action p-6 border-t border-emerald-100 flex justify-center gap-4">
+                                        <form method="dialog">
+                                            <button class="btn btn-outline text-emerald-700 btn-emerald-700 px-8 py-3 rounded-full text-lg">
+                                                Tutup
+                                            </button>
+                                        </form>
+                                        <a href="{{ asset('storage/' . profil('qris')) }}" 
+                                           download="QRIS_{{ Str::slug(profil('nama')) }}.png"
+                                           class="btn btn-primary px-8 py-3 rounded-full text-lg">
+                                            Simpan Gambar
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Klik luar modal untuk close (DaisyUI default) -->
+                                <form method="dialog" class="modal-backdrop">
+                                    <button>close</button>
+                                </form>
+                            </dialog>
                             <p class="text-sm text-slate-600 mt-6">Konfirmasi via WhatsApp setelah transfer</p>
                         </div>
 
@@ -819,7 +876,7 @@
                 </div>
 
                 <!-- Grid galeri -->
-                <div class="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
+                <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 sm:gap-3">
                     @forelse($galeri as $g)
                         <button type="button"
                             class="relative group rounded-xl overflow-hidden shadow-sm"
@@ -828,8 +885,8 @@
                             data-title="{{ $g['judul'] }}"
                             data-img="{{ $g['img'] }}">
                             
-                            <img src="{{ $g['img'] }}"
-                                 class="w-full h-20 sm:h-28 md:h-32 object-cover group-hover:scale-110 transition">
+                            <img src="{{ $g['img'] }}" 
+                                 loading="lazy" class="w-full h-20 sm:h-28 md:h-32 object-cover group-hover:scale-110 transition">
 
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end">
                                 <p class="text-[10px] text-white px-2 pb-2">{{ $g['judul'] }}</p>
@@ -922,7 +979,7 @@
                                         class="w-full h-full min-h-[400px]"
                                         frameborder="0"
                                         style="border:0"
-                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0000000000005!2d106.80000000000001!3d-6.200000000000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTInMDAuMCJTIDEwNsKwNDgnMDAuMCJF!5e0!3m2!1sid!2sid!4v{{ time() }}"
+                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d{{ $profil->zoom ?? 15 }}!2d{{ $profil->longitude ?? '106.8' }}!3d{{ $profil->latitude ?? '-6.2' }}"
                                         allowfullscreen=""
                                         loading="lazy">
                                     </iframe>
@@ -1399,6 +1456,20 @@
             }
         }
 
+        .service-card {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          }
+          .service-card:hover {
+            transform: translateY(-12px) scale(1.02);
+          }
+          .service-icon-bg {
+            transition: all 0.5s ease;
+          }
+          .service-card:hover .service-icon-bg {
+            background: linear-gradient(135deg, #059669, #0d9488);
+            color: white;
+          }
+
         #rekeningNum {
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
@@ -1496,6 +1567,10 @@
         // PWA Install Prompt
         // =============================================
         let deferredPrompt = null;
+
+        document.querySelectorAll('#qris-modal img').forEach(img => {
+            img.addEventListener('click', () => img.classList.toggle('scale-150'));
+        });
 
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -1612,7 +1687,10 @@
         document.addEventListener('DOMContentLoaded', function () {
             const quotes = @json($quotes); // ambil array quotes dari PHP
             const container = document.getElementById('quote-container');
+            if (!container || quotes.length === 0) return;
+
             let currentIndex = 0;
+            let timer = null; // ← deklarasikan di sini (penting!)
 
             // Fungsi untuk membuat elemen quote baru
             function createQuoteElement(quote) {
@@ -1635,25 +1713,44 @@
                 if (oldQuote) {
                     oldQuote.classList.remove('opacity-100', 'translate-y-0');
                     oldQuote.classList.add('opacity-0', '-translate-y-4');
-                    setTimeout(() => oldQuote.remove(), 800); // hapus setelah animasi selesai
+                    setTimeout(() => oldQuote.remove(), 800);
                 }
 
                 currentIndex = (currentIndex + 1) % quotes.length;
                 const newQuote = createQuoteElement(quotes[currentIndex]);
                 container.appendChild(newQuote);
 
-                // Trigger animasi masuk
                 setTimeout(() => {
                     newQuote.classList.remove('opacity-0', 'translate-y-4');
                     newQuote.classList.add('opacity-100', 'translate-y-0');
                 }, 50);
             }
 
-            // Mulai rotasi setiap 6 detik (ubah sesuai keinginan)
-            setInterval(rotateQuote, 6000);
+            // Mulai rotasi
+            function startRotation() {
+                if (timer) clearInterval(timer);
+                timer = setInterval(rotateQuote, 6000);
+            }
 
-            // Optional: Rotasi pertama setelah 4 detik (biar tidak langsung ganti)
+            // Optional: rotasi pertama setelah delay
             setTimeout(rotateQuote, 4000);
+
+            // Mulai otomatis saat load
+            startRotation();
+
+            // Pause & resume on hover
+            container.addEventListener('mouseenter', () => {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+            });
+
+            container.addEventListener('mouseleave', () => {
+                if (!timer) {
+                    startRotation();
+                }
+            });
         });
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -1987,7 +2084,7 @@
                     btn.style.padding = '0';
                     btn.style.margin = '0 6px 6px 0';
                     btn.setAttribute('aria-label', f.caption || `Foto ${i+1}`);
-                    btn.innerHTML = `<img src="${f.url}" class="w-full h-full object-cover" alt="${(f.caption||f.file_name||'foto')}">`;
+                    btn.innerHTML = `<img src="${f.url}" loading="lazy" class="w-full h-full object-cover" alt="${(f.caption||f.file_name||'foto')}">`;
                     btn.addEventListener('click', () => setImage(i));
                     thumbsBox.appendChild(btn);
                 });

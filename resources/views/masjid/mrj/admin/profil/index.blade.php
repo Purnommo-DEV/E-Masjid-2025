@@ -195,6 +195,64 @@
                             </div>
                         </div>
 
+                        {{-- ===================== DATA DONASI & INFAQ ===================== --}}
+                        <div class="mt-10 space-y-8">
+                            <h3 class="text-2xl font-bold text-emerald-1000">Data Donasi & Infaq</h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Nama Bank -->
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2">Nama Bank</label>
+                                    <input type="text" name="bank_name" value="{{ $profil->bank_name ?? 'BCA' }}" class="input input-bordered w-full" placeholder="BCA, Mandiri, dll">
+                                </div>
+
+                                <!-- Kode Bank -->
+                                <div>
+                                    <label class="block text-sm font-semibold mb-2">Kode Bank</label>
+                                    <input type="text" name="bank_code" value="{{ $profil->bank_code ?? '014' }}" class="input input-bordered w-full" placeholder="014 untuk BCA">
+                                </div>
+
+                                <!-- Nomor Rekening -->
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold mb-2">Nomor Rekening</label>
+                                    <input type="text" name="rekening" value="{{ $profil->rekening ?? '' }}" class="input input-bordered w-full" placeholder="1234567890 (tanpa spasi)">
+                                    <p class="text-xs text-gray-500 mt-1">Spasi akan ditambahkan otomatis tiap 4 digit di tampilan</p>
+                                </div>
+
+                                <!-- Atas Nama -->
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold mb-2">Atas Nama</label>
+                                    <input type="text" name="atas_nama" value="{{ $profil->atas_nama ?? 'Takmir Masjid Al-Hidaya' }}" class="input input-bordered w-full">
+                                </div>
+
+                                <!-- QRIS Upload -->
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold mb-2">Gambar QRIS</label>
+                                    <div class="flex items-center gap-4">
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="file" name="qris" id="qrisInput" class="hidden" accept="image/*">
+                                            <div class="px-4 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700">Pilih QRIS</div>
+                                        </label>
+                                        <div id="qrisPreview" class="w-40 h-40 rounded-xl overflow-hidden border bg-white shadow-sm">
+                                            @if($profil->qris)
+                                                <img src="{{ Storage::url($profil->qris) }}" alt="QRIS" class="w-full h-full object-contain">
+                                            @else
+                                                <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada QRIS</div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <p class="mt-2 text-xs text-gray-500">Format PNG/JPG, max 2MB. Akan ditampilkan di halaman donasi.</p>
+                                </div>
+
+                                <!-- WA Konfirmasi -->
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-semibold mb-2">WhatsApp Konfirmasi Donasi</label>
+                                    <input type="text" name="wa_konfirmasi" value="{{ $profil->wa_konfirmasi ?? $profil->telepon }}" class="input input-bordered w-full" placeholder="6281234567890">
+                                    <p class="text-xs text-gray-500 mt-1">Nomor WA untuk konfirmasi setelah transfer/scan QRIS</p>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="flex items-center justify-between mt-2">
                             <div class="text-sm text-gray-500">Terakhir diperbarui: <span class="font-medium text-emerald-700">{{ optional($profil->updated_at)->diffForHumans() ?? '-' }}</span></div>
                             <div class="flex gap-2">
@@ -338,17 +396,17 @@
 @push('style')
 <style>
 
-@layer components {
-  .input,
-  .textarea {
-    @apply border-emerald-400;          /* border normal emerald soft */
-  }
+    @layer components {
+      .input,
+      .textarea {
+        @apply border-emerald-400;          /* border normal emerald soft */
+      }
 
-  .input:focus,
-  .textarea:focus {
-    @apply border-emerald-600 ring-2 ring-emerald-500/20;  /* lebih bold + ring */
-  }
-}
+      .input:focus,
+      .textarea:focus {
+        @apply border-emerald-600 ring-2 ring-emerald-500/20;  /* lebih bold + ring */
+      }
+    }
     /* Card wrapper */
     .card-wrapper {
         border-radius: 1rem;
@@ -485,6 +543,17 @@
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     }
 
+    // PREVIEW QRIS
+    document.getElementById('qrisInput')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            document.getElementById('qrisPreview').innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-contain">`;
+        };
+        reader.readAsDataURL(file);
+    });
+
     // ========== IMAGE PREVIEW FORM ==========
     document.addEventListener('DOMContentLoaded', () => {
         const logoInput = document.getElementById('logoInput');
@@ -496,7 +565,7 @@
                 preview.innerHTML = '';
                 if (this.files && this.files[0]) {
                     const file = this.files[0];
-                    if (file.size > 2 * 1024 * 1024) {
+                    if (file.size > 3 * 1024 * 1024) {
                         showFieldError('logo','Ukuran file terlalu besar (max 2MB)');
                         this.value = '';
                         preview.innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada</div>`;

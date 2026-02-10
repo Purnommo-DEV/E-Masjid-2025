@@ -54,6 +54,16 @@ class Acara extends Model implements HasMedia
                 event(new AcaraPublished($acara));
             }
         });
+
+        static::creating(function ($acara) {
+            $acara->slug = Str::slug($acara->judul);
+        });
+
+        static::updating(function ($acara) {
+            if ($acara->isDirty('judul')) {
+                $acara->slug = Str::slug($acara->judul);
+            }
+        });
     }
 
 
@@ -84,6 +94,23 @@ class Acara extends Model implements HasMedia
                      ->where(function($q){
                          $q->whereNull('published_at')->orWhere('published_at','<=',now());
                      });
+    }
+
+    public function getPosterUrlAttribute(): ?string
+    {
+        //Cara Panggil d blade $berita->poster_url
+        $media = $this->getFirstMedia('poster');
+
+        if (!$media) {
+            return null;
+        }
+
+        if ($media->hasCustomProperty('folder')) {
+            $folder = $media->getCustomProperty('folder');
+            return asset('storage/' . $folder . '/' . $media->file_name);
+        }
+
+        return $media->getUrl();
     }
 
     public function scopeUpcoming($query)

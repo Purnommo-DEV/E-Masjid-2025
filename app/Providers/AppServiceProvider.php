@@ -19,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(\App\Services\JadwalSholatService::class);
+        
         // Binding MasjidRepositoryInterface dinamis
         $this->app->bind(\App\Interfaces\MasjidRepositoryInterface::class, function ($app) {
             $masjidName = masjid(); // ambil nama masjid dari helper
