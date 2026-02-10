@@ -34,9 +34,9 @@ class PendaftaranYatimDhuafaController extends Controller
             // 'tanggal_lahir'        => 'required|date|before_or_equal:' . now()->subYears(0)->toDateString(),
             'umur'                => 'nullable|integer|min:0|max:13',
             'jenis_kelamin'       => 'required|in:L,P',
-            'alamat'              => 'required|min:5|max:255',
+            'alamat'              => 'required|min:2|max:255',
             'no_wa'               => 'nullable|regex:/^08[0-9]{8,12}$/',
-            'nama_orang_tua'      => 'required|min:3|max:100',
+            'nama_orang_tua'      => 'required|min:2|max:100',
             'pekerjaan_orang_tua' => 'nullable|max:100',
         ], [
             'no_wa.regex' => 'Format nomor WA tidak valid (mulai dengan 08...)',
@@ -239,9 +239,9 @@ class PendaftaranYatimDhuafaController extends Controller
             'jenis_kelamin'        => 'required|in:L,P',
             'alamat'               => 'required|string|min:5|max:255',
             'no_wa'                => 'nullable|regex:/^08[0-9]{8,12}$/',
-            'nama_orang_tua'       => 'required|string|min:3|max:100',
+            'nama_orang_tua'       => 'required|string|min:2|max:100',
             'pekerjaan_orang_tua'  => 'nullable|string|max:100',
-            'sumber_informasi'     => 'required|string|min:3|max:255',
+            'sumber_informasi'     => 'required|string|min:2|max:255',
             'catatan_tambahan'     => 'nullable|string|max:500',
         ]);
 

@@ -278,8 +278,14 @@ $(document).ready(function () {
         const helper = $('#umurHelper');
 
         if (!tglLahirStr) {
-            umurInput.val('');
-            helper.text('Akan otomatis ter-update setiap tanggal lahir diubah');
+            // JANGAN hapus umur manual
+            const umurManual = umurInput.val();
+
+            if (umurManual !== '') {
+                helper.text('Umur diisi manual (tanggal lahir tidak digunakan)');
+            } else {
+                helper.text('Akan otomatis ter-update setiap tanggal lahir diubah');
+            }
             return;
         }
 
@@ -316,6 +322,18 @@ $(document).ready(function () {
 
     // Trigger awal
     hitungUmur();
+
+    $('#umur').on('input', function () {
+        const umurVal = $(this).val();
+        const tglInput = $('#tanggal_lahir');
+        const helper = $('#umurHelper');
+
+        // hanya jika user benar-benar mengisi umur
+        if (umurVal !== '') {
+            tglInput.val(''); // kosongkan tanggal lahir
+            helper.text('Umur diisi manual (tanggal lahir tidak digunakan)');
+        }
+    });
 
     // Reset form → reset umur & helper
     $('#form-pendaftaran').on('reset', function() {

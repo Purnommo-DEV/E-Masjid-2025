@@ -653,6 +653,56 @@
         color: #ffffff;
     }
 
+/* =========================
+   NAVBAR COLOR LOCK
+   ========================= */
+nav {
+    color: #e5e7eb !important; /* slate-200 */
+}
+
+nav a,
+nav span,
+nav div,
+nav li {
+    color: #e5e7eb !important;
+}
+
+/* Nama masjid */
+nav .group-hover\:text-emerald-200:hover {
+    color: #a7f3d0 !important;
+}
+
+/* Subtext */
+nav .text-emerald-200\/80 {
+    color: rgba(167, 243, 208, 0.8) !important;
+}
+
+/* Menu hover */
+nav a:hover {
+    color: #6ee7b7 !important; /* emerald-300 */
+}
+
+/* Button outline admin */
+nav .btn-outline {
+    color: #a7f3d0 !important;
+    border-color: rgba(52, 211, 153, 0.6) !important;
+}
+
+nav .btn-outline:hover {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #ecfdf5 !important;
+}
+
+/* Mobile dropdown */
+nav details .menu a {
+    color: #e5e7eb !important;
+}
+
+nav details .menu a:hover {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #ecfdf5 !important;
+}
+
 
 </style>
 @endpush
