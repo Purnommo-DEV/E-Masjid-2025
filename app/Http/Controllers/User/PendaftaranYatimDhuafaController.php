@@ -127,7 +127,7 @@ class PendaftaranYatimDhuafaController extends Controller
             ->addColumn('nama_panggilan', fn($row) => $row->nama_panggilan ?? '-')
             ->addColumn('tanggal_lahir', function ($row) {
                 return $row->tanggal_lahir
-                    ? Carbon::parse($row->tanggal_lahir)->format('Y-m-d')
+                    ? Carbon::parse($row->tanggal_lahir)->format('d-m-Y')
                     : '-';
             })
             ->addColumn('umur', fn($row) => $row->umur)

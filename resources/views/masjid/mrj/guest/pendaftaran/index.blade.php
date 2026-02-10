@@ -161,35 +161,51 @@
                         </div>
 
                         <!-- Tanggal Lahir & Umur -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="form-control">
-                                <label class="label pb-1">
-                                    <span class="label-text font-semibold text-slate-800">Tanggal Lahir <span class="text-red-500">*</span></span>
-                                </label>
-                                <div class="relative">
-                                    <input type="date" name="tanggal_lahir" id="tanggal_lahir"
-                                           class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white"/>
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📅</span>
-                                </div>
-                            </div>
-                            <div class="form-control">
-                                <label class="label pb-1">
-                                    <span class="label-text font-semibold text-slate-800">Umur Saat Ini <span class="text-red-500">*</span></span>
-                                </label>
-                                <div class="relative">
-                                    <input type="number" name="umur" id="umur" min="0" max="13" required
-                                           class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                           placeholder="Akan otomatis ter-update"/>
-                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🎂</span>
-                                </div>
-                                <label class="label">
-                                    <span class="label-text-alt text-sm text-slate-500 italic" id="umurHelper">
-                                        Akan otomatis ter-update setiap tanggal lahir diubah
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="form-control">
+        <label class="label pb-1">
+            <span class="label-text font-semibold text-slate-800">Tanggal Lahir <span class="text-red-500">*</span></span>
+        </label>
+        <div class="relative">
+            <input
+                type="text"
+                name="tanggal_lahir_text"
+                id="tanggal_lahir_text"
+                placeholder="Hari/Bulan/Tahun"
+                required
+                class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300
+                       focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
+                       transition-all duration-300 outline-none text-slate-900 bg-white"
+            />
+            <input type="hidden" name="tanggal_lahir" id="tanggal_lahir_hidden" />
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📅</span>
+        </div>
+        <label class="label">
+            <span class="label-text-alt text-sm text-slate-500 italic">
+                Ketik dalam format Hari/Bulan/Tahun (contoh: 15/08/2015)
+            </span>
+        </label>
+    </div>
 
+    <div class="form-control">
+        <label class="label pb-1">
+            <span class="label-text font-semibold text-slate-800">Umur Saat Ini <span class="text-red-500">*</span></span>
+        </label>
+        <div class="relative">
+            <input type="number" name="umur" id="umur" min="0" max="13" required
+                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 
+                          focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 
+                          transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                   placeholder="Akan otomatis ter-update" />
+            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🎂</span>
+        </div>
+        <label class="label">
+            <span class="label-text-alt text-sm text-slate-500 italic" id="umurHelper">
+                Akan otomatis ter-update jika tanggal lahir diisi
+            </span>
+        </label>
+    </div>
+</div>
 
                         <!-- Nama Orang Tua & Pekerjaan -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -271,74 +287,91 @@
 <script>
 $(document).ready(function () {
 
-    // Fungsi hitung umur
-    function hitungUmur() {
-        const tglLahirStr = $('#tanggal_lahir').val();
-        const umurInput = $('#umur');
-        const helper = $('#umurHelper');
+// =====================================
+    // Masking Hari/Bulan/Tahun + Hitung Umur Otomatis
+    // =====================================
+    const tglInput     = $('#tanggal_lahir_text');
+    const tglHidden    = $('#tanggal_lahir_hidden');
+    const umurInput    = $('#umur');
+    const umurHelper   = $('#umurHelper');
 
-        if (!tglLahirStr) {
-            // JANGAN hapus umur manual
-            const umurManual = umurInput.val();
+    // Fungsi format masking Hari/Bulan/Tahun
+    tglInput.on('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // hapus non angka
+        if (value.length > 8) value = value.substring(0, 8);
 
-            if (umurManual !== '') {
-                helper.text('Umur diisi manual (tanggal lahir tidak digunakan)');
-            } else {
-                helper.text('Akan otomatis ter-update setiap tanggal lahir diubah');
-            }
-            return;
-        }
+        // Tambah slash otomatis
+        if (value.length > 4) value = value.substring(0,2) + '/' + value.substring(2,4) + '/' + value.substring(4);
+        else if (value.length > 2) value = value.substring(0,2) + '/' + value.substring(2);
 
-        const tglLahir = new Date(tglLahirStr);
-        if (isNaN(tglLahir.getTime())) {
+        e.target.value = value;
+
+        // Update hidden field dalam format yyyy-mm-dd
+        if (value.length === 10) {
+            const parts = value.split('/');
+            const dd = parts[0].padStart(2, '0');
+            const mm = parts[1].padStart(2, '0');
+            const yyyy = parts[2];
+            tglHidden.val(`${yyyy}-${mm}-${dd}`);
+
+            // Hitung umur
+            hitungUmurOtomatis();
+        } else {
+            tglHidden.val('');
             umurInput.val('');
-            helper.text('Tanggal lahir tidak valid');
-            return;
-        }
-
-        const today = new Date();
-        let umur = today.getFullYear() - tglLahir.getFullYear();
-        const bulan = today.getMonth() - tglLahir.getMonth();
-
-        if (bulan < 0 || (bulan === 0 && today.getDate() < tglLahir.getDate())) {
-            umur--;
-        }
-
-        console.log(`Tanggal lahir: ${tglLahirStr} → Umur dihitung: ${umur}`);
-
-        if (umur < 0) {
-            umurInput.val('');
-            helper.text('Tanggal lahir di masa depan → umur tidak bisa negatif');
-            return;
-        }
-
-        // Selalu update umur (overwrite manual sekalipun)
-        umurInput.val(umur);
-        helper.text(`Umur otomatis: ${umur} tahun (berdasarkan tanggal lahir)`);
-    }
-
-    // Event super responsif
-    $('#tanggal_lahir').on('change input blur keyup', hitungUmur);
-
-    // Trigger awal
-    hitungUmur();
-
-    $('#umur').on('input', function () {
-        const umurVal = $(this).val();
-        const tglInput = $('#tanggal_lahir');
-        const helper = $('#umurHelper');
-
-        // hanya jika user benar-benar mengisi umur
-        if (umurVal !== '') {
-            tglInput.val(''); // kosongkan tanggal lahir
-            helper.text('Umur diisi manual (tanggal lahir tidak digunakan)');
+            umurHelper.text('Akan otomatis ter-update jika tanggal lahir diisi');
         }
     });
 
+    // Fungsi hitung umur dari tanggal lahir
+    function hitungUmurOtomatis() {
+        const value = tglHidden.val(); // yyyy-mm-dd
+        if (!value) {
+            umurInput.val('');
+            umurHelper.text('Akan otomatis ter-update jika tanggal lahir diisi');
+            return;
+        }
+
+        const birthDate = new Date(value);
+        const today     = new Date();
+
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        // Update field umur
+        umurInput.val(age);
+
+        // Update helper text
+        if (age > 13) {
+            umurHelper.text('Usia melebihi batas maksimal 13 tahun').addClass('text-red-600');
+        } else if (age < 0) {
+            umurHelper.text('Tanggal lahir tidak valid').addClass('text-red-600');
+        } else {
+            umurHelper.text(`Umur ${age} tahun (otomatis dari tanggal lahir)`).removeClass('text-red-600');
+        }
+    }
+
+    // Jika user isi umur manual → nonaktifkan otomatisasi tanggal
+    umurInput.on('input', function() {
+        const val = $(this).val().trim();
+        if (val !== '') {
+            tglInput.val('');
+            tglHidden.val('');
+            umurHelper.text('Umur diisi manual (tanggal lahir tidak digunakan)').addClass('text-amber-700');
+        } else {
+            umurHelper.text('Akan otomatis ter-update jika tanggal lahir diisi').removeClass('text-amber-700 text-red-600');
+        }
+    });
     // Reset form → reset umur & helper
     $('#form-pendaftaran').on('reset', function() {
         setTimeout(() => {
-            hitungUmur();
+            umurInput.val('');
+            umurHelper.text('Akan otomatis ter-update jika tanggal lahir diisi')
+                      .removeClass('text-red-600 text-amber-700');
         }, 100);
     });
 
@@ -348,6 +381,28 @@ $(document).ready(function () {
 
         const $btn = $('#btn-submit');
         const originalText = $btn.text();
+        const tglText = tglInput.val().trim();
+        const umurVal = umurInput.val().trim();
+
+        if (tglText === '' && umurVal === '') {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Perhatian',
+                text: 'Harap isi Tanggal Lahir atau Umur',
+                confirmButtonColor: '#059669'
+            });
+            return;
+        }
+
+        if (tglText !== '' && tglText.length !== 10) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Format Tanggal Salah',
+                text: 'Gunakan format Hari/Bulan/Tahun (contoh: 15/08/2015)',
+                confirmButtonColor: '#dc2626'
+            });
+            return;
+        }
 
         $btn.prop('disabled', true)
             .html('<span class="loading loading-spinner loading-md mr-2"></span> Mengirim...')
