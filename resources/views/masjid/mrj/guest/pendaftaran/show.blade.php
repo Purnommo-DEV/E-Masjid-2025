@@ -218,7 +218,7 @@
                                 type="text"
                                 name="tanggal_lahir_text"
                                 id="editTanggalLahirText"
-                                placeholder="Hari/Bulan/Tahun"
+                                placeholder="05/15/2013"
                                 class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300
                                        focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
                                        transition-all duration-300 outline-none text-slate-900 bg-white"

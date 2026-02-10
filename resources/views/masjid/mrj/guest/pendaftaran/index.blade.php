@@ -171,7 +171,7 @@
                                         type="text"
                                         name="tanggal_lahir_text"
                                         id="tanggal_lahir_text"
-                                        placeholder="Hari/Bulan/Tahun"
+                                        placeholder="05/15/2013"
                                         required
                                         class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300
                                                focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
