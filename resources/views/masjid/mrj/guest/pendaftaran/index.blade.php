@@ -8,24 +8,98 @@
         <div class="max-w-3xl mx-auto">
             <!-- Card Utama -->
             <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg overflow-hidden">
-                <div class="p-6 lg:p-10">
-                    <!-- Header -->
-                    <div class="text-center mb-10">
-                        <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-2">Pendaftaran Santunan Ramadhan</p>
-                        <h1 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">
-                            Santunan Anak Yatim & Dhuafa
-                        </h1>
-                        <p class="text-lg text-slate-600 mb-4">
-                            Ramadhan 1447 H / 2026
-                        </p>
-                        <div class="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium">
-                            <span class="text-xl">✅</span>
-                            Usia maksimal 13 tahun • Mohon isi dengan jujur & sebenar-benarnya
+                <div class="p-4 lg:p-8">
+                    <!-- HEADER UTAMA -->
+                    <div class="relative overflow-hidden mb-12">
+                        <!-- Background lembut -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50"></div>
+
+                        <div class="relative max-w-9xl mx-auto px-4 sm:px-2 lg:px-4 py-10 text-center">
+
+                            <!-- Logo Center -->
+                            <div class="flex items-center justify-center gap-3 sm:gap-4 mb-6">
+                                <img src="{{ asset('mrj-mtrj.png') }}"
+                                     alt="Logo MRJ"
+                                     class="h-16 sm:h-20 md:h-28 drop-shadow-md">
+                            </div>
+
+                            <!-- Card Konten -->
+                            <div class="max-w-4xl mx-auto bg-white/80 backdrop-blur-md rounded-3xl border border-emerald-100 shadow-xl p-6 sm:p-8 md:p-10">
+
+                                <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-emerald-800 leading-snug mb-5">
+                                    Pendataan Santunan Anak Yatim & Anak Dhuafa  
+                                    <span class="block text-lg sm:text-xl md:text-2xl font-semibold text-emerald-600 mt-1">
+                                        MRJ & MTRJ — Ramadhan 1447 H / 2026
+                                    </span>
+                                </h1>
+
+                                <p class="text-base sm:text-lg text-slate-700 leading-relaxed mb-6">
+                                    Formulir ini digunakan untuk pendataan <strong>Anak Yatim yang Dhuafa</strong> dan
+                                    <strong>Anak Dhuafa</strong> dalam rangka Program Santunan Ramadhan.
+                                </p>
+
+                                <!-- Kriteria -->
+                                <div class="bg-emerald-50/80 rounded-2xl border border-emerald-100 p-5 text-left mb-6">
+                                    <p class="font-semibold text-emerald-800 mb-3">Kriteria Penerima:</p>
+                                    <ul class="space-y-2 text-slate-700">
+                                        <li class="flex items-center gap-2">
+                                            <span class="text-emerald-600">✔</span>
+                                            Anak Yatim yang Dhuafa
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <span class="text-emerald-600">✔</span>
+                                            Anak Dhuafa
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <span class="text-emerald-600">✔</span>
+                                            Usia maksimal <strong>13 tahun</strong>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <!-- Penutup -->
+                                <div class="text-slate-700 italic text-sm sm:text-base text-center space-y-3">
+                                    <p class="font-semibold text-emerald-700">
+                                        Program Santunan Ramadhan MRJ &amp; MTRJ<br>
+                                        Ramadhan 1447 H / 2026
+                                    </p>
+
+                                    <p class="text-slate-600">
+                                        Masjid Raudhotul Jannah &amp; Majelis Ta’lim Raudhotul Jannah
+                                    </p>
+                                </div>
+
+                            </div>
                         </div>
                     </div>
-
                     <!-- Form -->
                     <form id="form-pendaftaran" class="space-y-7">
+
+                        <!-- Sumber Informasi -->
+                        <div class="form-control">
+                            <label class="label pb-1">
+                                <span class="label-text font-semibold text-slate-800">Penanggung Jawab Informasi <span class="text-red-500">*</span></span>
+                            </label>
+                            <div class="relative">
+                                <input type="text" name="sumber_informasi" required
+                                       class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                       placeholder="Dari mana Anda tahu program ini? (misal: grup WA tetangga, pengumuman masjid, IG, dll)"/>
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
+                            </div>
+                        </div>
+
+                        <!-- Nomor WA -->
+                        <div class="form-control">
+                            <label class="label pb-1">
+                                <span class="label-text font-semibold text-slate-800">Nomor WA (opsional, untuk konfirmasi)</span>
+                            </label>
+                            <div class="relative">
+                                <input type="tel" name="no_wa"
+                                       class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                       placeholder="08xxxxxxxxxx" pattern="^08[0-9]{8,13}$"/>
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
+                            </div>
+                        </div>
+
                         <!-- Kategori -->
                         <div class="form-control">
                             <label class="label pb-1">
@@ -69,6 +143,23 @@
                             </div>
                         </div>
 
+                        <!-- Jenis Kelamin -->
+                        <div class="form-control">
+                            <label class="label pb-1">
+                                <span class="label-text font-semibold text-slate-800">Jenis Kelamin <span class="text-red-500">*</span></span>
+                            </label>
+                            <div class="relative">
+                                <select name="jenis_kelamin" required
+                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
+                                    <option value="" disabled selected>Pilih jenis kelamin</option>
+                                    <option value="L">Laki-laki</option>
+                                    <option value="P">Perempuan</option>
+                                </select>
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">⚥</span>
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
+                            </div>
+                        </div>
+
                         <!-- Tanggal Lahir & Umur -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="form-control">
@@ -76,7 +167,7 @@
                                     <span class="label-text font-semibold text-slate-800">Tanggal Lahir <span class="text-red-500">*</span></span>
                                 </label>
                                 <div class="relative">
-                                    <input type="date" name="tanggal_lahir" id="tanggal_lahir" required
+                                    <input type="date" name="tanggal_lahir" id="tanggal_lahir"
                                            class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white"/>
                                     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📅</span>
                                 </div>
@@ -99,48 +190,6 @@
                             </div>
                         </div>
 
-                        <!-- Jenis Kelamin -->
-                        <div class="form-control">
-                            <label class="label pb-1">
-                                <span class="label-text font-semibold text-slate-800">Jenis Kelamin <span class="text-red-500">*</span></span>
-                            </label>
-                            <div class="relative">
-                                <select name="jenis_kelamin" required
-                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
-                                    <option value="" disabled selected>Pilih jenis kelamin</option>
-                                    <option value="L">Laki-laki</option>
-                                    <option value="P">Perempuan</option>
-                                </select>
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">⚥</span>
-                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
-                            </div>
-                        </div>
-
-                        <!-- Alamat -->
-                        <div class="form-control">
-                            <label class="label pb-1">
-                                <span class="label-text font-semibold text-slate-800">Alamat Lengkap <span class="text-red-500">*</span></span>
-                            </label>
-                            <div class="relative">
-                                <textarea name="alamat" rows="3" required
-                                          class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
-                                          placeholder="Contoh: Jl. Merdeka No. 45, Kel. Sukamaju, Kec. Cibeureum, Kota Tasikmalaya"></textarea>
-                                <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">🏠</span>
-                            </div>
-                        </div>
-
-                        <!-- Nomor WA -->
-                        <div class="form-control">
-                            <label class="label pb-1">
-                                <span class="label-text font-semibold text-slate-800">Nomor WA (opsional, untuk konfirmasi)</span>
-                            </label>
-                            <div class="relative">
-                                <input type="tel" name="no_wa"
-                                       class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                       placeholder="08xxxxxxxxxx" pattern="^08[0-9]{8,13}$"/>
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
-                            </div>
-                        </div>
 
                         <!-- Nama Orang Tua & Pekerjaan -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -168,23 +217,23 @@
                             </div>
                         </div>
 
-                        <!-- Sumber Informasi -->
+                        <!-- Alamat -->
                         <div class="form-control">
                             <label class="label pb-1">
-                                <span class="label-text font-semibold text-slate-800">Sumber Informasi <span class="text-red-500">*</span></span>
+                                <span class="label-text font-semibold text-slate-800">Alamat Lengkap <span class="text-red-500">*</span></span>
                             </label>
                             <div class="relative">
-                                <input type="text" name="sumber_informasi" required
-                                       class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                       placeholder="Dari mana Anda tahu program ini? (misal: grup WA tetangga, pengumuman masjid, IG, dll)"/>
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
+                                <textarea name="alamat" rows="3" required
+                                          class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
+                                          placeholder="Contoh: Jl. Merdeka No. 45, Kel. Sukamaju, Kec. Cibeureum, Kota Tasikmalaya"></textarea>
+                                <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">🏠</span>
                             </div>
                         </div>
 
                         <!-- Catatan Tambahan -->
                         <div class="form-control">
                             <label class="label pb-1">
-                                <span class="label-text font-semibold text-slate-800">Catatan Tambahan (opsional)</span>
+                                <span class="label-text font-semibold text-slate-800">Keterangan Tambahan</span>
                             </label>
                             <div class="relative">
                                 <textarea name="catatan_tambahan" rows="4"

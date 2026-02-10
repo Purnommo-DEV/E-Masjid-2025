@@ -85,12 +85,18 @@ Route::get('galeri', [HomeController::class, 'galeriIndex'])->name('galeri.index
 Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('kontak.kirim');
 
 Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function () {
+    Route::get('/', [PendaftaranYatimDhuafaController::class, 'indexPublik'])->name('index');
     Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])
         ->name('form');
-        
+    Route::get('/data', [PendaftaranYatimDhuafaController::class, 'dataTable'])->name('data');
     Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])
         ->name('submit');
+// Guest bisa edit data miliknya sendiri
+    Route::get('{id}/edit', [PendaftaranYatimDhuafaController::class, 'editGuest'])->name('edit');
+    Route::put('{id}', [PendaftaranYatimDhuafaController::class, 'updateGuest'])->name('update');
 });
+
+
 
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {
