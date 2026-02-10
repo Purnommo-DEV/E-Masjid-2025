@@ -147,15 +147,14 @@
                     <!-- Google Maps Placeholder -->
                     @if(profil('latitude') && profil('longitude')) <!-- asumsi kolom lat/long ada di model -->
                         <div class="rounded-xl overflow-hidden shadow-md border border-teal-100 mt-auto">
-<iframe
-    class="w-full rounded-xl shadow-md border border-gray-200"
-    height="250"
-    loading="lazy"
-    allowfullscreen
-    referrerpolicy="no-referrer-when-downgrade"
-    src="https://www.google.com/maps?q={{ profil('latitude') }},{{ profil('longitude') }}&z=20&output=embed">
-</iframe>
-
+                            <iframe
+                                class="w-full rounded-xl shadow-md border border-gray-200"
+                                height="250"
+                                loading="lazy"
+                                allowfullscreen
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="https://www.google.com/maps?q={{ profil('latitude') }},{{ profil('longitude') }}&z=20&output=embed">
+                            </iframe>
                         </div>
                     @else
                         <div class="text-center py-8 text-slate-500 italic mt-auto">

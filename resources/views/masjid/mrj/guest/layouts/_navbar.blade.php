@@ -6,12 +6,12 @@
            class="flex items-center gap-3 group">
             <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg shadow-emerald-500/30">
                 <span class="text-sm font-bold">
-                    {{ Str::limit($profil->singkatan ?? 'MSJ', 3, '') }}
+                    {!! profil('singkatan') !!}
                 </span>
             </div>
             <div class="hidden sm:block">
                 <div class="text-sm font-semibold tracking-wide group-hover:text-emerald-200 transition">
-                    {{ $profil->nama ?? 'Masjid Al-Ikhlas' }}
+                    {!! profil('nama') ?? 'Masjid' !!}
                 </div>
                 <div class="text-[11px] text-emerald-200/80">
                     Sistem Informasi Masjid
