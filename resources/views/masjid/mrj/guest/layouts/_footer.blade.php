@@ -3,7 +3,7 @@
 
         {{-- COPYRIGHT --}}
         <div class="text-center sm:text-left">
-            © {{ date('Y') }} {{ $profil->nama ?? 'Masjid Al-Ikhlas' }} —
+            © {{ date('Y') }} {!! profil('nama') ?? 'Masjid' !!} —
             Sistem Informasi Masjid.
         </div>
 
