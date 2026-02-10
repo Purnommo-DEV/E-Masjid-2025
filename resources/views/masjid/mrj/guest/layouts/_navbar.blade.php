@@ -21,6 +21,7 @@
 
         {{-- MENU DESKTOP --}}
         <ul class="hidden md:flex items-center gap-5 text-xs font-medium">
+            <li><a href="{{ route('home') }}" class="hover:text-emerald-300 transition">Beranda</a></li>
             <li><a href="#jadwal" class="hover:text-emerald-300 transition">Jadwal Sholat</a></li>
             <li><a href="#acara" class="hover:text-emerald-300 transition">Agenda</a></li>
             <li><a href="#berita" class="hover:text-emerald-300 transition">Berita</a></li>

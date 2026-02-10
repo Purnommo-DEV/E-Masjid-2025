@@ -9,6 +9,7 @@
 
         {{-- LINK CEPAT --}}
         <div class="flex items-center gap-4">
+            <a href="{{ route('home') }}" class="hover:text-emerald-300 transition">Beranda</a>
             <a href="#berita" class="hover:text-emerald-300 transition">Berita</a>
             <a href="#donasi" class="hover:text-emerald-300 transition">Donasi</a>
             <a href="#kontak" class="hover:text-emerald-300 transition">Kontak</a>

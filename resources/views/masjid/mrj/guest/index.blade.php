@@ -38,7 +38,7 @@
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70"></span>
                                 <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
                             </span>
-                            Selamat Datang di {{ $profil->nama ?? 'Masjid Al-Ikhlas' }}
+                            Selamat Datang di {!! profil('nama') ?? 'Masjid' !!}
                         </div>
 
                         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
