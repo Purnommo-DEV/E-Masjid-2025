@@ -50,7 +50,7 @@
         <!-- Jenis Kelamin -->
         <div class="form-control">
             <label class="label pb-1">
-                <span class="label-text font-semibold text-slate-800">JK</span>
+                <span class="label-text font-semibold text-slate-800">Jenis Kelamin</span>
             </label>
             <div class="relative">
                 <select id="filterJk"
