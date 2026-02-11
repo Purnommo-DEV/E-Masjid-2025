@@ -93,22 +93,22 @@
 
         <!-- Tabel -->
         <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100">
-            <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900 border-emerald-500">
+            <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900 border-emerald-500 whitespace-normal">
                 <thead class="bg-emerald-600 text-white">
                     <tr>
                         <th>No</th>
-                        <th>Nama Lengkap</th>
+                        <th>Penanggung Jawab Informasi</th>
+                        <th>No WA</th>
+                        <th>Kategori Penerima</th>
+                        <th>Nama Lengkap Anak</th>
                         <th>Nama Panggilan</th>
+                        <th>Jenis Kelamin</th>
                         <th>Tanggal Lahir</th>
                         <th>Umur</th>
-                        <th>Kategori</th>
-                        <th>Jenis Kelamin</th>
-                        <th>Alamat</th>
-                        <th>No WA</th>
                         <th>Nama Orang Tua</th>
                         <th>Pekerjaan Orang Tua</th>
-                        <th>Sumber Informasi</th>
-                        <th>Catatan Tambahan</th>
+                        <th>Alamat</th>
+                        <th>Keterangan Tambahan</th>
                         <th>Tahun</th>
                         <th class="text-center">Aksi</th>
                     </tr>
@@ -460,17 +460,17 @@ function hitungUmur(tglTextSelector, tglHiddenSelector, umurSelector, helperSele
             },
             columns: [
                 { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'sumber_informasi' },
+                { data: 'no_wa' },
+                { data: 'kategori' },
                 { data: 'nama_lengkap' },
                 { data: 'nama_panggilan' },
+                { data: 'jenis_kelamin' },
                 { data: 'tanggal_lahir' },
                 { data: 'umur' },
-                { data: 'kategori' },
-                { data: 'jenis_kelamin' },
-                { data: 'alamat' },
-                { data: 'no_wa' },
                 { data: 'nama_orang_tua' },
                 { data: 'pekerjaan_orang_tua' },
-                { data: 'sumber_informasi' },
+                { data: 'alamat' },
                 { data: 'catatan_tambahan' },
                 { data: 'tahun_program' },
                 {
@@ -700,55 +700,55 @@ function hitungUmur(tglTextSelector, tglHiddenSelector, umurSelector, helperSele
         color: #ffffff;
     }
 
-/* =========================
-   NAVBAR COLOR LOCK
-   ========================= */
-nav {
-    color: #e5e7eb !important; /* slate-200 */
-}
+    /* =========================
+       NAVBAR COLOR LOCK
+       ========================= */
+    nav {
+        color: #e5e7eb !important; /* slate-200 */
+    }
 
-nav a,
-nav span,
-nav div,
-nav li {
-    color: #e5e7eb !important;
-}
+    nav a,
+    nav span,
+    nav div,
+    nav li {
+        color: #e5e7eb !important;
+    }
 
-/* Nama masjid */
-nav .group-hover\:text-emerald-200:hover {
-    color: #a7f3d0 !important;
-}
+    /* Nama masjid */
+    nav .group-hover\:text-emerald-200:hover {
+        color: #a7f3d0 !important;
+    }
 
-/* Subtext */
-nav .text-emerald-200\/80 {
-    color: rgba(167, 243, 208, 0.8) !important;
-}
+    /* Subtext */
+    nav .text-emerald-200\/80 {
+        color: rgba(167, 243, 208, 0.8) !important;
+    }
 
-/* Menu hover */
-nav a:hover {
-    color: #6ee7b7 !important; /* emerald-300 */
-}
+    /* Menu hover */
+    nav a:hover {
+        color: #6ee7b7 !important; /* emerald-300 */
+    }
 
-/* Button outline admin */
-nav .btn-outline {
-    color: #a7f3d0 !important;
-    border-color: rgba(52, 211, 153, 0.6) !important;
-}
+    /* Button outline admin */
+    nav .btn-outline {
+        color: #a7f3d0 !important;
+        border-color: rgba(52, 211, 153, 0.6) !important;
+    }
 
-nav .btn-outline:hover {
-    background-color: rgba(16, 185, 129, 0.15) !important;
-    color: #ecfdf5 !important;
-}
+    nav .btn-outline:hover {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        color: #ecfdf5 !important;
+    }
 
-/* Mobile dropdown */
-nav details .menu a {
-    color: #e5e7eb !important;
-}
+    /* Mobile dropdown */
+    nav details .menu a {
+        color: #e5e7eb !important;
+    }
 
-nav details .menu a:hover {
-    background-color: rgba(16, 185, 129, 0.15) !important;
-    color: #ecfdf5 !important;
-}
+    nav details .menu a:hover {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        color: #ecfdf5 !important;
+    }
 
 
 </style>

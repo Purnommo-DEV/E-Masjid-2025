@@ -33,6 +33,7 @@ class PendaftaranYatimDhuafaController extends Controller
             'tanggal_lahir'       => 'nullable|date',
             // 'tanggal_lahir'        => 'required|date|before_or_equal:' . now()->subYears(0)->toDateString(),
             'umur'                => 'nullable|integer|min:0|max:13',
+            'umur_satuan'         => 'nullable|in:tahun,bulan,hari',
             'jenis_kelamin'       => 'required|in:L,P',
             'alamat'              => 'required|min:2|max:255',
             'no_wa'               => 'nullable|regex:/^08[0-9]{8,12}$/',
@@ -55,30 +56,82 @@ class PendaftaranYatimDhuafaController extends Controller
 
         /**
          * ============================
-         * LOGIKA UMUR (INTI MASALAH)
+         * LOGIKA UMUR (VERSI FINAL)
          * ============================
          */
         if (!empty($data['tanggal_lahir'])) {
-            // Ada tanggal lahir → hitung umur otomatis
-            $umur = Carbon::parse($data['tanggal_lahir'])->age;
 
-            if ($umur > 13) {
+            $tglLahir = Carbon::parse($data['tanggal_lahir']);
+
+            if ($tglLahir->isFuture()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tanggal lahir tidak valid'
+                ], 422);
+            }
+
+            $diff = $tglLahir->diff(now());
+
+            if ($diff->y > 13) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Usia anak melebihi 13 tahun'
                 ], 422);
             }
 
-            $data['umur'] = $umur;
+            if ($diff->y > 0) {
+                $data['umur'] = $diff->y;
+                $data['umur_satuan'] = 'tahun';
+            } elseif ($diff->m > 0) {
+                $data['umur'] = $diff->m;
+                $data['umur_satuan'] = 'bulan';
+            } else {
+                $data['umur'] = max($diff->d, 1);
+                $data['umur_satuan'] = 'hari';
+            }
+
         } else {
-            // Tanggal lahir kosong → umur HARUS dari input manual
-            if (!isset($data['umur'])) {
+
+            if (
+                !isset($data['umur']) ||
+                !isset($data['umur_satuan'])
+            ) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Umur wajib diisi jika tanggal lahir tidak diketahui'
+                    'message' => 'Umur dan satuan wajib diisi jika tanggal lahir tidak diketahui'
+                ], 422);
+            }
+
+            if ($data['umur'] < 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Umur tidak valid'
+                ], 422);
+            }
+
+            // Validasi batas 13 tahun
+            if ($data['umur_satuan'] === 'tahun' && $data['umur'] > 13) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usia anak melebihi 13 tahun'
+                ], 422);
+            }
+
+            if ($data['umur_satuan'] === 'bulan' && $data['umur'] > 156) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usia anak melebihi batas'
+                ], 422);
+            }
+
+            if ($data['umur_satuan'] === 'hari' && $data['umur'] > 4745) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usia anak melebihi batas'
                 ], 422);
             }
         }
+
 
         $data['tahun_program'] = now()->year;
         $data['ip_address']    = $request->ip();
@@ -131,7 +184,9 @@ class PendaftaranYatimDhuafaController extends Controller
                     ? Carbon::parse($row->tanggal_lahir)->format('d-m-Y')
                     : '-';
             })
-            ->addColumn('umur', fn($row) => $row->umur)
+            ->addColumn('umur', function ($row) {
+                return $row->umur . ' ' . ucfirst($row->umur_satuan);
+            })
             ->addColumn('kategori', function ($row) {
                 return match ($row->kategori) {
                     'yatim_dhuafa' => '<span style="
