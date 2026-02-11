@@ -137,10 +137,10 @@
                             <th>Jenis Kelamin</th>
                             <th>Tanggal Lahir</th>
                             <th>Umur</th>
-                            <th>Nama Orang Tua</th>
-                            <th>Pekerjaan</th>
-                            <th>Alamat</th>
-                            <th>Keterangan</th>
+                            <th>Nama Orang Tua / Wali</th>
+                            <th>Pekerjaan Orang Tua / Wali</th>
+                            <th>Alamat Lengkap</th>
+                            <th>Keterangan Tambahan</th>
                             <th>Tahun</th>
                             <th class="text-center">Aksi</th>
                         </tr>
