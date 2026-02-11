@@ -38,6 +38,7 @@ class PendaftaranYatimDhuafaController extends Controller
             'no_wa'               => 'nullable|regex:/^08[0-9]{8,12}$/',
             'nama_orang_tua'      => 'required|min:2|max:100',
             'pekerjaan_orang_tua' => 'nullable|max:100',
+            'catatan_tambahan'     => 'nullable|string|max:500'
         ], [
             'no_wa.regex' => 'Format nomor WA tidak valid (mulai dengan 08...)',
         ]);
