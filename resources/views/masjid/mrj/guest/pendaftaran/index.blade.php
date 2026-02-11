@@ -82,7 +82,7 @@
                             <div class="relative">
                                 <input type="text" name="sumber_informasi" required
                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                       placeholder=""/>
+                                       placeholder="Penanggung Jawab Informasi"/>
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
                             </div>
                         </div>

@@ -89,11 +89,10 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])
         ->name('form');
     Route::get('/data', [PendaftaranYatimDhuafaController::class, 'dataTable'])->name('data');
-    Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])
-        ->name('submit');
-// Guest bisa edit data miliknya sendiri
-    Route::get('{id}/edit', [PendaftaranYatimDhuafaController::class, 'editGuest'])->name('edit');
-    Route::put('{id}', [PendaftaranYatimDhuafaController::class, 'updateGuest'])->name('update');
+    Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])->name('submit');
+    Route::get('{id}/edit', [PendaftaranYatimDhuafaController::class, 'edit'])->name('edit');
+    Route::put('{id}', [PendaftaranYatimDhuafaController::class, 'update'])->name('update');
+    Route::delete('/delete/{id}', [PendaftaranYatimDhuafaController::class, 'destroy'])->name('destroy');
 });
 
 
