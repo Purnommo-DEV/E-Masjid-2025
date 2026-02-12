@@ -95,53 +95,51 @@ class PendaftaranYatimDhuafaController extends Controller
             })
             ->addColumn('jenis_kelamin_display', fn($row) => $row->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan')
             ->addColumn('tanggal_lahir_formatted', fn($row) => $row->tanggal_lahir ? Carbon::parse($row->tanggal_lahir)->format('d-m-Y') : '-')
-->addColumn('umur_display', function ($row) {
+            ->addColumn('umur_display', function ($row) {
 
-    // Jika ada tanggal lahir → hitung realtime
-    if (!empty($row->tanggal_lahir)) {
+                // Jika ada tanggal lahir → hitung realtime
+                if (!empty($row->tanggal_lahir)) {
 
-        $birth = Carbon::parse($row->tanggal_lahir);
-        $diff  = $birth->diff(now());
+                    $birth = Carbon::parse($row->tanggal_lahir);
+                    $diff  = $birth->diff(now());
 
-        $tahun = $diff->y;
-        $bulan = $diff->m;
-        $hari  = $diff->d;
+                    $tahun = $diff->y;
+                    $bulan = $diff->m;
+                    $hari  = $diff->d;
 
-        $parts = [];
+                    $parts = [];
 
-        if ($tahun > 0) {
-            $parts[] = $tahun . ' Tahun';
-        }
+                    if ($tahun > 0) {
+                        $parts[] = $tahun . ' Tahun';
+                    }
 
-        if ($bulan > 0) {
-            $parts[] = $bulan . ' Bulan';
-        }
+                    if ($bulan > 0) {
+                        $parts[] = $bulan . ' Bulan';
+                    }
 
-        if ($hari > 0) {
-            $parts[] = $hari . ' Hari';
-        }
+                    if ($hari > 0) {
+                        $parts[] = $hari . ' Hari';
+                    }
 
-        if (empty($parts)) {
-            return '<span class="text-slate-400 italic">Baru lahir</span>';
-        }
+                    if (empty($parts)) {
+                        return '<span class="text-slate-400 italic">Baru lahir</span>';
+                    }
 
-        return '<span class="font-medium text-slate-800">'
-                . implode(' · ', $parts) .
-               '</span>';
-    }
+                    return '<span class="font-medium text-slate-800">'
+                            . implode(' · ', $parts) .
+                           '</span>';
+                }
 
-    // Jika manual
-    if (!empty($row->umur) && !empty($row->umur_satuan)) {
+                // Jika manual
+                if (!empty($row->umur) && !empty($row->umur_satuan)) {
 
-        return '<span class="font-medium text-slate-700">'
-                . $row->umur . ' ' . ucfirst($row->umur_satuan) .
-               ' <span class="text-xs text-slate-400">(Manual)</span></span>';
-    }
+                    return '<span class="font-medium text-slate-700">'
+                            . $row->umur . ' ' . ucfirst($row->umur_satuan) .
+                           ' <span class="text-xs text-slate-400">(Manual)</span></span>';
+                }
 
-    return '<span class="text-slate-400 italic">Tidak diketahui</span>';
-})
-
-
+                return '<span class="text-slate-400 italic">Tidak diketahui</span>';
+            })
             ->addColumn('nama_lengkap', fn($row) => $row->nama_lengkap)
             ->addColumn('nama_panggilan', fn($row) => $row->nama_panggilan ?? '-')
             ->addColumn('nama_orang_tua', fn($row) => $row->nama_orang_tua)
