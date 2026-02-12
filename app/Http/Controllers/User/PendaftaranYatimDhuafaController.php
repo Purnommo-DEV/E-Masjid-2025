@@ -58,6 +58,7 @@ class PendaftaranYatimDhuafaController extends Controller
                   ->orWhere('nama_panggilan', 'like', $search)
                   ->orWhere('nama_orang_tua', 'like', $search)
                   ->orWhere('sumber_informasi', 'like', $search);
+                  ->orWhere('alamat', 'like', $search);
             });
         }
 

@@ -101,7 +101,7 @@
                     <!-- Search Box (span lebar di baris bawah) -->
                     <div class="form-control">
                         <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Cari Nama / Orang Tua / Sumber</span>
+                            <span class="label-text font-semibold text-slate-800">Cari Nama / Orang Tua / Sumber / Alamat</span>
                         </label>
                         <div class="relative">
                             <input type="text" id="globalSearch" placeholder="Ketik untuk cari..."
