@@ -95,7 +95,53 @@ class PendaftaranYatimDhuafaController extends Controller
             })
             ->addColumn('jenis_kelamin_display', fn($row) => $row->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan')
             ->addColumn('tanggal_lahir_formatted', fn($row) => $row->tanggal_lahir ? Carbon::parse($row->tanggal_lahir)->format('d-m-Y') : '-')
-            ->addColumn('umur_display', fn($row) => $row->umur ? $row->umur . ' ' . ucfirst($row->umur_satuan ?? '') : '-')
+->addColumn('umur_display', function ($row) {
+
+    // Jika ada tanggal lahir → hitung realtime
+    if (!empty($row->tanggal_lahir)) {
+
+        $birth = Carbon::parse($row->tanggal_lahir);
+        $diff  = $birth->diff(now());
+
+        $tahun = $diff->y;
+        $bulan = $diff->m;
+        $hari  = $diff->d;
+
+        $parts = [];
+
+        if ($tahun > 0) {
+            $parts[] = $tahun . ' Tahun';
+        }
+
+        if ($bulan > 0) {
+            $parts[] = $bulan . ' Bulan';
+        }
+
+        if ($hari > 0) {
+            $parts[] = $hari . ' Hari';
+        }
+
+        if (empty($parts)) {
+            return '<span class="text-slate-400 italic">Baru lahir</span>';
+        }
+
+        return '<span class="font-medium text-slate-800">'
+                . implode(' · ', $parts) .
+               '</span>';
+    }
+
+    // Jika manual
+    if (!empty($row->umur) && !empty($row->umur_satuan)) {
+
+        return '<span class="font-medium text-slate-700">'
+                . $row->umur . ' ' . ucfirst($row->umur_satuan) .
+               ' <span class="text-xs text-slate-400">(Manual)</span></span>';
+    }
+
+    return '<span class="text-slate-400 italic">Tidak diketahui</span>';
+})
+
+
             ->addColumn('nama_lengkap', fn($row) => $row->nama_lengkap)
             ->addColumn('nama_panggilan', fn($row) => $row->nama_panggilan ?? '-')
             ->addColumn('nama_orang_tua', fn($row) => $row->nama_orang_tua)
@@ -105,7 +151,7 @@ class PendaftaranYatimDhuafaController extends Controller
             ->addColumn('sumber_informasi', fn($row) => $row->sumber_informasi)
             ->addColumn('catatan_tambahan', fn($row) => $row->catatan_tambahan ?? '-')
             ->addColumn('tahun_program', fn($row) => $row->tahun_program)
-            ->rawColumns(['kategori_display'])
+            ->rawColumns(['kategori_display', 'umur_display'])
             ->make(true);
     }
 
