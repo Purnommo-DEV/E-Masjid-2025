@@ -201,15 +201,19 @@ class PendaftaranYatimDhuafaController extends Controller
                 ], 422);
             }
 
-            $diff = $tglLahir->diff(now());
+            $now  = now();
+            $diff = $tglLahir->diff($now);
 
-            if ($diff->y > 13) {
+            // ❌ Jika sudah masuk 14 tahun
+            if ($diff->y >= 14) {
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usia anak melebihi 13 tahun'
+                    'message' => "Usia melebihi batas maksimal (13 Tahun 11 Bulan). Saat ini: {$diff->y} Tahun {$diff->m} Bulan {$diff->d} Hari"
                 ], 422);
             }
 
+            // Simpan umur utama
             if ($diff->y > 0) {
                 $data['umur'] = $diff->y;
                 $data['umur_satuan'] = 'tahun';
@@ -223,42 +227,27 @@ class PendaftaranYatimDhuafaController extends Controller
 
         } else {
 
-            if (
-                !isset($data['umur']) ||
-                !isset($data['umur_satuan'])
-            ) {
+            // MODE MANUAL
+            if (!isset($data['umur']) || !isset($data['umur_satuan'])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Umur dan satuan wajib diisi jika tanggal lahir tidak diketahui'
                 ], 422);
             }
 
-            if ($data['umur'] < 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Umur tidak valid'
-                ], 422);
-            }
+            $umur = (int) $data['umur'];
 
-            // Validasi batas 13 tahun
-            if ($data['umur_satuan'] === 'tahun' && $data['umur'] > 13) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Usia anak melebihi 13 tahun'
-                ], 422);
-            }
+            // Konversi manual ke estimasi tahun untuk validasi
+            $tahunEstimasi = match($data['umur_satuan']) {
+                'tahun' => $umur,
+                'bulan' => floor($umur / 12),
+                'hari'  => floor($umur / 365),
+            };
 
-            if ($data['umur_satuan'] === 'bulan' && $data['umur'] > 156) {
+            if ($tahunEstimasi >= 14) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usia anak melebihi batas'
-                ], 422);
-            }
-
-            if ($data['umur_satuan'] === 'hari' && $data['umur'] > 4745) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Usia anak melebihi batas'
+                    'message' => 'Usia melebihi batas maksimal 13 Tahun 11 Bulan'
                 ], 422);
             }
         }
@@ -330,7 +319,9 @@ class PendaftaranYatimDhuafaController extends Controller
         // LOGIKA UMUR SAMA DENGAN STORE
         // =====================================
         if (!empty($data['tanggal_lahir'])) {
+
             $tglLahir = Carbon::parse($data['tanggal_lahir']);
+
             if ($tglLahir->isFuture()) {
                 return response()->json([
                     'success' => false,
@@ -338,27 +329,29 @@ class PendaftaranYatimDhuafaController extends Controller
                 ], 422);
             }
 
-            $diff = $tglLahir->diff(now());
+            $now  = now();
+            $diff = $tglLahir->diff($now);
 
-            if ($diff->y > 13) {
+            if ($diff->y >= 14) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usia anak melebihi 13 tahun'
+                    'message' => "Usia melebihi batas maksimal (13 Tahun 11 Bulan). Saat ini: {$diff->y} Tahun {$diff->m} Bulan {$diff->d} Hari"
                 ], 422);
             }
 
             if ($diff->y > 0) {
-                $data['umur']       = $diff->y;
+                $data['umur'] = $diff->y;
                 $data['umur_satuan'] = 'tahun';
             } elseif ($diff->m > 0) {
-                $data['umur']       = $diff->m;
+                $data['umur'] = $diff->m;
                 $data['umur_satuan'] = 'bulan';
             } else {
-                $data['umur']       = max($diff->d, 1);
+                $data['umur'] = max($diff->d, 1);
                 $data['umur_satuan'] = 'hari';
             }
+
         } else {
-            // Mode manual
+
             if (empty($data['umur']) || empty($data['umur_satuan'])) {
                 return response()->json([
                     'success' => false,
@@ -368,22 +361,16 @@ class PendaftaranYatimDhuafaController extends Controller
 
             $umur = (int) $data['umur'];
 
-            if ($data['umur_satuan'] === 'tahun' && $umur > 13) {
+            $tahunEstimasi = match($data['umur_satuan']) {
+                'tahun' => $umur,
+                'bulan' => floor($umur / 12),
+                'hari'  => floor($umur / 365),
+            };
+
+            if ($tahunEstimasi >= 14) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usia melebihi 13 tahun'
-                ], 422);
-            }
-            if ($data['umur_satuan'] === 'bulan' && $umur > 156) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Usia melebihi batas (maks 156 bulan)'
-                ], 422);
-            }
-            if ($data['umur_satuan'] === 'hari' && $umur > 4745) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Usia melebihi batas (maks ~4745 hari)'
+                    'message' => 'Usia melebihi batas maksimal 13 Tahun 11 Bulan'
                 ], 422);
             }
         }

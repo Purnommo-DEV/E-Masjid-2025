@@ -222,9 +222,17 @@
 
                                 </div>
 
+                                <!-- Helper -->
                                 <label class="label">
                                     <span class="label-text-alt text-sm text-slate-500 italic" id="umurHelper">
                                         Akan otomatis ter-update jika tanggal lahir diisi
+                                    </span>
+                                </label>
+
+                                <!-- Detail lengkap -->
+                                <label class="label pt-0">
+                                    <span class="label-text-alt text-sm font-semibold hidden"
+                                          id="umurFullDetail">
                                     </span>
                                 </label>
                             </div>
@@ -318,6 +326,7 @@ $(document).ready(function () {
     const umurHelper = $('#umurHelper');
     const umurDetailBadge = $('#umurDetailBadge');
     const umurSatuan = $('#umur_satuan');
+    const umurFullDetail = $('#umurFullDetail');
 
     // Masking input tanggal
     tglInput.on('input', function(e) {
@@ -346,32 +355,37 @@ $(document).ready(function () {
 
     // Fungsi hitung umur detail + badge (tahun + bulan + hari)
     function hitungUmurDetail() {
+
         const value = tglHidden.val();
         if (!value) {
             umurInput.val('');
-            umurHelper.text('Akan otomatis ter-update jika tanggal lahir diisi');
             umurDetailBadge.addClass('hidden');
+            umurFullDetail.addClass('hidden');
             return;
         }
 
         const birthDate = new Date(value);
         const today = new Date();
 
-        let years = today.getFullYear() - birthDate.getFullYear();
+        let years  = today.getFullYear() - birthDate.getFullYear();
         let months = today.getMonth() - birthDate.getMonth();
-        let days = today.getDate() - birthDate.getDate();
+        let days   = today.getDate() - birthDate.getDate();
 
         if (months < 0 || (months === 0 && days < 0)) {
             years--;
             months += 12;
         }
+
         if (days < 0) {
             months--;
-            const lastDayPrevMonth = new Date(today.getFullYear(), today.getMonth(), 0).getDate();
+            const lastDayPrevMonth =
+                new Date(today.getFullYear(), today.getMonth(), 0).getDate();
             days += lastDayPrevMonth;
         }
 
-        // Update input umur (tahun atau bulan, sesuai kebutuhan backend)
+        // ===============================
+        // Set input umur utama
+        // ===============================
         if (years >= 1) {
             umurInput.val(years);
             umurSatuan.val('tahun').addClass('hidden');
@@ -383,43 +397,62 @@ $(document).ready(function () {
             umurSatuan.val('hari').addClass('hidden');
         }
 
-        // Badge detail (tahun + bulan + hari)
+        // ===============================
+        // Badge tetap hanya satuan
+        // ===============================
         let badgeText = '';
-        if (years >= 1) {
-            badgeText = "Tahun";
-        } else if (months >= 1) {
-            badgeText = "Bulan";
-        } else if (days >= 1) {
-            badgeText = "Hari";
+        if (years >= 1) badgeText = 'Tahun';
+        else if (months >= 1) badgeText = 'Bulan';
+        else badgeText = 'Hari';
+
+        umurDetailBadge
+            .text(badgeText)
+            .removeClass('hidden badge-error')
+            .addClass('badge-success');
+
+        // ===============================
+        // Detail lengkap
+        // ===============================
+        let fullText = `${years} Tahun ${months} Bulan ${days} Hari`;
+
+        umurFullDetail
+            .removeClass('hidden text-red-600 text-emerald-600')
+            .text(fullText);
+
+        // ===============================
+        // VALIDASI MAKSIMAL 13 TAHUN 11 BULAN XXX HARI
+        // ==============================
+        const isValid = years <= 13;
+
+        if (!isValid) {
+
+            umurHelper
+                .removeClass('text-emerald-600')
+                .addClass('text-red-600')
+                .text(`Usia melebihi batas maksimal (13 Tahun 11 Bulan)`);
+
+            umurFullDetail
+                .removeClass('text-emerald-600')
+                .addClass('text-red-600');
+
+            umurDetailBadge
+                .removeClass('badge-success')
+                .addClass('badge-error');
+
         } else {
-            badgeText = 'Kurang dari 1 hari';
-        }
 
-        // if (years >= 1) {
-        //     badgeText = `${years} tahun`;
-        //     if (months > 0) badgeText += ` ${months} bulan`;
-        //     if (days > 0) badgeText += ` ${days} hari`;
-        // } else if (months >= 1) {
-        //     badgeText = `${months} bulan`;
-        //     if (days > 0) badgeText += ` ${days} hari`;
-        // } else if (days >= 1) {
-        //     badgeText = `${days} hari`;
-        // } else {
-        //     badgeText = 'Kurang dari 1 hari';
-        // }
+            umurHelper
+                .removeClass('text-red-600')
+                .addClass('text-emerald-600')
+                .text('Umur dihitung otomatis dari tanggal lahir');
 
-        umurDetailBadge.text(badgeText).removeClass('hidden badge-error badge-warning').addClass('badge-success badge-lg font-semibold');
+            umurFullDetail
+                .removeClass('text-red-600')
+                .addClass('text-emerald-600');
 
-        // Validasi
-        if (years > 13) {
-            umurHelper.addClass('text-red-600').text('Usia melebihi batas maksimal 13 tahun');
-            umurDetailBadge.removeClass('badge-success').addClass('badge-error');
-        } else if (years < 0) {
-            umurHelper.addClass('text-red-600').text('Tanggal lahir tidak valid');
-            umurDetailBadge.removeClass('badge-success').addClass('badge-error');
-        } else {
-            umurHelper.removeClass('text-red-600').text('Umur dihitung otomatis dari tanggal lahir');
-            umurDetailBadge.removeClass('badge-error badge-warning').addClass('badge-success');
+            umurDetailBadge
+                .removeClass('badge-error')
+                .addClass('badge-success');
         }
     }
 
@@ -455,7 +488,6 @@ $(document).ready(function () {
 
         umurDetailBadge.addClass('hidden');
     });
-
 
     // Reset form
     $('#form-pendaftaran').on('reset', function() {
