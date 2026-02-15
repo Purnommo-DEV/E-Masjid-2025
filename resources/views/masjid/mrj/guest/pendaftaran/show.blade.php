@@ -196,6 +196,33 @@
                 </div>
 
                 <div class="modal-body space-y-7">
+
+                    <!-- Penanggung Jawab Informasi -->
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text font-semibold text-slate-800">Penanggung Jawab Informasi <span class="text-red-500">*</span></span>
+                        </label>
+                        <div class="relative">
+                            <input type="text" name="sumber_informasi" id="editSumber" required
+                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                   placeholder="Penanggung Jawab Informasi"/>
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
+                        </div>
+                    </div>
+
+                    <!-- Nomor WA -->
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text font-semibold text-slate-800">Nomor WA (opsional, untuk konfirmasi)</span>
+                        </label>
+                        <div class="relative">
+                            <input type="tel" name="no_wa" id="editNoWa"
+                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
+                                   placeholder="08xxxxxxxxxx" pattern="^08[0-9]{8,13}$"/>
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
+                        </div>
+                    </div>
+
                     <!-- Kategori -->
                     <div class="form-control">
                         <label class="label pb-1">
@@ -236,6 +263,23 @@
                                        placeholder="Nama sehari-hari (misal: Adit)"/>
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">😊</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Jenis Kelamin -->
+                    <div class="form-control">
+                        <label class="label pb-1">
+                            <span class="label-text font-semibold text-slate-800">Jenis Kelamin <span class="text-red-500">*</span></span>
+                        </label>
+                        <div class="relative">
+                            <select name="jenis_kelamin" required id="editJenisKelamin"
+                                    class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
+                                <option value="" disabled selected>Pilih jenis kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">⚥</span>
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
                         </div>
                     </div>
 
@@ -296,23 +340,6 @@
                         </div>
                     </div>
 
-                    <!-- Jenis Kelamin -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Jenis Kelamin <span class="text-red-500">*</span></span>
-                        </label>
-                        <div class="relative">
-                            <select name="jenis_kelamin" required id="editJenisKelamin"
-                                    class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
-                                <option value="" disabled selected>Pilih jenis kelamin</option>
-                                <option value="L">Laki-laki</option>
-                                <option value="P">Perempuan</option>
-                            </select>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">⚥</span>
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
-                        </div>
-                    </div>
-
                     <!-- Alamat -->
                     <div class="form-control">
                         <label class="label pb-1">
@@ -323,19 +350,6 @@
                                       class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
                                       placeholder="Contoh: Jl. Merdeka No. 45, Kel. Sukamaju, Kec. Cibeureum, Kota Tasikmalaya"></textarea>
                             <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">🏠</span>
-                        </div>
-                    </div>
-
-                    <!-- Nomor WA -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Nomor WA (opsional, untuk konfirmasi)</span>
-                        </label>
-                        <div class="relative">
-                            <input type="tel" name="no_wa" id="editNoWa"
-                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                   placeholder="08xxxxxxxxxx" pattern="^08[0-9]{8,13}$"/>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📱</span>
                         </div>
                     </div>
 
@@ -365,28 +379,15 @@
                         </div>
                     </div>
 
-                    <!-- Sumber Informasi -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Sumber Informasi <span class="text-red-500">*</span></span>
-                        </label>
-                        <div class="relative">
-                            <input type="text" name="sumber_informasi" id="editSumber" required
-                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                   placeholder="Dari mana Anda tahu program ini? (misal: grup WA tetangga, pengumuman masjid, IG, dll)"/>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
-                        </div>
-                    </div>
-
                     <!-- Catatan Tambahan -->
                     <div class="form-control">
                         <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Catatan Tambahan (opsional)</span>
+                            <span class="label-text font-semibold text-slate-800">Keterangan Tambahan</span>
                         </label>
                         <div class="relative">
                             <textarea name="catatan_tambahan" id="editCatatan" rows="4"
                                       class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white resize-none"
-                                      placeholder="Misal: Kondisi kesehatan anak, kebutuhan khusus, atau informasi lain yang perlu diketahui panitia..."></textarea>
+                                      placeholder="Keterangan Tambahan"></textarea>
                             <span class="absolute left-4 top-4 text-emerald-600 text-xl pointer-events-none">📝</span>
                         </div>
                     </div>
