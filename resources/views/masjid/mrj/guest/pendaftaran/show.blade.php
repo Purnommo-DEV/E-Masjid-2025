@@ -122,6 +122,124 @@
                     </div>
             </div>
 
+            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+
+                <!-- =========================
+                     IMPORT SECTION
+                ========================== -->
+                <form id="formImportExcel"
+                      action="{{ route('santunan-ramadhan.import') }}"
+                      method="POST"
+                      enctype="multipart/form-data"
+                      class="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full lg:w-auto">
+
+                    @csrf
+
+                    <div class="mb-4">
+                        <h3 class="font-bold text-slate-800 text-lg">Import Data Excel</h3>
+                        <p class="text-sm text-slate-500">Download template terlebih dahulu sebelum upload</p>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-3">
+
+                        <!-- DOWNLOAD TEMPLATE -->
+                        <a href="{{ route('santunan-ramadhan.template') }}"
+                           class="px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow hover:shadow-md transition flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
+                            </svg>
+                            Download Template
+                        </a>
+
+                        <!-- FILE -->
+                        <input type="file"
+                               name="file"
+                               id="fileImport"
+                               required
+                               accept=".xlsx,.xls"
+                               class="px-4 py-3 rounded-xl border-2 border-slate-300
+                                      focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
+                                      outline-none text-slate-900 bg-white">
+
+                        <!-- IMPORT -->
+                        <button type="submit"
+                                id="btnImportExcel"
+                                class="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition flex items-center gap-2">
+
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
+                            </svg>
+
+                            <span id="textImport">Import</span>
+                            <span id="loadingImport" class="hidden loading loading-spinner loading-sm"></span>
+                        </button>
+
+                    </div>
+                </form>
+
+
+                <!-- =========================
+                     EXPORT SECTION
+                ========================== -->
+                <div class="flex items-center">
+
+                    <a id="btnExportExcel"
+                       class="px-10 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base flex items-center justify-center gap-2 cursor-pointer">
+
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M12 20V8m0 12l-4-4m4 4l4-4M4 4h16"/>
+                        </svg>
+
+                        Export Excel (Laporan)
+                    </a>
+
+                    <form id="exportForm" method="POST" action="{{ route('santunan-ramadhan.export') }}" target="downloadFrame">
+                        @csrf
+
+                        <input type="hidden" name="tahun" id="ex_tahun">
+                        <input type="hidden" name="umur_value" id="ex_umur_value">
+                        <input type="hidden" name="umur_satuan" id="ex_umur_satuan">
+                        <input type="hidden" name="jenis_kelamin" id="ex_jk">
+                        <input type="hidden" name="kategori" id="ex_kategori">
+                        <input type="hidden" name="search" id="ex_search">
+                        <input type="hidden" name="download_token" id="ex_token">
+                    </form>
+
+                    <iframe name="downloadFrame" style="display:none;"></iframe>
+
+
+                </div>
+
+            </div>
+
+
+            <div id="exportLoading"
+                 class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[999] flex items-center justify-center">
+
+                <div class="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4">
+                    <span class="loading loading-spinner loading-lg text-emerald-600"></span>
+                    <span class="font-semibold text-slate-700">Menyiapkan file Excel...</span>
+                </div>
+            </div>
+
+            <div id="importOverlay"
+                 class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm
+                        flex items-center justify-center">
+
+                <div class="bg-white rounded-2xl shadow-2xl p-10 text-center">
+                    <span class="loading loading-spinner loading-lg text-emerald-600"></span>
+                    <p class="mt-4 text-lg font-semibold text-slate-700">
+                        Mengupload & memproses data...
+                    </p>
+                    <p class="text-sm text-slate-500 mt-1">
+                        Mohon tunggu, jangan menutup halaman
+                    </p>
+                </div>
+            </div>
+
             <!-- Tabel (padding lebih besar, tidak mepet) -->
             <div class="bg-white rounded-3xl shadow-2xl overflow-hidden border border-emerald-100/60 p-6 lg:p-10 mt-4">
                 <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900">
@@ -439,6 +557,169 @@
     let table;
     let lastSelectedSatuan = '';
 
+    $('#btnExportExcel').on('click', function(e) {
+        e.preventDefault();
+
+        // Isi filter ke hidden inputs
+        $('#ex_tahun').val($('#filterTahun').val() || '');
+        $('#ex_umur_value').val($('#filterUmurValue').val() || '');
+        $('#ex_umur_satuan').val($('#filterUmurSatuan').val() || '');
+        $('#ex_jk').val($('#filterJk').val() || '');
+        $('#ex_kategori').val($('#filterKategori').val() || '');
+        $('#ex_search').val($('#globalSearch').val() || '');
+
+        // Tampilkan loader
+        $('#exportLoading').removeClass('hidden');
+
+        // Submit form secara normal (bukan ke iframe)
+        $('#exportForm').removeAttr('target');  // pastikan ga ada target=iframe
+        $('#exportForm')[0].submit();
+
+        // Loader akan hilang otomatis setelah download mulai (browser handle sendiri)
+        // Tapi untuk UX bagus, kita pakai timer fallback
+        setTimeout(() => {
+            $('#exportLoading').addClass('hidden');
+            Swal.fire({
+                icon: 'success',
+                title: 'Sedang diunduh...',
+                text: 'Cek folder Downloads Anda',
+                timer: 2500,
+                showConfirmButton: false
+            });
+        }, 1500);  // sesuaikan kalau file besar
+    });
+    
+    function waitForDownload(token) {
+        const maxTime = 60000; // naikkan jadi 60 detik dulu untuk debug
+        let elapsed = 0;
+
+        console.log('[Export] Mulai polling cookie dengan token:', token);
+
+        const checkInterval = setInterval(() => {
+            elapsed += 500;
+            const cookieValue = getCookie('fileDownload');
+
+            console.log(
+                `[Export] Cek ke-${elapsed/1000}s | cookie saat ini:`,
+                cookieValue,
+                '(dibandingkan dengan token:', token, ')'
+            );
+
+            if (cookieValue == token) {   // pakai == biar toleran tipe
+                clearInterval(checkInterval);
+                document.cookie = "fileDownload=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
+                $('#exportLoading').addClass('hidden');
+                console.log('[Export] Sukses! Cookie cocok → loader di-hide');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'File Excel berhasil didownload',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+
+            if (elapsed >= maxTime) {
+                clearInterval(checkInterval);
+                $('#exportLoading').addClass('hidden');
+                console.warn('[Export] Timeout polling cookie');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Timeout',
+                    text: 'File mungkin sudah terdownload, tapi loader tidak tertutup otomatis.'
+                });
+            }
+        }, 500);
+    }
+
+    function getCookie(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            let val = parts.pop().split(';').shift();
+            // trim dan bersihkan tanda kutip kalau ada
+            return val.trim().replace(/^"|"$/g, '');
+        }
+        return null;
+    }
+
+    $('#importFile').on('change', function () {
+        const fileName = this.files[0]?.name || 'Pilih file Excel (.xlsx)';
+        $('#fileLabel').text(fileName);
+    });
+
+    $('#btnImportExcel').prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+
+    $('#fileImport').on('change', function(){
+        if(this.files.length > 0){
+            $('#btnImportExcel').prop('disabled', false)
+                .removeClass('opacity-50 cursor-not-allowed');
+        }
+    });
+
+    $('#formImportExcel').on('submit', function(e){
+        e.preventDefault();
+
+        let formData = new FormData(this);
+
+        $('#btnImportExcel').prop('disabled', true);
+        $('#loadingImport').removeClass('hidden');
+        $('#textImport').text('Mengupload...');
+
+        $('#importOverlay').removeClass('hidden');
+
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            timeout: 0,
+
+            success: function(res){
+
+                $('#importOverlay').addClass('hidden');
+
+                Swal.fire({
+                    icon:'success',
+                    title:'Import Berhasil',
+                    text:res.message,
+                    confirmButtonColor:'#059669'
+                });
+
+                table.ajax.reload(null,false);
+                $('#formImportExcel')[0].reset();
+
+                $('#btnImportExcel').prop('disabled', true)
+                    .addClass('opacity-50 cursor-not-allowed');
+            },
+
+            error: function(xhr){
+
+                $('#importOverlay').addClass('hidden');
+
+                let msg = xhr.responseJSON?.message || 'Import gagal';
+
+                if(xhr.responseJSON?.detail){
+                    msg += '<br><br><b>Detail:</b><br>' +
+                        xhr.responseJSON.detail.join('<br>');
+                }
+
+                Swal.fire({
+                    icon:'error',
+                    title:'Import Dibatalkan',
+                    html:msg,
+                    width:600
+                });
+            },
+
+            complete:function(){
+                $('#loadingImport').addClass('hidden');
+                $('#textImport').text('Import');
+            }
+        });
+    });
+
     $(document).ready(function () {
         table = $('#tabelYatimDhuafa').DataTable({
             processing: true,
@@ -587,7 +868,6 @@
             }
         });
     }
-
 
     // Tombol Reset Filter
     $('#btnResetFilter').on('click', function () {

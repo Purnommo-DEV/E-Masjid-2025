@@ -29,8 +29,8 @@ use App\Http\Controllers\Admin\LayananController;
 use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
-
 use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
+use App\Http\Controllers\User\ExcelYatimDhuafaController;
 
 Route::get('/pwa-splash', function () {
     return view('pwa.splash');
@@ -86,13 +86,16 @@ Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('konta
 
 Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function () {
     Route::get('/', [PendaftaranYatimDhuafaController::class, 'indexPublik'])->name('index');
-    Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])
-        ->name('form');
+    Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])->name('form');
     Route::get('/data', [PendaftaranYatimDhuafaController::class, 'dataTable'])->name('data');
     Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])->name('submit');
     Route::get('{id}/edit', [PendaftaranYatimDhuafaController::class, 'edit'])->name('edit');
     Route::put('{id}', [PendaftaranYatimDhuafaController::class, 'update'])->name('update');
     Route::delete('/delete/{id}', [PendaftaranYatimDhuafaController::class, 'destroy'])->name('destroy');
+
+    Route::post('import', [ExcelYatimDhuafaController::class, 'import'])->name('import');
+    Route::get('template', [ExcelYatimDhuafaController::class, 'downloadTemplate'])->name('template');
+    Route::post('export', [ExcelYatimDhuafaController::class, 'export'])->name('export');
 });
 
 
