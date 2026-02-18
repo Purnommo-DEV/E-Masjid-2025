@@ -1150,17 +1150,15 @@
 
     $('#btnScanDuplikat').on('click', function() {
         const btn = $(this);
-        btn.prop('disabled', true).html('<span class="loading loading-spinner loading-sm"></span> Memindai...');
+        btn.prop('disabled', true).html('<span class="loading loading-spinner loading-sm mr-2"></span> Memindai...');
 
         $('#duplikatSection').removeClass('hidden');
         $('#duplikatLoading').removeClass('hidden');
-        $('#tabelDuplikat').addClass('hidden'); // sembunyikan table lama kalau ada
 
         $.ajax({
             url: '{{ route("santunan-ramadhan.scan-duplikat") }}',
             method: 'GET',
-            data: { tahun: {{ now()->year }} }, // bisa diganti dengan $('#scanTahun').val() kalau pakai dropdown
-            // Ganti seluruh blok success jadi seperti ini (simpel & aman)
+            data: { tahun: {{ now()->year }} },
             success: function(res) {
                 $('#duplikatLoading').addClass('hidden');
 
@@ -1175,14 +1173,15 @@
 
                 $('#duplikatTitle').text(`Hasil Scan Duplikat Potensial - Tahun ${res.tahun}`);
 
-                // Selalu destroy kalau sudah ada, lalu buat baru
+                // Destroy table lama kalau ada
                 if (duplikatTable) {
                     duplikatTable.destroy();
-                    duplikatTable = null;
+                    $('#tabelDuplikat').empty(); // bersihkan tbody agar tidak ada sisa
                 }
 
+                // Buat DataTable baru DAN PASTIKAN PAKAI DATA DARI RESPONSE
                 duplikatTable = $('#tabelDuplikat').DataTable({
-                    data: res.pairs || [],
+                    data: res.pairs || [],  // <--- INI WAJIB ADA!
                     paging: true,
                     pageLength: 10,
                     lengthChange: false,
@@ -1191,44 +1190,45 @@
                     columns: [
                         { 
                             data: null, 
-                            render: function(data, type, row, meta) {
+                            render: function (data, type, row, meta) {
                                 return meta.row + meta.settings._iDisplayStart + 1;
                             }
                         },
                         {
                             data: null,
-                            render: function(data) {
+                            render: function (data) {
                                 return `
-                                    <div class="font-medium text-slate-800">${data.nama_a}</div>
-                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_a}</div>
-                                    <div class="text-xs text-slate-500">Umur: ${data.umur_a} • Tahun: ${data.tahun_a}</div>
-                                    <div class="text-xs text-slate-500">${data.alamat_a}</div>
+                                    <div class="font-medium text-slate-800">${data.nama_a || '-'}</div>
+                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_a || '-'}</div>
+                                    <div class="text-xs text-slate-500">Umur: ${data.umur_a || '-'} • Tahun: ${data.tahun_a || '-'}</div>
+                                    <div class="text-xs text-slate-500">${data.alamat_a || '-'}</div>
                                 `;
                             }
                         },
                         {
                             data: null,
-                            render: function(data) {
+                            render: function (data) {
                                 return `
-                                    <div class="font-medium text-slate-800">${data.nama_b}</div>
-                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_b}</div>
-                                    <div class="text-xs text-slate-500">Umur: ${data.umur_b} • Tahun: ${data.tahun_b}</div>
-                                    <div class="text-xs text-slate-500">${data.alamat_b}</div>
+                                    <div class="font-medium text-slate-800">${data.nama_b || '-'}</div>
+                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_b || '-'}</div>
+                                    <div class="text-xs text-slate-500">Umur: ${data.umur_b || '-'} • Tahun: ${data.tahun_b || '-'}</div>
+                                    <div class="text-xs text-slate-500">${data.alamat_b || '-'}</div>
                                 `;
                             }
                         },
                         {
                             data: 'similarity',
-                            render: function(data, type, row) {
+                            render: function (data, type, row) {
                                 let cls = data >= 90 ? 'text-red-700 font-bold' :
                                           data >= 80 ? 'text-amber-700 font-semibold' : 'text-rose-600';
                                 let typeTxt = row.match_type ? ` (${row.match_type})` : '';
                                 return `<div class="text-center ${cls}">${data}%${typeTxt}</div>`;
-                            }
+                            },
+                            className: 'text-center font-medium'
                         },
                         {
                             data: null,
-                            render: function(data) {
+                            render: function (data) {
                                 return `
                                     <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
                                         <button onclick="openEditModal(${data.id_a})" 
@@ -1252,6 +1252,14 @@
                         infoEmpty: 'Tidak ada data'
                     }
                 });
+
+                // Enable tombol kembali
+                btn.prop('disabled', false).html(`
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Scan Duplikat Potensial (Tahun {{ now()->year }})
+                `);
             },
             error: function(xhr) {
                 $('#duplikatLoading').addClass('hidden');
