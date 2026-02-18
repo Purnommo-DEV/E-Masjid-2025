@@ -427,7 +427,7 @@ class PendaftaranYatimDhuafaController extends Controller
                 'success' => true,
                 'pairs'   => [],
                 'tahun'   => $tahun,
-                'message' => "Data di tahun {$tahun} kurang dari 2 record. Tidak ada yang bisa dibandingkan."
+                'message' => "Data di tahun {$tahun} kurang dari 2 record."
             ]);
         }
 
@@ -437,16 +437,47 @@ class PendaftaranYatimDhuafaController extends Controller
             for ($j = $i + 1; $j < $records->count(); $j++) {
                 $rowB = $records[$j];
 
+                // Preprocessing: hilangkan kata kecil di awal & spasi ekstra
                 $strA = strtolower(trim($rowA->nama_lengkap . ' ' . $rowA->nama_orang_tua));
                 $strB = strtolower(trim($rowB->nama_lengkap . ' ' . $rowB->nama_orang_tua));
 
-                if (strlen($strA) < 8 || strlen($strB) < 8) {
-                    continue;
+                $cleanA = preg_replace('/\b(a|si|bin|binti|binte|abd|abu|yang|dan)\b\s*/i', '', $strA);
+                $cleanB = preg_replace('/\b(a|si|bin|binti|binte|abd|abu|yang|dan)\b\s*/i', '', $strB);
+
+                $cleanA = preg_replace('/\s+/', ' ', trim($cleanA));
+                $cleanB = preg_replace('/\s+/', ' ', trim($cleanB));
+
+                if (strlen($cleanA) < 5 || strlen($cleanB) < 5) continue;
+
+                // Hitung similarity normal
+                $simNormal = JaroWinkler::similarity($cleanA, $cleanB) * 100;
+
+                // Partial matching: jika salah satu lebih pendek, coba cocokkan sebagai substring
+                $simPartial = 0;
+                $short = strlen($cleanA) <= strlen($cleanB) ? $cleanA : $cleanB;
+                $long  = strlen($cleanA) > strlen($cleanB) ? $cleanA : $cleanB;
+
+                if (strlen($short) < strlen($long) && strlen($short) >= 5) {
+                    for ($start = 0; $start <= strlen($long) - strlen($short); $start++) {
+                        $substr = substr($long, $start, strlen($short));
+                        $temp = JaroWinkler::similarity($short, $substr) * 100;
+                        if ($temp > $simPartial) $simPartial = $temp;
+                    }
                 }
 
-                $sim = JaroWinkler::similarity($strA, $strB) * 100;
+                // Skor akhir = yang terbaik
+                $simFinal = max($simNormal, $simPartial);
 
-                if ($sim >= 80) {
+                // Threshold adaptif
+                $threshold = 80;
+                $minLen = min(strlen($cleanA), strlen($cleanB));
+                if ($minLen <= 10) {
+                    $threshold = 70;   // lebih longgar untuk nama pendek
+                } elseif ($simPartial > $simNormal) {
+                    $threshold = 75;   // kalau partial match, sedikit lebih longgar
+                }
+
+                if ($simFinal >= $threshold) {
                     $pairs->push([
                         'id_a'       => $rowA->id,
                         'nama_a'     => $rowA->nama_lengkap,
@@ -462,7 +493,8 @@ class PendaftaranYatimDhuafaController extends Controller
                         'tahun_b'    => $rowB->tahun_program,
                         'alamat_b'   => Str::limit($rowB->alamat ?: '-', 45, '...'),
 
-                        'similarity' => round($sim, 1),
+                        'similarity' => round($simFinal, 1),
+                        'match_type' => $simPartial > $simNormal ? 'partial' : 'full',
                     ]);
                 }
             }
@@ -475,7 +507,7 @@ class PendaftaranYatimDhuafaController extends Controller
             'pairs'   => $pairs,
             'total'   => $pairs->count(),
             'tahun'   => $tahun,
-            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan dengan kemiripan ≥ 80% di tahun {$tahun}" : null
+            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan ≥ threshold di tahun {$tahun}" : null
         ]);
     }
 
