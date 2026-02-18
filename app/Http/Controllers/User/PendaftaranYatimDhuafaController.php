@@ -468,14 +468,14 @@ class PendaftaranYatimDhuafaController extends Controller
             }
         }
 
-        $pairs = $pairs->sortByDesc('similarity')->take(30);
+        $pairs = $pairs->sortByDesc('similarity')->take(30)->values();  // <-- .values() ini penting!
 
         return response()->json([
             'success' => true,
-            'pairs'   => $pairs,
+            'pairs'   => $pairs->toArray(),  // atau cukup $pairs (Collection otomatis toArray di json)
             'total'   => $pairs->count(),
             'tahun'   => $tahun,
-            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan dengan kemiripan ≥ 80% di tahun {$tahun}" : null
+            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan dengan kemiripan tinggi di tahun {$tahun}" : null
         ]);
     }
 

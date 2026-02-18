@@ -1159,85 +1159,95 @@
             url: '{{ route("santunan-ramadhan.scan-duplikat") }}',
             method: 'GET',
             data: { tahun: {{ now()->year }} },
-            success: function(res) {
+            success: function(response) {
                 $('#duplikatLoading').addClass('hidden');
 
-                if (res.message) {
-                    Swal.fire({
-                        icon: 'info',
-                        title: 'Hasil Scan',
-                        text: res.message,
-                        confirmButtonColor: '#ef4444'
-                    });
+                console.log('Full response:', response);
+
+                let pairsArray = [];
+                if (Array.isArray(response.pairs)) {
+                    pairsArray = response.pairs;
+                } else if (typeof response.pairs === 'object' && response.pairs !== null) {
+                    pairsArray = Object.values(response.pairs);
                 }
 
-                $('#duplikatTitle').text(`Hasil Scan Duplikat Potensial - Tahun ${res.tahun}`);
+                // Filter super ketat
+                pairsArray = pairsArray.filter(item => item && typeof item === 'object' && item.id_a);
 
-                // Destroy table lama kalau ada
+                console.log('Pairs setelah filter:', pairsArray);
+                console.log('Jumlah baris valid:', pairsArray.length);
+
+                if (pairsArray.length === 0) {
+                    Swal.fire('Peringatan', 'Tidak ada data valid dari server (cek controller).', 'warning');
+                }
+
+                $('#duplikatTitle').text(`Hasil Scan Duplikat Potensial - Tahun ${response.tahun || 'Tidak diketahui'}`);
+
                 if (duplikatTable) {
                     duplikatTable.destroy();
-                    $('#tabelDuplikat').empty(); // bersihkan tbody agar tidak ada sisa
                 }
+                $('#tabelDuplikat tbody').empty();
 
-                // Buat DataTable baru DAN PASTIKAN PAKAI DATA DARI RESPONSE
                 duplikatTable = $('#tabelDuplikat').DataTable({
-                    data: res.pairs || [],  // <--- INI WAJIB ADA!
+                    destroy: true,
+                    data: pairsArray,
                     paging: true,
                     pageLength: 10,
-                    lengthChange: false,
                     searching: false,
                     info: true,
                     columns: [
                         { 
-                            data: null, 
                             render: function (data, type, row, meta) {
                                 return meta.row + meta.settings._iDisplayStart + 1;
                             }
                         },
                         {
-                            data: null,
-                            render: function (data) {
+                            render: function (data, type, row) {  // pakai row sebagai fallback
+                                const item = row || data || {};
+                                console.log('Render Record 1 - row data:', item); // DEBUG per baris
                                 return `
-                                    <div class="font-medium text-slate-800">${data.nama_a || '-'}</div>
-                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_a || '-'}</div>
-                                    <div class="text-xs text-slate-500">Umur: ${data.umur_a || '-'} • Tahun: ${data.tahun_a || '-'}</div>
-                                    <div class="text-xs text-slate-500">${data.alamat_a || '-'}</div>
+                                    <div class="font-medium text-slate-800">${item.nama_a || item.nama_lengkap || item.nama || '-'}</div>
+                                    <div class="text-sm text-slate-600">Ortu: ${item.ortu_a || item.nama_orang_tua || '-'}</div>
+                                    <div class="text-xs text-slate-500">Umur: ${item.umur_a || item.umur || '-'} • Tahun: ${item.tahun_a || item.tahun_program || '-'}</div>
+                                    <div class="text-xs text-slate-500">${item.alamat_a || item.alamat || '-'}</div>
                                 `;
                             }
                         },
                         {
-                            data: null,
-                            render: function (data) {
+                            render: function (data, type, row) {
+                                const item = row || data || {};
+                                console.log('Render Record 2 - row data:', item);
                                 return `
-                                    <div class="font-medium text-slate-800">${data.nama_b || '-'}</div>
-                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_b || '-'}</div>
-                                    <div class="text-xs text-slate-500">Umur: ${data.umur_b || '-'} • Tahun: ${data.tahun_b || '-'}</div>
-                                    <div class="text-xs text-slate-500">${data.alamat_b || '-'}</div>
+                                    <div class="font-medium text-slate-800">${item.nama_b || item.nama_lengkap || item.nama || '-'}</div>
+                                    <div class="text-sm text-slate-600">Ortu: ${item.ortu_b || item.nama_orang_tua || '-'}</div>
+                                    <div class="text-xs text-slate-500">Umur: ${item.umur_b || item.umur || '-'} • Tahun: ${item.tahun_b || item.tahun_program || '-'}</div>
+                                    <div class="text-xs text-slate-500">${item.alamat_b || item.alamat || '-'}</div>
                                 `;
                             }
                         },
                         {
                             data: 'similarity',
-                            render: function (data, type, row) {
+                            render: function (data) {
+                                if (typeof data !== 'number') return '-';
                                 let cls = data >= 90 ? 'text-red-700 font-bold' :
                                           data >= 80 ? 'text-amber-700 font-semibold' : 'text-rose-600';
-                                let typeTxt = row.match_type ? ` (${row.match_type})` : '';
-                                return `<div class="text-center ${cls}">${data}%${typeTxt}</div>`;
+                                return `<div class="text-center ${cls}">${data.toFixed(1)}%</div>`;
                             },
                             className: 'text-center font-medium'
                         },
                         {
-                            data: null,
-                            render: function (data) {
+                            render: function (data, type, row) {
+                                const item = row || data || {};
+                                if (!item.id_a || !item.id_b) return '-';
                                 return `
                                     <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
-                                        <button onclick="openEditModal(${data.id_a})" 
+                                        <button onclick="openEditModal(${item.id_a})" 
                                                 class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-4 py-1 rounded shadow-sm">
-                                            Edit #${data.id_a}
+                                            Edit #${item.id_a}
                                         </button>
-                                        <button onclick="openEditModal(${data.id_b})" 
+                                        <button onclick="openEditModal(${item.id_b})" 
                                                 class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-4 py-1 rounded shadow-sm">
-                                            Edit #${data.id_b}
+                                            Edit #${item.id_b}
                                         </button>
                                     </div>
                                 `;
@@ -1247,13 +1257,12 @@
                         }
                     ],
                     language: {
-                        emptyTable: 'Tidak ada pasangan duplikat yang ditemukan',
+                        emptyTable: 'Tidak ada data valid dari server',
                         info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ pasangan',
                         infoEmpty: 'Tidak ada data'
                     }
                 });
 
-                // Enable tombol kembali
                 btn.prop('disabled', false).html(`
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1263,22 +1272,12 @@
             },
             error: function(xhr) {
                 $('#duplikatLoading').addClass('hidden');
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Gagal Memindai',
-                    text: xhr.responseJSON?.message || 'Terjadi kesalahan server. Coba lagi nanti.',
-                });
-                btn.prop('disabled', false).html(`
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Scan Duplikat Potensial (Tahun {{ now()->year }})
-                `);
+                Swal.fire('Error', 'Gagal memindai: ' + (xhr.responseJSON?.message || 'Server error'), 'error');
+                btn.prop('disabled', false).html('Scan Duplikat Potensial');
             }
         });
     });
 
-    // Tutup section
     $('#hideDuplikat').on('click', function() {
         $('#duplikatSection').addClass('hidden');
     });
