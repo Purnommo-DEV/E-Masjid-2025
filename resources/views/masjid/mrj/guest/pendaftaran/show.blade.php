@@ -122,148 +122,148 @@
                     </div>
             </div>
 
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
 
-    <!-- =======================================
-         CARD IMPORT
-    ======================================== -->
-    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <!-- =======================================
+                     CARD IMPORT
+                ======================================== -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
 
-        <div class="mb-5">
-            <h3 class="text-xl font-bold text-slate-800">Import Data Excel</h3>
-            <p class="text-sm text-slate-500">
-                Download template terlebih dahulu sebelum upload file.
-            </p>
-        </div>
+                    <div class="mb-5">
+                        <h3 class="text-xl font-bold text-slate-800">Import Data Excel</h3>
+                        <p class="text-sm text-slate-500">
+                            Download template terlebih dahulu sebelum upload file.
+                        </p>
+                    </div>
 
-        <form id="formImportExcel"
-              action="{{ route('santunan-ramadhan.import') }}"
-              method="POST"
-              enctype="multipart/form-data"
-              class="space-y-4">
-            @csrf
+                    <form id="formImportExcel"
+                          action="{{ route('santunan-ramadhan.import') }}"
+                          method="POST"
+                          enctype="multipart/form-data"
+                          class="space-y-4">
+                        @csrf
 
-            <!-- Download Template -->
-            <a href="{{ route('santunan-ramadhan.template') }}"
-               class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
-                </svg>
-                Download Template
-            </a>
+                        <!-- Download Template -->
+                        <a href="{{ route('santunan-ramadhan.template') }}"
+                           class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
+                            </svg>
+                            Download Template
+                        </a>
 
-            <!-- File Input -->
-            <input type="file"
-                   name="file"
-                   id="fileImport"
-                   required
-                   accept=".xlsx,.xls"
-                   class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
-                          focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
-                          outline-none text-slate-900 bg-white">
+                        <!-- File Input -->
+                        <input type="file"
+                               name="file"
+                               id="fileImport"
+                               required
+                               accept=".xlsx,.xls"
+                               class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
+                                      focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
+                                      outline-none text-slate-900 bg-white">
 
-            <!-- Import Button -->
-            <button type="submit"
-                    id="btnImportExcel"
-                    class="w-full flex items-center justify-center gap-2 px-6 py-3
-                           bg-gradient-to-r from-emerald-600 to-teal-600
-                           hover:from-emerald-700 hover:to-teal-700
-                           text-white font-bold rounded-xl shadow-lg transition">
+                        <!-- Import Button -->
+                        <button type="submit"
+                                id="btnImportExcel"
+                                class="w-full flex items-center justify-center gap-2 px-6 py-3
+                                       bg-gradient-to-r from-emerald-600 to-teal-600
+                                       hover:from-emerald-700 hover:to-teal-700
+                                       text-white font-bold rounded-xl shadow-lg transition">
 
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
-                </svg>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
+                            </svg>
 
-                <span id="textImport">Import Data</span>
-                <span id="loadingImport" class="hidden loading loading-spinner loading-sm"></span>
-            </button>
-        </form>
-    </div>
+                            <span id="textImport">Import Data</span>
+                            <span id="loadingImport" class="hidden loading loading-spinner loading-sm"></span>
+                        </button>
+                    </form>
+                </div>
 
 
-    <!-- =======================================
-         CARD EXPORT
-    ======================================== -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                <!-- =======================================
+                     CARD EXPORT
+                ======================================== -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
 
-        <div>
-            <h3 class="text-xl font-bold text-slate-800">Export Data</h3>
-            <p class="text-sm text-slate-500">
-                Export seluruh data atau berdasarkan sumber informasi tertentu.
-            </p>
-        </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-800">Export Data</h3>
+                        <p class="text-sm text-slate-500">
+                            Export seluruh data atau berdasarkan sumber informasi tertentu.
+                        </p>
+                    </div>
 
-        <!-- EXPORT ALL -->
-        <div>
-            <button id="btnExportExcel"
-                class="w-full flex items-center justify-center gap-2 px-6 py-3
-                       bg-gradient-to-r from-amber-500 to-orange-600
-                       hover:from-amber-600 hover:to-orange-700
-                       text-white font-bold rounded-xl shadow-lg transition">
+                    <!-- EXPORT ALL -->
+                    <div>
+                        <button id="btnExportExcel"
+                            class="w-full flex items-center justify-center gap-2 px-6 py-3
+                                   bg-gradient-to-r from-amber-500 to-orange-600
+                                   hover:from-amber-600 hover:to-orange-700
+                                   text-white font-bold rounded-xl shadow-lg transition">
 
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M12 20V8m0 12l-4-4m4 4l4-4M4 4h16"/>
-                </svg>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M12 20V8m0 12l-4-4m4 4l4-4M4 4h16"/>
+                            </svg>
 
-                Export Semua Data (Laporan)
-            </button>
-        </div>
+                            Export Semua Data (Laporan)
+                        </button>
+                    </div>
 
-        <!-- EXPORT BY SUMBER -->
-        <div class="space-y-3">
+                    <!-- EXPORT BY SUMBER -->
+                    <div class="space-y-3">
 
-            <select id="filterSumberExport"
-                    class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
-                           focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200
-                           outline-none bg-white text-slate-800">
-                <option value="">Pilih Sumber Informasi</option>
-                @foreach($sumberList as $s)
-                    <option value="{{ $s }}">{{ $s }}</option>
-                @endforeach
-            </select>
+                        <select id="filterSumberExport"
+                                class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
+                                       focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200
+                                       outline-none bg-white text-slate-800">
+                            <option value="">Pilih Sumber Informasi</option>
+                            @foreach($sumberList as $s)
+                                <option value="{{ $s }}">{{ $s }}</option>
+                            @endforeach
+                        </select>
 
-            <button id="btnExportBySumber"
-                class="w-full flex items-center justify-center gap-2 px-6 py-3
-                       bg-gradient-to-r from-indigo-600 to-purple-600
-                       hover:from-indigo-700 hover:to-purple-700
-                       text-white font-bold rounded-xl shadow-lg transition">
+                        <button id="btnExportBySumber"
+                            class="w-full flex items-center justify-center gap-2 px-6 py-3
+                                   bg-gradient-to-r from-indigo-600 to-purple-600
+                                   hover:from-indigo-700 hover:to-purple-700
+                                   text-white font-bold rounded-xl shadow-lg transition">
 
-                Export Berdasarkan Sumber
-            </button>
+                            Export Berdasarkan Sumber
+                        </button>
 
-        </div>
+                    </div>
 
-        <!-- Hidden Form -->
-        <form id="formExportBySumber"
-              method="POST"
-              action="{{ route('santunan-ramadhan.exportBySumber') }}"
-              target="downloadFrame">
-            @csrf
-            <input type="hidden" name="sumber_informasi" id="ex_sumber">
-        </form>
+                    <!-- Hidden Form -->
+                    <form id="formExportBySumber"
+                          method="POST"
+                          action="{{ route('santunan-ramadhan.exportBySumber') }}"
+                          target="downloadFrame">
+                        @csrf
+                        <input type="hidden" name="sumber_informasi" id="ex_sumber">
+                    </form>
 
-        <form id="exportForm"
-              method="POST"
-              action="{{ route('santunan-ramadhan.export') }}"
-              target="downloadFrame">
-            @csrf
-            <input type="hidden" name="tahun" id="ex_tahun">
-            <input type="hidden" name="umur_value" id="ex_umur_value">
-            <input type="hidden" name="umur_satuan" id="ex_umur_satuan">
-            <input type="hidden" name="jenis_kelamin" id="ex_jk">
-            <input type="hidden" name="kategori" id="ex_kategori">
-            <input type="hidden" name="search" id="ex_search">
-            <input type="hidden" name="download_token" id="ex_token">
-        </form>
+                    <form id="exportForm"
+                          method="POST"
+                          action="{{ route('santunan-ramadhan.export') }}"
+                          target="downloadFrame">
+                        @csrf
+                        <input type="hidden" name="tahun" id="ex_tahun">
+                        <input type="hidden" name="umur_value" id="ex_umur_value">
+                        <input type="hidden" name="umur_satuan" id="ex_umur_satuan">
+                        <input type="hidden" name="jenis_kelamin" id="ex_jk">
+                        <input type="hidden" name="kategori" id="ex_kategori">
+                        <input type="hidden" name="search" id="ex_search">
+                        <input type="hidden" name="download_token" id="ex_token">
+                    </form>
 
-        <iframe name="downloadFrame" style="display:none;"></iframe>
+                    <iframe name="downloadFrame" style="display:none;"></iframe>
 
-    </div>
+                </div>
 
-</div>
+            </div>
 
 
 
@@ -296,7 +296,7 @@
                 <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900">
                     <thead class="bg-emerald-600 text-white">
                         <tr>
-                            <th></th> <!-- Control Responsive -->
+                            <!-- <th></th> -->
                             <th>No</th>
                             <th>Penanggung Jawab Informasi</th>
                             <th>No WA</th>
@@ -643,9 +643,9 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<!-- <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script> -->
 
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+<!-- <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css"> -->
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
 
 
@@ -833,12 +833,12 @@
         table = $('#tabelYatimDhuafa').DataTable({
             processing: true,
             serverSide: true,
-            responsive: {
-                details: {
-                    type: 'column',
-                    target: 0
-                }
-            },
+            // responsive: {
+            //     details: {
+            //         type: 'column',
+            //         target: 0
+            //     }
+            // },
             columnDefs: [
                 {
                     className: 'control',
@@ -846,6 +846,12 @@
                     targets: 0
                 }
             ],
+            // AKTIFKAN SCROLL X (horizontal) & Y (vertical)
+            scrollX: true,       // <-- ini yang bikin scroll horizontal muncul kalau tabel lebar
+            scrollCollapse: true, // biar tabel bisa mengecil kalau data sedikit
+
+            // Opsional: biar header tetap fixed saat scroll Y
+            fixedHeader: true,   // header tetap di atas saat scroll vertical
             order: [1, 'asc'],
             paging: true,
             searching: false,          // <-- matikan search bawaan
@@ -862,12 +868,12 @@
                 }
             },
             columns: [
-                {
-                    data: null,
-                    defaultContent: '',
-                    className: 'control',
-                    orderable: false
-                },
+                // {
+                //     data: null,
+                //     defaultContent: '',
+                //     className: 'control',
+                //     orderable: false
+                // },
                 { data: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'sumber_informasi' },
                 { data: 'no_wa' },
@@ -1348,7 +1354,7 @@
 </script>
 
 <!-- CSS Override (pastikan semua teks gelap & kolom terlihat) -->
-<style>
+<!-- <style>
     /* =========================
        GLOBAL TEXT COLOR FIX
        ========================= */
@@ -1567,5 +1573,169 @@
         color: #ecfdf5 !important;
     }
 </style>
+ -->
 
+ <style>
+    /* GLOBAL TEXT COLOR FIX */
+    body, .text-slate-50, .text-gray-50, .text-base-content {
+        color: #0f172a !important;
+    }
+    .select, .input-bordered, .select option, .input input, textarea {
+        color: #0f172a !important;
+        background-color: white !important;
+    }
+
+    /* DATATABLE BASE COLOR & LOADER */
+    .dataTables_wrapper,
+    .dataTables_info,
+    .dataTables_length,
+    .dataTables_paginate {
+        color: #0f172a !important;
+    }
+    .dataTables_wrapper {
+        position: relative;
+        overflow-x: visible !important; /* Pagination tidak ikut scroll */
+    }
+    .dataTables_wrapper .dataTables_processing {
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.9) !important;
+        padding: 20px 30px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        z-index: 50 !important;
+        font-weight: 600;
+        color: #059669 !important;
+    }
+
+    /* PAGINATION STYLE */
+    .dataTables_paginate .paginate_button {
+        color: #059669 !important;
+        background: white !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        padding: 6px 12px !important;
+        margin: 0 2px !important;
+        cursor: pointer !important;
+    }
+    .dataTables_paginate .paginate_button:hover {
+        background: #ecfdf5 !important;
+        border-color: #059669 !important;
+    }
+    .dataTables_paginate .paginate_button.current {
+        background: #059669 !important;
+        color: white !important;
+        border-color: #059669 !important;
+    }
+
+    /* Hilangkan search bawaan */
+    .dataTables_filter {
+        display: none !important;
+    }
+
+    /* INFO + PAGINATION ALIGN & LAYOUT */
+    .dataTables_wrapper .dt-layout-row:last-child {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding: 0 1rem;
+    }
+    .dataTables_info {
+        text-align: left;
+    }
+    .dataTables_paginate {
+        text-align: right;
+    }
+
+    /* Pagination di mobile tetap rapi & centered */
+    @media (max-width: 640px) {
+        .dataTables_wrapper .dt-layout-row:last-child {
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        .dataTables_info,
+        .dataTables_paginate {
+            width: 100%;
+            text-align: center;
+        }
+        .dataTables_paginate {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .dataTables_paginate .paginate_button {
+            min-width: 2.5rem;
+            padding: 0.5rem 0.75rem;
+            margin: 0.25rem;
+        }
+    }
+
+    /* TABLE STYLING */
+    #tabelYatimDhuafa, #tabelDuplikat {
+        width: 100% !important;
+        min-width: 1000px; /* sesuaikan sesuai jumlah kolom, biar scroll muncul di mobile kalau perlu */
+    }
+    #tabelYatimDhuafa tbody td,
+    #tabelDuplikat tbody td {
+        color: #0f172a !important;
+    }
+    #tabelYatimDhuafa thead th,
+    #tabelDuplikat thead th {
+        background-color: #059669 !important;
+        color: white !important;
+    }
+    /* Zebra */
+    #tabelYatimDhuafa tbody tr:nth-child(odd),
+    #tabelDuplikat tbody tr:nth-child(odd) {
+        background-color: #f1f5f9;
+    }
+    #tabelYatimDhuafa tbody tr:nth-child(even),
+    #tabelDuplikat tbody tr:nth-child(even) {
+        background-color: #ffffff;
+    }
+    /* Hover */
+    #tabelYatimDhuafa tbody tr:hover,
+    #tabelDuplikat tbody tr:hover {
+        background-color: #d1fae5 !important;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    /* NAVBAR COLOR LOCK */
+    nav {
+        color: #e5e7eb !important;
+    }
+    nav a, nav span, nav div, nav li {
+        color: #e5e7eb !important;
+    }
+    nav .group-hover\:text-emerald-200:hover {
+        color: #a7f3d0 !important;
+    }
+    nav .text-emerald-200\/80 {
+        color: rgba(167, 243, 208, 0.8) !important;
+    }
+    nav a:hover {
+        color: #6ee7b7 !important;
+    }
+    nav .btn-outline {
+        color: #a7f3d0 !important;
+        border-color: rgba(52, 211, 153, 0.6) !important;
+    }
+    nav .btn-outline:hover {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        color: #ecfdf5 !important;
+    }
+    nav details .menu a {
+        color: #e5e7eb !important;
+    }
+    nav details .menu a:hover {
+        background-color: rgba(16, 185, 129, 0.15) !important;
+        color: #ecfdf5 !important;
+    }
+</style>
 @endpush
