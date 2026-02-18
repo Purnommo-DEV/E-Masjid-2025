@@ -411,7 +411,15 @@ class PendaftaranYatimDhuafaController extends Controller
 
         $records = PendaftaranAnakYatimDhuafa::query()
             ->where('tahun_program', $tahun)
-            ->select(['id', 'nama_lengkap', 'nama_orang_tua', 'tahun_program', 'umur', 'umur_satuan', 'alamat'])
+            ->select([
+                'id',
+                'nama_lengkap',
+                'nama_orang_tua',
+                'tahun_program',
+                'umur',
+                'umur_satuan',
+                'alamat'
+            ])
             ->get();
 
         if ($records->count() < 2) {
@@ -419,7 +427,7 @@ class PendaftaranYatimDhuafaController extends Controller
                 'success' => true,
                 'pairs'   => [],
                 'tahun'   => $tahun,
-                'message' => "Data di tahun {$tahun} kurang dari 2."
+                'message' => "Data di tahun {$tahun} kurang dari 2 record. Tidak ada yang bisa dibandingkan."
             ]);
         }
 
@@ -429,63 +437,16 @@ class PendaftaranYatimDhuafaController extends Controller
             for ($j = $i + 1; $j < $records->count(); $j++) {
                 $rowB = $records[$j];
 
-                // Preprocessing ringan
                 $strA = strtolower(trim($rowA->nama_lengkap . ' ' . $rowA->nama_orang_tua));
-                $strB = strtolower(trim($rowB->nama_orang_tua . ' ' . $rowB->nama_lengkap));
+                $strB = strtolower(trim($rowB->nama_lengkap . ' ' . $rowB->nama_orang_tua));
 
-                $cleanA = preg_replace('/\b(a|si|bin|binti|binte|abd|abu|yang|dan|zx)\b\s*/i', '', $strA);
-                $cleanB = preg_replace('/\b(a|si|bin|binti|binte|abd|abu|yang|dan|zx)\b\s*/i', '', $strB);
-
-                $cleanA = preg_replace('/\s+/', ' ', trim($cleanA));
-                $cleanB = preg_replace('/\s+/', ' ', trim($cleanB));
-
-                if (strlen($cleanA) < 5 || strlen($cleanB) < 5) continue;
-
-                // 1. Skor normal Jaro-Winkler
-                $simNormal = JaroWinkler::similarity($cleanA, $cleanB) * 100;
-
-                // 2. Token sort (abaikan urutan kata)
-                $tokensA = explode(' ', $cleanA);
-                $tokensB = explode(' ', $cleanB);
-                sort($tokensA);
-                sort($tokensB);
-                $sortedA = implode(' ', $tokensA);
-                $sortedB = implode(' ', $tokensB);
-                $simSorted = JaroWinkler::similarity($sortedA, $sortedB) * 100;
-
-                // 3. Partial substring match (khusus kalau salah satu pendek)
-                $simPartial = 0;
-                $short = strlen($cleanA) <= strlen($cleanB) ? $cleanA : $cleanB;
-                $long  = strlen($cleanA) > strlen($cleanB) ? $cleanA : $cleanB;
-
-                if (strlen($short) <= 12 && strlen($long) > strlen($short)) {
-                    $pos = stripos($long, $short);
-                    if ($pos !== false) {
-                        // Kalau ada exact substring → skor tinggi
-                        $simPartial = 95; // boost tinggi kalau exact match substring
-                    } else {
-                        // Kalau tidak exact, coba sliding window seperti sebelumnya
-                        for ($start = 0; $start <= strlen($long) - strlen($short); $start++) {
-                            $substr = substr($long, $start, strlen($short));
-                            $temp = JaroWinkler::similarity($short, $substr) * 100;
-                            if ($temp > $simPartial) $simPartial = $temp;
-                        }
-                    }
+                if (strlen($strA) < 8 || strlen($strB) < 8) {
+                    continue;
                 }
 
-                // Skor akhir: ambil tertinggi
-                $simFinal = max($simNormal, $simSorted, $simPartial);
+                $sim = JaroWinkler::similarity($strA, $strB) * 100;
 
-                // Threshold super adaptif
-                $threshold = 80;
-                $minLen = min(strlen($cleanA), strlen($cleanB));
-                if ($minLen <= 10) {
-                    $threshold = 65;  // sangat longgar untuk nama pendek seperti "Reyhan"
-                } elseif ($simPartial > 0 || $simSorted > $simNormal) {
-                    $threshold = 72;
-                }
-
-                if ($simFinal >= $threshold) {
+                if ($sim >= 80) {
                     $pairs->push([
                         'id_a'       => $rowA->id,
                         'nama_a'     => $rowA->nama_lengkap,
@@ -501,8 +462,7 @@ class PendaftaranYatimDhuafaController extends Controller
                         'tahun_b'    => $rowB->tahun_program,
                         'alamat_b'   => Str::limit($rowB->alamat ?: '-', 45, '...'),
 
-                        'similarity' => round($simFinal, 1),
-                        'match_type' => $simPartial > max($simNormal, $simSorted) ? 'partial' : ($simSorted > $simNormal ? 'sorted' : 'normal'),
+                        'similarity' => round($sim, 1),
                     ]);
                 }
             }
@@ -515,16 +475,16 @@ class PendaftaranYatimDhuafaController extends Controller
             'pairs'   => $pairs,
             'total'   => $pairs->count(),
             'tahun'   => $tahun,
-            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan dengan kemiripan tinggi di tahun {$tahun}" : null
+            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan dengan kemiripan ≥ 80% di tahun {$tahun}" : null
         ]);
     }
 
     private function formatUmur($row)
-    {
-        if ($row->umur && $row->umur_satuan) {
-            return $row->umur . ' ' . ucfirst($row->umur_satuan);
+        {
+            if ($row->umur && $row->umur_satuan) {
+                return $row->umur . ' ' . ucfirst($row->umur_satuan);
+            }
+            return '-';
         }
-        return '-';
-    }
 
 }

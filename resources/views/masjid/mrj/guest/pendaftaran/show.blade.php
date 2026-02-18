@@ -1160,9 +1160,9 @@
             url: '{{ route("santunan-ramadhan.scan-duplikat") }}',
             method: 'GET',
             data: { tahun: {{ now()->year }} }, // bisa diganti dengan $('#scanTahun').val() kalau pakai dropdown
+            // Ganti seluruh blok success jadi seperti ini (simpel & aman)
             success: function(res) {
                 $('#duplikatLoading').addClass('hidden');
-                $('#tabelDuplikat').removeClass('hidden');
 
                 if (res.message) {
                     Swal.fire({
@@ -1173,93 +1173,85 @@
                     });
                 }
 
-                // Update judul dengan tahun
                 $('#duplikatTitle').text(`Hasil Scan Duplikat Potensial - Tahun ${res.tahun}`);
 
-                if (!duplikatTable) {
-                    duplikatTable = $('#tabelDuplikat').DataTable({
-                        data: res.pairs,
-                        paging: res.pairs.length > 10,
-                        pageLength: 10,
-                        lengthChange: false,
-                        searching: false,
-                        info: res.pairs.length > 0,
-                        columns: [
-                            { 
-                                data: null, 
-                                render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1 
-                            },
-                            {
-                                data: null,
-                                render: function(data) {
-                                    return `
-                                        <div class="font-semibold text-slate-800">${data.nama_a}</div>
-                                        <div class="text-sm text-slate-600">Orang tua: ${data.ortu_a}</div>
-                                        <div class="text-xs text-slate-500 mt-1">
-                                            Umur: ${data.umur_a} • Tahun: ${data.tahun_a}
-                                        </div>
-                                        <div class="text-xs text-slate-500">${data.alamat_a}</div>
-                                    `;
-                                }
-                            },
-                            {
-                                data: null,
-                                render: function(data) {
-                                    return `
-                                        <div class="font-semibold text-slate-800">${data.nama_b}</div>
-                                        <div class="text-sm text-slate-600">Orang tua: ${data.ortu_b}</div>
-                                        <div class="text-xs text-slate-500 mt-1">
-                                            Umur: ${data.umur_b} • Tahun: ${data.tahun_b}
-                                        </div>
-                                        <div class="text-xs text-slate-500">${data.alamat_b}</div>
-                                    `;
-                                }
-                            },
-                            {
-                                data: 'similarity',
-                                render: function(data) {
-                                    let cls = data >= 90 ? 'text-red-700 font-bold text-lg' :
-                                              data >= 85 ? 'text-amber-700 font-semibold text-lg' : 
-                                              'text-rose-600 font-medium text-lg';
-                                    return `<div class="text-center ${cls}">${data}%</div>`;
-                                }
-                            },
-                            {
-                                data: null,
-                                render: function(data) {
-                                    return `
-                                        <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
-                                            <button onclick="openEditModal(${data.id_a})" 
-                                                    class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg shadow-sm transition">
-                                                Edit Record 1
-                                            </button>
-                                            <button onclick="openEditModal(${data.id_b})" 
-                                                    class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg shadow-sm transition">
-                                                Edit Record 2
-                                            </button>
-                                        </div>
-                                    `;
-                                },
-                                orderable: false,
-                                className: 'text-center'
-                            }
-                        ],
-                        language: {
-                            emptyTable: 'Tidak ditemukan pasangan duplikat ≥ 80%',
-                            info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ pasangan',
-                            infoEmpty: 'Tidak ada data'
-                        }
-                    });
-                } else {
-                    duplikatTable.clear().rows.add(res.pairs).draw();
+                // Selalu destroy kalau sudah ada, lalu buat baru
+                if (duplikatTable) {
+                    duplikatTable.destroy();
+                    duplikatTable = null;
                 }
 
-                btn.prop('disabled', false).html(`
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Scan Duplikat Potensial (Tahun {{ now()->year }})
-                `);
+                duplikatTable = $('#tabelDuplikat').DataTable({
+                    data: res.pairs || [],
+                    paging: true,
+                    pageLength: 10,
+                    lengthChange: false,
+                    searching: false,
+                    info: true,
+                    columns: [
+                        { 
+                            data: null, 
+                            render: function(data, type, row, meta) {
+                                return meta.row + meta.settings._iDisplayStart + 1;
+                            }
+                        },
+                        {
+                            data: null,
+                            render: function(data) {
+                                return `
+                                    <div class="font-medium text-slate-800">${data.nama_a}</div>
+                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_a}</div>
+                                    <div class="text-xs text-slate-500">Umur: ${data.umur_a} • Tahun: ${data.tahun_a}</div>
+                                    <div class="text-xs text-slate-500">${data.alamat_a}</div>
+                                `;
+                            }
+                        },
+                        {
+                            data: null,
+                            render: function(data) {
+                                return `
+                                    <div class="font-medium text-slate-800">${data.nama_b}</div>
+                                    <div class="text-sm text-slate-600">Ortu: ${data.ortu_b}</div>
+                                    <div class="text-xs text-slate-500">Umur: ${data.umur_b} • Tahun: ${data.tahun_b}</div>
+                                    <div class="text-xs text-slate-500">${data.alamat_b}</div>
+                                `;
+                            }
+                        },
+                        {
+                            data: 'similarity',
+                            render: function(data, type, row) {
+                                let cls = data >= 90 ? 'text-red-700 font-bold' :
+                                          data >= 80 ? 'text-amber-700 font-semibold' : 'text-rose-600';
+                                let typeTxt = row.match_type ? ` (${row.match_type})` : '';
+                                return `<div class="text-center ${cls}">${data}%${typeTxt}</div>`;
+                            }
+                        },
+                        {
+                            data: null,
+                            render: function(data) {
+                                return `
+                                    <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                                        <button onclick="openEditModal(${data.id_a})" 
+                                                class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-4 py-1 rounded shadow-sm">
+                                            Edit #${data.id_a}
+                                        </button>
+                                        <button onclick="openEditModal(${data.id_b})" 
+                                                class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-4 py-1 rounded shadow-sm">
+                                            Edit #${data.id_b}
+                                        </button>
+                                    </div>
+                                `;
+                            },
+                            orderable: false,
+                            className: 'text-center py-2'
+                        }
+                    ],
+                    language: {
+                        emptyTable: 'Tidak ada pasangan duplikat yang ditemukan',
+                        info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ pasangan',
+                        infoEmpty: 'Tidak ada data'
+                    }
+                });
             },
             error: function(xhr) {
                 $('#duplikatLoading').addClass('hidden');
