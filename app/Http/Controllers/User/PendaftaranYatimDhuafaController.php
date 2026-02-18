@@ -18,7 +18,13 @@ class PendaftaranYatimDhuafaController extends Controller
     // Halaman publik (guest)
     public function indexPublik()
     {
-        return view('masjid.' . masjid() . '.guest.pendaftaran.show');
+        $sumberList = PendaftaranAnakYatimDhuafa::whereNotNull('sumber_informasi')
+        ->where('tahun_program', now()->year)
+        ->distinct()
+        ->orderBy('sumber_informasi')
+        ->pluck('sumber_informasi');
+
+        return view('masjid.' . masjid() . '.guest.pendaftaran.show', compact('sumberList'));
     }
 
     public function index()

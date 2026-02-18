@@ -122,98 +122,149 @@
                     </div>
             </div>
 
-            <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
 
-                <!-- =========================
-                     IMPORT SECTION
-                ========================== -->
-                <form id="formImportExcel"
-                      action="{{ route('santunan-ramadhan.import') }}"
-                      method="POST"
-                      enctype="multipart/form-data"
-                      class="bg-slate-50 border border-slate-200 rounded-2xl p-5 w-full lg:w-auto">
+    <!-- =======================================
+         CARD IMPORT
+    ======================================== -->
+    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
 
-                    @csrf
+        <div class="mb-5">
+            <h3 class="text-xl font-bold text-slate-800">Import Data Excel</h3>
+            <p class="text-sm text-slate-500">
+                Download template terlebih dahulu sebelum upload file.
+            </p>
+        </div>
 
-                    <div class="mb-4">
-                        <h3 class="font-bold text-slate-800 text-lg">Import Data Excel</h3>
-                        <p class="text-sm text-slate-500">Download template terlebih dahulu sebelum upload</p>
-                    </div>
+        <form id="formImportExcel"
+              action="{{ route('santunan-ramadhan.import') }}"
+              method="POST"
+              enctype="multipart/form-data"
+              class="space-y-4">
+            @csrf
 
-                    <div class="flex flex-col sm:flex-row items-center gap-3">
+            <!-- Download Template -->
+            <a href="{{ route('santunan-ramadhan.template') }}"
+               class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
+                </svg>
+                Download Template
+            </a>
 
-                        <!-- DOWNLOAD TEMPLATE -->
-                        <a href="{{ route('santunan-ramadhan.template') }}"
-                           class="px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow hover:shadow-md transition flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
-                            </svg>
-                            Download Template
-                        </a>
+            <!-- File Input -->
+            <input type="file"
+                   name="file"
+                   id="fileImport"
+                   required
+                   accept=".xlsx,.xls"
+                   class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
+                          focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
+                          outline-none text-slate-900 bg-white">
 
-                        <!-- FILE -->
-                        <input type="file"
-                               name="file"
-                               id="fileImport"
-                               required
-                               accept=".xlsx,.xls"
-                               class="px-4 py-3 rounded-xl border-2 border-slate-300
-                                      focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
-                                      outline-none text-slate-900 bg-white">
+            <!-- Import Button -->
+            <button type="submit"
+                    id="btnImportExcel"
+                    class="w-full flex items-center justify-center gap-2 px-6 py-3
+                           bg-gradient-to-r from-emerald-600 to-teal-600
+                           hover:from-emerald-700 hover:to-teal-700
+                           text-white font-bold rounded-xl shadow-lg transition">
 
-                        <!-- IMPORT -->
-                        <button type="submit"
-                                id="btnImportExcel"
-                                class="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
+                </svg>
 
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
-                            </svg>
-
-                            <span id="textImport">Import</span>
-                            <span id="loadingImport" class="hidden loading loading-spinner loading-sm"></span>
-                        </button>
-
-                    </div>
-                </form>
-
-
-                <!-- =========================
-                     EXPORT SECTION
-                ========================== -->
-                <div class="flex items-center">
-
-                    <a id="btnExportExcel"
-                       class="px-10 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base flex items-center justify-center gap-2 cursor-pointer">
-
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M12 20V8m0 12l-4-4m4 4l4-4M4 4h16"/>
-                        </svg>
-
-                        Export Excel (Laporan)
-                    </a>
-
-                    <form id="exportForm" method="POST" action="{{ route('santunan-ramadhan.export') }}" target="downloadFrame">
-                        @csrf
-
-                        <input type="hidden" name="tahun" id="ex_tahun">
-                        <input type="hidden" name="umur_value" id="ex_umur_value">
-                        <input type="hidden" name="umur_satuan" id="ex_umur_satuan">
-                        <input type="hidden" name="jenis_kelamin" id="ex_jk">
-                        <input type="hidden" name="kategori" id="ex_kategori">
-                        <input type="hidden" name="search" id="ex_search">
-                        <input type="hidden" name="download_token" id="ex_token">
-                    </form>
-
-                    <iframe name="downloadFrame" style="display:none;"></iframe>
+                <span id="textImport">Import Data</span>
+                <span id="loadingImport" class="hidden loading loading-spinner loading-sm"></span>
+            </button>
+        </form>
+    </div>
 
 
-                </div>
+    <!-- =======================================
+         CARD EXPORT
+    ======================================== -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
 
-            </div>
+        <div>
+            <h3 class="text-xl font-bold text-slate-800">Export Data</h3>
+            <p class="text-sm text-slate-500">
+                Export seluruh data atau berdasarkan sumber informasi tertentu.
+            </p>
+        </div>
+
+        <!-- EXPORT ALL -->
+        <div>
+            <button id="btnExportExcel"
+                class="w-full flex items-center justify-center gap-2 px-6 py-3
+                       bg-gradient-to-r from-amber-500 to-orange-600
+                       hover:from-amber-600 hover:to-orange-700
+                       text-white font-bold rounded-xl shadow-lg transition">
+
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 20V8m0 12l-4-4m4 4l4-4M4 4h16"/>
+                </svg>
+
+                Export Semua Data (Laporan)
+            </button>
+        </div>
+
+        <!-- EXPORT BY SUMBER -->
+        <div class="space-y-3">
+
+            <select id="filterSumberExport"
+                    class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
+                           focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200
+                           outline-none bg-white text-slate-800">
+                <option value="">Pilih Sumber Informasi</option>
+                @foreach($sumberList as $s)
+                    <option value="{{ $s }}">{{ $s }}</option>
+                @endforeach
+            </select>
+
+            <button id="btnExportBySumber"
+                class="w-full flex items-center justify-center gap-2 px-6 py-3
+                       bg-gradient-to-r from-indigo-600 to-purple-600
+                       hover:from-indigo-700 hover:to-purple-700
+                       text-white font-bold rounded-xl shadow-lg transition">
+
+                Export Berdasarkan Sumber
+            </button>
+
+        </div>
+
+        <!-- Hidden Form -->
+        <form id="formExportBySumber"
+              method="POST"
+              action="{{ route('santunan-ramadhan.exportBySumber') }}"
+              target="downloadFrame">
+            @csrf
+            <input type="hidden" name="sumber_informasi" id="ex_sumber">
+        </form>
+
+        <form id="exportForm"
+              method="POST"
+              action="{{ route('santunan-ramadhan.export') }}"
+              target="downloadFrame">
+            @csrf
+            <input type="hidden" name="tahun" id="ex_tahun">
+            <input type="hidden" name="umur_value" id="ex_umur_value">
+            <input type="hidden" name="umur_satuan" id="ex_umur_satuan">
+            <input type="hidden" name="jenis_kelamin" id="ex_jk">
+            <input type="hidden" name="kategori" id="ex_kategori">
+            <input type="hidden" name="search" id="ex_search">
+            <input type="hidden" name="download_token" id="ex_token">
+        </form>
+
+        <iframe name="downloadFrame" style="display:none;"></iframe>
+
+    </div>
+
+</div>
+
 
 
             <div id="exportLoading"
@@ -634,6 +685,19 @@
         }, 1500);  // sesuaikan kalau file besar
     });
     
+    $('#btnExportBySumber').on('click', function(){
+
+        let sumber = $('#filterSumberExport').val();
+
+        if(!sumber){
+            Swal.fire('Pilih sumber informasi dulu');
+            return;
+        }
+
+        $('#ex_sumber').val(sumber);
+        $('#formExportBySumber').submit();
+    });
+
     function waitForDownload(token) {
         const maxTime = 60000; // naikkan jadi 60 detik dulu untuk debug
         let elapsed = 0;

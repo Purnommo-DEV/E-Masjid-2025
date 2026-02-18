@@ -14,6 +14,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpFoundation\Cookie;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class ExcelYatimDhuafaController extends Controller
@@ -227,7 +228,7 @@ class ExcelYatimDhuafaController extends Controller
         }
     }
 
-public function export(Request $request)
+    public function export(Request $request)
     {
         $query = PendaftaranAnakYatimDhuafa::query();
 
@@ -463,5 +464,132 @@ public function export(Request $request)
 
         return response()->download($path, 'Template Import Yatim Dhuafa.xlsx');
     }
+
+    public function exportBySumber(Request $request)
+    {
+        $request->validate([
+            'sumber_informasi' => 'required'
+        ]);
+
+        $sumber = $request->sumber_informasi;
+
+        $data = PendaftaranAnakYatimDhuafa::where('sumber_informasi', $sumber)
+            ->orderBy('jenis_kelamin') // L dulu
+            ->orderBy('nama_lengkap')  // abjad
+            ->get();
+
+        if ($data->isEmpty()) {
+            return back()->with('error', 'Data tidak ditemukan');
+        }
+
+        $spreadsheet = new Spreadsheet();
+
+        // ================================
+        // FUNCTION BUAT SHEET
+        // ================================
+        $buatSheet = function($sheet, $collection, $judul) {
+
+            $sheet->setCellValue('A1', $judul);
+            $sheet->mergeCells('A1:I1');
+            $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+
+            $headers = [
+                'No',
+                'Nama Anak',
+                'Jenis Kelamin',
+                'Tanggal Lahir',
+                'Umur',
+                'Nama Orang Tua',
+                'Alamat',
+                'Kategori',
+                'Tahun'
+            ];
+
+            $col = 'A';
+            foreach ($headers as $header) {
+                $sheet->setCellValue($col.'3', $header);
+                $sheet->getStyle($col.'3')->getFont()->setBold(true);
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+                $col++;
+            }
+
+            $row = 4;
+            $no  = 1;
+
+            foreach ($collection as $d) {
+
+                $umur = $d->umur . ' ' . ucfirst($d->umur_satuan);
+
+                $sheet->setCellValue('A'.$row, $no++);
+                $sheet->setCellValue('B'.$row, $d->nama_lengkap);
+                $sheet->setCellValue('C'.$row, $d->jenis_kelamin == 'L' ? 'Laki-laki' : 'Perempuan');
+                $sheet->setCellValue('D'.$row, optional($d->tanggal_lahir)->format('d/m/Y'));
+                $sheet->setCellValue('E'.$row, $umur);
+                $sheet->setCellValue('F'.$row, $d->nama_orang_tua);
+                $sheet->setCellValue('G'.$row, $d->alamat);
+                $sheet->setCellValue('H'.$row, $d->kategori == 'dhuafa' ? 'Dhuafa' : 'Yatim Dhuafa');
+                $sheet->setCellValue('I'.$row, $d->tahun_program);
+
+                $row++;
+            }
+
+            $sheet->getStyle('A3:I'.($row-1))
+                ->getBorders()
+                ->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+        };
+
+        // ================================
+        // SHEET 1 — DHUAFA
+        // ================================
+        $sheet1 = $spreadsheet->getActiveSheet();
+        $sheet1->setTitle('Dhuafa');
+
+        $buatSheet(
+            $sheet1,
+            $data->where('kategori','dhuafa'),
+            "DATA DHUAFA - {$sumber}"
+        );
+
+        // ================================
+        // SHEET 2 — YATIM DHUAFA
+        // ================================
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2->setTitle('Yatim Dhuafa');
+
+        $buatSheet(
+            $sheet2,
+            $data->where('kategori','yatim_dhuafa'),
+            "DATA YATIM DHUAFA - {$sumber}"
+        );
+
+        // ================================
+        // SHEET 3 — GABUNGAN
+        // ================================
+        $sheet3 = $spreadsheet->createSheet();
+        $sheet3->setTitle('Gabungan');
+
+        $buatSheet(
+            $sheet3,
+            $data,
+            "DATA GABUNGAN - {$sumber}"
+        );
+
+        // ================================
+        // FILE NAME
+        // ================================
+        $safeName = Str::slug($sumber, '_');
+        $fileName = "{$safeName}_yatim_dhuafa.xlsx";
+
+        return new StreamedResponse(function() use ($spreadsheet){
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
 
 }

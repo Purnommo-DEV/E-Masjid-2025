@@ -99,6 +99,11 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::post('import', [ExcelYatimDhuafaController::class, 'import'])->name('import');
     Route::get('template', [ExcelYatimDhuafaController::class, 'downloadTemplate'])->name('template');
     Route::post('export', [ExcelYatimDhuafaController::class, 'export'])->name('export');
+
+    Route::post('export-by-sumber', 
+        [ExcelYatimDhuafaController::class, 'exportBySumber']
+    )->name('exportBySumber');
+
 });
 
 Route::get('/santunan-ramadhan/scan-duplikat', [PendaftaranYatimDhuafaController::class, 'scanDuplikat'])
