@@ -93,12 +93,16 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::put('{id}', [PendaftaranYatimDhuafaController::class, 'update'])->name('update');
     Route::delete('/delete/{id}', [PendaftaranYatimDhuafaController::class, 'destroy'])->name('destroy');
 
+    Route::get('/scan-duplikat', [PendaftaranYatimDhuafaController::class, 'scanDuplikat'])
+    ->name('scan-duplikat');
+
     Route::post('import', [ExcelYatimDhuafaController::class, 'import'])->name('import');
     Route::get('template', [ExcelYatimDhuafaController::class, 'downloadTemplate'])->name('template');
     Route::post('export', [ExcelYatimDhuafaController::class, 'export'])->name('export');
 });
 
-
+Route::get('/santunan-ramadhan/scan-duplikat', [PendaftaranYatimDhuafaController::class, 'scanDuplikat'])
+    ->name('santunan-ramadhan.scan-duplikat');
 
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {

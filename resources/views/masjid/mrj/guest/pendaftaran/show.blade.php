@@ -267,6 +267,51 @@
                 </table>
             </div>
 
+                    <div class="mt-8 flex flex-col sm:flex-row justify-center lg:justify-end gap-4 items-center">
+                        <button id="btnScanDuplikat"
+                                class="px-8 py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 
+                                       text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 
+                                       text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Scan Duplikat Potensial (Tahun {{ now()->year }})
+                        </button>
+                    </div>
+                    <!-- Hasil Scan -->
+                    <div id="duplikatSection" class="mt-12 bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-200/70 p-6 lg:p-10 hidden">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                            <div>
+                                <h3 id="duplikatTitle" class="text-2xl font-bold text-rose-700">Hasil Scan Duplikat Potensial</h3>
+                                <p class="text-slate-600 mt-1">
+                                    Pasangan data dengan kemiripan nama ≥ 80%. Periksa & hapus/merge jika diperlukan.
+                                </p>
+                            </div>
+                            <button id="hideDuplikat" class="btn btn-sm btn-outline text-rose-700 border-rose-400 hover:bg-rose-50">
+                                Tutup Hasil
+                            </button>
+                        </div>
+
+                        <div id="duplikatLoading" class="hidden text-center py-10">
+                            <span class="loading loading-spinner loading-lg text-rose-600"></span>
+                            <p class="mt-4 text-lg font-medium text-slate-700">Sedang memindai data tahun {{ now()->year }}...</p>
+                            <p class="text-sm text-slate-500 mt-2">Proses ini bisa memakan waktu beberapa detik tergantung jumlah data.</p>
+                        </div>
+
+                        <table id="tabelDuplikat" class="table table-zebra w-full text-slate-900">
+                            <thead class="bg-rose-600 text-white">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Record 1</th>
+                                    <th>Record 2</th>
+                                    <th class="text-center">Kemiripan</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
             <!-- CTA Daftar Baru -->
             <div class="text-center mt-10">
                 <a href="{{ route('santunan-ramadhan.form') }}" 
@@ -1099,6 +1144,143 @@
                 $text.text('Simpan Perubahan');
             }
         });
+    });
+
+    let duplikatTable = null;
+
+    $('#btnScanDuplikat').on('click', function() {
+        const btn = $(this);
+        btn.prop('disabled', true).html('<span class="loading loading-spinner loading-sm"></span> Memindai...');
+
+        $('#duplikatSection').removeClass('hidden');
+        $('#duplikatLoading').removeClass('hidden');
+        $('#tabelDuplikat').addClass('hidden'); // sembunyikan table lama kalau ada
+
+        $.ajax({
+            url: '{{ route("santunan-ramadhan.scan-duplikat") }}',
+            method: 'GET',
+            data: { tahun: {{ now()->year }} }, // bisa diganti dengan $('#scanTahun').val() kalau pakai dropdown
+            success: function(res) {
+                $('#duplikatLoading').addClass('hidden');
+                $('#tabelDuplikat').removeClass('hidden');
+
+                if (res.message) {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Hasil Scan',
+                        text: res.message,
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+
+                // Update judul dengan tahun
+                $('#duplikatTitle').text(`Hasil Scan Duplikat Potensial - Tahun ${res.tahun}`);
+
+                if (!duplikatTable) {
+                    duplikatTable = $('#tabelDuplikat').DataTable({
+                        data: res.pairs,
+                        paging: res.pairs.length > 10,
+                        pageLength: 10,
+                        lengthChange: false,
+                        searching: false,
+                        info: res.pairs.length > 0,
+                        columns: [
+                            { 
+                                data: null, 
+                                render: (data, type, row, meta) => meta.row + meta.settings._iDisplayStart + 1 
+                            },
+                            {
+                                data: null,
+                                render: function(data) {
+                                    return `
+                                        <div class="font-semibold text-slate-800">${data.nama_a}</div>
+                                        <div class="text-sm text-slate-600">Orang tua: ${data.ortu_a}</div>
+                                        <div class="text-xs text-slate-500 mt-1">
+                                            Umur: ${data.umur_a} • Tahun: ${data.tahun_a}
+                                        </div>
+                                        <div class="text-xs text-slate-500">${data.alamat_a}</div>
+                                    `;
+                                }
+                            },
+                            {
+                                data: null,
+                                render: function(data) {
+                                    return `
+                                        <div class="font-semibold text-slate-800">${data.nama_b}</div>
+                                        <div class="text-sm text-slate-600">Orang tua: ${data.ortu_b}</div>
+                                        <div class="text-xs text-slate-500 mt-1">
+                                            Umur: ${data.umur_b} • Tahun: ${data.tahun_b}
+                                        </div>
+                                        <div class="text-xs text-slate-500">${data.alamat_b}</div>
+                                    `;
+                                }
+                            },
+                            {
+                                data: 'similarity',
+                                render: function(data) {
+                                    let cls = data >= 90 ? 'text-red-700 font-bold text-lg' :
+                                              data >= 85 ? 'text-amber-700 font-semibold text-lg' : 
+                                              'text-rose-600 font-medium text-lg';
+                                    return `<div class="text-center ${cls}">${data}%</div>`;
+                                }
+                            },
+                            {
+                                data: null,
+                                render: function(data) {
+                                    return `
+                                        <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
+                                            <button onclick="openEditModal(${data.id_a})" 
+                                                    class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg shadow-sm transition">
+                                                Edit Record 1
+                                            </button>
+                                            <button onclick="openEditModal(${data.id_b})" 
+                                                    class="btn btn-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg shadow-sm transition">
+                                                Edit Record 2
+                                            </button>
+                                        </div>
+                                    `;
+                                },
+                                orderable: false,
+                                className: 'text-center'
+                            }
+                        ],
+                        language: {
+                            emptyTable: 'Tidak ditemukan pasangan duplikat ≥ 80%',
+                            info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ pasangan',
+                            infoEmpty: 'Tidak ada data'
+                        }
+                    });
+                } else {
+                    duplikatTable.clear().rows.add(res.pairs).draw();
+                }
+
+                btn.prop('disabled', false).html(`
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Scan Duplikat Potensial (Tahun {{ now()->year }})
+                `);
+            },
+            error: function(xhr) {
+                $('#duplikatLoading').addClass('hidden');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Memindai',
+                    text: xhr.responseJSON?.message || 'Terjadi kesalahan server. Coba lagi nanti.',
+                });
+                btn.prop('disabled', false).html(`
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Scan Duplikat Potensial (Tahun {{ now()->year }})
+                `);
+            }
+        });
+    });
+
+    // Tutup section
+    $('#hideDuplikat').on('click', function() {
+        $('#duplikatSection').addClass('hidden');
     });
 </script>
 

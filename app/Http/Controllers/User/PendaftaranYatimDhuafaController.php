@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Edgaras\StrSim\JaroWinkler;
 
 class PendaftaranYatimDhuafaController extends Controller
 {
@@ -400,6 +403,88 @@ class PendaftaranYatimDhuafaController extends Controller
             'success' => true,
             'message' => 'Data berhasil dihapus'
         ]);
+    }
+
+    public function scanDuplikat(Request $request)
+    {
+        $tahun = $request->get('tahun', now()->year);
+
+        $records = PendaftaranAnakYatimDhuafa::query()
+            ->where('tahun_program', $tahun)
+            ->select([
+                'id',
+                'nama_lengkap',
+                'nama_orang_tua',
+                'tahun_program',
+                'umur',
+                'umur_satuan',
+                'alamat'
+            ])
+            ->get();
+
+        if ($records->count() < 2) {
+            return response()->json([
+                'success' => true,
+                'pairs'   => [],
+                'tahun'   => $tahun,
+                'message' => "Data di tahun {$tahun} kurang dari 2 record. Tidak ada yang bisa dibandingkan."
+            ]);
+        }
+
+        $pairs = new Collection();
+
+        foreach ($records as $i => $rowA) {
+            for ($j = $i + 1; $j < $records->count(); $j++) {
+                $rowB = $records[$j];
+
+                $strA = strtolower(trim($rowA->nama_lengkap . ' ' . $rowA->nama_orang_tua));
+                $strB = strtolower(trim($rowB->nama_lengkap . ' ' . $rowB->nama_orang_tua));
+
+                if (strlen($strA) < 8 || strlen($strB) < 8) {
+                    continue;
+                }
+
+                $sim = JaroWinkler::similarity($strA, $strB) * 100;
+
+                if ($sim >= 80) {
+                    $pairs->push([
+                        'id_a'       => $rowA->id,
+                        'nama_a'     => $rowA->nama_lengkap,
+                        'ortu_a'     => $rowA->nama_orang_tua ?: '-',
+                        'umur_a'     => $this->formatUmur($rowA),
+                        'tahun_a'    => $rowA->tahun_program,
+                        'alamat_a'   => Str::limit($rowA->alamat ?: '-', 45, '...'),
+
+                        'id_b'       => $rowB->id,
+                        'nama_b'     => $rowB->nama_lengkap,
+                        'ortu_b'     => $rowB->nama_orang_tua ?: '-',
+                        'umur_b'     => $this->formatUmur($rowB),
+                        'tahun_b'    => $rowB->tahun_program,
+                        'alamat_b'   => Str::limit($rowB->alamat ?: '-', 45, '...'),
+
+                        'similarity' => round($sim, 1),
+                    ]);
+                }
+            }
+        }
+
+        $pairs = $pairs->sortByDesc('similarity')->take(30);
+
+        return response()->json([
+            'success' => true,
+            'pairs'   => $pairs,
+            'total'   => $pairs->count(),
+            'tahun'   => $tahun,
+            'message' => $pairs->isEmpty() ? "Tidak ditemukan pasangan dengan kemiripan ≥ 80% di tahun {$tahun}" : null
+        ]);
+    }
+
+    private function formatUmur($row)
+    {
+        if ($row->umur && $row->umur_satuan) {
+            return $row->umur . ' ' . ucfirst($row->umur_satuan);
+        }
+        return '-';
     }
 
 }
