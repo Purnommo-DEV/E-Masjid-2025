@@ -290,7 +290,35 @@
                     </p>
                 </div>
             </div>
+            <!-- Tombol Switch Mode Tampilan (responsif & lebih kecil) -->
+            <div class="flex flex-col sm:flex-row justify-end items-center gap-3 mb-6">
+                <span class="text-sm font-medium text-slate-700 whitespace-nowrap">Mode Tampilan:</span>
+                <div class="inline-flex rounded-full shadow-sm overflow-hidden border border-slate-200/70 bg-white/80 backdrop-blur-sm w-full sm:w-auto">
+                    <!-- Responsive -->
+                    <button id="btnModeResponsive"
+                            class="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2
+                                   bg-gradient-to-r from-emerald-600/90 to-teal-600/90 text-white
+                                   hover:from-emerald-700 hover:to-teal-700
+                                   shadow hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
+                        </svg>
+                        Responsive
+                    </button>
 
+                    <!-- Full -->
+                    <button id="btnModeFull"
+                            class="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2
+                                   bg-gradient-to-r from-amber-500/90 to-orange-600/90 text-white
+                                   hover:from-amber-600 hover:to-orange-700
+                                   shadow hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+                        </svg>
+                        Full Scroll
+                    </button>
+                </div>
+            </div>
             <!-- Tabel (padding lebih besar, tidak mepet) -->
             <div class="bg-white rounded-3xl shadow-2xl overflow-hidden border border-emerald-100/60 p-6 lg:p-10 mt-4">
                 <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900">
@@ -318,50 +346,50 @@
                 </table>
             </div>
 
-                    <div class="mt-8 flex flex-col sm:flex-row justify-center lg:justify-end gap-4 items-center">
-                        <button id="btnScanDuplikat"
-                                class="px-8 py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 
-                                       text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 
-                                       text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            Scan Duplikat Potensial (Tahun {{ now()->year }})
-                        </button>
+            <div class="mt-8 flex flex-col sm:flex-row justify-center lg:justify-end gap-4 items-center">
+                <button id="btnScanDuplikat"
+                        class="px-8 py-4 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 
+                               text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 
+                               text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Scan Duplikat ({{ now()->year }})
+                </button>
+            </div>
+            <!-- Hasil Scan -->
+            <div id="duplikatSection" class="mt-12 bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-200/70 p-6 lg:p-10 hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                    <div>
+                        <h3 id="duplikatTitle" class="text-2xl font-bold text-rose-700">Hasil Scan Duplikat</h3>
+                        <p class="text-slate-600 mt-1">
+                            Pasangan data dengan kemiripan nama ≥ 80%. Periksa & hapus/merge jika diperlukan.
+                        </p>
                     </div>
-                    <!-- Hasil Scan -->
-                    <div id="duplikatSection" class="mt-12 bg-white rounded-3xl shadow-2xl overflow-hidden border border-rose-200/70 p-6 lg:p-10 hidden">
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-                            <div>
-                                <h3 id="duplikatTitle" class="text-2xl font-bold text-rose-700">Hasil Scan Duplikat Potensial</h3>
-                                <p class="text-slate-600 mt-1">
-                                    Pasangan data dengan kemiripan nama ≥ 80%. Periksa & hapus/merge jika diperlukan.
-                                </p>
-                            </div>
-                            <button id="hideDuplikat" class="btn btn-sm btn-outline text-rose-700 border-rose-400 hover:bg-rose-50">
-                                Tutup Hasil
-                            </button>
-                        </div>
+                    <button id="hideDuplikat" class="btn btn-sm btn-outline text-rose-700 border-rose-400 hover:bg-rose-50">
+                        Tutup Hasil
+                    </button>
+                </div>
 
-                        <div id="duplikatLoading" class="hidden text-center py-10">
-                            <span class="loading loading-spinner loading-lg text-rose-600"></span>
-                            <p class="mt-4 text-lg font-medium text-slate-700">Sedang memindai data tahun {{ now()->year }}...</p>
-                            <p class="text-sm text-slate-500 mt-2">Proses ini bisa memakan waktu beberapa detik tergantung jumlah data.</p>
-                        </div>
+                <div id="duplikatLoading" class="hidden text-center py-10">
+                    <span class="loading loading-spinner loading-lg text-rose-600"></span>
+                    <p class="mt-4 text-lg font-medium text-slate-700">Sedang memindai data tahun {{ now()->year }}...</p>
+                    <p class="text-sm text-slate-500 mt-2">Proses ini bisa memakan waktu beberapa detik tergantung jumlah data.</p>
+                </div>
 
-                        <table id="tabelDuplikat" class="table table-zebra w-full text-slate-900">
-                            <thead class="bg-rose-600 text-white">
-                                <tr>
-                                    <th>No</th>
-                                    <th>Record 1</th>
-                                    <th>Record 2</th>
-                                    <th class="text-center">Kemiripan</th>
-                                    <th class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
+                <table id="tabelDuplikat" class="table table-zebra w-full text-slate-900">
+                    <thead class="bg-rose-600 text-white">
+                        <tr>
+                            <th>No</th>
+                            <th>Record 1</th>
+                            <th>Record 2</th>
+                            <th class="text-center">Kemiripan</th>
+                            <th class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
 
             <!-- CTA Daftar Baru -->
             <div class="text-center mt-10">
@@ -643,15 +671,16 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
-<!-- <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script> -->
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
-<!-- <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css"> -->
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
 
 
 <script>
     let table;
     let lastSelectedSatuan = '';
+    let currentMode = 'responsive'; // default
 
     $('#btnExportExcel').on('click', function(e) {
         e.preventDefault();
@@ -829,60 +858,96 @@
         });
     });
 
-    $(document).ready(function () {
+    
+    function initTable(mode = 'responsive') {
+        if (table) {
+            table.destroy();
+        }
+
+        // Bersihkan thead & tbody
+        $('#tabelYatimDhuafa thead').empty();
+        $('#tabelYatimDhuafa tbody').empty();
+
+        // Bangun thead
+        let theadHtml = '<tr>';
+        if (mode === 'responsive') {
+            theadHtml += '<th></th>';
+        }
+        theadHtml += `
+            <th>No</th>
+            <th>Penanggung Jawab Informasi</th>
+            <th>No WA</th>
+            <th>Kategori</th>
+            <th>Nama Anak</th>
+            <th>Panggilan</th>
+            <th>Jenis Kelamin</th>
+            <th>Tanggal Lahir</th>
+            <th>Umur</th>
+            <th>Nama Orang Tua / Wali</th>
+            <th>Pekerjaan Orang Tua / Wali</th>
+            <th>Alamat Lengkap</th>
+            <th>Keterangan Tambahan</th>
+            <th>Tahun</th>
+            <th class="text-center">Aksi</th>
+        </tr>`;
+        $('#tabelYatimDhuafa thead').html(theadHtml);
+
+        // Load responsive library dinamis
+        if (mode === 'responsive' && !$('script[src*="dataTables.responsive.min.js"]').length) {
+            $('<script/>', {
+                src: 'https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js'
+            }).appendTo('head');
+            $('<link/>', {
+                rel: 'stylesheet',
+                href: 'https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css'
+            }).appendTo('head');
+        }
+
         table = $('#tabelYatimDhuafa').DataTable({
             processing: true,
             serverSide: true,
-            // responsive: {
-            //     details: {
-            //         type: 'column',
-            //         target: 0
-            //     }
-            // },
-            columnDefs: [
-                {
-                    className: 'control',
-                    orderable: false,
-                    targets: 0
-                }
-            ],
-            // AKTIFKAN SCROLL X (horizontal) & Y (vertical)
-            scrollX: true,       // <-- ini yang bikin scroll horizontal muncul kalau tabel lebar
-            scrollCollapse: true, // biar tabel bisa mengecil kalau data sedikit
-
-            // Opsional: biar header tetap fixed saat scroll Y
-            fixedHeader: true,   // header tetap di atas saat scroll vertical
-            order: [1, 'asc'],
+            order: [mode === 'responsive' ? 1 : 0, 'asc'],
             paging: true,
-            searching: false,          // <-- matikan search bawaan
-            dom: 'lrtip',              // <-- hilangkan search box bawaan ('f' dihilangkan), hanya length + table + info + pagination
+            searching: false,
+            dom: 'lrtip',
+
+            responsive: mode === 'responsive' ? {
+                details: {
+                    type: 'column',
+                    target: 0
+                }
+            } : false,
+
+            scrollX: mode === 'full' ? true : false,
+            scrollCollapse: true,
+
+            columnDefs: mode === 'responsive' ? [
+                { className: 'control', orderable: false, targets: 0 }
+            ] : [],
+
             ajax: {
                 url: '{{ route("santunan-ramadhan.data") }}',
                 data: function (d) {
-                    d.tahun           = $('#filterTahun').val() || null;
-                    d.umur_value      = $('#filterUmurValue').val() || null;
-                    d.umur_satuan     = $('#filterUmurSatuan').val() || null;
-                    d.jenis_kelamin   = $('#filterJk').val() || null;
-                    d.kategori        = $('#filterKategori').val() || null;
-                    d.search          = $('#globalSearch').val() || null; // global search
+                    d.tahun = $('#filterTahun').val() || null;
+                    d.umur_value = $('#filterUmurValue').val() || null;
+                    d.umur_satuan = $('#filterUmurSatuan').val() || null;
+                    d.jenis_kelamin = $('#filterJk').val() || null;
+                    d.kategori = $('#filterKategori').val() || null;
+                    d.search = $('#globalSearch').val() || null;
                 }
             },
-            columns: [
-                // {
-                //     data: null,
-                //     defaultContent: '',
-                //     className: 'control',
-                //     orderable: false
-                // },
+
+            columns: mode === 'responsive' ? [
+                { data: null, defaultContent: '', className: 'control', orderable: false },
                 { data: 'DT_RowIndex', orderable: false, searchable: false },
                 { data: 'sumber_informasi' },
                 { data: 'no_wa' },
-                { data: 'kategori_display' }, // custom untuk tampilan UI
+                { data: 'kategori_display' },
                 { data: 'nama_lengkap' },
                 { data: 'nama_panggilan' ?? '-' },
                 { data: 'jenis_kelamin_display' },
                 { data: 'tanggal_lahir_formatted' },
-                { data: 'umur_display' }, // custom: umur + satuan
+                { data: 'umur_display' },
                 { data: 'nama_orang_tua' },
                 { data: 'pekerjaan_orang_tua' ?? '-' },
                 { data: 'alamat' },
@@ -894,13 +959,53 @@
                     searchable: false,
                     className: 'text-center',
                     render: function (data, type, row) {
+                        const id = row && typeof row.id !== 'undefined' ? row.id : 0;
+                        const safeId = JSON.stringify(id);
                         return `
                             <div class="flex justify-center gap-2">
                                 <button class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg"
-                                        onclick="openEditModal(${row.id})">
+                                        onclick="openEditModal(${safeId})">
                                     Edit
                                 </button>
-                                <button class="btn btn-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg" onclick="hapusData(${row.id})">
+                                <button class="btn btn-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                                        onclick="hapusData(${safeId})">
+                                    Hapus
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
+            ] : [
+                { data: 'DT_RowIndex', orderable: false, searchable: false },
+                { data: 'sumber_informasi' },
+                { data: 'no_wa' },
+                { data: 'kategori_display' },
+                { data: 'nama_lengkap' },
+                { data: 'nama_panggilan' ?? '-' },
+                { data: 'jenis_kelamin_display' },
+                { data: 'tanggal_lahir_formatted' },
+                { data: 'umur_display' },
+                { data: 'nama_orang_tua' },
+                { data: 'pekerjaan_orang_tua' ?? '-' },
+                { data: 'alamat' },
+                { data: 'catatan_tambahan' ?? '-' },
+                { data: 'tahun_program' },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    className: 'text-center',
+                    render: function (data, type, row) {
+                        const id = row && typeof row.id !== 'undefined' ? row.id : 0;
+                        const safeId = JSON.stringify(id);
+                        return `
+                            <div class="flex justify-center gap-2">
+                                <button class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg"
+                                        onclick="openEditModal(${safeId})">
+                                    Edit
+                                </button>
+                                <button class="btn btn-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                                        onclick="hapusData(${safeId})">
                                     Hapus
                                 </button>
                             </div>
@@ -908,13 +1013,9 @@
                     }
                 }
             ],
+
             language: {
-                processing: `
-                    <div class="flex items-center gap-3 text-emerald-600">
-                        <span class="loading loading-spinner loading-md"></span>
-                        Memuat data...
-                    </div>
-                `,
+                processing: `<div class="flex items-center gap-3 text-emerald-600"><span class="loading loading-spinner loading-md"></span> Memuat data...</div>`,
                 emptyTable: 'Belum ada data',
                 info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
                 infoEmpty: 'Tidak ada entri',
@@ -930,26 +1031,67 @@
             }
         });
 
-        // Event filter
+        // Update tombol aktif
+        $('#btnModeResponsive').toggleClass('btn-active', mode === 'responsive');
+        $('#btnModeFull').toggleClass('btn-active', mode === 'full');
+
+        currentMode = mode;
+    }
+
+    // Inisialisasi awal
+    initTable('responsive');
+
+    $('#btnModeResponsive').on('click', function () {
+        initTable('responsive');
+    });
+
+    $('#btnModeFull').on('click', function () {
+        initTable('full');
+    });
+
+    // Filter tetap reload dengan mode saat ini
+    $('#filterTahun, #filterUmurValue, #filterUmurSatuan, #filterJk, #filterKategori').on('change', function () {
+        table.ajax.reload();
+    });
+
+    let debounceTimer;
+    $('#filterUmurValue').on('input', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => table.ajax.reload(), 300);
+    });
+
+    $('#globalSearch').on('keyup', function () {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => table.ajax.reload(), 300);
+    });
+
+    // Inisialisasi awal (default responsive)
+    $(document).ready(function () {
+        initTable('responsive');
+
+        // Toggle mode
+        $('#btnModeResponsive').on('click', function () {
+            initTable('responsive');
+        });
+
+        $('#btnModeFull').on('click', function () {
+            initTable('full');
+        });
+
+        // Filter tetap reload table dengan mode saat ini
         $('#filterTahun, #filterUmurValue, #filterUmurSatuan, #filterJk, #filterKategori').on('change', function () {
             table.ajax.reload();
         });
 
-        // Khusus input number umur: reload saat ketik (dengan debounce agar smooth)
         let debounceTimer;
         $('#filterUmurValue').on('input', function () {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                table.ajax.reload();
-            }, 300); // 300ms delay
+            debounceTimer = setTimeout(() => table.ajax.reload(), 300);
         });
 
-        // Search custom auto reload saat ketik
         $('#globalSearch').on('keyup', function () {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                table.ajax.reload();
-            }, 300);
+            debounceTimer = setTimeout(() => table.ajax.reload(), 300);
         });
     });
 
@@ -1251,7 +1393,7 @@
                     Swal.fire('Peringatan', 'Tidak ada data valid dari server (cek controller).', 'warning');
                 }
 
-                $('#duplikatTitle').text(`Hasil Scan Duplikat Potensial - Tahun ${response.tahun || 'Tidak diketahui'}`);
+                $('#duplikatTitle').text(`Hasil Scan Duplikat - Tahun ${response.tahun || 'Tidak diketahui'}`);
 
                 if (duplikatTable) {
                     duplikatTable.destroy();
@@ -1337,13 +1479,13 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Scan Duplikat Potensial (Tahun {{ now()->year }})
+                    Scan Duplikat (Tahun {{ now()->year }})
                 `);
             },
             error: function(xhr) {
                 $('#duplikatLoading').addClass('hidden');
                 Swal.fire('Error', 'Gagal memindai: ' + (xhr.responseJSON?.message || 'Server error'), 'error');
-                btn.prop('disabled', false).html('Scan Duplikat Potensial');
+                btn.prop('disabled', false).html('Scan Duplikat');
             }
         });
     });
@@ -1354,7 +1496,7 @@
 </script>
 
 <!-- CSS Override (pastikan semua teks gelap & kolom terlihat) -->
-<!-- <style>
+<style>
     /* =========================
        GLOBAL TEXT COLOR FIX
        ========================= */
@@ -1399,7 +1541,16 @@
 
     /* =========================
        PAGINATION STYLE
-       ========================= */
+       ========================= */    
+    .dataTables_paginate {
+        display: flex !important;
+        justify-content: center !important; /* center di semua ukuran */
+        align-items: center !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        margin-top: 1rem !important;
+    }
+
     .dataTables_paginate .paginate_button {
         color: #059669 !important;
         background: white !important;
@@ -1421,9 +1572,33 @@
         border-color: #059669 !important;
     }
 
-    /* Hilangkan search bawaan */
-    .dataTables_filter {
-        display: none !important;
+    .dataTables_paginate .paginate_button:hover:not(.disabled) {
+        background: #ecfdf5 !important;
+        color: #059669 !important;
+        transform: scale(1.05);
+    }
+
+    /* Mobile: pagination tetap rapi & center */
+    @media (max-width: 640px) {
+        .dataTables_paginate {
+            justify-content: center !important;
+            padding: 0.5rem !important;
+        }
+        .dataTables_paginate .paginate_button {
+            min-width: 2rem !important;
+            height: 2rem !important;
+            padding: 0.4rem 0.6rem !important;
+            font-size: 0.8rem !important;
+        }
+        .dataTables_info {
+            text-align: center !important;
+            margin-bottom: 0.5rem !important;
+        }
+    }
+
+    /* Hilangkan jarak aneh antar nomor */
+    .dataTables_paginate .paginate_button + .paginate_button {
+        margin-left: 0 !important;
     }
 
     /* =========================
@@ -1528,6 +1703,26 @@
         background-color: #dc2626;
     }
 
+    /* Fix potong kanan di mode responsive */
+    .dataTables_wrapper .dataTables_scrollBody {
+        overflow-x: auto !important;
+    }
+
+    table.dataTable.dtr-inline.collapsed > tbody > tr > td:first-child,
+    table.dataTable.dtr-inline.collapsed > tbody > tr > th:first-child {
+        padding-left: 30px !important; /* ruang untuk tombol + */
+    }
+
+    /* Pastikan wrapper tidak memotong */
+    .dataTables_wrapper {
+        overflow: visible !important;
+    }
+
+    /* Responsive collapse tidak memotong kanan */
+    .dtr-modal .dtr-modal-content {
+        max-width: 90vw !important;
+    }
+
     /* =========================
        NAVBAR COLOR LOCK
        ========================= */
@@ -1573,169 +1768,5 @@
         color: #ecfdf5 !important;
     }
 </style>
- -->
 
- <style>
-    /* GLOBAL TEXT COLOR FIX */
-    body, .text-slate-50, .text-gray-50, .text-base-content {
-        color: #0f172a !important;
-    }
-    .select, .input-bordered, .select option, .input input, textarea {
-        color: #0f172a !important;
-        background-color: white !important;
-    }
-
-    /* DATATABLE BASE COLOR & LOADER */
-    .dataTables_wrapper,
-    .dataTables_info,
-    .dataTables_length,
-    .dataTables_paginate {
-        color: #0f172a !important;
-    }
-    .dataTables_wrapper {
-        position: relative;
-        overflow-x: visible !important; /* Pagination tidak ikut scroll */
-    }
-    .dataTables_wrapper .dataTables_processing {
-        position: absolute !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%);
-        background: rgba(255, 255, 255, 0.9) !important;
-        padding: 20px 30px !important;
-        border-radius: 12px !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        z-index: 50 !important;
-        font-weight: 600;
-        color: #059669 !important;
-    }
-
-    /* PAGINATION STYLE */
-    .dataTables_paginate .paginate_button {
-        color: #059669 !important;
-        background: white !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        padding: 6px 12px !important;
-        margin: 0 2px !important;
-        cursor: pointer !important;
-    }
-    .dataTables_paginate .paginate_button:hover {
-        background: #ecfdf5 !important;
-        border-color: #059669 !important;
-    }
-    .dataTables_paginate .paginate_button.current {
-        background: #059669 !important;
-        color: white !important;
-        border-color: #059669 !important;
-    }
-
-    /* Hilangkan search bawaan */
-    .dataTables_filter {
-        display: none !important;
-    }
-
-    /* INFO + PAGINATION ALIGN & LAYOUT */
-    .dataTables_wrapper .dt-layout-row:last-child {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin-top: 1rem;
-        padding: 0 1rem;
-    }
-    .dataTables_info {
-        text-align: left;
-    }
-    .dataTables_paginate {
-        text-align: right;
-    }
-
-    /* Pagination di mobile tetap rapi & centered */
-    @media (max-width: 640px) {
-        .dataTables_wrapper .dt-layout-row:last-child {
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-        }
-        .dataTables_info,
-        .dataTables_paginate {
-            width: 100%;
-            text-align: center;
-        }
-        .dataTables_paginate {
-            display: flex;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .dataTables_paginate .paginate_button {
-            min-width: 2.5rem;
-            padding: 0.5rem 0.75rem;
-            margin: 0.25rem;
-        }
-    }
-
-    /* TABLE STYLING */
-    #tabelYatimDhuafa, #tabelDuplikat {
-        width: 100% !important;
-        min-width: 1000px; /* sesuaikan sesuai jumlah kolom, biar scroll muncul di mobile kalau perlu */
-    }
-    #tabelYatimDhuafa tbody td,
-    #tabelDuplikat tbody td {
-        color: #0f172a !important;
-    }
-    #tabelYatimDhuafa thead th,
-    #tabelDuplikat thead th {
-        background-color: #059669 !important;
-        color: white !important;
-    }
-    /* Zebra */
-    #tabelYatimDhuafa tbody tr:nth-child(odd),
-    #tabelDuplikat tbody tr:nth-child(odd) {
-        background-color: #f1f5f9;
-    }
-    #tabelYatimDhuafa tbody tr:nth-child(even),
-    #tabelDuplikat tbody tr:nth-child(even) {
-        background-color: #ffffff;
-    }
-    /* Hover */
-    #tabelYatimDhuafa tbody tr:hover,
-    #tabelDuplikat tbody tr:hover {
-        background-color: #d1fae5 !important;
-        transition: background-color 0.15s ease-in-out;
-    }
-
-    /* NAVBAR COLOR LOCK */
-    nav {
-        color: #e5e7eb !important;
-    }
-    nav a, nav span, nav div, nav li {
-        color: #e5e7eb !important;
-    }
-    nav .group-hover\:text-emerald-200:hover {
-        color: #a7f3d0 !important;
-    }
-    nav .text-emerald-200\/80 {
-        color: rgba(167, 243, 208, 0.8) !important;
-    }
-    nav a:hover {
-        color: #6ee7b7 !important;
-    }
-    nav .btn-outline {
-        color: #a7f3d0 !important;
-        border-color: rgba(52, 211, 153, 0.6) !important;
-    }
-    nav .btn-outline:hover {
-        background-color: rgba(16, 185, 129, 0.15) !important;
-        color: #ecfdf5 !important;
-    }
-    nav details .menu a {
-        color: #e5e7eb !important;
-    }
-    nav details .menu a:hover {
-        background-color: rgba(16, 185, 129, 0.15) !important;
-        color: #ecfdf5 !important;
-    }
-</style>
 @endpush
