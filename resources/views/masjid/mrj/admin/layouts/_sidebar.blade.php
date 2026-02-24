@@ -1,11 +1,50 @@
-<aside 
-    x-data="{ openKeuangan: false, sidebarOpen: window.innerWidth >= 1024 }"
+<aside
+    x-data="{
+        openKeuangan: {{ request()->routeIs([
+            'admin.keuangan.saldo-awal*',
+            'admin.keuangan.kotak-infak*',
+            'admin.keuangan.akun.index*',
+            'admin.keuangan.petty-cash*',
+            'admin.keuangan.pengeluaran*',
+            'admin.keuangan.penerimaan*',
+            'admin.keuangan.alokasi-dana*',
+            'admin.keuangan.zakat.index*',
+            'admin.keuangan.dana-terikat.index*',
+            'admin.keuangan.jurnal.index*'
+        ]) ? 'true' : 'false' }},
+
+        // ✅ TAMBAHKAN INI
+        openRamadhan: {{ request()->routeIs([
+            'admin.ramadhan.jadwal-imam*'
+        ]) ? 'true' : 'false' }},
+
+        sidebarOpen: window.innerWidth >= 1024,
+
+        init() {
+            if (localStorage.getItem('openKeuangan') === 'true') {
+                this.openKeuangan = true;
+            }
+
+            if (localStorage.getItem('openRamadhan') === 'true') {
+                this.openRamadhan = true;
+            }
+
+            this.$watch('openKeuangan', value => {
+                localStorage.setItem('openKeuangan', value);
+            });
+
+            // ✅ TAMBAHKAN INI
+            this.$watch('openRamadhan', value => {
+                localStorage.setItem('openRamadhan', value);
+            });
+        }
+    }"
     x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
     class="fixed inset-y-0 left-0 z-[9999] w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:w-64 lg:shadow-2xl"
     aria-label="Sidebar"
 >
-    <!-- Overlay gelap -->
-    <div 
+    <!-- Overlay gelap untuk mobile -->
+    <div
         x-show="sidebarOpen && window.innerWidth < 1024"
         @click="sidebarOpen = false"
         class="fixed inset-0 bg-black/70 z-[9998] lg:hidden transition-opacity duration-300 pointer-events-none"
@@ -50,18 +89,27 @@
                 @php
                     $menuItems = [
                         ['route' => 'admin.dashboard', 'icon' => 'home', 'label' => 'Dashboard'],
-                        ['route' => 'admin.profil', 'icon' => 'building', 'label' => 'Profil'],
+                        ['route' => 'admin.profil', 'icon' => 'building', 'label' => 'Profil Masjid'],
                         ['route' => 'admin.role', 'icon' => 'shield', 'label' => 'Role & Permission'],
                         ['route' => 'admin.user', 'icon' => 'users', 'label' => 'Kelola User'],
+
+                        // ───────────────────────────────────────────────
+                        // KONTEN INSPIRATIF & PENGINGAT (baru ditambahkan di sini)
+                        ['route' => 'admin.slide-motivasi.index', 'icon' => 'sparkles', 'label' => 'Slider Motivasi'],
+                        ['route' => 'admin.quote-harian.index', 'icon' => 'chat-quote', 'label' => 'Quote Harian'],
+                        ['route' => 'admin.khutbah-jumat.index', 'icon' => 'mosque', 'label' => 'Khutbah Jumat'],
+                        // ───────────────────────────────────────────────
+
                         ['route' => 'admin.banner.index', 'icon' => 'images', 'label' => 'Banner'],
                         ['route' => 'admin.kategori.index', 'icon' => 'tag', 'label' => 'Kategori'],
                         ['route' => 'admin.berita.index', 'icon' => 'newspaper', 'label' => 'Berita'],
                         ['route' => 'admin.acara.index', 'icon' => 'calendar', 'label' => 'Acara'],
                         ['route' => 'admin.layanan.index', 'icon' => 'heart-handshake', 'label' => 'Layanan'],
                         ['route' => 'admin.galeri.index', 'icon' => 'photo', 'label' => 'Galeri'],
-                        ['route' => 'admin.pengumuman.index', 'icon' => 'megaphone', 'label' => 'Pengumuman']
+                        ['route' => 'admin.pengumuman.index', 'icon' => 'megaphone', 'label' => 'Pengumuman'],
                     ];
                 @endphp
+
                 @foreach($menuItems as $m)
                     @php $isActive = request()->routeIs($m['route'].'*'); @endphp
                     <li>
@@ -71,7 +119,7 @@
                                 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200' => $isActive,
                                 'text-white hover:bg-white/10 hover:translate-x-1 hover:shadow' => !$isActive
                            ])>
-                            {{-- Icon Anda (sama) --}}
+                            {{-- Icon --}}
                             @if($m['icon'] === 'home')
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l9-9 9 9M4 10v10a1 1 0 001 1h4m10-11v10a1 1 0 01-1 1h-4"/></svg>
                             @elseif($m['icon'] === 'building')
@@ -80,8 +128,14 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V6l-8-4-8 4v6c0 6 8 10 8 10z"/></svg>
                             @elseif($m['icon'] === 'users')
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            @elseif($m['icon'] === 'sparkles')
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                            @elseif($m['icon'] === 'chat-quote')
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                            @elseif($m['icon'] === 'mosque')
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l9 7v12a2 2 0 01-2 2H5a2 2 0 01-2-2V9l9-7zM12 2v7m-4 4h8"/></svg>
                             @elseif($m['icon'] === 'images')
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12 2 2 0 002 2z"/></svg>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12 2 0 002 2z"/></svg>
                             @elseif($m['icon'] === 'tag')
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M3 11l9 9 9-9-9-9-9 9z"/></svg>
                             @elseif($m['icon'] === 'newspaper')
@@ -99,47 +153,56 @@
                         </a>
                     </li>
                 @endforeach
-
                 <!-- KEUANGAN COLLAPSIBLE -->
                 <li class="mt-2">
                     <button @click="openKeuangan = !openKeuangan"
-                            :class="openKeuangan ? 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200' : 'text-white hover:bg-white/10'"
-                            class="w-full flex items-center gap-4 px-5 py-3 rounded-xl transition text-sm">
-                        <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v12H4V7zm0-2h16V3H4v2zm12 7h2v2h-2v-2z"/>
-                        </svg>
-                        <span class="flex-1 text-left">Manajemen Keuangan</span>
-                        <svg x-show="openKeuangan" class="w-4 h-4 transition-transform" :class="openKeuangan ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                            :class="openKeuangan 
+                                ? 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200' 
+                                : 'text-white hover:bg-white/10'"
+                            class="w-full flex items-center justify-between gap-4 px-5 py-3 rounded-xl transition text-sm">
+                        
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v12H4V7zm0-2h16V3H4v2zm12 7h2v2h-2v-2z"/>
+                            </svg>
+                            <span>Manajemen Keuangan</span>
+                        </div>
+
+                        <svg class="w-5 h-5 transition-transform duration-200" 
+                             :class="openKeuangan ? 'rotate-180' : ''" 
+                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
-                    <!-- Submenu dengan x-collapse -->
                     <ul x-show="openKeuangan" x-collapse class="mt-2 space-y-1 pl-6 overflow-hidden">
                         @php
                             $sub = [
-                                ['route'=>'admin.keuangan.saldo-awal','label'=>'Saldo Awal Periode','icon'=>'scale'],
-                                ['route'=>'admin.keuangan.kotak-infak','label'=>'Hitung Kotak Infak','icon'=>'donate'],
-                                ['route'=>'admin.keuangan.akun.index','label'=>'Daftar Akun (CoA)','icon'=>'book'],
-                                ['route'=>'admin.keuangan.petty-cash','label'=>'Petty Cash','icon'=>'banknotes'],
-                                ['route'=>'admin.keuangan.pengeluaran','label'=>'Pengeluaran','icon'=>'arrow-up'],
-                                ['route'=>'admin.keuangan.penerimaan','label'=>'Penerimaan','icon'=>'arrow-down'],
-                                ['route'=>'admin.keuangan.alokasi-dana','label'=>'Alokasi Dana','icon'=>'hand'],
-                                ['route'=>'admin.keuangan.zakat.index','label'=>'Zakat & Fidyah','icon'=>'zakat'],
-                                ['route'=>'admin.keuangan.dana-terikat.index','label'=>'Dana Terikat & Program Rutin','icon'=>'inbox'],
-                                ['route'=>'admin.keuangan.jurnal.index','label'=>'Jurnal Umum','icon'=>'document'],
+                                ['route' => 'admin.keuangan.saldo-awal', 'label' => 'Saldo Awal Periode'],
+                                ['route' => 'admin.keuangan.kotak-infak', 'label' => 'Hitung Kotak Infak'],
+                                ['route' => 'admin.keuangan.akun.index', 'label' => 'Daftar Akun (CoA)'],
+                                ['route' => 'admin.keuangan.petty-cash', 'label' => 'Petty Cash'],
+                                ['route' => 'admin.keuangan.pengeluaran', 'label' => 'Pengeluaran'],
+                                ['route' => 'admin.keuangan.penerimaan', 'label' => 'Penerimaan'],
+                                ['route' => 'admin.keuangan.alokasi-dana', 'label' => 'Alokasi Dana'],
+                                ['route' => 'admin.keuangan.zakat.index', 'label' => 'Zakat & Fidyah'],
+                                ['route' => 'admin.keuangan.dana-terikat.index', 'label' => 'Dana Terikat & Program Rutin'],
+                                ['route' => 'admin.keuangan.jurnal.index', 'label' => 'Jurnal Umum'],
                             ];
                         @endphp
+
                         @foreach($sub as $s)
-                            @php $a = request()->routeIs($s['route'].'*'); @endphp
+                            @php
+                                // Gunakan $s['route'] langsung, bukan $route
+                                $isActive = request()->routeIs($s['route'] . '*');
+                            @endphp
                             <li>
                                 <a href="{{ route($s['route']) }}"
                                    @class([
                                        'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
-                                       'bg-amber-300/90 text-emerald-900 font-semibold shadow' => $a,
-                                       'text-white hover:bg-white/10' => !$a
+                                       'bg-amber-300/90 text-emerald-900 font-semibold shadow' => $isActive,
+                                       'text-white hover:bg-white/10' => !$isActive
                                    ])>
-                                    <!-- Icon submenu (sama seperti sebelumnya) -->
                                     <span>{{ $s['label'] }}</span>
                                     @if($s['route'] === 'admin.keuangan.saldo-awal')
                                         @if(\App\Models\SaldoAwalPeriode::where('status','locked')->exists())
@@ -153,6 +216,60 @@
                         @endforeach
                     </ul>
                 </li>
+
+                <!-- BARU: MANAJEMEN RAMADHAN COLLAPSIBLE -->
+                <li class="mt-2">
+                    <button @click="openRamadhan = !openRamadhan"
+                            :class="openRamadhan 
+                                ? 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200' 
+                                : 'text-white hover:bg-white/10 hover:shadow'"
+                            class="w-full flex items-center justify-between gap-4 px-5 py-3 rounded-xl transition text-sm">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z M5 3v4M19 3v4 M12 3v18" />
+                            </svg>
+                            <span>Manajemen Ramadhan</span>
+                        </div>
+                        <svg class="w-5 h-5 transition-transform duration-200"
+                             :class="openRamadhan ? 'rotate-180' : ''"
+                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <ul x-show="openRamadhan" x-collapse class="mt-2 space-y-1 pl-6 overflow-hidden">
+                        <li>
+                            <a href="{{ route('admin.ramadhan.jadwal-imam.index') }}"
+                               @class([
+                                   'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                                   'bg-amber-300/90 text-emerald-900 font-semibold shadow' => request()->routeIs('admin.ramadhan.jadwal-imam*'),
+                                   'text-white hover:bg-white/10' => !request()->routeIs('admin.ramadhan.jadwal-imam*')
+                               ])>
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7H3v12a2 2 0 002 2z" />
+                                </svg>
+                                Jadwal Imam Tarawih
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{{ route('admin.ramadhan.laporan-harian.index') }}"
+                               @class([
+                                   'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                                   'bg-amber-300/90 text-emerald-900 font-semibold shadow' => request()->routeIs('admin.ramadhan.laporan-harian*'),
+                                   'text-white hover:bg-white/10' => !request()->routeIs('admin.ramadhan.laporan-harian*')
+                               ])>
+                                <svg class="w-4 h-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Laporan Harian Tarawih
+                            </a>
+                        </li>
+                        <!-- Nanti bisa tambah sub-menu lain di sini, misal:
+                        <li><a href="...">Master Program Infaq</a></li>
+                        <li><a href="...">Santunan & Gebyar</a></li>
+                        -->
+                    </ul>
+                </li>
             </ul>
         </nav>
 
@@ -162,7 +279,7 @@
                 @csrf
                 <button type="submit"
                         class="w-full flex items-center justify-center gap-3 px-5 py-3 bg-red-600 hover:bg-red-700 rounded-xl transition text-white font-semibold shadow-lg">
-                    <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <svg class="w-5 h-5 text-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 8h8v-2"/>
                     </svg>
                     <span class="text-sm">Keluar</span>
@@ -176,7 +293,6 @@
         </div>
     </div>
 
-    <!-- Styles -->
     <style>
         .sidebar-wrap {
             background: linear-gradient(180deg,#0b3b37,#0f4d45);

@@ -24,7 +24,9 @@ use App\Http\Controllers\Admin\DanaTerikatController;
 use App\Http\Controllers\Admin\DanaTerikatReferensiController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\LayananController;
-
+use App\Http\Controllers\Admin\SlideMotivasiController;
+use App\Http\Controllers\Admin\QuoteHarianController;
+use App\Http\Controllers\Admin\KhutbahJumatController;
 
 use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\AcaraGuestController;
@@ -83,6 +85,22 @@ Route::get('/home/galeri/{id}', [GaleriController::class, 'apiFotos']);
 Route::get('galeri', [HomeController::class, 'galeriIndex'])->name('galeri.index');
 
 Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('kontak.kirim');
+
+Route::get('/laporan-harian-ramadhan', function () {
+    $today = now();
+    $ramadhanStart = \Carbon\Carbon::parse('2026-02-19');
+    $ramadhanEnd   = \Carbon\Carbon::parse('2026-03-19');
+
+    if (!$today->between($ramadhanStart, $ramadhanEnd)) {
+        abort(404, 'Halaman ini hanya tersedia selama bulan Ramadhan.');
+    }
+
+    return view('masjid.'.masjid().'.guest.laporan-harian.index');
+})->name('guest.laporan-harian');
+
+Route::get('/galeri/public', [HomeController::class, 'galeriPublic'])->name('home.galeri.public');
+
+Route::get('/home/galeri/{id}', [HomeController::class, 'galeriDetail'])->name('home.galeri.detail');
 
 Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function () {
     Route::get('/', [PendaftaranYatimDhuafaController::class, 'indexPublik'])->name('index');
@@ -264,7 +282,6 @@ Route::middleware(['auth'])->group(function () {
 
         // Dana Terikat & Program Rutin
         Route::prefix('dana-terikat')->name('admin.keuangan.dana-terikat.')->group(function () {
-
             Route::get('/', [DanaTerikatController::class, 'index'])->name('index');
 
             // Data untuk semua tab (saldo, penerima, penerimaan, realisasi)
@@ -290,17 +307,85 @@ Route::middleware(['auth'])->group(function () {
 
             // CRUD referensi
             Route::resource('referensi', DanaTerikatReferensiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
-            
-
         });
 
+        // Slider Motivasi
+        Route::resource('slide-motivasi', SlideMotivasiController::class)
+        ->names('admin.slide-motivasi')
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+        Route::get('slide-motivasi/data', [SlideMotivasiController::class, 'data'])->name('admin.slide-motivasi.data');
 
+        // Quote Harian
+        Route::resource('quote-harian', QuoteHarianController::class)
+        ->names('admin.quote-harian')
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+        Route::get('quote-harian/data', [QuoteHarianController::class, 'data'])->name('admin.quote-harian.data');
+
+        // Khutbah Jumat
+        Route::resource('khutbah-jumat', KhutbahJumatController::class)
+        ->names('admin.khutbah-jumat')
+        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+        Route::get('khutbah-jumat/data', [KhutbahJumatController::class, 'data'])->name('admin.khutbah-jumat.data');
+        
         // Neraca Saldo + Export
         // Route::get('keuangan/laporan/neraca-saldo', [LaporanController::class, 'neracaSaldo'])->name('admin.keuangan.laporan.neraca-saldo');
         // Route::get('keuangan/laporan/neraca-saldo/pdf', [LaporanController::class, 'neracaSaldoPdf'])->name('admin.keuangan.laporan.neraca-saldo.pdf');
         // Route::get('keuangan/laporan/neraca-saldo/excel', [LaporanController::class, 'neracaSaldoExcel'])->name('admin.keuangan.laporan.neraca-saldo.excel');
 
         });
+
+        // PINDAHKAN RAMADHAN KE SINI (sejajar dengan prefix 'admin')
+        Route::prefix('admin/ramadhan')
+        ->name('admin.ramadhan.')
+        ->middleware(['auth'])
+        ->group(function () {
+
+            // ================= JADWAL IMAM =================
+
+            Route::get('jadwal-imam/data', [\App\Http\Controllers\Admin\Ramadhan\JadwalImamController::class, 'data'])
+                ->name('jadwal-imam.data')->withoutMiddleware(['auth']);
+
+            Route::get('jadwal-imam/{jadwal_imam}/edit', [\App\Http\Controllers\Admin\Ramadhan\JadwalImamController::class, 'edit'])
+                ->name('jadwal-imam.edit');
+
+            Route::resource('jadwal-imam', \App\Http\Controllers\Admin\Ramadhan\JadwalImamController::class)
+                ->only(['index', 'store', 'update', 'destroy']);
+
+
+            // ================= LAPORAN HARIAN =================
+
+            Route::get('laporan-harian/data', [\App\Http\Controllers\Admin\Ramadhan\LaporanHarianController::class, 'data'])
+                ->name('laporan-harian.data')->withoutMiddleware(['auth']);
+
+            Route::get('donatur-hari-ini/data', [\App\Http\Controllers\Admin\Ramadhan\LaporanHarianController::class, 'donatur'])
+                ->name('donatur-hari-ini.data')->withoutMiddleware(['auth']);
+
+            Route::get('laporan-harian/{laporan_harian}/edit', [\App\Http\Controllers\Admin\Ramadhan\LaporanHarianController::class, 'edit'])
+                ->name('laporan-harian.edit');
+
+            Route::resource('laporan-harian', \App\Http\Controllers\Admin\Ramadhan\LaporanHarianController::class)
+                ->only(['index', 'store', 'update', 'destroy']);
+        });
+
+        Route::get('/admin/ramadhan/laporan-harian/prev/{malam_ke}', function ($malam_ke) {
+            $prev = \App\Models\LaporanRamadhanHarian::where('malam_ke', $malam_ke - 1)->first();
+            
+            if (!$prev) {
+                return response()->json(['success' => false, 'data' => null]);
+            }
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'infaq_ramadan_saldo_sekarang'       => $prev->infaq_ramadan_saldo_sekarang ?? 0,
+                    'ifthor_saldo_sekarang'               => $prev->ifthor_saldo_sekarang ?? 0,
+                    'santunan_yatim_terkumpul_kemarin'    => ($prev->santunan_yatim_terkumpul_kemarin ?? 0) + collect($prev->santunan_yatim_penerimaan_hari_ini ?? [])->sum('nominal'),
+                    'paket_sembako_terkumpul_kemarin'     => ($prev->paket_sembako_terkumpul_kemarin ?? 0) + collect($prev->paket_sembako_penerimaan_hari_ini ?? [])->sum('nominal'),
+                    'gebyar_anak_terkumpul_kemarin'       => ($prev->gebyar_anak_terkumpul_kemarin ?? 0) + collect($prev->gebyar_anak_penerimaan_hari_ini ?? [])->sum('nominal'),
+                    // tambahkan jika ada field kumulatif lain
+                ]
+            ]);
+        })->name('admin.ramadhan.laporan-harian.prev');
 });
 
 require __DIR__.'/auth.php';

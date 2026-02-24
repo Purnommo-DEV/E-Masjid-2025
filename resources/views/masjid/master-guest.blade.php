@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="night">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    {{-- TITLE DINAMIS --}}
+    {{-- TITLE --}}
     <title>
         @hasSection('title')
             @yield('title') — E-Masjid
@@ -13,99 +13,99 @@
         @endif
     </title>
 
-    {{-- SEO DESCRIPTION DINAMIS --}}
+    {{-- SEO --}}
     <meta name="description"
-          content="@yield('meta_description', 'Sistem Informasi Masjid berbasis web untuk pengelolaan kegiatan, keuangan, dan informasi jamaah.')">
+          content="@yield('meta_description', 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kegiatan, kajian, dan layanan jamaah.')">
 
-    {{-- CSRF TOKEN (butuh untuk form/axios/fetch) --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
-
     <link rel="canonical" href="{{ url()->current() }}">
-    
+
+    {{-- PWA --}}
     <link rel="manifest" href="{{ route('pwa.manifest') }}">
     <meta name="theme-color" content="#059669">
-    <meta name="description" content="Sistem Informasi Masjid - Jadwal Sholat, Donasi, Kajian & Komunitas">
-    <!-- iOS support -->
     <link rel="apple-touch-icon" href="{{ asset('/pwa/icon-128.png') }}">
 
-    {{-- OG TAGS (OPTIONAL, BAGUS UNTUK SHARE LINK) --}}
+    {{-- OPEN GRAPH --}}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="@yield('title', 'E-Masjid — Sistem Informasi Masjid')">
+    <meta property="og:title" content="@yield('title', 'Masjid Raudhotul Jannah')">
     <meta property="og:description"
-          content="@yield('meta_description', 'Sistem Informasi Masjid berbasis web untuk pengelolaan kegiatan, keuangan, dan informasi jamaah.')">
+          content="@yield('meta_description', 'Kegiatan dan informasi Masjid Raudhotul Jannah Taman Cipulir Estate.')">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:image" content="{{ asset('images/masjid-cover.jpg') }}"> {{-- ganti jika sudah ada --}}
+    <meta property="og:image" content="{{ asset('images/masjid-cover.jpg') }}">
+    <meta property="og:locale" content="id_ID">
 
-    {{-- FAVICON (OPTIONAL) --}}
+    {{-- FAVICON --}}
     <link rel="icon" type="image/png" href="{{ asset('/pwa/mrj-logo.png') }}">
 
-    {{-- FONT (OPSIONAL, KALAU MAU PAKAI GOOGLE FONT) --}}
-    {{-- <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.x/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"> --}}
-
-    {{-- VITE (TAILWIND + DAISYUI) --}}
+    {{-- VITE --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{-- SWEETALERT --}}
     @include('sweetalert::alert')
-
-    {{-- KALAU ADA STYLE TAMBAHAN DI HALAMAN2 TERTENTU --}}
     @stack('head')
 
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "PlaceOfWorship",
-      "name": "Masjid [Nama]",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "{{ profil('alamat') }}",
-        "addressLocality": "Kota",
-        "addressCountry": "ID"
-      },
-      "openingHours": "Mo-Su 00:00-23:59",  // atau spesifik sholat
-      "telephone": "{{ profil('telepon') }}",
-      "url": "{{ url('/') }}"
-    }
-    </script>
+    <!-- GLOBAL SCROLL FIX -->
+    <style>
+        html{
+            scroll-behavior: smooth;
+            scroll-padding-top: 95px;
+        }
+
+        /* agar section tidak ketutup navbar */
+        section{
+            scroll-margin-top: 110px;
+        }
+
+        /* footer selalu nempel */
+        body{
+            display:flex;
+            flex-direction:column;
+            min-height:100vh;
+        }
+
+        main{
+            flex:1;
+        }
+    </style>
 </head>
 
-<body class="bg-slate-950 text-slate-100 overflow-x-hidden min-h-screen">
-
-    {{-- NAVBAR FRONTEND --}}
+<body class="bg-white text-slate-100 overflow-x-hidden">
+    {{-- NAVBAR --}}
     @include(guest_layout('_navbar'))
 
-    {{-- KONTEN HALAMAN --}}
-    <main class="min-h-[calc(100vh-56px)]">
+    {{-- CONTENT --}}
+    <main>
         @yield('content')
     </main>
 
-    {{-- FOOTER FRONTEND --}}
+    {{-- FOOTER --}}
     @include(guest_layout('_footer'))
 
-    {{-- SCRIPT GLOBAL FRONTEND --}}
+    <!-- SCROLL HASH (#!jadwal dll) -->
     <script>
-        // Smooth scroll untuk link anchor (#jadwal, #acara, dll)
-        document.addEventListener('DOMContentLoaded', function () {
-            const links = document.querySelectorAll('a[href^="#"]');
+    document.addEventListener("DOMContentLoaded", function () {
 
-            links.forEach(link => {
-                link.addEventListener('click', function (e) {
-                    const targetId = this.getAttribute('href').substring(1);
-                    const targetEl = document.getElementById(targetId);
+        function scrollToHash(){
+            const hash = window.location.hash;
 
-                    if (targetEl) {
-                        e.preventDefault();
-                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                });
-            });
-        });
+            if(hash.startsWith("#!")){
+                const id = hash.replace("#!","");
+                const el = document.getElementById(id);
+
+                if(el){
+                    setTimeout(()=>{
+                        const yOffset = -90;
+                        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                        window.scrollTo({top:y,behavior:"smooth"});
+                    },300);
+                }
+            }
+        }
+
+        scrollToHash();
+        window.addEventListener("hashchange", scrollToHash);
+    });
     </script>
 
-    {{-- SCRIPT TAMBAHAN DARI HALAMAN LAIN --}}
     @stack('scripts')
 
 </body>

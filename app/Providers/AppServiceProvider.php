@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Interfaces\MasjidRepositoryInterface;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
+use Carbon\Carbon;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -289,6 +291,84 @@ class AppServiceProvider extends ServiceProvider
 
             return $app->make($class);
         });
+
+        // Binding SlideMotivasiRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\SlideMotivasiRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\SlideMotivasiRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("SlideMotivasiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding QuoteHarianRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QuoteHarianRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QuoteHarianRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QuoteHarianRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding QuoteHarianRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QuoteHarianRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QuoteHarianRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QuoteHarianRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding KhutbahJumatRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\KhutbahJumatRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\KhutbahJumatRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("KhutbahJumatRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+        
+        // Binding JadwalImamTarawihRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\JadwalImamTarawihRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\JadwalImamTarawihRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("JadwalImamTarawihRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding LaporanRamadhanHarianRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\LaporanRamadhanHarianRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\LaporanRamadhanHarianRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("LaporanRamadhanHarianRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
     }
 
     /**
@@ -300,6 +380,19 @@ class AppServiceProvider extends ServiceProvider
         if (request()->header('x-forwarded-proto') === 'https') {
             URL::forceScheme('https');
         }
+
+        View::composer('*', function ($view) {
+
+            $today = Carbon::now();
+
+            // Tanggal estimasi Ramadhan (boleh kamu ubah nanti)
+            $ramadhanStart = Carbon::parse('2026-02-19');
+            $ramadhanEnd   = Carbon::parse('2026-03-20');
+
+            $isRamadhan = $today->between($ramadhanStart, $ramadhanEnd);
+
+            $view->with('isRamadhan', $isRamadhan);
+        });
     }
 
 

@@ -1,5 +1,5 @@
 @extends('masjid.master-guest')
-@section('title', 'Home')
+@section('title', 'Beranda')
 
 @section('content')
     {{-- LOADER FULLSCREEN --}}
@@ -23,7 +23,7 @@
     <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 relative overflow-hidden">
 
         {{-- HERO --}}
-        <section class="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
+        <section id="jadwal" class="relative pt-16 pb-20 lg:pt-24 lg:pb-32 overflow-hidden">
             <div class="absolute inset-0 pointer-events-none">
                 <div class="absolute -top-20 -left-20 w-96 h-96 bg-teal-200 rounded-full blur-3xl opacity-30 animate-pulse"></div>
                 <div class="absolute top-40 right-0 w-[600px] h-[600px] bg-cyan-200 rounded-full blur-3xl opacity-25 animate-pulse delay-1000"></div>
@@ -54,7 +54,7 @@
 
                         <div class="flex flex-wrap justify-center lg:justify-start gap-4 mt-8">
                             <a href="#donasi" class="btn btn-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white shadow-xl shadow-teal-500/30 px-10 py-4 text-base font-bold rounded-full transition-all">
-                                🌟 Donasi Sekarang
+                                🤲 Titip Amal Jariyah
                             </a>
                             <a href="#acara" class="btn btn-lg btn-outline border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-600">
                                 Lihat Agenda
@@ -79,7 +79,7 @@
                     </div>
 
                     <!-- JADWAL SHOLAT – VERSI BARU & RESPONSIF -->
-                    <div id="jadwal" class="w-full max-w-3xl mx-auto lg:mx-0 lg:max-w-none">  <!-- lebar lebih fleksibel di desktop -->
+                    <div class="w-full max-w-3xl mx-auto lg:mx-0 lg:max-w-none">  <!-- lebar lebih fleksibel di desktop -->
                         <div class="bg-white/85 backdrop-blur-2xl rounded-3xl shadow-2xl shadow-teal-200/40 border border-white/30 overflow-hidden">
                             <div class="p-6 lg:p-8">
                                 <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
@@ -317,7 +317,7 @@
                                           text-white font-bold rounded-full 
                                           shadow-xl hover:shadow-2xl transition-all duration-300 text-base sm:text-lg">
                                     <span class="text-xl sm:text-2xl">📅</span>
-                                    Lihat Semua Agenda & Kajian →
+                                    Lihat Semua Agenda
                                 </a>
                             </div>
                         @endif
@@ -403,44 +403,36 @@
                 <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-5 sm:px-6 py-6 sm:py-8 shadow-xl relative overflow-hidden">
                     <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-3">Pengingat Harian</p>
 
-                    <!-- Container utama quote – tinggi minimal lebih besar di mobile -->
-                    <div id="quote-container" class="relative min-h-[160px] sm:min-h-[120px] lg:min-h-[100px] overflow-hidden">
-                        <!-- Quote fallback awal -->
-                        @php
-                            $quotes = [
-                                ['title' => 'QS. Al-Baqarah: 186', 'text' => '“Dan apabila hamba-hamba-Ku bertanya kepadamu tentang Aku, maka (jawablah), bahwasanya Aku dekat. Aku mengabulkan permohonan orang yang berdoa apabila ia memohon kepada-Ku.”'],
-                                ['title' => 'HR. Muslim', 'text' => '“Shalat yang paling utama setelah shalat fardhu adalah shalat malam.”'],
-                                ['title' => 'HR. Tirmidzi', 'text' => '“Senyummu di hadapan saudaramu adalah sedekah.”'],
-                                ['title' => 'QS. Ar-Ra’d: 28', 'text' => '“(yaitu) orang-orang yang beriman dan hati mereka menjadi tenteram dengan mengingat Allah. Ingatlah, hanya dengan mengingat Allah-lah hati menjadi tenteram.”'],
-                                ['title' => 'HR. Bukhari', 'text' => '“Sebaik-baik manusia adalah yang paling bermanfaat bagi manusia lainnya.”'],
-                                ['title' => 'QS. Al-Insyirah: 5-6', 'text' => '“Sesungguhnya bersama kesulitan ada kemudahan. Sesungguhnya bersama kesulitan ada kemudahan.”'],
-
-                                // Tambahan quotes
-                                ['title' => 'QS. Az-Zumar: 53', 'text' => '“Wahai hamba-hamba-Ku yang melampaui batas terhadap diri mereka sendiri! Janganlah kamu berputus asa dari rahmat Allah.”'],
-                                ['title' => 'HR. Ahmad', 'text' => '“Sesungguhnya Allah itu Maha Lembut dan menyukai kelembutan dalam segala urusan.”'],
-                                ['title' => 'QS. Al-Ankabut: 69', 'text' => '“Dan orang-orang yang berjihad untuk (mencari keridaan) Kami, benar-benar akan Kami tunjukkan kepada mereka jalan-jalan Kami.”'],
-                                ['title' => 'HR. Bukhari & Muslim', 'text' => '“Barang siapa yang beriman kepada Allah dan hari akhir, hendaklah ia berkata baik atau diam.”'],
-                                ['title' => 'QS. Al-Ahzab: 70', 'text' => '“Wahai orang-orang yang beriman! Bertakwalah kamu kepada Allah dan ucapkanlah perkataan yang benar.”'],
-                                ['title' => 'HR. Muslim', 'text' => '“Allah tidak melihat rupa dan harta kalian, tetapi Dia melihat hati dan amal kalian.”'],
-                                ['title' => 'QS. Ali-Imran: 139', 'text' => '“Janganlah kamu bersikap lemah dan janganlah pula kamu bersedih hati, padahal kamulah orang-orang yang paling tinggi (derajatnya) jika kamu orang-orang yang beriman.”'],
-                            ];
-                            $initialQuote = $quotes[array_rand($quotes)];
-                        @endphp
-                        <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out flex flex-col">
-                            <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
-                                {{ $initialQuote['title'] }}
-                            </h3>
-                            <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
-                                {{ $initialQuote['text'] }}
+                    <!-- Container quote -->
+                    <div id="quote-container" class="relative min-h-[180px] sm:min-h-[140px] lg:min-h-[120px] overflow-hidden">
+                        @if($quoteHarianList->isNotEmpty())
+                            <!-- Quote pertama (acak di JS nanti) -->
+                            <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out flex flex-col">
+                                <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                                    {{ $quoteHarianList->first()->title }}
+                                </h3>
+                                <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                                    {{ $quoteHarianList->first()->text }}
+                                </div>
                             </div>
-                        </div>
+                        @else
+                            <!-- Fallback -->
+                            <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out flex flex-col">
+                                <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                                    Pengingat Harian
+                                </h3>
+                                <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                                    “Sesungguhnya bersama kesulitan ada kemudahan.” — QS. Al-Insyirah: 6
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
         </section>
 
         {{-- === BERITA & PENGUMUMAN === --}}
-        <section class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
+        <section id="berita" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
             <div class="container mx-auto px-4 lg:px-6 grid lg:grid-cols-[1.5fr_minmax(0,1fr)] gap-10">
 
                 <!-- BERITA -->
@@ -635,112 +627,72 @@
         {{-- === DONASI === --}}
         <section id="donasi" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
             <div class="container mx-auto px-4 lg:px-6">
+                <!-- Slider Motivasi dari Database - Full Lebar + Batas Super Jelas -->
+                @if($sliders->isNotEmpty())
+                    <div id="motivasiCarousel" class="relative mb-12 lg:mb-16">
+                        <div class="overflow-hidden rounded-3xl shadow-2xl">
+                            <div class="motivasi-track flex transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] snap-x snap-mandatory">
+                                @foreach($sliders as $slide)
+                                    <div class="w-full shrink-0 snap-start relative group">
+                                        <!-- Slide utama dengan border pemisah tipis + shadow lapisan -->
+                                        <div class="bg-gradient-to-br {{ $slide->gradient ?? 'from-emerald-700 via-teal-700 to-cyan-700' }} text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border {{ $slide->border_color ?? 'border-emerald-500/30' }} overflow-hidden group-hover:scale-[1.02] transition-transform duration-400 border-l-4 border-r-4 border-l-white/10 border-r-white/10">
+                                            <div class="flex flex-col items-center justify-center flex-grow space-y-4 lg:space-y-6 px-4 sm:px-8 lg:px-16">
+                                                <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold leading-tight">
+                                                    {!! $slide->title !!}
+                                                </h3>
+                                                <p class="text-lg sm:text-xl lg:text-2xl font-semibold line-clamp-4 sm:line-clamp-none">
+                                                    {!! $slide->subtitle !!}
+                                                </p>
+                                            </div>
+                                            <a href="{{ $slide->button_link ?? '#rekening' }}"
+                                               class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-12 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs transition-all">
+                                                {{ $slide->button_text ?? 'Yuk Sedekah Sekarang' }}
+                                            </a>
+                                        </div>
 
-                <!-- Carousel Ajakan Infaq - Versi Mobile Rapi & Rata Tinggi -->
-                <div id="infaqCarousel" class="relative mb-10 lg:mb-16">
-                    <div class="overflow-hidden rounded-3xl">
-                        <div class="infaq-track flex transition-transform duration-700 ease-out">
-                            
-                            <!-- Slide 1 -->
-                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
-                                <div class="bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-600 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-emerald-500/30 overflow-hidden">
-                                    <div class="flex flex-col items-center justify-center flex-grow">
-                                        <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold mb-4 lg:mb-6 leading-tight">
-                                            Setiap kebaikan kecil yang kita tanam...
-                                        </h3>
-                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-4 sm:line-clamp-none">
-                                            akan tumbuh menjadi <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-5xl mt-2">PAHALA</span>  
-                                            yang menemani kita selamanya.
-                                        </p>
+                                        <!-- Overlay gelap samping untuk efek pemisah kuat (non-aktif) -->
+                                        <div class="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/40 to-transparent pointer-events-none opacity-60 group-[.active]:opacity-0 transition-opacity duration-400"></div>
+                                        <div class="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/40 to-transparent pointer-events-none opacity-60 group-[.active]:opacity-0 transition-opacity duration-400"></div>
                                     </div>
-                                    <a href="#rekening" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
-                                        Yuk, Tanam Kebaikan Hari Ini
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <!-- Slide 2 -->
-                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
-                                <div class="bg-gradient-to-br from-teal-700 via-emerald-700 to-cyan-700 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-teal-500/30 overflow-hidden">
-                                    <div class="flex flex-col items-center justify-center flex-grow">
-                                        <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold mb-4 lg:mb-6">
-                                            Bayangkan senyuman mereka...
-                                        </h3>
-                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-4 sm:line-clamp-none">
-                                            karena <span class="text-yellow-300">sedekah kecilmu</span> hari ini.  
-                                            Doa mereka menjadi <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-5xl mt-2">pembuka rezeki</span> untukmu.
-                                        </p>
-                                    </div>
-                                    <a href="#qris" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
-                                        Mulai dengan Senyuman
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <!-- Slide 3 -->
-                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
-                                <div class="bg-gradient-to-br from-cyan-700 via-teal-700 to-emerald-700 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-cyan-500/30 overflow-hidden">
-                                    <div class="flex flex-col items-center justify-center flex-grow">
-                                        <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold mb-4 lg:mb-6">
-                                            Sedekah itu seperti menabur benih...
-                                        </h3>
-                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-4 sm:line-clamp-none">
-                                            yang Allah rawat sendiri.  
-                                            Hasilnya? <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-5xl mt-2">BERKALI-KALI LIPAT</span>  
-                                            di dunia & akhirat.
-                                        </p>
-                                    </div>
-                                    <a href="#rekening" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-10 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
-                                        Tabur Benih Kebaikanmu
-                                    </a>
-                                </div>
-                            </div>
-                            
-                            <!-- Slide 4 -->
-                            <div class="w-full shrink-0 px-3 sm:px-6 lg:px-8">
-                                <div class="bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-600 text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border border-emerald-500/30 overflow-hidden">
-                                    <div class="flex flex-col items-center justify-center flex-grow">
-                                        <h3 class="text-2xl sm:text-3xl lg:text-5xl font-extrabold mb-4 lg:mb-6">
-                                            Malam ini...  
-                                            <span class="text-yellow-300 block text-3xl sm:text-4xl lg:text-6xl mt-2">bisa jadi berkah terindahmu</span>
-                                        </h3>
-                                        <p class="text-lg sm:text-xl lg:text-2xl font-semibold mb-6 lg:mb-8 px-2 sm:px-0 line-clamp-3 sm:line-clamp-none">
-                                            Satu langkah kecil, pahala tak terhingga.
-                                        </p>
-                                    </div>
-                                    <a href="#donasi" class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-12 py-4 sm:py-6 rounded-full shadow-2xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs">
-                                        Ayo, Mulai Dari Hati
-                                    </a>
-                                </div>
+                                @endforeach
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Dots Navigation -->
-                    <div class="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
-                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="0"></button>
-                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="1"></button>
-                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="2"></button>
-                        <button class="infaq-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="3"></button>
+                        <!-- Dots Navigation -->
+                        <div class="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
+                            @foreach($sliders as $index => $slide)
+                                <button class="motivasi-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="{{ $index }}"></button>
+                            @endforeach
+                        </div>
                     </div>
-                </div>
-
-                <div class="text-center mb-10">
-                    <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-2">Infaq & Donasi</p>
-                    <h2 class="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">
-                        Mari Tebar Kebaikan
-                    </h2>
-                    <p class="text-base lg:text-lg text-slate-600 max-w-3xl mx-auto">
-                        Setiap infaq yang kamu berikan adalah investasi akhirat yang tak pernah putus pahalanya. 
-                        Allah berfirman: “Dan barangsiapa yang menafkahkan hartanya karena mencari keridhaan Allah...”
-                    </p>
-                </div>
+                @else
+                    <!-- Fallback -->
+                    <div class="text-center py-12 bg-white rounded-3xl shadow-lg border border-emerald-100">
+                        <p class="text-xl text-slate-600">Belum ada slide motivasi untuk Ramadhan saat ini.</p>
+                        <p class="text-sm text-slate-500 mt-2">Admin akan segera menambahkannya.</p>
+                    </div>
+                @endif
 
                 <div class="max-w-4xl mx-auto bg-white rounded-3xl border border-emerald-100/50 shadow-2xl overflow-hidden">
                     <div class="p-8 lg:p-12">
                         <!-- Rekening Tunggal -->
                         <div class="text-center mb-10">
-                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Transfer ke Rekening Resmi</h3>
+                            <div class="text-center max-w-2xl mx-auto mb-10">
+                                <h3 class="text-2xl font-bold text-emerald-800 mb-4">
+                                    Jadikan Harta Lebih Berkah
+                                </h3>
+
+                                <p class="text-slate-700 leading-relaxed text-base">
+                                    Setiap rupiah yang Anda titipkan akan menjadi bagian dari adzan yang berkumandang,
+                                    shalat berjamaah, kajian ilmu, serta kegiatan sosial umat.
+                                </p>
+
+                                <p class="mt-3 text-slate-600">
+                                    InsyaAllah menjadi <span class="font-semibold text-emerald-700">amal jariyah</span>
+                                    yang pahalanya terus mengalir, meski kita telah tiada.
+                                </p>
+                            </div>
+                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Salurkan Sedekah Anda</h3>
                             <div class="inline-block bg-emerald-50 rounded-2xl p-5 sm:p-6 shadow-inner w-full max-w-md mx-auto">
                                 <p class="text-lg font-semibold text-emerald-700 mb-2">Bank {!! profil('bank_name') !!} • {!! profil('bank_code') !!}</p>
                                 
@@ -755,7 +707,7 @@
                                     </p>
                                     <button
                                         type="button"
-                                        onclick="copyToClipboard('123456789010')"
+                                        onclick="copyToClipboard('{!! profil('rekening') !!}')"
                                         class="btn btn-sm btn-circle bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 tooltip tooltip-bottom before:content-[attr(data-tip)]"
                                         data-tip="Salin nomor rekening"
                                     >
@@ -775,11 +727,19 @@
 
                                 <p class="text-base text-slate-600 mt-2">a/n {!! profil('atas_nama') !!}</p>
                             </div>
+                            <p class="text-sm text-slate-500 mt-4 italic">
+                                Donasi digunakan untuk operasional masjid, kegiatan dakwah,
+                                pendidikan Al-Qur’an, serta layanan sosial jamaah.
+                            </p>
+
+                            <p class="text-sm text-emerald-700 mt-2 font-medium">
+                                📊 Laporan penyaluran dipublikasikan secara berkala.
+                            </p>
                         </div>
 
                         <!-- QRIS -->
                         <div class="text-center mb-10">
-                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Scan QRIS Instan</h3>
+                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Sedekah Lebih Mudah (QRIS)</h3>
                             <div class="mx-auto w-64 h-64 sm:w-72 sm:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100 relative cursor-pointer group"onclick="document.getElementById('qris-modal').showModal()">
                                 <img src="{{ asset('storage/'.profil('qris')) }}" loading="lazy" alt="QRIS Donasi" class="w-full h-full object-contain group-hover:scale-105 pb-3">
                                 <a href="{{ asset('storage/'.profil('qris')) }}" download="QRIS_{{ profil('nama') }}.png"
@@ -846,13 +806,19 @@
                                 — {{ $randomInfaq['sumber'] }}
                             </p>
                         </div>
-
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mt-8 text-center">
+                            <p class="text-emerald-800 italic">
+                                “Ya Allah, terimalah sedekah dari para dermawan kami,
+                                lapangkan rezekinya, sehatkan badannya,
+                                dan jadikan sebagai pemberat amal kebaikan di akhirat.”
+                            </p>
+                        </div>
                         <!-- CTA Besar -->
                         <div class="text-center mt-10">
-                            <a href="https://wa.me/6281234567890?text=Assalamu'alaikum%20saya%20ingin%20donasi..."
+                            <a href="https://wa.me/628121073583?text=Assalamu'alaikum%20Bapak%20Ari%20saya%20ingin%20donasi..."
                                target="_blank"
                                class="inline-flex items-center px-8 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-full shadow-2xl text-lg sm:text-xl">
-                                💚 Donasi via WhatsApp
+                                💚 Konfirmasi Sedekah
                             </a>
                             <p class="text-sm text-slate-600 mt-4">
                                 Konfirmasi donasi melalui WA untuk mendapatkan laporan penyaluran. Jazakumullah khairan.
@@ -1684,14 +1650,23 @@
         btnDeny?.addEventListener('click', closeNotifModal);
 
         document.addEventListener('DOMContentLoaded', function () {
-            const quotes = @json($quotes); // ambil array quotes dari PHP
             const container = document.getElementById('quote-container');
-            if (!container || quotes.length === 0) return;
+            if (!container) return;
+
+            // Ambil semua quote aktif dari Blade (sudah di-pass dari controller)
+            const quotes = @json($quoteHarianList->map(function($q) {
+                return ['title' => $q->title, 'text' => $q->text];
+            })->toArray());
+
+            if (quotes.length <= 1) return; // tidak perlu rotate kalau cuma 1 atau kosong
+
+            // Acak urutan quote setiap load halaman
+            quotes.sort(() => Math.random() - 0.5);
 
             let currentIndex = 0;
-            let timer = null; // ← deklarasikan di sini (penting!)
+            let timer = null;
 
-            // Fungsi untuk membuat elemen quote baru
+            // Buat elemen quote baru
             function createQuoteElement(quote) {
                 const div = document.createElement('div');
                 div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out flex flex-col';
@@ -1706,7 +1681,7 @@
                 return div;
             }
 
-            // Fungsi untuk ganti quote dengan animasi
+            // Ganti quote dengan animasi
             function rotateQuote() {
                 const oldQuote = container.querySelector('.quote-item.opacity-100');
                 if (oldQuote) {
@@ -1728,16 +1703,10 @@
             // Mulai rotasi
             function startRotation() {
                 if (timer) clearInterval(timer);
-                timer = setInterval(rotateQuote, 6000);
+                timer = setInterval(rotateQuote, 7000); // ganti setiap 7 detik
             }
 
-            // Optional: rotasi pertama setelah delay
-            setTimeout(rotateQuote, 4000);
-
-            // Mulai otomatis saat load
-            startRotation();
-
-            // Pause & resume on hover
+            // Pause saat hover
             container.addEventListener('mouseenter', () => {
                 if (timer) {
                     clearInterval(timer);
@@ -1746,18 +1715,22 @@
             });
 
             container.addEventListener('mouseleave', () => {
-                if (!timer) {
-                    startRotation();
-                }
+                if (!timer) startRotation();
             });
+
+            // Mulai setelah baca quote pertama (delay 5 detik)
+            setTimeout(() => {
+                rotateQuote();
+                startRotation();
+            }, 5000);
         });
 
         document.addEventListener('DOMContentLoaded', function () {
-            const infaqCarousel = document.getElementById('infaqCarousel');
-            if (!infaqCarousel) return;
+            const carousel = document.getElementById('motivasiCarousel');
+            if (!carousel) return;
 
-            const track = infaqCarousel.querySelector('.infaq-track');
-            const dots = infaqCarousel.querySelectorAll('.infaq-dot');
+            const track = carousel.querySelector('.motivasi-track');
+            const dots = carousel.querySelectorAll('.motivasi-dot');
             let current = 0;
             const total = dots.length;
             let timer = null;
@@ -1777,6 +1750,11 @@
                 track.style.transform = `translateX(-${index * 100}%)`;
                 setDot(index);
                 current = index;
+
+                // Tambah class active ke slide yang sedang dilihat (untuk overlay)
+                document.querySelectorAll('.motivasi-track > div').forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
             }
 
             function startAuto() {
@@ -1798,10 +1776,8 @@
                 });
             });
 
-            infaqCarousel.addEventListener('mouseenter', stopAuto);
-            infaqCarousel.addEventListener('mouseleave', startAuto);
-            infaqCarousel.addEventListener('touchstart', stopAuto);
-            infaqCarousel.addEventListener('touchend', startAuto);
+            carousel.addEventListener('mouseenter', stopAuto);
+            carousel.addEventListener('mouseleave', startAuto);
 
             // Mulai
             go(0);
@@ -1935,9 +1911,32 @@
             }
         });
 
-        window.addEventListener('load',function(){
-            const loader=document.getElementById('page-loader');
-            if(loader){ loader.classList.add('opacity-0','pointer-events-none'); setTimeout(()=>loader.remove(),600);}
+        window.addEventListener('load', function () {
+            const loader = document.getElementById('page-loader');
+
+            // simpan hash tujuan
+            const hash = window.location.hash;
+
+            if (loader) {
+                loader.classList.add('opacity-0','pointer-events-none');
+
+                setTimeout(() => {
+                    loader.remove();
+
+                    // 🔥 setelah loader hilang → baru scroll
+                    if(hash){
+                        const target = document.querySelector(hash);
+                        if(target){
+                            setTimeout(()=>{
+                                target.scrollIntoView({
+                                    behavior:'smooth',
+                                    block:'start'
+                                });
+                            },150);
+                        }
+                    }
+                }, 600);
+            }
         });
 
         document.addEventListener('DOMContentLoaded',function(){

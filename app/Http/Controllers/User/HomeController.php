@@ -9,6 +9,9 @@ use App\Interfaces\BeritaServiceInterface;
 use App\Interfaces\PengumumanServiceInterface;
 use App\Interfaces\GaleriServiceInterface;
 use App\Services\JadwalSholatService;
+use App\Interfaces\SlideMotivasiRepositoryInterface;
+use App\Interfaces\QuoteHarianRepositoryInterface;
+use App\Interfaces\KhutbahJumatRepositoryInterface;
 use App\Models\ProfilMasjid;
 use App\Models\Acara;
 use App\Models\Berita;
@@ -25,6 +28,9 @@ class HomeController extends Controller
     protected $pengumumanService;
     protected $galeriService;
     protected $jadwalSholatService;
+    protected $slideMotivasiRepo;
+    protected $quoteHarianRepo;
+    protected $khutbahJumatRepo;
 
     public function __construct(
         AcaraServiceInterface $acaraService,
@@ -32,7 +38,10 @@ class HomeController extends Controller
         BeritaServiceInterface $beritaService,
         PengumumanServiceInterface $pengumumanService,
         GaleriServiceInterface $galeriService,
-        JadwalSholatService $jadwalSholatService
+        JadwalSholatService $jadwalSholatService,
+        SlideMotivasiRepositoryInterface $slideMotivasiRepo,
+        QuoteHarianRepositoryInterface $quoteHarianRepo,
+        KhutbahJumatRepositoryInterface $khutbahJumatRepo
     ) {
         $this->acaraService = $acaraService;
         $this->bannerService = $bannerService;
@@ -40,6 +49,9 @@ class HomeController extends Controller
         $this->pengumumanService = $pengumumanService;
         $this->galeriService = $galeriService;
         $this->jadwalSholatService = $jadwalSholatService;
+        $this->slideMotivasiRepo = $slideMotivasiRepo;
+        $this->quoteHarianRepo = $quoteHarianRepo;
+        $this->khutbahJumatRepo = $khutbahJumatRepo;
     }
 
     public function index()
@@ -63,6 +75,13 @@ class HomeController extends Controller
 
         $jadwalSholat = $this->jadwalSholatService->getJadwalHariIni();
 
+        $sliders = $this->slideMotivasiRepo->ordered();
+        $quoteHarianList = $this->quoteHarianRepo->all()
+            ->where('is_active', true)
+            ->inRandomOrder()
+            ->limit(20)  // optional, supaya tidak load 100 semua
+            ->get();
+        // $khutbahJumat = $this->khutbahJumatRepo->comingSoon();
         return view('masjid.'.masjid().'.guest.index', compact(
             'profil',
             'banner',
@@ -72,6 +91,8 @@ class HomeController extends Controller
             'layanans',
             'galeri',
             'jadwalSholat',
+            'sliders',
+            'quoteHarianList'
         ));
     }
 
@@ -105,5 +126,51 @@ class HomeController extends Controller
             'message' => 'Terima kasih — pesan Anda berhasil dikirim.',
             'id' => $pesan->id,
         ], 201);
+    }
+
+    public function galeriPublic()
+    {
+        $galeri = Galeri::where('is_published', 1)
+            ->whereHas('kategoris', function($q){
+                $q->where('nama', 'Ramadhan 1447H');
+            })
+            ->latest()
+            ->get()
+            ->map(function($g){
+
+                $media = $g->getFirstMedia('foto');
+
+                return [
+                    'id' => $g->id,
+                    'judul' => $g->judul,
+                    'img' => $media
+                        ? asset('storage/'.$media->custom_properties['folder'].'/'.$media->file_name)
+                        : null,
+                ];
+            })
+            ->filter(fn($g) => $g['img'] !== null)
+            ->values();
+
+        return response()->json([
+            'data' => $galeri
+        ]);
+    }
+
+    public function galeriDetail($id)
+    {
+        // ambil 1 album galeri
+        $galeri = Galeri::where('is_published', 1)->findOrFail($id);
+
+        // ambil HANYA foto milik album itu
+        $fotos = $galeri->getMedia('foto')->map(function ($media) {
+            return [
+                'url' => asset('storage/' . $media->custom_properties['folder'] . '/' . $media->file_name),
+                'caption' => $media->name ?? '',
+            ];
+        });
+
+        return response()->json([
+            'fotos' => $fotos
+        ]);
     }
 }
