@@ -3,7 +3,7 @@
     {{-- ================= DOA PENUTUP ================= --}}
     <div class="max-w-4xl mx-auto text-center px-6 pt-16 pb-12">
         <h3 class="text-2xl font-semibold text-emerald-200 mb-4">
-            Doakan Kami
+            Mohon Doa Jamaah
         </h3>
 
         <p class="text-emerald-100/90 leading-relaxed">
@@ -15,12 +15,16 @@
         <p class="mt-5 text-emerald-300 font-medium">
             Mohon doa dan dukungan jamaah agar masjid ini terus hidup dan bermanfaat.
         </p>
+
+        <p class="mt-6 text-sm text-emerald-200/90 italic">
+            Jika berkenan, mari ikut mengambil bagian dalam kebaikan Ramadhan di masjid kita.
+        </p>
     </div>
 
 
     {{-- ================= GRID FOOTER ================= --}}
     <div class="border-t border-emerald-800/40">
-        <div class="container mx-auto px-6 py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+        <div class="container mx-auto px-6 py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-2">
 
             {{-- MASJID --}}
             <div>
@@ -39,32 +43,6 @@
             </div>
 
 
-            {{-- NAVIGASI JAMAAH --}}
-            <div>
-                <h4 class="text-lg font-semibold text-white mb-4">Navigasi Jamaah</h4>
-                <ul class="space-y-2 text-sm">
-                    <li><a href="{{ route('home') }}" class="hover:text-white transition">Beranda</a></li>
-                    <li><a href="{{ route('home') }}#!jadwal" class="hover:text-white transition">Jadwal Sholat</a></li>
-                    <li><a href="{{ route('home') }}#!acara" class="hover:text-white transition">Agenda Kajian</a></li>
-                    <li><a href="{{ route('home') }}#!berita" class="hover:text-white transition">Berita Masjid</a></li>
-                    <li><a href="{{ route('home') }}#!donasi" class="hover:text-white transition">Infaq & Sedekah</a></li>
-                    <li><a href="{{ route('home') }}#!kontak" class="hover:text-white transition">Kontak Jamaah</a></li>
-                </ul>
-            </div>
-
-
-            {{-- AMANAH JAMAAH --}}
-            <div>
-                <h4 class="text-lg font-semibold text-white mb-4">Amanah Jamaah</h4>
-                <ul class="space-y-2 text-sm">
-                    <li><a href="{{ route('guest.laporan-harian') }}" class="hover:text-white transition">Laporan Ramadhan</a></li>
-                    <li><a href="{{ route('home') }}#!donasi" class="hover:text-white transition">Program Sosial</a></li>
-                    <li><a href="{{ route('home') }}#!donasi" class="hover:text-white transition">Penyaluran Donasi</a></li>
-                    <li><a href="{{ route('home') }}#!berita" class="hover:text-white transition">Pengumuman</a></li>
-                </ul>
-            </div>
-
-
             {{-- KONTAK JAMAAH --}}
             <div>
                 <h4 class="text-lg font-semibold text-white mb-4">Kontak Jamaah</h4>
@@ -73,12 +51,7 @@
 
                     <div class="flex items-center gap-3">
                         <span class="text-xl">📞</span>
-                        <span>{{ $profil->telepon ?? '-' }}</span>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        <span class="text-xl">✉️</span>
-                        <span>{{ $profil->email ?? '-' }}</span>
+                        <span>{!! profil('no_wa') ?? '0895704043814' !!}</span>
                     </div>
 
                     <div class="flex items-center gap-3">
@@ -88,27 +61,32 @@
 
                 </div>
 
-                {{-- Tombol WA --}}
+                {{-- Tombol WA Admin --}}
                 @php
-                    $wa = preg_replace('/[^0-9]/', '', $profil->telepon ?? '62895704043814');
+                    $wa = preg_replace('/[^0-9]/', '', profil('no_wa') ?? '62895704043814');
                 @endphp
 
                 <a href="https://wa.me/{{ $wa }}"
                    target="_blank"
                    class="inline-block mt-5 px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg transition">
-                    💬 Hubungi via WhatsApp
+                    💬 Hubungi Admin Masjid
                 </a>
+
+                <p class="mt-4 text-xs text-emerald-200/80 leading-relaxed">
+                    Untuk pertanyaan atau bantuan, silakan hubungi admin masjid melalui WhatsApp di atas.
+                    Konfirmasi donasi dilakukan melalui tombol konfirmasi pada bagian donasi.
+                </p>
             </div>
 
         </div>
     </div>
 
 
-    {{-- ================= COPYRIGHT / PENUTUP ================= --}}
+    {{-- ================= PENUTUP ================= --}}
     <div class="border-t border-emerald-800/40 text-center py-8 px-4">
 
         <p class="text-sm text-emerald-200">
-            Website ini dibuat untuk pelayanan jamaah dan kemakmuran masjid.
+            Amanah jamaah dicatat dan dilaporkan setiap malam oleh panitia.
         </p>
 
         <p class="text-sm text-emerald-300 mt-1">

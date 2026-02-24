@@ -11,7 +11,7 @@
         <!-- ===================================================== -->
         <!-- HERO + AJAKAN DONASI + QRIS + KONFIRMASI DONASI FINAL -->
         <!-- ===================================================== -->
-        <div class="text-center mb-12 sm:mb-16">
+        <div class="text-center mb-12 sm:mb-9">
 
             <!-- LOGO -->
             <div class="flex justify-center items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -51,19 +51,38 @@
 
                     <div class="absolute inset-0 bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/50 opacity-80"></div>
 
-                    <!-- NARASI -->
-                    <div class="text-center mb-8 relative z-10">
-                        <h2 class="text-2xl sm:text-3xl font-bold text-emerald-900">
-                            Semoga Ramadhan ini menjadi keberkahan untuk kita semua 🌙
+                    <!-- NARASI UPGRADE (FINAL) -->
+                    <div class="text-center mb-10 sm:mb-12 relative z-10">
+
+                        <!-- Icon Bulan Sabit (focal point) -->
+                        <div class="inline-flex items-center justify-center w-20 sm:w-24 h-20 sm:h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-100/80 to-teal-100/80 shadow-xl backdrop-blur-sm border border-emerald-200/50">
+                            <span class="text-5xl sm:text-6xl drop-shadow-md">🌙</span>
+                        </div>
+
+                        <!-- Judul -->
+                        <h2 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-emerald-900 tracking-tight leading-tight">
+                            Semoga Ramadhan Ini
+                            <span class="block mt-1 sm:mt-2 text-teal-700 relative inline-block">
+                                Menjadi Keberkahan untuk Kita Semua
+                                <span class="absolute -bottom-1 left-0 right-0 h-1 bg-gradient-to-r from-teal-400/40 to-emerald-400/40 rounded-full"></span>
+                            </span>
                         </h2>
 
-                        <p class="mt-4 text-gray-700 max-w-2xl mx-auto leading-relaxed text-base sm:text-lg">
-                            Setiap sore menjelang maghrib jamaah mulai berdatangan, berbuka bersama, lalu shalat berjamaah dan menghidupkan malam Ramadhan.
+                        <!-- Narasi utama -->
+                        <p class="mt-6 text-base sm:text-lg text-gray-700 max-w-xl mx-auto leading-relaxed">
+                            Setiap sore menjelang maghrib, masjid mulai hidup.
+                            Ada yang duduk menunggu adzan, ada yang membantu menyiapkan hidangan.
+                            Lalu berbuka bersama dan menutup hari dengan shalat berjamaah.
                         </p>
 
-                        <p class="mt-5 font-semibold text-emerald-800 text-lg">
-                            Tidak semua dari kita bisa selalu hadir di masjid. Namun semoga Allah tetap memberi kita bagian dari kebaikan yang ada di dalamnya.
+                        <!-- Kalimat emosional (inti) -->
+                        <p class="mt-6 text-base sm:text-lg text-emerald-800 italic max-w-lg mx-auto leading-relaxed">
+                            Tidak semua dari kita bisa selalu hadir.
+                            Namun semoga Allah tetap memberi kita bagian pahala
+                            dari setiap ayat yang dibaca, setiap doa yang dipanjatkan,
+                            dan setiap hidangan yang dinikmati oleh jamaah.
                         </p>
+
                     </div>
 
                     <!-- ================= QRIS ================= -->
@@ -134,7 +153,7 @@
                                         <!-- NO REK -->
                                         <div id="rek-ramadhan"
                                              data-copy="1010011737242"
-                                             class="font-mono text-2xl sm:text-3xl font-bold text-emerald-800 tracking-wide mb-2 select-all">
+                                             class="rek-number font-mono font-semibold text-emerald-800 mb-2 select-all break-all">
                                             10 100 11737 242
                                         </div>
 
@@ -193,7 +212,7 @@
                                     <!-- NO REK -->
                                     <div id="rek-masjid"
                                          data-copy="7025516952"
-                                         class="font-mono text-2xl sm:text-3xl font-bold text-teal-800 tracking-wide mb-2 select-all">
+                                         class="rek-number font-mono font-semibold text-teal-800 mb-2 select-all break-all">
                                         {{ trim(chunk_split(preg_replace('/\D/','', profil('rekening')), 4, ' ')) }}
                                     </div>
 
@@ -228,6 +247,172 @@
             </div>
         </div>
     </div>
+
+    <!-- ==================== KEHIDUPAN RAMADHAN DI MASJID ==================== -->
+    <section class="py-16 sm:py-20 bg-gradient-to-b from-emerald-50/80 via-white to-teal-50/50 relative overflow-hidden">
+        <!-- Background subtle -->
+        <div class="absolute inset-0 opacity-5 pointer-events-none">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(16,185,129,0.08)_0%,_transparent_50%)]"></div>
+        </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <!-- Header -->
+            <div class="text-center mb-12 sm:mb-16 relative">
+                <div class="inline-flex items-center justify-center w-16 h-16 mx-auto mb-6 rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 shadow-lg">
+                    <span class="text-3xl">🌙</span>
+                </div>
+                <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-emerald-900 tracking-tight">
+                    Kehidupan Ramadhan
+                    <span class="block text-teal-700 mt-2">di Masjid Raudhotul Jannah</span>
+                </h2>
+                <p class="mt-4 text-base sm:text-lg text-gray-700 max-w-3xl mx-auto leading-relaxed">
+                    Setiap Ramadhan, suasana masjid terasa lebih hidup.
+                    Langkah kaki jamaah datang lebih sering, Al-Qur’an terdengar lebih lama,
+                    dan banyak hati menemukan kembali ketenangan.
+                </p>
+            </div>
+
+            <!-- Grid utama – 2 kolom rata tinggi -->
+            <div class="grid md:grid-cols-2 gap-8 lg:gap-12 auto-rows-fr">
+                <!-- Card Ibadah -->
+                <div class="bg-white/90 backdrop-blur-sm rounded-3xl border border-emerald-100/60 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group flex flex-col">
+                    <div class="h-2 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                    <div class="p-6 sm:p-8 flex flex-col flex-grow">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-3xl shadow-inner group-hover:bg-emerald-100 transition-colors">
+                                🕌
+                            </div>
+                            <h3 class="text-2xl font-bold text-emerald-900">Ibadah Harian</h3>
+                        </div>
+                        <ul class="space-y-4 text-gray-700 flex-grow">
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-emerald-600 mt-1">→</span>
+                                <span>Shalat Tarawih berjamaah setiap malam</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-emerald-600 mt-1">→</span>
+                                <span>Tadarus Al-Qur'an</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-emerald-600 mt-1">→</span>
+                                <span>I'tikaf di sepuluh malam terakhir Ramadhan</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-emerald-600 mt-1">→</span>
+                                <span>Khatmil Qur'an</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card Pelayanan -->
+                <div class="bg-white/90 backdrop-blur-sm rounded-3xl border border-teal-100/60 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group flex flex-col">
+                    <div class="h-2 bg-gradient-to-r from-teal-500 to-cyan-500"></div>
+                    <div class="p-6 sm:p-8 flex flex-col flex-grow">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-3xl shadow-inner group-hover:bg-teal-100 transition-colors">
+                                🍽️
+                            </div>
+                            <h3 class="text-2xl font-bold text-teal-900">Pelayanan Jamaah</h3>
+                        </div>
+                        <ul class="space-y-4 text-gray-700 flex-grow">
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-teal-600 mt-1">→</span>
+                                <span>Hidangan berbuka puasa untuk jamaah</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-teal-600 mt-1">→</span>
+                                <span>Sahur untuk marbot dan petugas keamanan</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-teal-600 mt-1">→</span>
+                                <span>Masjid dijaga tetap bersih dan nyaman</span>
+                            </li>
+                            <!-- Tambah dummy kalau perlu biar rata, atau biarkan kosong -->
+                            <li class="flex items-start gap-3 opacity-0 pointer-events-none">
+                                <span class="text-xl mt-1">→</span>
+                                <span>&nbsp;</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card Sosial -->
+                <div class="bg-white/90 backdrop-blur-sm rounded-3xl border border-amber-100/60 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group flex flex-col">
+                    <div class="h-2 bg-gradient-to-r from-amber-500 to-orange-500"></div>
+                    <div class="p-6 sm:p-8 flex flex-col flex-grow">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-3xl shadow-inner group-hover:bg-amber-100 transition-colors">
+                                💝
+                            </div>
+                            <h3 class="text-2xl font-bold text-amber-900">Program Sosial</h3>
+                        </div>
+                        <ul class="space-y-4 text-gray-700 flex-grow">
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-amber-600 mt-1">→</span>
+                                <span>Santunan anak yatim yang dhuafa dan anak dhuafa</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-amber-600 mt-1">→</span>
+                                <span>Pembagian paket sembako</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-amber-600 mt-1">→</span>
+                                <span>Penyaluran zakat, infaq dan fidyah jamaah</span>
+                            </li>
+                            <!-- Dummy untuk rata -->
+                            <li class="flex items-start gap-3 opacity-0 pointer-events-none">
+                                <span class="text-xl mt-1">→</span>
+                                <span>&nbsp;</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card Syiar -->
+                <div class="bg-white/90 backdrop-blur-sm rounded-3xl border border-purple-100/60 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 overflow-hidden group flex flex-col">
+                    <div class="h-2 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
+                    <div class="p-6 sm:p-8 flex flex-col flex-grow">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-3xl shadow-inner group-hover:bg-purple-100 transition-colors">
+                                ✨
+                            </div>
+                            <h3 class="text-2xl font-bold text-purple-900">Syiar & Kebersamaan</h3>
+                        </div>
+                        <ul class="space-y-4 text-gray-700 flex-grow">
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-purple-600 mt-1">→</span>
+                                <span>Peringatan Nuzulul Qur'an</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-purple-600 mt-1">→</span>
+                                <span>Gebyar Ramadhan dan lomba anak sholeh-sholehah</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-xl text-purple-600 mt-1">→</span>
+                                <span>Shalat Idul Fitri berjamaah</span>
+                            </li>
+                            <!-- Dummy untuk rata -->
+                            <li class="flex items-start gap-3 opacity-0 pointer-events-none">
+                                <span class="text-xl mt-1">→</span>
+                                <span>&nbsp;</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Penutup emosional -->
+            <div class="text-center mt-16 max-w-3xl mx-auto">
+                <p class="text-lg sm:text-xl italic text-emerald-800 font-medium leading-relaxed">
+                    Masjid hidup dari doa yang dipanjatkan, dari langkah kaki yang datang, dan dari kebaikan yang dititipkan oleh jamaah.
+                </p>
+                <p class="mt-4 text-sm text-gray-600">
+                    Semoga kita semua mendapat bagian keberkahan Ramadhan ini.
+                </p>
+            </div>
+        </div>
+    </section>
 
     <div class="max-w-[1400px] 2xl:max-w-[1550px] mx-auto px-3 sm:px-6">
         <h2 class="text-2xl sm:text-3xl font-bold text-center text-emerald-900 mb-6">
@@ -357,24 +542,26 @@
         <div class="mt-16 max-w-5xl mx-auto">
             <h2 class="text-2xl sm:text-3xl font-bold text-center text-emerald-900 mb-6">🕌 Jadwal Imam Tarawih</h2>
             <div class="bg-white rounded-3xl shadow overflow-hidden">  <!-- Hilangkan overflow-x-auto di sini, pindah ke inner div -->
-                <div class="overflow-x-auto overflow-y-auto max-h-[400px]">  <!-- Gabung overflow-x dan y di satu div -->
-                    <table class="w-full text-sm text-gray-900 min-w-max table-fixed">  <!-- Satu table saja -->
-                        <thead class="bg-emerald-100 text-emerald-900">
-                            <tr>
-                                <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[10%] sticky top-0 z-10 bg-emerald-100">Malam</th>  <!-- Sticky per th -->
-                                <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[20%] sticky top-0 z-10 bg-emerald-100">Tanggal</th>
-                                <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[30%] sticky top-0 z-10 bg-emerald-100">Imam</th>
-                                <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[40%] sticky top-0 z-10 bg-emerald-100">Tema Tausiyah</th>
-                            </tr>
-                        </thead>
-                        <tbody id="jadwal-imam-body" class="text-gray-800">
-                            <tr><td colspan="4" class="text-center py-6">Memuat...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="p-2 sm:p-4">
+                     <div class="overflow-x-auto overflow-y-auto max-h-[400px]">
+                        <table class="w-full text-sm text-gray-900 min-w-max table-fixed">  <!-- Satu table saja -->
+                            <thead class="bg-emerald-100 text-emerald-900">
+                                <tr>
+                                    <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[10%] sticky top-0 z-10 bg-emerald-100">Malam</th>  <!-- Sticky per th -->
+                                    <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[20%] sticky top-0 z-10 bg-emerald-100">Tanggal</th>
+                                    <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[30%] sticky top-0 z-10 bg-emerald-100">Imam</th>
+                                    <th class="px-4 py-3 text-left sm:px-6 sm:py-4 w-[40%] sticky top-0 z-10 bg-emerald-100">Tema Tausiyah</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jadwal-imam-body" class="text-gray-800">
+                                <tr><td colspan="4" class="text-center py-6">Memuat...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <p class="text-center text-sm text-gray-500 mt-4 italic flex items-center justify-center gap-2">
-                <span>📜 Geser ke atas/bawah (atau samping di HP) untuk melihat jadwal lengkap</span> <span class="text-xl">⬆️⬇️ ⬅️➡️</span>
+            <p class="text-center text-xs sm:text-sm text-gray-500 mt-4 italic leading-relaxed">
+                Jadwal lengkap dapat dilihat dengan menggeser tabel
             </p>
         </div>
 
@@ -493,8 +680,8 @@
         </div>
         <!-- Footer -->
         <footer class="text-center mt-16 pb-8 text-gray-500 text-sm">
-            Data diambil dari laporan panitia masjid & diverifikasi setiap malam •
-            Semua dana masuk langsung ke rekening masjid • Hubungi panitia via WA resmi untuk detail bukti
+            Setiap amanah jamaah dicatat dan dilaporkan setiap malam oleh panitia.
+            Bila membutuhkan rincian atau konfirmasi, silakan hubungi nomor konfirmasi donasi yang tertera di atas.
         </footer>
     </div>
 </section>
@@ -522,12 +709,13 @@
         requestAnimationFrame(update);
     }
 </script>
+<!-- 
 <script id="nightmode">
     const hour = new Date().getHours();
     if(hour >= 18 || hour <= 4){
         document.body.classList.add('ramadhan-night');
     }
-</script>
+</script> -->
 <script>
     function copyRek(elementId) {
 
@@ -869,9 +1057,15 @@
 
         return `
             <div class="collapse collapse-arrow bg-white rounded-3xl shadow-md border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-2">
-                <input type="radio" name="laporan-accordion" />
-                <div class="collapse-title text-xl font-bold text-emerald-900 px-6 py-5 flex items-center gap-2">
-                    Malam ke-${malamKe} • ${tanggal}
+               <input type="checkbox" class="laporan-toggle" />
+                <div class="collapse-title text-base sm:text-lg font-semibold text-emerald-800 px-5 py-4 flex flex-col leading-snug">
+                    <span class="text-emerald-900">
+                        Laporan Malam ke-${malamKe}
+                    </span>
+
+                    <span class="text-sm sm:text-base text-gray-600 font-medium mt-1">
+                        ${tanggal}
+                    </span>
                 </div>
                 <div class="collapse-content px-6 pb-8 pt-4 text-gray-700">
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1738,5 +1932,45 @@
             rgba(16,185,129,.05)
         );
     }
+    /* ===== NOMOR REKENING RESPONSIVE FIX ===== */
+    .rek-number{
+        font-size: clamp(0.95rem, 4.2vw, 1.6rem);
+        letter-spacing: .06em;
+        line-height: 1.35;
+        word-break: break-word;
+    }
+
+    /* HP kecil banget */
+    @media (max-width:380px){
+        .rek-number{
+            font-size: 1.1rem;
+            letter-spacing: .04em;
+        }
+    }
+    /* Jadwal tarawih mobile breathing */
+    #jadwal-imam-body td{
+        padding-left: .75rem;
+        padding-right: .75rem;
+    }
+
+    @media (max-width:640px){
+        #jadwal-imam-body td{
+            padding-left: .6rem;
+            padding-right: .6rem;
+        }
+    }
+    #jadwal-imam-body tr:hover{
+        background: #f0fdf4;
+    }
+    /* Hierarchy fix laporan */
+    #laporan-list .collapse-content{
+        font-size: 0.92rem;
+    }
+
+    #laporan-list h4{
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
 </style>
 @endpush
