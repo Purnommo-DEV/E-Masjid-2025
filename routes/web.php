@@ -86,7 +86,7 @@ Route::get('galeri', [HomeController::class, 'galeriIndex'])->name('galeri.index
 
 Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('kontak.kirim');
 
-Route::get('/laporan-harian-ramadhan', function () {
+Route::get('/kabar-ramadhan', function () {
     $today = now();
     $ramadhanStart = \Carbon\Carbon::parse('2026-02-19');
     $ramadhanEnd   = \Carbon\Carbon::parse('2026-03-19');
