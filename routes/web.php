@@ -254,8 +254,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('keuangan/petty-cash', [PettyCashController::class, 'index'])->name('admin.keuangan.petty-cash');
         Route::post('keuangan/petty-cash', [PettyCashController::class, 'store'])->name('admin.keuangan.petty-cash.store');
         Route::get('keuangan/petty-cash/data', [PettyCashController::class, 'data'])->name('admin.keuangan.petty-cash.data');
-        Route::get('keuangan/petty-cash/saldo', [PettyCashController::class, 'saldo'])->name('admin.keuangan.petty-cash.saldo')
-    ->middleware('auth');
+        Route::get('keuangan/petty-cash/saldo', [PettyCashController::class, 'saldo'])->name('admin.keuangan.petty-cash.saldo')->middleware('auth');
 
 
         // Pengeluaran Umum
@@ -270,10 +269,14 @@ Route::middleware(['auth'])->group(function () {
 
         // Zakat
         Route::get('keuangan/zakat', [ZakatController::class, 'index'])->name('admin.keuangan.zakat.index');
-        Route::get('zakat/data', [ZakatController::class, 'data'])->name('admin.keuangan.zakat.data');
-        Route::post('zakat/penerimaan', [ZakatController::class, 'storePenerimaan'])->name('admin.keuangan.zakat.store.penerimaan');
+        Route::get('/data', [ZakatController::class, 'data'])->name('admin.keuangan.zakat.data');
+        Route::post('/store-penerimaan', [ZakatController::class, 'storePenerimaan'])->name('admin.keuangan.zakat.store.penerimaan');
         Route::post('zakat/penyaluran', [ZakatController::class, 'storePenyaluran'])->name('admin.keuangan.zakat.store.penyaluran');
-        Route::get('zakat/kwitansi/{id}', [ZakatController::class, 'kwitansi'])->name('admin.keuangan.zakat.kwitansi');
+        Route::get('/kwitansi/{id}', [ZakatController::class, 'kwitansi'])->name('admin.keuangan.zakat.kwitansi');
+        Route::get('/search-muzakki', [ZakatController::class, 'searchMuzakki'])->name('admin.keuangan.zakat.search-muzakki');
+        Route::get('/zakat/edit-data/{id}', [ZakatController::class, 'editData'])->name('admin.keuangan.zakat.edit-data');
+        Route::put('/zakat/update/{id}', [ZakatController::class, 'update'])->name('admin.keuangan.zakat.update');
+        Route::delete('/zakat/delete/{id}', [ZakatController::class, 'delete'])->name('admin.keuangan.zakat.delete');
 
         // Pendapatan
         Route::get('keuangan/penerimaan', [PenerimaanPemasukanController::class, 'index'])->name('admin.keuangan.penerimaan');

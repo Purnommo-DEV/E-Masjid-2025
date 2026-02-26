@@ -2,183 +2,113 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kwitansi Zakat - {{ $transaksi->nomor_kwitansi }}</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: white; font-size: 14px; line-height: 1.5; }
-        .kwitansi { max-width: 900px; margin: 0 auto; border: 4px double #000; padding: 35px; }
-        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 15px; margin-bottom: 25px; }
-        .logo { width: 90px; margin-bottom: 8px; }
-        .judul { font-size: 23px; font-weight: bold; margin: 4px 0; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        td { padding: 5px 0; vertical-align: top; }
-        .garis { border-bottom: 1px dotted #000; display: inline-block; min-width: 380px; }
-        .table-zakat { width: 100%; border: 2px solid #000; margin: 30px 0; }
-        .table-zakat th, .table-zakat td { border: 1px solid #000; padding: 12px; text-align: center; font-size: 13.5px; }
-        .table-zakat th { background: #f0f0f0; font-weight: bold; }
-        .total { text-align: right; font-size: 21px; font-weight: bold; margin: 25px 0; padding-right: 40px; }
-        .ttd { margin-top: 80px; display: flex; justify-content: space-between; }
-        .ttd-box { text-align: center; width: 48%; }
-        .line { border-top: 1px solid #000; width: 240px; margin: 30px auto 8px; }
-        .arabic { font-family: "Traditional Arabic", "Times New Roman", serif; font-size: 28px; text-align: center; margin: 30px 0; direction: rtl; }
-        @media print { body { padding: 10px; } .no-print { display: none; } }
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; color: #333; background: white; }
+        .container { max-width: 800px; margin: 40px auto; padding: 30px; border: 2px solid #10b981; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .header { position: relative; text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #10b981; }
+        .logo { position: absolute; top: 0; right: 0; width: 120px; height: 120px; object-fit: contain; }
+        .kop { font-size: 28px; font-weight: bold; color: #065f46; margin: 0; }
+        .subkop { font-size: 14px; color: #555; margin: 5px 0; }
+        .info { margin-bottom: 30px; }
+        .info table { width: 100%; border-collapse: collapse; }
+        .info td { padding: 10px 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+        .info td:first-child { width: 180px; font-weight: bold; color: #065f46; }
+        .detail { margin-bottom: 30px; }
+        .detail table { width: 100%; border-collapse: collapse; }
+        .detail th, .detail td { padding: 12px 10px; border: 1px solid #ddd; text-align: left; }
+        .detail th { background: #ecfdf5; color: #065f46; font-weight: bold; }
+        .total { font-size: 20px; font-weight: bold; text-align: right; margin: 20px 0; color: #065f46; padding: 10px 0; border-top: 2px dashed #10b981; }
+        .ttd { margin-top: 60px; display: flex; justify-content: flex-end; }
+        .ttd div { width: 220px; text-align: center; border-top: 1px solid #333; padding-top: 50px; margin-left: 40px; }
+        @media print {
+            body { margin: 0; }
+            .container { box-shadow: none; border: 1px solid #ddd; }
+            .no-print { display: none; }
+        }
     </style>
 </head>
-<body onload="window.print()">
-
-<div class="kwitansi">
-
-    <!-- HEADER -->
-    <div class="header">
-        <img src="{{ asset('assets/img/logo-masjid.png') }}" class="logo" alt="Logo">
-        <div class="judul">Panitia Amil Zakat, Infaq, Sodaqoh (ZIS)</div>
-        <div class="judul">MASJID : {{ strtoupper(config('app.name')) }}</div>
-        <div>Alamat : {{ auth()->user()->masjid?->alamat ?? 'Jl. Raya Masjid No. 123, Kelurahan Sukamaju' }}</div>
-    </div>
-
-    <!-- NOMOR & TANGGAL -->
-    <table>
-        <tr>
-            <td width="60%"><strong>KWITANSI / TANDA TERIMA</strong></td>
-            <td><strong>Nomor : {{ $transaksi->nomor_kwitansi }}</strong></td>
-            <td><strong>Tanggal : {{ $transaksi->tanggal->format('d-m-Y') }}</strong></td>
-        </tr>
-    </table>
-
-    <!-- JENIS ZAKAT -->
-    <div style="margin:25px 0;">
-        Sudah terima 
-        ◯ Zakat Fitrah @if(in_array('zakat_fitrah', $transaksi->jenis_zakat)) ✓ @endif 
-        ◯ Zakat Maal @if(in_array('zakat_maal', $transaksi->jenis_zakat)) ✓ @endif 
-        ◯ Fidyah @if(in_array('fidyah', $transaksi->jenis_zakat)) ✓ @endif 
-        ◯ Infaq @if(in_array('infaq', $transaksi->jenis_zakat)) ✓ @endif 
-        ◯ Sodaqoh @if(in_array('shodaqoh', $transaksi->jenis_zakat)) ✓ @endif 
-        dari :
-    </div>
-
-    <!-- MUZAKKI UTAMA & ALAMAT -->
-    <table>
-        <tr>
-            <td width="15%">Nama Muzakki</td>
-            <td width="85%">: {{ $transaksi->muzakki_utama }}</td>
-        </tr>
-        <tr>
-            <td>Alamat</td>
-            <td>: <span class="garis">{{ $transaksi->keterangan ?: '....................................................................................' }}</span></td>
-        </tr>
-    </table>
-
-    <!-- RINCIAN ZAKAT FITRAH -->
-    @if(in_array('zakat_fitrah', $transaksi->jenis_zakat))
-    <div style="margin:25px 0;">
-        Dengan rincian sebagai berikut :<br>
-        1. Zakat Fitrah untuk : <strong>{{ $transaksi->total_jiwa }} Jiwa</strong>, berupa :<br>
-          A. Beras : <strong>{{ $transaksi->satuan_beras ?? '____' }}</strong><br>
-          B. Uang : Rp <strong>{{ number_format($transaksi->jumlah, 0, ',', '.') }}</strong>
-    </div>
-
-    <!-- TABEL NAMA KELUARGA — PERSIS GAMBAR! -->
-    <table class="table-zakat">
-        <thead>
-            <tr>
-                <th width="10%">No.</th>
-                <th width="55%">Nama</th>
-                <th width="35%">Uang (Rp) / Beras (L/Kg)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php
-                // Pastikan selalu dapat array
-                $keluarga = is_array($transaksi->daftar_keluarga)
-                    ? $transaksi->daftar_keluarga
-                    : (json_decode($transaksi->daftar_keluarga ?? '[]', true) ?: []);
-
-                $jumlahKeluarga = count($keluarga);
-                $isZakatFitrah = in_array('zakat_fitrah', $transaksi->jenis_zakat ?? []);
-            @endphp
-
-            @foreach($keluarga as $i => $item)
-                <tr>
-                    <td>{{ $i + 1 }}</td>
-                    <td style="text-align:left; padding-left:20px;">
-                        {{ $item['nama'] ?? '' }}
-                    </td>
-                    <td>
-                        @if($isZakatFitrah)
-                            {{ $item['jiwa'] ?? 0 }} Jiwa
-                        @else
-                            @php
-                                $perOrang = $jumlahKeluarga > 0
-                                    ? $transaksi->jumlah / $jumlahKeluarga
-                                    : 0;
-                            @endphp
-                            Rp {{ number_format($perOrang, 0, ',', '.') }}
-                        @endif
-                    </td>
-                </tr>
-            @endforeach
-
-            @for($i = $jumlahKeluarga; $i < 5; $i++)
-                <tr>
-                    <td>{{ $i + 1 }}</td>
-                    <td height="45"></td>
-                    <td></td>
-                </tr>
-            @endfor
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="2" style="text-align:center; font-weight:bold; font-size:15px;">TOTAL</td>
-                <td style="font-weight:bold; font-size:15px;">
-                    Rp {{ number_format($transaksi->jumlah, 0, ',', '.') }}
-                </td>
-            </tr>
-        </tfoot>
-    </table>
-    @else
-        <!-- Zakat Maal / Fidyah / Infaq → tidak tampilkan tabel jiwa -->
-        <p>Telah menerima {{ implode(', ', array_map(fn($j)=>ucwords(str_replace('_',' ',$j)), $transaksi->jenis_zakat)) }}
-        sebesar Rp {{ number_format($transaksi->jumlah,0,',','.') }}</p>
-    @endif
-
-
-    <div style="font-size:12px; margin:10px 0;">
-        * Keterangan : Nilai konversi beras ke Rupiah (sesuai dengan harga beras yang di konsumsi)
-    </div>
-
-    <!-- ZAKAT MAAL / DLL -->
-    <div style="margin:35px 0; text-align:center; font-weight:bold; font-size:19px;">
-        2. Zakat Maal/Fidyah/Infaq/Sodaqoh sebesar : Rp {{ number_format($transaksi->jumlah, 0, ',', '.') }}<br>
-        ({{ ucwords(terbilang($transaksi->jumlah)) }} Rupiah)
-    </div>
-
-    <!-- DOA ARAB -->
-    <div class="arabic">
-        اجْرِكَ اللّٰهُ فِيْمَا اَعْطَيْتَ وَبَارَكَ لَكَ فِيْمَا اَبْقَيْتَ وَجَعَلَهُ لَكَ طَهُوْرًا
-    </div>
-    <div style="text-align:center; margin:15px 0;">
-        <em>Aajarakallahu fiimaa a’thoita, wa baaraka laka fiimaa abqoita, waja’alahu laka thohuuron</em>
-    </div>
-
-    <!-- TANDA TANGAN -->
-    <div class="ttd">
-        <div class="ttd-box">
-            <p>Amil ZIS</p>
-            <div class="line"></div>
-            <p><strong>(_________________________)</strong></p>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{{ asset('images/logo-masjid.png') }}" alt="Logo Masjid Raudhotul Jannah" class="logo">
+            <h1 class="kop">MASJID RAUDHOTUL JANNAH</h1>
+            <p class="subkop">Jl. Raya Contoh No. 123, Kelurahan Sukamaju, Kecamatan Cikarang, Kabupaten Bekasi</p>
+            <p class="subkop">Telp: (021) 1234 5678 | Email: info@raudhotuljannah.or.id</p>
         </div>
-        <div class="ttd-box">
-            <p>Muzakki</p>
-            <div class="line"></div>
-            <p><strong>({{ $transaksi->muzakki_utama }})</strong></p>
+
+        <div class="info">
+            <table>
+                <tr>
+                    <td>No. Kwitansi</td>
+                    <td>: {{ $transaksi->nomor_kwitansi }}</td>
+                </tr>
+                <tr>
+                    <td>Tanggal</td>
+                    <td>: {{ $transaksi->tanggal->format('d F Y') }}</td>
+                </tr>
+                <tr>
+                    <td>Diterima dari</td>
+                    <td>: {{ $transaksi->muzakki->nama }}</td>
+                </tr>
+                <tr>
+                    <td>Alamat</td>
+                    <td>: {{ $transaksi->muzakki->alamat ?? '-' }}</td>
+                </tr>
+                <tr>
+                    <td>Metode Bayar</td>
+                    <td>: {{ ucfirst($transaksi->metode_bayar) }}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="detail">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Jenis Zakat / Dana</th>
+                        <th>Nominal (Rp)</th>
+                        <th>Jiwa / Hari</th>
+                        <th>Beras</th>
+                        <th>Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($transaksi->details as $detail)
+                    <tr>
+                        <td>{{ ucwords(str_replace('_', ' ', $detail->jenis)) }}</td>
+                        <td style="text-align:right">{{ number_format($detail->nominal, 0, ',', '.') }}</td>
+                        <td style="text-align:center">{{ $detail->jiwa ?? '-' }}</td>
+                        <td style="text-align:center">{{ $detail->jumlah_beras ? $detail->jumlah_beras . ' ' . $detail->satuan_beras : '-' }}</td>
+                        <td>{{ $detail->keterangan_detail ?? '-' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="total">
+            TOTAL NOMINAL: Rp {{ number_format($transaksi->total_nominal, 0, ',', '.') }}
+        </div>
+
+        <div class="ttd">
+            <div>
+                Bendahara<br><br><br>
+                (..................................)
+            </div>
+            <div>
+                Ketua<br><br><br>
+                (..................................)
+            </div>
         </div>
     </div>
 
-    <!-- TOMBOL PRINT (hanya muncul di layar) -->
-    <div class="no-print text-center mt-5">
-        <button onclick="window.print()" class="btn btn-success btn-lg">Cetak Kwitansi</button>
-        <a href="{{ route('admin.keuangan.zakat.index') }}" class="btn btn-secondary btn-lg">Kembali</a>
+    <!-- Tombol cetak (hilang saat print) -->
+    <div class="text-center mt-6 no-print">
+        <button onclick="window.print()" class="btn btn-success gap-2">
+            <i class="fas fa-print"></i> Cetak Kwitansi
+        </button>
     </div>
-
-</div>
 </body>
 </html>
