@@ -7,13 +7,13 @@
     {{-- TITLE --}}
     <title>
         @hasSection('title')
-            @yield('title') — E-Masjid
+            @yield('title') | Masjid Raudhotul Jannah
         @else
-            E-Masjid — Sistem Informasi Masjid
+            Masjid Raudhotul Jannah Taman Cipulir Estate
         @endif
     </title>
 
-    {{-- SEO --}}
+    {{-- SEO DESCRIPTION (WAJIB SATU SAJA) --}}
     <meta name="description"
           content="@yield('meta_description', 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kegiatan, kajian, dan layanan jamaah.')">
 
@@ -25,15 +25,43 @@
     <meta name="theme-color" content="#059669">
     <link rel="apple-touch-icon" href="{{ asset('/pwa/icon-128.png') }}">
 
-    {{-- OPEN GRAPH --}}
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="@yield('title', 'Masjid Raudhotul Jannah')">
-    <meta property="og:description"
-          content="@yield('meta_description', 'Kegiatan dan informasi Masjid Raudhotul Jannah Taman Cipulir Estate.')">
-    <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:image" content="{{ asset('images/masjid-cover.jpg') }}">
-    <meta property="og:locale" content="id_ID">
+    {{-- UPDATE TIME (anti cache WA) --}}
+    <meta property="og:updated_time" content="{{ now()->timestamp }}">
 
+    {{-- ================= OPEN GRAPH ================= --}}
+    <meta property="og:type" content="@yield('og_type','website')">
+
+    <meta property="og:title"
+          content="@yield('og_title', trim($__env->yieldContent('title')) ?: 'Masjid Raudhotul Jannah')">
+
+    <meta property="og:description"
+          content="@yield('meta_description', 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate.')">
+
+    <meta property="og:url"
+          content="@yield('og_url', url()->current())">
+
+    <meta property="og:image"
+          content="@yield('og_image', secure_asset('images/default-share.jpg'))">
+
+    <meta property="og:image:secure_url"
+          content="@yield('og_image', secure_asset('images/default-share.jpg'))">
+
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:alt"
+          content="@yield('og_image_alt','Masjid Raudhotul Jannah Taman Cipulir Estate')">
+
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+
+    {{-- ================= TWITTER CARD (WA juga pakai ini) ================= --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="@yield('og_title', trim($__env->yieldContent('title')))">
+    <meta name="twitter:description" content="@yield('meta_description')">
+    <meta name="twitter:image"
+          content="@yield('og_image', secure_asset('images/default-share.jpg'))">
+      
     {{-- FAVICON --}}
     <link rel="icon" type="image/png" href="{{ asset('/pwa/mrj-logo.png') }}">
 
@@ -81,7 +109,7 @@
         <div class="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4 sm:bottom-8 sm:right-8">
 
             <!-- Tombol Chat WA (paling bawah) -->
-            @php $wa = preg_replace('/[^0-9]/', '', $profil->telepon ?? '6281234567890'); @endphp
+            @php $wa = preg_replace('/[^0-9]/', '', profil('no_wa') ?? '62895704043814'); @endphp
             <a href="https://wa.me/{{ $wa }}" target="_blank" 
                class="btn btn-circle btn-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/40 border-none transition-all duration-300 hover:scale-110 active:scale-95">
                 <span class="text-2xl">💬</span>
@@ -155,7 +183,7 @@
     <!-- SCROLL HASH (#!jadwal dll) -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        
+
         document.addEventListener("DOMContentLoaded", function () {
             function scrollToHash(){
                 const hash = window.location.hash;

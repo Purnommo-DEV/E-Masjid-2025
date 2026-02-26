@@ -1,6 +1,27 @@
 @extends('masjid.master-guest')
 
-@section('title', $acara->judul ?? 'Detail Acara')
+@php
+use Illuminate\Support\Str;
+
+$raw = $acara->deskripsi ?? $acara->judul;
+$desc = Str::limit(trim(strip_tags($raw)), 160);
+
+$img = $acara->poster_url ?? asset('images/default-share.jpg');
+
+if (!Str::startsWith($img, ['http://','https://'])) {
+    $img = asset($img);
+}
+@endphp
+
+@section('title', $acara->judul)
+
+@section('og_type','article')
+
+@section('og_title', $acara->judul)
+
+@section('meta_description', $desc)
+
+@section('og_image', $img)
 
 @section('content')
     <!-- Subtle Islamic pattern background -->

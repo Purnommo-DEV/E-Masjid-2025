@@ -1,5 +1,13 @@
 @extends('masjid.master-guest')
+
 @section('title', 'Beranda')
+
+@section('og_title', 'Masjid Raudhotul Jannah Taman Cipulir Estate')
+
+@section('meta_description',
+'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kajian, agenda kegiatan, berita jamaah, serta program Ramadhan dan pelayanan umat.')
+
+@section('og_image', asset('images/default-share.jpg'))
 
 @section('content')
     {{-- LOADER FULLSCREEN --}}
@@ -54,7 +62,7 @@
 
                         <div class="flex flex-wrap justify-center lg:justify-start gap-4 mt-8">
                             <a href="#donasi" class="btn btn-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:brightness-110 text-white shadow-xl shadow-teal-500/30 px-10 py-4 text-base font-bold rounded-full transition-all">
-                                🤲 Titip Amal Jariyah
+                                🤲 Tunaikan Infak
                             </a>
                             <a href="#acara" class="btn btn-lg btn-outline border-2 border-emerald-500 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-600">
                                 Lihat Agenda

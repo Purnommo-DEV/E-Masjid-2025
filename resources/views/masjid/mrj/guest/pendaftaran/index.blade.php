@@ -2,6 +2,17 @@
 
 @section('title', 'Pendaftaran Santunan Anak Yatim & Dhuafa Ramadhan 1447 H / 2026')
 
+@section('og_title', 'Pendaftaran Santunan Ramadhan 1447H – Masjid Raudhotul Jannah')
+
+@section('meta_description',
+'Masjid Raudhotul Jannah membuka pendaftaran santunan Ramadhan untuk anak yatim dan dhuafa di lingkungan Taman Cipulir Estate. Silakan daftar atau bantu sebarkan informasi ini.')
+
+@section('og_image', asset('images/default-ramadhan.jpg'))
+
+@section('og_type','article')
+
+@section('og_image_alt','Pendaftaran Santunan Ramadhan Masjid Raudhotul Jannah 1447H')
+
 @section('content')
 <section class="py-16 bg-gradient-to-br from-slate-50 to-white">
     <div class="container mx-auto px-4 lg:px-6">

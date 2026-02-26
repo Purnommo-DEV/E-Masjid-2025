@@ -2,7 +2,18 @@
 
 @section('title', 'Ramadhan Masjid Raudhotul Jannah TCE 1447H')
 
-@section('meta_description', 'Ikuti kegiatan Ramadhan Masjid Raudhotul Jannah Taman Cipulir Estate bersama Majelis Ta’lim Raudhotul Jannah. Lihat perkembangan donasi, jadwal imam tarawih, dan penyaluran amanah jamaah setiap hari.')
+@section('og_type','article')
+
+@section('og_title', 'Ramadhan 1447 H di Masjid Raudhotul Jannah')
+
+@section('meta_description',
+'Ikuti kegiatan Ramadhan Masjid Raudhotul Jannah Taman Cipulir Estate. Laporan infak harian, jadwal imam tarawih, santunan yatim & dhuafa serta kegiatan jamaah.')
+
+@section('og_url', route('guest.laporan-harian'))
+
+@section('og_image', asset('images/default-ramadhan.jpg'))
+
+@section('og_image_alt', 'Ramadhan 1447 H Masjid Raudhotul Jannah Taman Cipulir Estate')
 
 @section('content')
 <section class="min-h-screen bg-gray-50 py-12 px-2 sm:px-4 lg:px-6">
@@ -161,7 +172,7 @@
                                             a.n. <span class="font-semibold">Chaeriyah Alpi</span>
                                         </div>
                                         <p class="text-xs text-gray-500 mt-1">
-                                            (Rekening amanah panitia kegiatan Ramadhan)
+                                            (Rekening khusus kegiatan Ramadhan yang dikelola panitia)
                                         </p>
 
                                     </div>
@@ -177,7 +188,7 @@
                                     📋 Copy Rekening
                                 </button>
 
-                                <a href="https://wa.me/6281288975634?text=Assalamu%27alaikum%20Ibu%20Alfi,%20saya%20sudah%20transfer%20donasi%20Ramadhan.%20Berikut%20bukti%20transfernya."
+                                <a href="https://wa.me/6281288975634?text=Assalamu%27alaikum%20Ibu%20Alfi,%20saya%20sudah%20transfer%20infak%20Ramadhan.%20Berikut%20bukti%20transfernya."
                                    target="_blank"
                                    class="w-full text-center bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 font-semibold py-3 rounded-full transition duration-300 transform hover:-translate-y-1 flex items-center justify-center gap-2">
                                     💬 Konfirmasi
@@ -416,7 +427,7 @@
 
     <div class="max-w-[1400px] 2xl:max-w-[1550px] mx-auto px-3 sm:px-6">
         <h2 class="text-2xl sm:text-3xl font-bold text-center text-emerald-900 mb-6">
-            🌟 Progress Donasi Ramadhan
+            🌟 Perkembangan Infak Ramadhan
         </h2>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-16 sm:mb-20 bg-emerald-50/50 p-6 rounded-3xl"
@@ -480,7 +491,7 @@
                     </div>
                     <div id="need-santunan" class="progress-need text-amber-700 mt-2"></div>
                     <p class="program-desc mt-4">
-                        Santunan disalurkan kepada yatim dan dhuafa sekitar masjid.
+                        Santunan disalurkan kepada anak-anak yatim dan dhuafa di sekitar masjid.
                     </p>
                 </div>
             </div>
@@ -530,7 +541,7 @@
                     <p class="total-amount text-purple-800 mt-3 font-extrabold tracking-tight text-emerald-700" id="total-gebyar">Rp 0</p>
                     <div id="update-gebyar" class="card-meta text-purple-700 mt-3"></div>
                     <p class="program-desc mt-4">
-                        Kegiatan anak dan remaja untuk meramaikan masjid di bulan Ramadhan.
+                        Kegiatan Ramadhan untuk anak-anak dan remaja, disertai santunan serta pembagian hadiah.
                     </p>
                 </div>
             </div>
@@ -563,16 +574,6 @@
             <p class="text-center text-xs sm:text-sm text-gray-500 mt-4 italic leading-relaxed">
                 Jadwal lengkap dapat dilihat dengan menggeser tabel
             </p>
-        </div>
-
-        <!-- Donatur Hari Ini (Card Baru) -->
-        <div class="mt-16 max-w-5xl mx-auto bg-white rounded-3xl shadow-lg p-6 sm:p-8">
-            <h2 class="text-2xl sm:text-3xl font-bold text-center text-emerald-900 mb-6">🙏 Donatur Hari Ini</h2>
-            <p class="text-center text-gray-600 mb-6">Jazakumullahu khairan kepada para jamaah yang telah menitipkan amanahnya.</p>
-            <div id="donatur-list" class="space-y-4">
-                <!-- Placeholder -->
-                <div class="text-center text-gray-500">Memuat daftar donatur...</div>
-            </div>
         </div>
 
         <!-- ==================== GALERI MOMEN ==================== -->
@@ -661,7 +662,7 @@
             📌 Transparansi Kami
         </h2>
         <div class="text-center mb-10 text-gray-600 text-sm max-w-2xl mx-auto px-4">
-            Seluruh penerimaan dan penyaluran dicatat oleh panitia dan diperbarui setiap malam selama Ramadhan.
+            Setiap amanah jamaah dicatat dan dilaporkan setiap malam selama Ramadhan.
         </div>
         <!-- Laporan Detail -->
         <h2 class="text-2xl sm:text-3xl font-bold text-center text-emerald-900 mb-6 mt-16">
@@ -681,7 +682,7 @@
         <!-- Footer -->
         <footer class="text-center mt-16 pb-8 text-gray-500 text-sm">
             Setiap amanah jamaah dicatat dan dilaporkan setiap malam oleh panitia.
-            Bila membutuhkan rincian atau konfirmasi, silakan hubungi nomor konfirmasi donasi yang tertera di atas.
+            Bila membutuhkan rincian atau konfirmasi, silakan hubungi nomor konfirmasi infak yang tertera di atas.
         </footer>
     </div>
 </section>
@@ -834,14 +835,14 @@
         if(needSantunan){
             needSantunan.textContent =
                 sisaAnak > 0
-                ? `Masih membutuhkan ${sisaAnak} penerima lagi`
+                ? `Santunan untuk ${sisaAnak} anak masih dalam proses pemenuhan.`
                 : `Alhamdulillah target santunan telah terpenuhi`;
         }
 
         if(needSembako){
             needSembako.textContent =
                 sisaPaket > 0
-                ? `Masih ${sisaPaket} paket sembako diperlukan`
+                ? `Pemenuhan ${sisaPaket} paket sembako masih berlangsung.`
                 : `Alhamdulillah paket sembako sudah terpenuhi`;
         }
         const now = new Date();
@@ -1483,7 +1484,7 @@
         animation-delay: 0.3s;
     }
     .overflow-y-auto::-webkit-scrollbar {
-        +width: 8px;
+        width: 8px;
     }
     .overflow-y-auto::-webkit-scrollbar-thumb {
         background: #10b981;  /* Warna emerald */

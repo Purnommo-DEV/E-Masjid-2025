@@ -1,6 +1,27 @@
 @extends('masjid.master-guest')
 
-@section('title', $berita->judul ?? 'Detail Berita')
+@php
+use Illuminate\Support\Str;
+
+$raw = $berita->isi ?? $berita->excerpt ?? '';
+$desc = Str::limit(trim(strip_tags($raw)), 160);
+
+$img = $berita->gambar_url ?? asset('images/default-share.jpg');
+
+if (!Str::startsWith($img, ['http://','https://'])) {
+    $img = asset($img);
+}
+@endphp
+
+@section('title', $berita->judul)
+
+@section('og_type','article')
+
+@section('og_title', $berita->judul)
+
+@section('meta_description', $desc)
+
+@section('og_image', $img)
 
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 py-10 lg:py-16">

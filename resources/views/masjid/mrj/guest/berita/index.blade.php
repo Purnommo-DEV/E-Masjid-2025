@@ -1,6 +1,13 @@
 @extends('masjid.master-guest')
 
-@section('title', 'Berita')
+@section('title', 'Berita Masjid')
+
+@section('og_title', 'Berita Masjid Raudhotul Jannah')
+
+@section('meta_description',
+'Kumpulan berita kegiatan, kajian, pengumuman dan informasi terbaru Masjid Raudhotul Jannah Taman Cipulir Estate.')
+
+@section('og_image', asset('images/default-share.jpg'))
 
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 py-10 lg:py-16">
