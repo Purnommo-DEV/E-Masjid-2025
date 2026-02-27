@@ -1,4 +1,4 @@
-<footer class="mt-20 bg-gradient-to-b from-emerald-900 via-emerald-950 to-slate-950 text-emerald-50">
+<footer class="mt-1 bg-gradient-to-b from-emerald-900 via-emerald-950 to-slate-950 text-emerald-50">
 
     {{-- ================= DOA PENUTUP ================= --}}
     <div class="max-w-4xl mx-auto text-center px-6 pt-16 pb-12">

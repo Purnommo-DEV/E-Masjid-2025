@@ -33,6 +33,8 @@ use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
 use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
 use App\Http\Controllers\User\ExcelYatimDhuafaController;
+use App\Http\Controllers\User\SaranController;
+use App\Http\Controllers\User\ProgramRamadhanGuestController;
 
 Route::get('/pwa-splash', function () {
     return view('pwa.splash');
@@ -71,6 +73,11 @@ Route::get('/manifest.json', function () {
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+Route::prefix('program-ramadhan')->name('program-ramadhan.')->group(function () {
+    Route::get('/', [ProgramRamadhanGuestController::class, 'index'])->name('index');
+    Route::get('/{slug}', [ProgramRamadhanGuestController::class, 'show'])->name('show');
+});
+
 Route::get('acara', [AcaraGuestController::class, 'index'])->name('acara.index');
 Route::get('acara-show/{slug}', [AcaraGuestController::class, 'show'])->name('acara.show');
 
@@ -86,7 +93,7 @@ Route::get('galeri', [HomeController::class, 'galeriIndex'])->name('galeri.index
 
 Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('kontak.kirim');
 
-Route::get('/kabar-ramadhan', function () {
+Route::get('/kegiatan-ramadhan', function () {
     $today = now();
     $ramadhanStart = \Carbon\Carbon::parse('2026-02-19');
     $ramadhanEnd   = \Carbon\Carbon::parse('2026-03-19');

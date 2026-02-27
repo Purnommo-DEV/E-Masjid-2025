@@ -93,6 +93,30 @@
         main{
             flex:1;
         }
+        .grecaptcha-badge,
+        .grecaptcha-badge > div,
+        .grecaptcha-badge iframe,
+        .rc-anchor,
+        .rc-anchor-light,
+        .rc-anchor-invisible,
+        .rc-anchor-invisible-hover,
+        .rc-anchor-normal-footer,
+        .rc-anchor-pt,
+        .rc-anchor-logo-large,
+        .rc-anchor-logo-img,
+        .rc-anchor-aria-status,
+        .rc-anchor-error-msg-container {
+            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+        }
     </style>
 </head>
 

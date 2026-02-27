@@ -5,6 +5,8 @@ namespace App\Services\mrj;
 use App\Interfaces\BeritaServiceInterface;
 use App\Models\Berita;
 use Illuminate\Support\Str;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 
 class BeritaService implements BeritaServiceInterface
 {
@@ -107,5 +109,46 @@ class BeritaService implements BeritaServiceInterface
                 'url'      => route('berita.show', $b->slug),
             ];
         })->toArray();
+    }
+
+    /**
+     * Ambil daftar program Ramadhan (berita dengan kategori tertentu) - untuk halaman index
+     */
+    public function paginateProgramRamadhan(int $perPage = 9): LengthAwarePaginator
+    {
+        return Berita::where('is_published', true)
+            ->whereHas('kategoris', function ($query) {
+                $query->where('slug', 'program-ramadhan-1447h'); // GANTI SESUAI SLUG KATEGORI KAMU
+            })
+            ->latest('published_at') // atau latest() kalau pakai created_at
+            ->paginate($perPage);
+    }
+
+    /**
+     * Cari satu program berdasarkan slug (untuk halaman detail)
+     */
+    public function findProgramBySlug(string $slug): Berita
+    {
+        return Berita::where('slug', $slug)
+            ->where('is_published', true)
+            ->whereHas('kategoris', function ($query) {
+                $query->where('slug', 'program-ramadhan-1447h'); // GANTI SESUAI SLUG KATEGORI
+            })
+            ->firstOrFail();
+    }
+
+    /**
+     * Ambil program terkait dalam kategori Ramadhan (untuk related di halaman detail)
+     */
+    public function relatedPrograms(int $excludeId, int $limit = 3): Collection
+    {
+        return Berita::where('is_published', true)
+            ->where('id', '!=', $excludeId)
+            ->whereHas('kategoris', function ($query) {
+                $query->where('slug', 'program-ramadhan-1447h'); // GANTI SESUAI SLUG KATEGORI
+            })
+            ->latest('published_at')
+            ->take($limit)
+            ->get();
     }
 }

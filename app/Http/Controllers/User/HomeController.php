@@ -18,7 +18,11 @@ use App\Models\Berita;
 use App\Models\Pengumuman;
 use App\Models\Layanan;
 use App\Models\Galeri;
+use App\Models\PesanJamaah;
 use Carbon\Carbon;
+use Illuminate\Http\Request; // PASTIKAN INI ADA DAN BENAR
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Http;
 
 class HomeController extends Controller
 {
@@ -109,22 +113,53 @@ class HomeController extends Controller
 
     public function kirimPesan(Request $request)
     {
-        $validated = $request->validate([
-            'nama'    => 'required|string|max:191',
-            'telepon' => 'nullable|string|max:32',
-            'pesan'   => 'required|string',
+        // Validasi input biasa
+        $validator = Validator::make($request->all(), [
+            'nama'     => 'required|string|max:191',
+            'telepon'  => 'nullable|string|max:32',
+            'pesan'    => 'required|string',
+            'g-recaptcha-response' => 'required', // token reCAPTCHA wajib
         ]);
 
-        // simpan
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ada kesalahan validasi.',
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        // Verifikasi reCAPTCHA v3
+        $recaptchaResponse = $request->input('g-recaptcha-response');
+        $secret = env('RECAPTCHA_SECRET_KEY');
+
+        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+            'secret'   => $secret,
+            'response' => $recaptchaResponse,
+            'remoteip' => $request->ip(),
+        ]);
+
+        $recaptchaData = $response->json();
+
+        // Skor minimal 0.5 (bisa diubah jadi 0.4 kalau mau lebih ketat)
+        if (!$recaptchaData['success'] || $recaptchaData['score'] < 0.5) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Verifikasi reCAPTCHA gagal. Kemungkinan terdeteksi sebagai spam.'
+            ], 422);
+        }
+
+        // Aman → simpan
         $pesan = PesanJamaah::create([
-            'nama'    => $validated['nama'],
-            'telepon' => $validated['telepon'] ?? null,
-            'pesan'   => $validated['pesan'],
+            'nama'     => $request->nama,
+            'telepon'  => $request->telepon ?? null,
+            'pesan'    => $request->pesan,
         ]);
 
         return response()->json([
+            'success' => true,
             'message' => 'Terima kasih — pesan Anda berhasil dikirim.',
-            'id' => $pesan->id,
+            'id'      => $pesan->id,
         ], 201);
     }
 
