@@ -6,10 +6,10 @@ use Illuminate\Support\Str;
 $raw = $berita->isi ?? $berita->excerpt ?? '';
 $desc = Str::limit(trim(strip_tags($raw)), 160);
 
-$img = $berita->gambar_url ?? asset('images/default-share.jpg');
+$img = $berita->gambar_url ?? secure_url('images/default-share.jpg');
 
 if (!Str::startsWith($img, ['http://','https://'])) {
-    $img = asset($img);
+    $img = secure_url($img);
 }
 @endphp
 

@@ -11,7 +11,7 @@
 
 @section('og_url', route('guest.laporan-harian'))
 
-@section('og_image', asset('images/default-ramadhan.jpg'))
+@section('og_image', secure_url('images/default-ramadhan.jpg'))
 
 @section('og_image_alt', 'Ramadhan 1447 H Masjid Raudhotul Jannah Taman Cipulir Estate')
 

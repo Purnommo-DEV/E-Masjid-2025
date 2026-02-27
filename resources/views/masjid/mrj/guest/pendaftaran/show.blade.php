@@ -7,7 +7,7 @@
 @section('meta_description',
 'Transparansi data penerima santunan Ramadhan Masjid Raudhotul Jannah Taman Cipulir Estate. Berisi daftar anak yatim & dhuafa yang menerima amanah jamaah.')
 
-@section('og_image', asset('images/default-ramadhan.jpg'))
+@section('og_image', secure_url('images/default-ramadhan.jpg'))
 
 @section('og_type','article')
 

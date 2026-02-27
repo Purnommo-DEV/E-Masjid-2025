@@ -7,7 +7,7 @@
 @section('meta_description',
 'Masjid Raudhotul Jannah membuka pendaftaran santunan Ramadhan untuk anak yatim dan dhuafa di lingkungan Taman Cipulir Estate. Silakan daftar atau bantu sebarkan informasi ini.')
 
-@section('og_image', asset('images/default-ramadhan.jpg'))
+@section('og_image', secure_url('images/default-ramadhan.jpg'))
 
 @section('og_type','article')
 
