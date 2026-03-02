@@ -447,141 +447,127 @@
         <section id="berita" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
             <div class="container mx-auto px-4 lg:px-6 grid lg:grid-cols-[1.5fr_minmax(0,1fr)] gap-10">
 
-                <!-- BERITA -->
-<!-- BERITA (kiri) – Versi Redesain Hidup -->
-<div class="relative z-10">
-    <div class="flex items-center justify-between mb-6">
-        <div>
-            <p class="text-xs uppercase tracking-widest font-medium text-emerald-700/80">Berita Terbaru</p>
-            <h2 class="text-2xl md:text-3xl font-bold text-slate-900 mt-1">Kabar Masjid & Umat</h2>
-        </div>
-        <a href="{{ route('berita.index') }}" 
-           class="text-sm font-medium text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors hover:underline">
-            Lihat Semua <span aria-hidden="true">→</span>
-        </a>
-    </div>
-
-    <div class="grid gap-6 md:gap-8">
-        @forelse($beritas as $b)
-            <a href="{{ $b['url'] }}" 
-               class="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-emerald-300/30 border border-slate-100 transition-all duration-400 ease-out transform hover:-translate-y-3 hover:border-emerald-400/50">
-                
-                <!-- Gambar dengan efek zoom + overlay gradient -->
-                <div class="relative h-48 md:h-64 overflow-hidden">
-                    <img src="{{ $b['gambar'] ?? asset('storage/404.jpg') }}" 
-                         loading="lazy" 
-                         alt="{{ $b['judul'] }}" 
-                         class="w-full h-full object-cover transition-transform duration-800 group-hover:scale-110">
-                    <!-- Overlay gradient bottom + subtle shine -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-70 transition-opacity duration-500"></div>
-                    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-700"></div>
-                </div>
-
-                <!-- Konten -->
-                <div class="p-5 md:p-7">
-                    <!-- Judul dengan efek color shift & underline hover -->
-                    <h3 class="text-lg md:text-xl font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors duration-300 mb-3 relative">
-                        {{ $b['judul'] }}
-                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 group-hover:w-full transition-all duration-400"></span>
-                    </h3>
-
-                    <!-- Ringkasan -->
-                    <p class="text-sm md:text-base text-slate-600 line-clamp-3 md:line-clamp-2 leading-relaxed mb-4">
-                        {{ $b['ringkas'] ?? Str::limit(strip_tags($b['isi'] ?? ''), 140) }}
-                    </p>
-
-                    <!-- Meta: waktu + badge kategori (opsional) -->
-                    <div class="flex items-center justify-between text-xs md:text-sm text-slate-500">
-                        <div class="flex items-center gap-2">
-                            <span class="font-medium">{{ $b['waktu'] ?? 'Baru saja' }}</span>
-                            @if(!empty($b['kategori']))
-                                <span class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium shadow-sm">
-                                    {{ $b['kategori'] }}
-                                </span>
-                            @endif
+                <!-- BERITA (kiri) – Full fix: spacing lega, gambar tidak mepet, zoom aman -->
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-8">
+                        <div>
+                            <p class="text-xs uppercase tracking-widest font-medium text-emerald-700/80">Berita Terbaru</p>
+                            <h2 class="text-2xl md:text-3xl font-bold text-slate-900 mt-1.5">Kabar Masjid & Umat</h2>
                         </div>
-                        <span class="text-emerald-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            Baca Selengkapnya →
-                        </span>
-                    </div>
-                </div>
-            </a>
-        @empty
-            <div class="bg-white/90 rounded-2xl p-10 text-center text-slate-500 border border-slate-100 shadow-md">
-                <p class="text-xl font-semibold text-slate-700 mb-3">Belum ada berita terbaru</p>
-                <p class="text-sm">Pantau terus untuk update kegiatan masjid terbaru!</p>
-            </div>
-        @endforelse
-    </div>
-</div>
-
-                {{-- =================================================
-                     PENGUMUMAN — Tampilan rapi + preview modal
-                     ================================================= --}}
-                <div>
-                    <div class="flex items-center justify-between mb-3 sm:mb-4">
-                        <h2 class="text-base sm:text-lg font-semibold text-slate-900">Pengumuman</h2>
-                        <a href="{{ route('pengumuman.index') }}" 
-                           class="text-xs sm:text-sm text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 hover:underline">
-                            Semua →
+                        <a href="{{ route('berita.index') }}"
+                           class="text-sm font-medium text-emerald-700 hover:text-emerald-800 flex items-center gap-1.5 transition-colors hover:underline">
+                            Lihat Semua <span aria-hidden="true">→</span>
                         </a>
                     </div>
 
-                    <div class="space-y-3 sm:space-y-4">
-                        @forelse($pengumuman as $p)
-                            @php
-                                $short = Str::limit(strip_tags($p['isi'] ?? ''), 100); // dikecilin lagi biar lebih aman di mobile
-                                $tanggal = $p['tanggal'] ?? ($p['created_at'] ?? now())->translatedFormat('d M Y');
-                            @endphp
+                    <div class="grid gap-6 md:gap-8">
+                        @forelse($beritas as $b)
+                            <a href="{{ $b['url'] }}"
+                               class="group flex gap-5 bg-white rounded-2xl border border-emerald-100/70 shadow-md hover:shadow-xl hover:shadow-emerald-200/30 hover:border-emerald-300/60 transition-all duration-300 overflow-hidden pl-4 md:pl-5">
 
-                            <article class="bg-white rounded-xl sm:rounded-2xl border border-amber-100/70 shadow-sm 
-                                           hover:shadow-md hover:border-amber-300 transition-all duration-200 
-                                           group w-full max-w-full overflow-hidden">
+                                <!-- Gambar kiri – punya ruang bernapas -->
+                                <div class="flex-shrink-0 w-32 h-32 md:w-36 md:h-36 overflow-hidden rounded-xl">
+                                    <img src="{{ $b['gambar'] ?? asset('storage/404.jpg') }}"
+                                         loading="lazy"
+                                         alt="{{ $b['judul'] }}"
+                                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                                </div>
 
-                                <div class="p-3 sm:p-4 flex items-start gap-3 sm:gap-4">
-                                    <!-- Ikon tetap kecil & fixed width -->
-                                    <div class="flex-shrink-0">
-                                        <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-amber-50 border border-amber-200/80 
-                                                    flex items-center justify-center text-amber-700 text-xl sm:text-2xl">
-                                            📢
+                                <!-- Konten teks -->
+                                <div class="flex-1 py-5 pr-5 flex flex-col">
+                                    <h3 class="text-base md:text-lg font-semibold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors mb-2.5 leading-tight">
+                                        {{ $b['judul'] }}
+                                    </h3>
+
+                                    <p class="text-sm text-slate-600 line-clamp-2 md:line-clamp-3 leading-relaxed mb-3 flex-1">
+                                        {{ $b['ringkas'] ?? Str::limit(strip_tags($b['isi'] ?? ''), 130) }}
+                                    </p>
+
+                                    <div class="flex items-center justify-between text-xs text-slate-500 mt-auto">
+                                        <div class="flex items-center gap-3">
+                                            <span class="font-medium">{{ $b['waktu'] ?? 'Baru saja' }}</span>
+                                            @if(!empty($b['kategori']))
+                                                <span class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium shadow-sm">
+                                                    {{ $b['kategori'] }}
+                                                </span>
+                                            @endif
                                         </div>
-                                    </div>
-
-                                    <!-- Konten utama -->
-                                    <div class="flex-1 min-w-0">
-                                        <h3 class="text-sm sm:text-base font-semibold text-slate-900 leading-tight 
-                                                   line-clamp-2 group-hover:text-amber-700 transition-colors mb-1.5">
-                                            {{ $p['judul'] }}
-                                        </h3>
-
-                                        <p class="text-xs sm:text-[13px] text-slate-600 line-clamp-3 sm:line-clamp-2 leading-relaxed">
-                                            {{ $short }}
-                                        </p>
-
-                                        <!-- Baris tanggal + tombol → dibuat lebih compact di mobile -->
-                                        <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-                                            <span class="whitespace-nowrap">{{ $tanggal }}</span>
-                                            <button type="button"
-                                                    class="text-amber-700 hover:text-amber-800 font-medium 
-                                                           px-2.5 py-1 rounded-md hover:bg-amber-50 transition-colors text-xs sm:text-sm"
-                                                    data-pengumuman-id="{{ $p['id'] ?? '' }}"
-                                                    data-pengumuman-judul="{{ e($p['judul'] ?? '') }}"
-                                                    data-pengumuman-isi="{{ e(strip_tags($p['isi'] ?? '')) }}"
-                                                    data-pengumuman-url="{{ e($p['url'] ?? '#') }}"
-                                                    onclick="openPengumumanPreview(this)">
-                                                Lihat →
-                                            </button>
-                                        </div>
+                                        <span class="text-emerald-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            Baca →
+                                        </span>
                                     </div>
                                 </div>
-                            </article>
+                            </a>
                         @empty
-                            <div class="bg-amber-50/40 rounded-xl p-5 sm:p-6 text-center text-slate-500 text-sm border border-amber-100/70">
-                                Belum ada pengumuman terbaru.
+                            <div class="bg-white/80 rounded-2xl p-10 text-center text-slate-500 border border-emerald-100/60 shadow-md">
+                                <p class="text-xl font-semibold text-slate-700 mb-3">Belum ada berita terbaru</p>
+                                <p class="text-sm">Pantau terus untuk update kegiatan masjid terbaru!</p>
                             </div>
                         @endforelse
                     </div>
                 </div>
+
+<!-- PENGUMUMAN – shadow default lebih tegas + hover hidup -->
+<div>
+    <div class="flex items-center justify-between mb-6 sm:mb-8">
+        <h2 class="text-lg sm:text-xl font-semibold text-slate-900">Pengumuman</h2>
+        <a href="{{ route('pengumuman.index') }}"
+           class="text-sm text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1.5 hover:underline transition">
+            Semua →
+        </a>
+    </div>
+
+    <div class="space-y-4 sm:space-y-5">
+        @forelse($pengumuman as $p)
+            @php
+                $short = Str::limit(strip_tags($p['isi'] ?? ''), 100);
+                $tanggal = $p['tanggal'] ?? ($p['created_at'] ?? now())->translatedFormat('d M Y');
+            @endphp
+            <article class="bg-white rounded-xl sm:rounded-2xl border border-amber-100/70
+                            shadow-md hover:shadow-xl hover:shadow-amber-100/50 hover:border-amber-300/70
+                            transition-all duration-300 group w-full overflow-hidden">
+                <div class="p-4 sm:p-5 flex items-start gap-4 sm:gap-5">
+                    <!-- Ikon -->
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-amber-50 border border-amber-200/80
+                                    flex items-center justify-center text-amber-700 text-2xl sm:text-3xl shadow-sm">
+                            📢
+                        </div>
+                    </div>
+
+                    <!-- Konten -->
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-base sm:text-lg font-semibold text-slate-900 leading-tight line-clamp-2
+                                   group-hover:text-amber-700 transition-colors mb-2">
+                            {{ $p['judul'] }}
+                        </h3>
+                        <p class="text-sm text-slate-600 line-clamp-3 sm:line-clamp-2 leading-relaxed mb-3">
+                            {{ $short }}
+                        </p>
+                        <div class="flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-500">
+                            <span class="whitespace-nowrap font-medium">{{ $tanggal }}</span>
+                            <button type="button"
+                                    class="text-amber-700 hover:text-amber-800 font-medium px-3 py-1.5 rounded-md
+                                           hover:bg-amber-50 transition-colors"
+                                    data-pengumuman-id="{{ $p['id'] ?? '' }}"
+                                    data-pengumuman-judul="{{ e($p['judul'] ?? '') }}"
+                                    data-pengumuman-isi="{{ e(strip_tags($p['isi'] ?? '')) }}"
+                                    data-pengumuman-url="{{ e($p['url'] ?? '#') }}"
+                                    onclick="openPengumumanPreview(this)">
+                                Lihat →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        @empty
+            <div class="bg-amber-50/50 rounded-xl p-6 sm:p-8 text-center text-slate-500 text-sm
+                        border border-amber-200/60 shadow-md">
+                Belum ada pengumuman terbaru.
+            </div>
+        @endforelse
+    </div>
+</div>
 
                 {{-- ======== MODAL PREVIEW PENGUMUMAN (GANTI SELURUH BLOCK INI) ======== --}}
                 <dialog id="pengumumanModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="pengumumanModalTitle" aria-describedby="pengumumanModalBody">
