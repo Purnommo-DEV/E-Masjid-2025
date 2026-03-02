@@ -13,7 +13,7 @@ class Berita extends Model implements HasMedia
     use InteractsWithMedia;
 
     protected $table = 'beritas';
-    protected $guarded = ['id']; // atau protected $guarded = [];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'published_at' => 'datetime',
@@ -26,6 +26,10 @@ class Berita extends Model implements HasMedia
         static::creating(function ($b) {
             $b->slug = Str::slug($b->judul);
             $b->created_by = auth()->id();
+        });
+
+        static::updating(function ($b) {
+            $b->slug = Str::slug($b->judul);
         });
     }
 
@@ -41,35 +45,34 @@ class Berita extends Model implements HasMedia
 
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('gambar')->singleFile();
-    }
-
-    // App/Models/Media.php atau override
-    public function getUrl($conversion = '')
-    {
-        if ($conversion === '' && isset($this->custom_properties['folder'])) {
-            return asset('storage/' . $this->custom_properties['folder'] . '/' . $this->file_name);
-        }
-        return parent::getUrl($conversion);
-    }
-
-    // Di model Berita.php
-    public function getGambarUrlAttribute(): ?string
-    {
-        //Cara Panggil d blade $berita->gambar_url
-        $media = $this->getFirstMedia('gambar');
-        if (!$media) {
-            return null;
-        }
-        if ($media->hasCustomProperty('folder')) {
-            $folder = $media->getCustomProperty('folder');
-            return asset('storage/' . $folder . '/' . $media->file_name);
-        }
-        return $media->getUrl();
+        $this->addMediaCollection('gambar');
     }
 
     public function registerMediaConversions(Media $media = null): void
     {
+        // Kosong atau tambah thumbnail jika perlu
+    }
 
+    // Override getUrl agar selalu pakai custom folder jika ada
+    public function getUrl($conversion = '')
+    {
+        $media = $this->getFirstMedia('gambar');
+        if (!$media) {
+            return null;
+        }
+
+        // Prioritaskan custom folder dari custom_properties
+        if ($conversion === '' && $media->hasCustomProperty('folder')) {
+            $folder = $media->getCustomProperty('folder');
+            return asset('storage/' . $folder . '/' . $media->file_name);
+        }
+
+        // Fallback default Spatie (hanya jika custom folder tidak ada)
+        return $media->getUrl($conversion);
+    }
+
+    public function getGambarUrlAttribute(): ?string
+    {
+        return $this->getUrl();
     }
 }

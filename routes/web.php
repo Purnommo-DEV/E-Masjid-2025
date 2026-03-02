@@ -196,7 +196,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('berita', [BeritaController::class, 'index'])->name('admin.berita.index');
         Route::get('berita/data', [BeritaController::class, 'data'])->name('admin.berita.data');
         Route::post('berita', [BeritaController::class, 'store'])->name('admin.berita.store');
-        Route::get('berita/{id}', [BeritaController::class, 'edit'])->name('admin.berita.edit');
+        Route::get('berita/{id}', [BeritaController::class, 'show'])->name('admin.berita.show');
         Route::put('berita/{id}', [BeritaController::class, 'update'])->name('admin.berita.update');
         Route::delete('berita/{id}', [BeritaController::class, 'destroy'])->name('admin.berita.destroy');
 

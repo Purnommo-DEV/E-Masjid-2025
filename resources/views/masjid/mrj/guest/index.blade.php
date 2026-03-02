@@ -74,7 +74,7 @@
                         </div>
 
                         <!-- Stats -->
-                        <div class="grid grid-cols-3 gap-4 pt-6 max-w-md mx-auto lg:mx-0">
+<!--                         <div class="grid grid-cols-3 gap-4 pt-6 max-w-md mx-auto lg:mx-0">
                             <div class="bg-white/70 backdrop-blur-md rounded-2xl border border-emerald-100/50 shadow-sm p-4 text-center">
                                 <p class="text-xs text-slate-500">Program Rutin</p>
                                 <p class="text-2xl font-bold text-emerald-700 mt-1">+{{ $profil->jumlah_program ?? 12 }}</p>
@@ -87,7 +87,7 @@
                                 <p class="text-xs text-slate-500">Program Sosial</p>
                                 <p class="text-2xl font-bold text-cyan-700 mt-1">+{{ $profil->jumlah_program_sosial ?? 8 }}</p>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
 
                     <!-- JADWAL SHOLAT – VERSI BARU & RESPONSIF -->
@@ -448,49 +448,72 @@
             <div class="container mx-auto px-4 lg:px-6 grid lg:grid-cols-[1.5fr_minmax(0,1fr)] gap-10">
 
                 <!-- BERITA -->
-                <div>
-                    <div class="flex justify-between mb-5">
-                        <div>
-                            <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Berita</p>
-                            <h2 class="text-xl font-semibold text-slate-900">Berita</h2>
+<!-- BERITA (kiri) – Versi Redesain Hidup -->
+<div class="relative z-10">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <p class="text-xs uppercase tracking-widest font-medium text-emerald-700/80">Berita Terbaru</p>
+            <h2 class="text-2xl md:text-3xl font-bold text-slate-900 mt-1">Kabar Masjid & Umat</h2>
+        </div>
+        <a href="{{ route('berita.index') }}" 
+           class="text-sm font-medium text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors hover:underline">
+            Lihat Semua <span aria-hidden="true">→</span>
+        </a>
+    </div>
+
+    <div class="grid gap-6 md:gap-8">
+        @forelse($beritas as $b)
+            <a href="{{ $b['url'] }}" 
+               class="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:shadow-emerald-300/30 border border-slate-100 transition-all duration-400 ease-out transform hover:-translate-y-3 hover:border-emerald-400/50">
+                
+                <!-- Gambar dengan efek zoom + overlay gradient -->
+                <div class="relative h-48 md:h-64 overflow-hidden">
+                    <img src="{{ $b['gambar'] ?? asset('storage/404.jpg') }}" 
+                         loading="lazy" 
+                         alt="{{ $b['judul'] }}" 
+                         class="w-full h-full object-cover transition-transform duration-800 group-hover:scale-110">
+                    <!-- Overlay gradient bottom + subtle shine -->
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-70 transition-opacity duration-500"></div>
+                    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-30 transition-opacity duration-700"></div>
+                </div>
+
+                <!-- Konten -->
+                <div class="p-5 md:p-7">
+                    <!-- Judul dengan efek color shift & underline hover -->
+                    <h3 class="text-lg md:text-xl font-bold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors duration-300 mb-3 relative">
+                        {{ $b['judul'] }}
+                        <span class="absolute bottom-0 left-0 w-0 h-0.5 bg-emerald-500 group-hover:w-full transition-all duration-400"></span>
+                    </h3>
+
+                    <!-- Ringkasan -->
+                    <p class="text-sm md:text-base text-slate-600 line-clamp-3 md:line-clamp-2 leading-relaxed mb-4">
+                        {{ $b['ringkas'] ?? Str::limit(strip_tags($b['isi'] ?? ''), 140) }}
+                    </p>
+
+                    <!-- Meta: waktu + badge kategori (opsional) -->
+                    <div class="flex items-center justify-between text-xs md:text-sm text-slate-500">
+                        <div class="flex items-center gap-2">
+                            <span class="font-medium">{{ $b['waktu'] ?? 'Baru saja' }}</span>
+                            @if(!empty($b['kategori']))
+                                <span class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium shadow-sm">
+                                    {{ $b['kategori'] }}
+                                </span>
+                            @endif
                         </div>
-                        <a href="{{ route('berita.index') }}" class="text-xs text-emerald-700">Semua →</a>
-                    </div>
-
-                    <div class="space-y-4">   <!-- tambah space-y lebih besar biar terlihat rapi -->
-                        @forelse($beritas as $b)
-                            <a href="{{ $b['url'] }}" 
-                               class="block group bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-emerald-300 transition-all duration-200 overflow-hidden w-full max-w-full">
-
-                                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4">  <!-- ubah ke column di mobile, row di sm+ -->
-
-                                    <div class="w-full sm:w-32 h-40 sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
-                                        <img src="{{ $b['gambar'] ?? 'https://via.placeholder.com/300x200?text=Berita' }}" 
-                                             loading="lazy" 
-                                             alt="{{ $b['judul'] ?? 'Berita masjid' }}" 
-                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                                    </div>
-
-                                    <div class="flex-1 min-w-0">
-                                        <h3 class="text-sm sm:text-base font-semibold text-slate-900 line-clamp-2 group-hover:text-emerald-700 transition-colors">
-                                            {{ $b['judul'] }}
-                                        </h3>
-                                        <p class="text-xs sm:text-[13px] text-slate-600 mt-1.5 line-clamp-3 sm:line-clamp-2">
-                                            {{ $b['ringkas'] ?? Str::limit(strip_tags($b['isi'] ?? ''), 120) }}
-                                        </p>
-                                        <div class="mt-2 text-[10px] sm:text-xs text-slate-400">
-                                            {{ $b['waktu'] ?? 'Baru saja' }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                        @empty
-                            <div class="bg-slate-50 rounded-xl p-6 text-center text-slate-500 text-sm">
-                                Belum ada berita terbaru.
-                            </div>
-                        @endforelse
+                        <span class="text-emerald-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            Baca Selengkapnya →
+                        </span>
                     </div>
                 </div>
+            </a>
+        @empty
+            <div class="bg-white/90 rounded-2xl p-10 text-center text-slate-500 border border-slate-100 shadow-md">
+                <p class="text-xl font-semibold text-slate-700 mb-3">Belum ada berita terbaru</p>
+                <p class="text-sm">Pantau terus untuk update kegiatan masjid terbaru!</p>
+            </div>
+        @endforelse
+    </div>
+</div>
 
                 {{-- =================================================
                      PENGUMUMAN — Tampilan rapi + preview modal
@@ -715,7 +738,7 @@
                                         class="text-xl sm:text-2xl font-bold text-slate-900 tracking-widest whitespace-nowrap overflow-x-auto touch-pan-x"
                                         style="max-width: 75%; scrollbar-width: thin;"
                                     >
-                                        {!! profil('rekening') !!}  <!-- sudah ada spasi tiap 4 digit -->
+                                        {{ trim(chunk_split(preg_replace('/\D/','', profil('rekening')), 4, ' ')) }}
                                     </p>
                                     <button
                                         type="button"

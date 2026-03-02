@@ -117,6 +117,38 @@
             left: -9999px !important;
             top: -9999px !important;
         }
+
+        /*Header*/
+        /* Ripple effect saat tap/klik */
+        .ripple {
+          position: relative;
+          overflow: hidden;
+        }
+        .ripple::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 0;
+          height: 0;
+          background: rgba(16, 185, 129, 0.25); /* emerald-500 opacity */
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0;
+          transition: all 0.5s;
+          pointer-events: none;
+        }
+        .ripple:active::after {
+          width: 300px;
+          height: 300px;
+          opacity: 1;
+        }
+
+        /* Pastikan semua link punya transisi */
+        a {
+          transition: all 0.2s ease-in-out;
+        }
+        
     </style>
 </head>
 

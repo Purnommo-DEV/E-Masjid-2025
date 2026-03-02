@@ -107,7 +107,7 @@ if (!Str::startsWith($img, ['http://','https://'])) {
                         <div class="flex items-start gap-4">
                             <span class="text-4xl text-emerald-600 flex-shrink-0">👤</span>
                             <div>
-                                <span class="block text-lg font-semibold">Pemateri</span>
+                                <span class="block text-lg font-semibold">Pemateri / Pengisi / Pembimbing</span>
                                 <p class="text-base">{{ $acara->pemateri ?? 'Belum ditentukan' }}</p>
                             </div>
                         </div>
@@ -123,8 +123,26 @@ if (!Str::startsWith($img, ['http://','https://'])) {
                             <div>
                                 <span class="block text-lg font-semibold">Jadwal</span>
                                 <p class="text-base">
-                                    {{ $acara->mulai?->translatedFormat('l, d F Y • H:i') ?? 'Belum ditentukan' }}
-                                    @if($acara->selesai) – {{ $acara->selesai->format('H:i') }} WIB @endif
+                                    @php
+                                    $mulai = $acara->mulai;
+                                    $selesai = $acara->selesai;
+                                    @endphp
+
+                                    @if($mulai)
+                                    {{ $mulai->translatedFormat('l, d F Y') }} pukul {{ $mulai->format('H:i') }} WIB
+
+                                    @if($selesai)
+                                        @if($mulai->isSameDay($selesai))
+                                            s.d. pukul {{ $selesai->format('H:i') }} WIB
+                                        @else
+                                            <br>
+                                            s.d. {{ $selesai->translatedFormat('l, d F Y') }} pukul {{ $selesai->format('H:i') }} WIB
+                                        @endif
+                                    @endif
+                                    @else
+                                    Belum ditentukan
+                                    @endif
+
                                 </p>
                             </div>
                         </div>
