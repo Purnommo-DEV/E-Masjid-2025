@@ -951,9 +951,32 @@
         <section id="layanan_jamaah" class="py-16 bg-gradient-to-br from-slate-50 to-white">
             <div class="container mx-auto px-4 lg:px-6">
                 <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
+                    
                     <!-- Kolom Kiri: Maps & Alamat (tetap) -->
                     <div class="bg-white rounded-2xl border border-emerald-100/60 shadow-lg p-6 lg:p-10">
-                        <!-- ... kode maps & alamat tetap sama ... -->
+                        <div class="mb-6">
+                            <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Kontak</p>
+                            <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Hubungi Kami</h2>
+                            <p class="text-base text-slate-600 mt-3 leading-relaxed">
+                                {{ $profil->alamat ?? 'Alamat belum tersedia. Hubungi kami untuk info lebih lanjut.' }}
+                            </p>
+                        </div>
+
+                        <div class="flex-1 bg-slate-50">
+                            @if(!empty($profil->latitude) && !empty($profil->longitude))
+                                <iframe
+                                    class="w-full h-full min-h-[400px] rounded-2xl shadow-xl shadow-emerald-200/30 border border-emerald-100/50"
+                                    loading="lazy"
+                                    allowfullscreen
+                                    referrerpolicy="no-referrer-when-downgrade"
+                                    src="https://www.google.com/maps?q={{ $profil->latitude }},{{ $profil->longitude }}&z=20&output=embed">
+                                </iframe>
+                            @else
+                                <div class="w-full h-full min-h-[400px] flex items-center justify-center text-slate-400 text-lg bg-slate-100">
+                                    Peta Masjid Belum Tersedia
+                                </div>
+                            @endif
+                        </div>
                     </div>
 
                     <!-- Kolom Kanan: Kontak + Form -->
