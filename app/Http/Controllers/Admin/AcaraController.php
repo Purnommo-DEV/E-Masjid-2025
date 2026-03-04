@@ -31,7 +31,7 @@ class AcaraController extends Controller
             'penyelenggara' => 'nullable|string',
             'pemateri' => 'nullable|string',
             'waktu_teks' => 'nullable|string',
-            'poster' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2024',
+            'poster' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5024',
             'kategori_id' => 'array',
         ]);
 
@@ -91,7 +91,7 @@ class AcaraController extends Controller
             'penyelenggara' => 'nullable|string',
             'pemateri' => 'nullable|string',
             'waktu_teks' => 'nullable|string',
-            'poster' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2024',
+            'poster' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5024',
             'kategori_id' => 'array',
         ]);
 

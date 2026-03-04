@@ -445,7 +445,7 @@
         const file = e.target.files[0];
         const preview = $('#previewGambar'); preview.empty();
         if(!file){ preview.html('<div class="text-muted small">Belum ada gambar.</div>'); return; }
-        const maxSize = 2 * 1024 * 1024;
+        const maxSize = 5 * 1024 * 1024;
         if(file.size > maxSize){ Swal.fire('Ukuran terlalu besar!', 'Maksimal 2MB.', 'warning'); $(this).val(''); preview.html('<div class="text-muted small">Belum ada gambar.</div>'); return; }
         if(!file.type.startsWith('image/')){ Swal.fire('File tidak valid!', 'Hanya gambar diperbolehkan.', 'error'); $(this).val(''); preview.html('<div class="text-muted small">Belum ada gambar.</div>'); return; }
 
