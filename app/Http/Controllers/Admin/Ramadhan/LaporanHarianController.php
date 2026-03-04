@@ -7,6 +7,7 @@ use App\Interfaces\LaporanRamadhanHarianRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use RalphJSmit\Laravel\SEO\Support\SEOData;
+use RalphJSmit\Laravel\SEO\SchemaCollection;
 
 class LaporanHarianController extends Controller
 {
