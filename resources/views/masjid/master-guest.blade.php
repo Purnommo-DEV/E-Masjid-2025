@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    {!! seo($seoData ?? $acara ?? $berita ?? null) !!}
+
     {{-- TITLE --}}
     <title>
         @hasSection('title')
@@ -14,9 +16,9 @@
     </title>
 
     {{-- SEO DESCRIPTION (WAJIB SATU SAJA) --}}
-    <meta name="description"
+    <!-- <meta name="description"
           content="@yield('meta_description', 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kegiatan, kajian, dan layanan jamaah.')">
-
+ -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="canonical" href="{{ url()->current() }}">
 
@@ -26,9 +28,10 @@
     <link rel="apple-touch-icon" href="{{ asset('/pwa/icon-128.png') }}">
 
     {{-- UPDATE TIME (anti cache WA) --}}
-    <meta property="og:updated_time" content="{{ now()->timestamp }}">
+    <!-- <meta property="og:updated_time" content="{{ now()->timestamp }}"> -->
 
     {{-- ================= OPEN GRAPH ================= --}}
+    <!-- 
     <meta property="og:type" content="@yield('og_type','website')">
 
     <meta property="og:title"
@@ -53,14 +56,14 @@
           content="@yield('og_image_alt','Masjid Raudhotul Jannah Taman Cipulir Estate')">
 
     <meta property="og:locale" content="id_ID">
-    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah"> -->
 
     {{-- ================= TWITTER CARD (WA juga pakai ini) ================= --}}
-    <meta name="twitter:card" content="summary_large_image">
+<!--     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="@yield('og_title', trim($__env->yieldContent('title')))">
     <meta name="twitter:description" content="@yield('meta_description')">
     <meta name="twitter:image"
-          content="@yield('og_image', secure_asset('images/default-share.jpg'))">
+          content="@yield('og_image', secure_asset('images/default-share.jpg'))"> -->
       
     {{-- FAVICON --}}
     <link rel="icon" type="image/png" href="{{ asset('/pwa/mrj-logo.png') }}">

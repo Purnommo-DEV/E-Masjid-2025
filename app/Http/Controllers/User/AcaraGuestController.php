@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Interfaces\AcaraServiceInterface;
 use Illuminate\Http\Request;
 use App\Models\Acara;
+use RalphJSmit\Laravel\SEO\Support\SEOData;
 
 class AcaraGuestController extends Controller
 {
@@ -17,20 +18,28 @@ class AcaraGuestController extends Controller
 
     public function index()
     {
-        $acaras = $this->acaraService->paginate(9);  // 9 item per halaman, sesuai request awalmu
+        $acaras = $this->acaraService->paginate(9);
 
-        return view('masjid.'.masjid().'.guest.acara.index', compact('acaras'));
+        // SEO khusus halaman list agenda
+        $seoData = new SEOData(
+            title: 'Agenda Kegiatan & Kajian',
+            description: 'Jadwal kajian, pengajian, ceramah, dan kegiatan Masjid Raudhotul Jannah Taman Cipulir Estate. Lihat agenda terbaru dan jangan sampai terlewat.',
+            image: secure_asset('images/default-share.jpg'),
+        );
+
+        return view('masjid.' . masjid() . '.guest.acara.index', compact('acaras'))
+            ->with('seoData', $seoData);
     }
 
     public function show($slug)
     {
         $acara = Acara::where('slug', $slug)
-                      ->where('is_published', true)
-                      ->firstOrFail();
-                      
-        // Related: 3 acara mendatang lainnya (kecuali yang sedang dibuka)
+            ->where('is_published', true)
+            ->firstOrFail();
+
         $related = $this->acaraService->upcoming(3, $acara->id);
 
-        return view('masjid.'.masjid().'.guest.acara.show', compact('acara', 'related'));
+        // SEO otomatis dari model Acara via trait HasSEO
+        return view('masjid.' . masjid() . '.guest.acara.show', compact('acara', 'related'));
     }
 }

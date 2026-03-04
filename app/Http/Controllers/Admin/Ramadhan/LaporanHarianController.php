@@ -13,9 +13,30 @@ class LaporanHarianController extends Controller
 
     public function index()
     {
-        return view('masjid.' . masjid() . '.admin.ramadhan.laporan-harian.index');
-    }
+        // SEO khusus halaman laporan harian Ramadhan
+        $seoData = new SEOData(
+            title: 'Laporan Harian Ramadhan 1447 H - Masjid Raudhotul Jannah TCE',
+            description: 'Ikuti kegiatan Ramadhan Masjid Raudhotul Jannah Taman Cipulir Estate. Laporan infak harian, jadwal imam tarawih, santunan yatim & dhuafa serta kegiatan jamaah secara transparan dan real-time.',
+            image: secure_asset('images/default-ramadhan.jpg'),
+            // Tambah schema custom untuk Organization + WebPage
+            schema: SchemaCollection::make()->add([
+                '@context' => 'https://schema.org',
+                '@type' => 'WebPage',
+                'name' => 'Laporan Harian Ramadhan 1447 H',
+                'description' => 'Laporan transparan infak dan kegiatan Ramadhan di Masjid Raudhotul Jannah TCE',
+                'url' => route('guest.laporan-harian'), // sesuaikan route name
+                'publisher' => [
+                    '@type' => 'Organization',
+                    'name' => 'Masjid Raudhotul Jannah Taman Cipulir Estate',
+                    'logo' => secure_asset('pwa/mrj-logo.png'), // ganti kalau ada logo
+                    'url' => url('/'),
+                ],
+            ]),
+        );
 
+        return view('masjid.' . masjid() . '.admin.ramadhan.laporan-harian.index')
+            ->with('seoData', $seoData);
+    }
     public function data()
     {
         return response()->json(['data' => $this->repo->all()]);

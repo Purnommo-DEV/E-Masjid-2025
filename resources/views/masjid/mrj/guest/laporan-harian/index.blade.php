@@ -1,20 +1,5 @@
 @extends('masjid.master-guest')
 
-@section('title', 'Ramadhan Masjid Raudhotul Jannah TCE 1447H')
-
-@section('og_type','article')
-
-@section('og_title', 'Ramadhan 1447 H di Masjid Raudhotul Jannah')
-
-@section('meta_description',
-'Ikuti kegiatan Ramadhan Masjid Raudhotul Jannah Taman Cipulir Estate. Laporan infak harian, jadwal imam tarawih, santunan yatim & dhuafa serta kegiatan jamaah.')
-
-@section('og_url', route('guest.laporan-harian'))
-
-@section('og_image', secure_url('images/default-ramadhan.jpg'))
-
-@section('og_image_alt', 'Ramadhan 1447 H Masjid Raudhotul Jannah Taman Cipulir Estate')
-
 @section('content')
 <section class="min-h-screen bg-gray-50 py-12 px-2 sm:px-4 lg:px-6">
     <div class="max-w-6xl mx-auto">

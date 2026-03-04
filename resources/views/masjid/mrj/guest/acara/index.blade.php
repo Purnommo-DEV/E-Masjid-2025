@@ -1,14 +1,5 @@
 @extends('masjid.master-guest')
 
-@section('title', 'Agenda Kegiatan')
-
-@section('og_title', 'Agenda & Kajian Masjid Raudhotul Jannah')
-
-@section('meta_description',
-'Jadwal kajian, pengajian, ceramah, dan kegiatan Masjid Raudhotul Jannah Taman Cipulir Estate. Lihat agenda terbaru dan jangan sampai terlewat.')
-
-@section('og_image', asset('images/default-share.jpg'))
-
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 py-12 lg:py-16">
         <div class="container mx-auto px-5 lg:px-8">

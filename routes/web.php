@@ -109,6 +109,9 @@ Route::get('/galeri/public', [HomeController::class, 'galeriPublic'])->name('hom
 
 Route::get('/home/galeri/{id}', [HomeController::class, 'galeriDetail'])->name('home.galeri.detail');
 
+Route::post('/set-location', [HomeController::class, 'setLocation'])
+    ->name('set.location');
+
 Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function () {
     Route::get('/', [PendaftaranYatimDhuafaController::class, 'indexPublik'])->name('index');
     Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])->name('form');

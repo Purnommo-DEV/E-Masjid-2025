@@ -1,10 +1,5 @@
 @extends('masjid.master-guest')
 
-@section('title', 'Program Ramadhan 1447 H - Masjid Raudhotul Jannah TCE')
-@section('og_title', 'Program Ramadhan 1447 H - Masjid Raudhotul Jannah')
-@section('meta_description', 'Jelajahi program spesial Ramadhan di Masjid Raudhotul Jannah Taman Cipulir Estate: ibadah, sosial, anak, dan kebersamaan. Ikuti progres dan berkontribusi bersama.')
-@section('og_image', asset('images/ramadhan-share.jpg')) <!-- ganti dengan gambar hero kalau ada -->
-
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-950 to-cyan-950 text-white relative overflow-hidden">
     <!-- Background efek malam Ramadhan -->

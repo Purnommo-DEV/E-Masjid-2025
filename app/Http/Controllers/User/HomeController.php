@@ -86,6 +86,15 @@ class HomeController extends Controller
             ->limit(20)  // optional, supaya tidak load 100 semua
             ->get();
         // $khutbahJumat = $this->khutbahJumatRepo->comingSoon();
+
+        // === TAMBAHKAN SEO KHUSUS UNTUK HALAMAN HOME ===
+        $seoData = new \RalphJSmit\Laravel\SEO\Support\SEOData(
+            title: 'Masjid Raudhotul Jannah Taman Cipulir Estate',
+            description: 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kajian, agenda kegiatan, berita jamaah, serta program Ramadhan dan pelayanan umat.',
+            image: secure_asset('images/default-share.jpg'),
+            // Opsional: tambah author, published_time, dll kalau relevan
+        );
+
         return view('masjid.'.masjid().'.guest.index', compact(
             'profil',
             'banner',
@@ -97,7 +106,7 @@ class HomeController extends Controller
             'jadwalSholat',
             'sliders',
             'quoteHarianList'
-        ));
+        ))->with('seoData', $seoData);
     }
 
     public function acaraIndex(){}
@@ -207,5 +216,72 @@ class HomeController extends Controller
         return response()->json([
             'fotos' => $fotos
         ]);
+    }
+
+    public function setLocation(Request $request)
+    {
+        $request->validate([
+            'lat'  => 'required|numeric|between:-90,90',
+            'lng'  => 'required|numeric|between:-180,180',
+            // optional: tambah accuracy kalau mau filter
+            'accuracy' => 'nullable|numeric|min:0|max:10000',
+        ]);
+
+        $lat = $request->lat;
+        $lng = $request->lng;
+
+        // Reverse geocoding Nominatim
+        $url = "https://nominatim.openstreetmap.org/reverse?format=json"
+             . "&lat={$lat}&lon={$lng}"
+             . "&zoom=10&addressdetails=1"; // zoom=10 cukup untuk dapat kota/provinsi
+
+        try {
+            $response = Http::withHeaders([
+                'User-Agent'      => 'MasjidRaudhotulJannah/1.0 (contact: your@email.com)', // WAJIB! Nominatim butuh identitas
+                'Referer'         => url('/'), // optional tapi bagus
+                'Accept-Language' => 'id,en', // prioritas bahasa Indonesia
+            ])->timeout(8)->get($url);
+
+            if (!$response->successful()) {
+                Log::warning("Nominatim gagal - HTTP {$response->status()} | Lat/Lng: {$lat},{$lng}");
+                return response()->json(['success' => false, 'message' => 'Gagal mendapatkan lokasi']);
+            }
+
+            $data = $response->json();
+
+            // Ambil nama kota/provinsi secara lebih pintar
+            $address = $data['address'] ?? [];
+
+            $city = $address['city'] 
+                 ?? $address['town'] 
+                 ?? $address['village'] 
+                 ?? $address['county'] 
+                 ?? $address['state_district'] 
+                 ?? $address['municipality'] 
+                 ?? $address['state'] 
+                 ?? null;
+
+            if (!$city) {
+                Log::warning("Nominatim tidak menemukan kota | Response: " . json_encode($data));
+                return response()->json(['success' => false, 'message' => 'Lokasi tidak dikenali']);
+            }
+
+            // Normalisasi nama kota supaya cocok dengan config kota_kemenag
+            $city = strtolower(trim($city));
+
+            session([
+                'user_city' => $city,
+                'user_lat'  => $lat,
+                'user_lng'  => $lng,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'city'    => ucwords($city), // tampilkan capitalized di frontend kalau mau
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("Exception reverse geocode: " . $e->getMessage() . " | Lat/Lng: {$lat},{$lng}");
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server']);
+        }
     }
 }
