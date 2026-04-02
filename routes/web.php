@@ -35,6 +35,7 @@ use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
 use App\Http\Controllers\User\ExcelYatimDhuafaController;
 use App\Http\Controllers\User\SaranController;
 use App\Http\Controllers\User\ProgramRamadhanGuestController;
+use App\Http\Controllers\User\KesehatanGuestController;
 
 Route::get('/pwa-splash', function () {
     return view('pwa.splash');
@@ -136,6 +137,22 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
 
 Route::get('/santunan-ramadhan/scan-duplikat', [PendaftaranYatimDhuafaController::class, 'scanDuplikat'])
     ->name('santunan-ramadhan.scan-duplikat');
+
+// Program Kesehatan
+Route::prefix('kesehatan')->name('kesehatan.')->group(function () {
+    Route::get('/', [KesehatanGuestController::class, 'index'])->name('index');
+    Route::get('/daftar', [KesehatanGuestController::class, 'create'])->name('daftar');
+    Route::post('/daftar', [KesehatanGuestController::class, 'store'])->name('store');
+
+    // Export
+    Route::get('/export/donor-darah', [KesehatanGuestController::class, 'exportDonorDarah'])->name('export.donor');
+    Route::get('/export/cek-kesehatan', [KesehatanGuestController::class, 'exportCekKesehatan'])->name('export.cek-kesehatan');
+    Route::get('/export/cek-katarak', [KesehatanGuestController::class, 'exportCekKatarak'])->name('export.cek-katarak');
+});
+
+Route::get('/program-kesehatan/success', function () {
+    return view('masjid.' . masjid() . '.guest.program-kesehatan.success');
+})->name('kesehatan.success');
 
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {
