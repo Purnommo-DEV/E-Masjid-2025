@@ -1,5 +1,31 @@
 @extends('masjid.master-guest')
 
+@push('head')
+
+    {{-- BASIC SEO (Google) --}}
+    <meta name="description" content="{{ Str::limit(strip_tags(html_entity_decode($berita->excerpt ?? $berita->isi)), 150) }}">
+
+    {{-- OPEN GRAPH (WA & Facebook) --}}
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ $berita->judul }}">
+    <meta property="og:description" content="{{ Str::limit(strip_tags(html_entity_decode($berita->excerpt ?? $berita->isi)), 150) }}">
+    <meta property="og:image" content="{{ $berita->gambar_url ?? asset('images/default.jpg') }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:locale" content="id_ID">
+
+    {{-- 🔥 UPGRADE TAMBAHAN --}}
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    {{-- TWITTER (WA juga kadang pakai ini) --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $berita->judul }}">
+    <meta name="twitter:description" content="{{ Str::limit(strip_tags(html_entity_decode($berita->excerpt ?? $berita->isi)), 150) }}">
+    <meta name="twitter:image" content="{{ $berita->gambar_url ?? asset('images/default.jpg') }}">
+
+@endpush
+
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 py-10 lg:py-16">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">

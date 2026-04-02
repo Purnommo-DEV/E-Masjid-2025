@@ -1,5 +1,30 @@
 @extends('masjid.master-guest')
+@push('head')
 
+    {{-- BASIC SEO --}}
+    <title>Ramadhan 1447 H | Masjid Raudhotul Jannah</title>
+    <meta name="description" content="Program Ramadhan 1447 H di Masjid Raudhotul Jannah: buka puasa, santunan, zakat, dan kegiatan ibadah harian. Mari ambil bagian dalam keberkahan Ramadhan.">
+
+    {{-- OPEN GRAPH (WA & Facebook) --}}
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Ramadhan 1447 H | Masjid Raudhotul Jannah">
+    <meta property="og:description" content="Program Ramadhan: buka puasa jamaah, santunan yatim & dhuafa, paket sembako, dan ibadah harian di Masjid Raudhotul Jannah.">
+    <meta property="og:image" content="{{ asset('images/default-ramadhan.png') }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:locale" content="id_ID">
+
+    {{-- SIZE BIAR WA GA NGACO --}}
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    {{-- TWITTER --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Ramadhan 1447 H | Masjid Raudhotul Jannah">
+    <meta name="twitter:description" content="Program Ramadhan: buka puasa, santunan, zakat, dan kegiatan ibadah harian.">
+    <meta name="twitter:image" content="{{ asset('images/default-ramadhan.png') }}">
+
+@endpush
 @section('content')
 <section class="min-h-screen bg-gray-50 py-12 px-2 sm:px-4 lg:px-6">
     <div class="max-w-6xl mx-auto">

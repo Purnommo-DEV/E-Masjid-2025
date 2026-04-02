@@ -1,18 +1,30 @@
 @extends('masjid.master-guest')
+@push('head')
 
-@section('title', 'Pendaftaran Santunan Anak Yatim & Dhuafa Ramadhan 1447 H / 2026')
+    {{-- BASIC SEO --}}
+    <title>Pendaftaran Santunan Ramadhan 1447H | Masjid Raudhotul Jannah</title>
+    <meta name="description" content="Masjid Raudhotul Jannah membuka pendaftaran santunan Ramadhan untuk anak yatim dan dhuafa di lingkungan Taman Cipulir Estate. Silakan daftar atau bantu sebarkan.">
 
-@section('og_title', 'Pendaftaran Santunan Ramadhan 1447H – Masjid Raudhotul Jannah')
+    {{-- OPEN GRAPH (WA & FB) --}}
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Pendaftaran Santunan Ramadhan 1447H – Masjid Raudhotul Jannah">
+    <meta property="og:description" content="Form pendaftaran santunan anak yatim & dhuafa Ramadhan di Masjid Raudhotul Jannah.">
+    <meta property="og:image" content="{{ secure_url('images/default-ramadhan.jpg') }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:locale" content="id_ID">
 
-@section('meta_description',
-'Masjid Raudhotul Jannah membuka pendaftaran santunan Ramadhan untuk anak yatim dan dhuafa di lingkungan Taman Cipulir Estate. Silakan daftar atau bantu sebarkan informasi ini.')
+    {{-- FIX WA IMAGE --}}
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
 
-@section('og_image', secure_url('images/default-ramadhan.jpg'))
+    {{-- TWITTER --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Pendaftaran Santunan Ramadhan 1447H – Masjid Raudhotul Jannah">
+    <meta name="twitter:description" content="Form pendaftaran santunan anak yatim & dhuafa Ramadhan.">
+    <meta name="twitter:image" content="{{ secure_url('images/default-ramadhan.jpg') }}">
 
-@section('og_type','article')
-
-@section('og_image_alt','Pendaftaran Santunan Ramadhan Masjid Raudhotul Jannah 1447H')
-
+@endpush
 @section('content')
 <section class="py-16 bg-gradient-to-br from-slate-50 to-white">
     <div class="container mx-auto px-4 lg:px-6">

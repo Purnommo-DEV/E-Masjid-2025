@@ -1,5 +1,39 @@
 @extends('masjid.master-guest')
+@push('head')
 
+    @php
+        $desc = Str::limit(strip_tags(html_entity_decode($berita->excerpt ?? $berita->isi)), 150);
+        $img  = $berita->gambar_url ?? asset('images/default.jpg');
+    @endphp
+
+    {{-- BASIC SEO --}}
+    <title>{{ $berita->judul }} | Masjid Raudhotul Jannah</title>
+    <meta name="description" content="{{ $desc }}">
+
+    {{-- OPEN GRAPH --}}
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ $berita->judul }}">
+    <meta property="og:description" content="{{ $desc }}">
+    <meta property="og:image" content="{{ $img }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:locale" content="id_ID">
+
+    {{-- OPTIONAL (biar lebih proper artikel) --}}
+    <meta property="article:published_time" content="{{ $berita->published_at }}">
+    <meta property="article:author" content="{{ $berita->author->name ?? 'Admin Masjid' }}">
+
+    {{-- FIX IMAGE --}}
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    {{-- TWITTER --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $berita->judul }}">
+    <meta name="twitter:description" content="{{ $desc }}">
+    <meta name="twitter:image" content="{{ $img }}">
+
+@endpush
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-teal-50 via-emerald-50 to-cyan-50 py-10 lg:py-16">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">

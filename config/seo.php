@@ -4,7 +4,7 @@ return [
     'site_name' => 'Masjid Raudhotul Jannah Taman Cipulir Estate',
 
     'title' => [
-        'suffix' => ' | Masjid Raudhotul Jannah',
+        'suffix' => '',
         'homepage_title' => 'Masjid Raudhotul Jannah - Informasi Kegiatan & Kajian',
     ],
 
