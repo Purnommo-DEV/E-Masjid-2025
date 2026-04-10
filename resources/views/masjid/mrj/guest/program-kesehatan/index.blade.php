@@ -126,6 +126,7 @@
                                     <th>Gula Darah</th>
                                     <th>Kolesterol</th>
                                     <th>Asam Urat</th>
+                                    <th>Tensi Darah</th>
                                     <th>Alamat</th>
                                 </tr>
                             </thead>
@@ -139,6 +140,7 @@
                                     <td class="text-center text-xl">{{ in_array('gula_darah', $cek) ? '✅' : '' }}</td>
                                     <td class="text-center text-xl">{{ in_array('kolesterol', $cek) ? '✅' : '' }}</td>
                                     <td class="text-center text-xl">{{ in_array('asam_urat', $cek) ? '✅' : '' }}</td>
+                                    <td class="text-center text-xl">{{ in_array('tensi_darah', $cek) ? '✅' : '' }}</td>
                                     <td class="text-slate-600">{{ $item->alamat ?? '-' }}</td>
                                 </tr>
                                 @endforeach
