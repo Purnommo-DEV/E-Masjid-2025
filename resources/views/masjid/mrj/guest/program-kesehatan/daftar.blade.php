@@ -1,8 +1,29 @@
 @extends('masjid.master-guest')
 
 @push('head')
+    {{-- BASIC SEO --}}
     <title>Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE</title>
-    <meta name="description" content="Daftarkan diri Anda untuk Donor Darah dan Cek Gula Darah di Masjid Raudhotul Jannah TCE.">
+    <meta name="description" content="Daftarkan diri Anda untuk program kesehatan: donor darah, cek kesehatan, dan cek mata katarak di Masjid Raudhotul Jannah TCE.">
+
+    {{-- OPEN GRAPH (WA & FB) --}}
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Pendaftaran Program Kesehatan Masjid Raudhotul Jannah">
+    <meta property="og:description" content="Program kesehatan gratis: donor darah, cek gula darah, kolesterol, asam urat, dan cek mata katarak.">
+    <meta property="og:image" content="{{ secure_url('mrj.png') }}">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:locale" content="id_ID">
+
+    {{-- FIX IMAGE WA --}}
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+
+    {{-- TWITTER --}}
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Pendaftaran Program Kesehatan Masjid Raudhotul Jannah">
+    <meta name="twitter:description" content="Daftar donor darah, cek kesehatan, dan cek mata katarak di Masjid Raudhotul Jannah.">
+    <meta name="twitter:image" content="{{ secure_url('mrj.png') }}">
+
 @endpush
 
 @section('content')
