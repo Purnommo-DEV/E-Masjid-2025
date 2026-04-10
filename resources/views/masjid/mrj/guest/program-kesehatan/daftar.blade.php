@@ -3,15 +3,15 @@
 @push('head')
     {{-- BASIC SEO --}}
     <title>Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE</title>
-    <meta name="description" content="Daftarkan diri Anda untuk program kesehatan: donor darah, cek kesehatan, dan cek mata katarak di Masjid Raudhotul Jannah TCE.">
+    <meta name="description" content="Daftarkan diri Anda untuk program kesehatan gratis: Donor Darah, Pemeriksaan Gula Darah, dan Pemeriksaan Tensi Darah di Masjid Raudhotul Jannah TCE.">
 
     {{-- OPEN GRAPH (WA & FB) --}}
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Pendaftaran Program Kesehatan Masjid Raudhotul Jannah">
-    <meta property="og:description" content="Program kesehatan gratis: donor darah, cek gula darah, kolesterol, asam urat, dan cek mata katarak.">
+    <meta property="og:title" content="Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE">
+    <meta property="og:description" content="Program kesehatan gratis: Donor Darah, Pemeriksaan Gula Darah, dan Pemeriksaan Tensi Darah.">
     <meta property="og:image" content="{{ secure_url('mrj.png') }}">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:site_name" content="Masjid Raudhotul Jannah">
+    <meta property="og:site_name" content="Masjid Raudhotul Jannah TCE">
     <meta property="og:locale" content="id_ID">
 
     {{-- FIX IMAGE WA --}}
@@ -20,10 +20,9 @@
 
     {{-- TWITTER --}}
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Pendaftaran Program Kesehatan Masjid Raudhotul Jannah">
-    <meta name="twitter:description" content="Daftar donor darah, cek kesehatan, dan cek mata katarak di Masjid Raudhotul Jannah.">
+    <meta name="twitter:title" content="Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE">
+    <meta name="twitter:description" content="Donor Darah, Pemeriksaan Gula Darah & Pemeriksaan Tensi Darah gratis di Masjid Raudhotul Jannah TCE.">
     <meta name="twitter:image" content="{{ secure_url('mrj.png') }}">
-
 @endpush
 
 @section('content')
@@ -74,9 +73,14 @@
                             
                             <div class="grid grid-cols-1 gap-3">
                                 
+                                <!-- RS Kanker Dharmais -->
                                 <div class="flex items-center gap-3 bg-white border border-emerald-200 rounded-xl p-3">
-                                    <div class="w-10 h-10 bg-red-100 text-red-600 rounded-lg flex items-center justify-center text-xl">
-                                        🩸
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden border border-emerald-100 bg-white">
+                                        <img 
+                                            src="{{ asset('dharmais.png') }}" 
+                                            alt="Logo RS Kanker Dharmais" 
+                                            class="w-9 h-9 object-contain"
+                                        >
                                     </div>
                                     <div class="text-sm">
                                         <div class="font-semibold text-emerald-900">Donor Darah</div>
@@ -84,18 +88,22 @@
                                     </div>
                                 </div>
 
+                                <!-- RS Hermina Ciledug -->
                                 <div class="flex items-center gap-3 bg-white border border-emerald-200 rounded-xl p-3">
-                                    <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center text-xl">
-                                        🧪
+                                    <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden border border-emerald-100 bg-white">
+                                        <img 
+                                            src="{{ asset('hermina.png') }}" 
+                                            alt="Logo RS Hermina Ciledug" 
+                                            class="w-9 h-9 object-contain"
+                                        >
                                     </div>
                                     <div class="text-sm">
-                                        <div class="font-semibold text-emerald-900">Cek Gula Darah</div>
+                                        <div class="font-semibold text-emerald-900">Pemeriksaan Kesehatan</div>
                                         <div class="text-slate-500 text-xs">RS Hermina Ciledug</div>
                                     </div>
                                 </div>
 
                             </div>
-                        </div>
 
                     </div>
 
@@ -146,25 +154,36 @@
                             </label>
                             
                             <!-- Catatan -->
-                            <p class="text-xs text-emerald-600 mb-3">
-                                Anda dapat memilih satu atau kedua program sesuai kebutuhan Anda.
-                            </p>                        
-
+                            <p class="text-xs text-emerald-600 mb-4">
+                                Anda dapat memilih satu atau lebih program sesuai kebutuhan Anda.
+                            </p>                     
+                            
                             <div class="space-y-3 mt-2">
-
-                                <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition">
+                                
+                                <!-- Donor Darah -->
+                                <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition-all">
                                     <input type="checkbox" name="donor_darah" class="w-5 h-5 accent-emerald-600 mt-1">
-                                    <div>
+                                    <div class="flex-1">
                                         <div class="font-semibold text-sm text-emerald-800">Donor Darah</div>
-                                        <p class="text-slate-500 text-xs mt-1">Mendonorkan darah untuk sesama.</p>
+                                        <p class="text-slate-500 text-xs mt-1">Mendonorkan darah untuk menyelamatkan nyawa sesama.</p>
                                     </div>
                                 </label>
 
-                                <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition">
+                                <!-- Pemeriksaan Gula Darah -->
+                                <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition-all">
                                     <input type="checkbox" name="cek_kesehatan[]" value="gula_darah" class="w-5 h-5 accent-emerald-600 mt-1">
-                                    <div>
+                                    <div class="flex-1">
                                         <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Gula Darah</div>
-                                        <p class="text-slate-500 text-xs mt-1">Pemeriksaan gula darah gratis.</p>
+                                        <p class="text-slate-500 text-xs mt-1">Pengukuran kadar gula darah secara gratis.</p>
+                                    </div>
+                                </label>
+
+                                <!-- Pemeriksaan Tensi Darah -->
+                                <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition-all">
+                                    <input type="checkbox" name="cek_kesehatan[]" value="tensi_darah" class="w-5 h-5 accent-emerald-600 mt-1">
+                                    <div class="flex-1">
+                                        <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Tensi Darah</div>
+                                        <p class="text-slate-500 text-xs mt-1">Pengukuran tekanan darah (sistolik & diastolik).</p>
                                     </div>
                                 </label>
 
