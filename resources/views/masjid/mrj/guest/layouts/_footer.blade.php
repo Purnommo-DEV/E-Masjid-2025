@@ -1,7 +1,7 @@
 <footer class="mt-1 bg-gradient-to-b from-emerald-900 via-emerald-950 to-slate-950 text-emerald-50">
 
     {{-- ================= DOA PENUTUP ================= --}}
-    <div class="max-w-4xl mx-auto text-center px-6 pt-16 pb-12">
+    <div class="max-w-4xl container mx-auto px-6 lg:px-16 xl:px-24 relative text-center pt-16 pb-12">
         <h3 class="text-2xl font-semibold text-emerald-200 mb-4">
             Harapan & Doa
         </h3>
@@ -23,7 +23,7 @@
 
     {{-- ================= GRID FOOTER ================= --}}
     <div class="border-t border-emerald-800/40">
-        <div class="container mx-auto px-6 py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-2">
+        <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative py-14 grid gap-10 md:grid-cols-2 lg:grid-cols-2">
 
             {{-- MASJID --}}
             <div>

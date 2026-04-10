@@ -32,7 +32,7 @@
                 <div class="absolute top-40 right-0 w-[600px] h-[600px] bg-cyan-200 rounded-full blur-3xl opacity-25 animate-pulse delay-1000"></div>
             </div>
 
-            <div class="container mx-auto px-5 lg:px-8 relative">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
                     <!-- Hero Text -->
                     <div class="space-y-8 text-center lg:text-left">
@@ -65,7 +65,8 @@
                         </div>
 
                         <!-- Stats -->
-<!--                         <div class="grid grid-cols-3 gap-4 pt-6 max-w-md mx-auto lg:mx-0">
+                        <!--                    
+                        <div class="grid grid-cols-3 gap-4 pt-6 max-w-md mx-auto lg:mx-0">
                             <div class="bg-white/70 backdrop-blur-md rounded-2xl border border-emerald-100/50 shadow-sm p-4 text-center">
                                 <p class="text-xs text-slate-500">Program Rutin</p>
                                 <p class="text-2xl font-bold text-emerald-700 mt-1">+{{ $profil->jumlah_program ?? 12 }}</p>
@@ -140,7 +141,7 @@
 
         {{-- INFO CEPAT --}}
         <section class="pb-10 -mt-2">
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 @php
                     $infoCepat = [
                         ['icon'=>'🕌','text'=>'Kajian Rutin & Pembinaan Umat'],
@@ -162,7 +163,7 @@
 
         {{-- === SLIDER BANNER 3 KARTU (DB + SERVICE) === --}}
         <section class="pb-12 -mt-6">
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
 
                 @php
                     // supaya kode bawah tetap pakai variabel $pages
@@ -254,7 +255,7 @@
                 <div class="absolute -top-20 -left-20 w-96 h-96 bg-teal-200 rounded-full blur-3xl"></div>
             </div>
 
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-10 gap-4">
                     <div>
                         <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">AGENDA TERDEKAT</p>
@@ -412,7 +413,7 @@
 
         {{-- SECTION QUOTE HARI INI - AUTO ROTATE DENGAN ANIMASI --}}
         <section class="py-10">
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-5 sm:px-6 py-6 sm:py-8 shadow-xl relative overflow-hidden">
                     <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-3">Pengingat Harian</p>
 
@@ -446,7 +447,7 @@
 
         {{-- === BERITA & PENGUMUMAN === --}}
         <section id="berita" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
-            <div class="container mx-auto px-4 lg:px-6 grid lg:grid-cols-[1.5fr_minmax(0,1fr)] gap-10">
+            <div class="container container mx-auto px-6 lg:px-16 xl:px-24 relative grid lg:grid-cols-[1.5fr_minmax(0,1fr)] gap-10">
 
                 <div class="relative z-10">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-8 md:mb-10">
@@ -609,7 +610,7 @@
 
         {{-- === LAYANAN MASJID === --}}
         <section class="py-16 bg-gradient-to-b from-white to-emerald-50/30">
-            <div class="container mx-auto px-4 lg:px-8">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="text-center mb-12">
                     <span class="inline-block px-4 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium mb-3">
                         Layanan Terpercaya
@@ -646,7 +647,7 @@
 
         {{-- === DONASI === --}}
         <section id="donasi" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <!-- Slider Motivasi dari Database - Full Lebar + Batas Super Jelas -->
                 @if($sliders->isNotEmpty())
                     <div id="motivasiCarousel" class="relative mb-12 lg:mb-16">
@@ -851,7 +852,7 @@
 
         {{-- === GALERI + MODAL === --}}
         <section class="py-16 bg-gradient-to-br from-emerald-50 via-slate-50 to-sky-50">
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="flex justify-between mb-5">
                     <div>
                         <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Galeri</p>
@@ -948,7 +949,7 @@
         {{-- === KONTAK === --}}
         
         <section id="layanan_jamaah" class="py-16 bg-gradient-to-br from-slate-50 to-white">
-            <div class="container mx-auto px-4 lg:px-6">
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
 
                     <!-- Kolom Kiri: Maps & Alamat (tetap) -->

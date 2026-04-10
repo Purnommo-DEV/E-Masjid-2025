@@ -49,7 +49,33 @@ class KesehatanGuestController extends Controller
         return view('masjid.' . masjid() . '.guest.program-kesehatan.daftar', compact('eventDate'));
     }
 
-    public function store(Request $request)
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'nama_lengkap' => 'required|string|max:255',
+    //         'no_hp'        => 'required|string|max:20',
+    //         'alamat'       => 'nullable|string|max:500',
+    //     ]);
+
+    //     KesehatanRegistration::create([
+    //         'nama_lengkap'     => $request->nama_lengkap,
+    //         'no_hp'            => $request->no_hp,
+    //         'alamat'           => $request->alamat,
+    //         'event_date'       => $request->event_date ?? now()->format('Y-m-d'),
+    //         'donor_darah'      => $request->boolean('donor_darah'),
+    //         'cek_kesehatan'    => $request->cek_kesehatan ?? [],
+    //         'cek_mata_katarak' => $request->boolean('cek_mata_katarak'),
+    //     ]);
+
+    //     // Kirim nama melalui query string
+    //     return response()->json([
+    //         'success'      => true,
+    //         'nama_lengkap' => $request->nama_lengkap,
+    //         'redirect'     => route('kesehatan.success', ['name' => $request->nama_lengkap])
+    //     ]);
+    // }
+
+    public function storeNew(Request $request)
     {
         $request->validate([
             'nama_lengkap' => 'required|string|max:255',
@@ -71,10 +97,9 @@ class KesehatanGuestController extends Controller
         return response()->json([
             'success'      => true,
             'nama_lengkap' => $request->nama_lengkap,
-            'redirect'     => route('kesehatan.success', ['name' => $request->nama_lengkap])
+            'redirect'     => route('donor-darah.success', ['name' => $request->nama_lengkap])
         ]);
     }
-
     // ===================== EXPORT =====================
 
     public function exportDonorDarah(Request $request)
@@ -207,11 +232,160 @@ class KesehatanGuestController extends Controller
         exit;
     }
 
-    public function exportCekKesehatan(Request $request)
+    // public function exportCekKesehatan(Request $request)
+    // {
+    //     $eventDate = $request->get('event_date', now()->format('Y-m-d'));
+    
+    //     // Ambil data cek kesehatan
+    //     $data = KesehatanRegistration::where('event_date', $eventDate)
+    //         ->whereNotNull('cek_kesehatan')
+    //         ->whereJsonLength('cek_kesehatan', '>', 0)
+    //         ->get();
+
+    //     $spreadsheet = new Spreadsheet();
+    //     $sheet = $spreadsheet->getActiveSheet();
+    //     $sheet->setTitle('Cek Kesehatan');
+
+    //     // ====================== PAGE SETUP - A4 Portrait ======================
+    //     $sheet->getPageSetup()
+    //         ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT)
+    //         ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
+
+    //     $sheet->getPageSetup()->setHorizontalCentered(true);
+
+    //     // ====================== JUDUL ======================
+    //     $sheet->mergeCells('A1:G1');
+    //     $sheet->setCellValue('A1', 'PENDAFTARAN PEMERIKSAAN DARAH');
+    //     $sheet->getStyle('A1')->applyFromArray([
+    //         'font' => ['bold' => true, 'size' => 16],
+    //         'alignment' => [
+    //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+    //         ]
+    //     ]);
+
+    //     $sheet->mergeCells('A2:G2');
+    //     $sheet->setCellValue('A2', '(Gula Darah, Kolesterol dan Asam Urat)');
+    //     $sheet->getStyle('A2')->applyFromArray([
+    //         'font' => ['bold' => true, 'size' => 12],
+    //         'alignment' => [
+    //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+    //         ]
+    //     ]);
+
+    //     $sheet->mergeCells('A3:G3');
+    //     $sheet->setCellValue('A3', 'Tanggal: 18 April 2026');
+    //     $sheet->getStyle('A3')->applyFromArray([
+    //         'font' => ['bold' => true, 'size' => 12],
+    //         'alignment' => [
+    //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+    //         ]
+    //     ]);
+
+    //     $sheet->mergeCells('A4:G4');
+    //     $sheet->setCellValue('A4', 'MASJID RAUDHOTUL JANNAH TCE');
+    //     $sheet->getStyle('A4')->applyFromArray([
+    //         'font' => ['bold' => true, 'size' => 11],
+    //         'alignment' => [
+    //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+    //         ]
+    //     ]);
+
+    //     // ====================== HEADER TABEL ======================
+    //     $header = ['NO', 'NAMA', 'ALAMAT', 'GD', 'K', 'AU', 'NO HP'];
+    //     $col = 'A';
+    //     foreach ($header as $h) {
+    //         $sheet->setCellValue($col . '6', $h);
+    //         $col++;
+    //     }
+
+    //     // Styling Header (hijau)
+    //     $sheet->getStyle('A6:G6')->applyFromArray([
+    //         'font' => [
+    //             'bold' => true,
+    //             'color' => ['rgb' => 'FFFFFF']
+    //         ],
+    //         'fill' => [
+    //             'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+    //             'startColor' => ['rgb' => '059669']
+    //         ],
+    //         'alignment' => [
+    //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+    //         ]
+    //     ]);
+
+    //     // ====================== ISI DATA ======================
+    //     $row = 7;
+
+    //     foreach ($data as $index => $item) {
+    //         $cek = $item->cek_kesehatan ?? [];
+
+    //         $sheet->setCellValue('A' . $row, $index + 1);
+    //         $sheet->setCellValue('B' . $row, $item->nama_lengkap ?? '');
+    //         $sheet->setCellValue('C' . $row, $item->alamat ?? '-');
+    //         $sheet->setCellValue('D' . $row, in_array('gula_darah', $cek) ? '✓' : '');
+    //         $sheet->setCellValue('E' . $row, in_array('kolesterol', $cek) ? '✓' : '');
+    //         $sheet->setCellValue('F' . $row, in_array('asam_urat', $cek) ? '✓' : '');
+    //         $sheet->setCellValue('G' . $row, $item->no_hp ? "'" . $item->no_hp : '');
+
+    //         $row++;
+    //     }
+
+    //     // Lanjutkan nomor urut sampai 150 (baris kosong)
+    //     for ($i = $row; $i <= 156; $i++) {
+    //         $nomor = $i - 6;
+    //         $sheet->setCellValue('A' . $i, $nomor);
+    //         $sheet->setCellValue('B' . $i, '');
+    //         $sheet->setCellValue('C' . $i, '');
+    //         $sheet->setCellValue('D' . $i, '');
+    //         $sheet->setCellValue('E' . $i, '');
+    //         $sheet->setCellValue('F' . $i, '');
+    //         $sheet->setCellValue('G' . $i, '');
+    //     }
+
+    //     // Border untuk semua baris data
+    //     $sheet->getStyle('A7:G156')->applyFromArray([
+    //         'borders' => [
+    //             'allBorders' => [
+    //                 'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+    //             ]
+    //         ]
+    //     ]);
+
+    //     // ====================== PENGATURAN LEBAR KOLOM (SESUAI PERMINTAAN) ======================
+    //     $sheet->getColumnDimension('A')->setWidth(6);      // NO
+    //     $sheet->getColumnDimension('B')->setWidth(25);     // NAMA
+    //     $sheet->getColumnDimension('C')->setWidth(20);     // ALAMAT
+    //     $sheet->getColumnDimension('D')->setWidth(5);      // Gula Darah
+    //     $sheet->getColumnDimension('E')->setWidth(5);      // Kolesterol
+    //     $sheet->getColumnDimension('F')->setWidth(5);      // Asam Urat
+    //     $sheet->getColumnDimension('G')->setWidth(18);     // NO HP
+
+    //     // Freeze pane
+    //     $sheet->freezePane('A7');
+
+    //     // ====================== DOWNLOAD ======================
+    //     $filename = "Pemeriksaan_Darah_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+
+    //     $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+    //     header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    //     header('Content-Disposition: attachment; filename="' . $filename . '"');
+    //     header('Cache-Control: max-age=0');
+
+    //     $writer->save('php://output');
+    //     exit;
+    // }
+
+    public function exportCekKesehatanNew(Request $request)
     {
         $eventDate = $request->get('event_date', now()->format('Y-m-d'));
-    
-        // Ambil data cek kesehatan
+
+        // Ambil data pendaftar yang memilih cek kesehatan
         $data = KesehatanRegistration::where('event_date', $eventDate)
             ->whereNotNull('cek_kesehatan')
             ->whereJsonLength('cek_kesehatan', '>', 0)
@@ -219,18 +393,24 @@ class KesehatanGuestController extends Controller
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Cek Kesehatan');
+        $sheet->setTitle('Cek Gula Darah');
 
-        // ====================== PAGE SETUP - A4 Portrait ======================
+        // ====================== PAGE SETUP + MARGIN LEGA ======================
         $sheet->getPageSetup()
             ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT)
-            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
+            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
+            ->setHorizontalCentered(true);
 
-        $sheet->getPageSetup()->setHorizontalCentered(true);
+        // Margin supaya tidak mentok kiri-kanan
+        $sheet->getPageMargins()
+            ->setTop(0.8)
+            ->setRight(0.8)
+            ->setLeft(0.8)
+            ->setBottom(0.8);
 
         // ====================== JUDUL ======================
-        $sheet->mergeCells('A1:G1');
-        $sheet->setCellValue('A1', 'PENDAFTARAN PEMERIKSAAN DARAH');
+        $sheet->mergeCells('A1:E1');
+        $sheet->setCellValue('A1', 'PENDAFTARAN CEK GULA DARAH');
         $sheet->getStyle('A1')->applyFromArray([
             'font' => ['bold' => true, 'size' => 16],
             'alignment' => [
@@ -239,8 +419,8 @@ class KesehatanGuestController extends Controller
             ]
         ]);
 
-        $sheet->mergeCells('A2:G2');
-        $sheet->setCellValue('A2', '(Gula Darah, Kolesterol dan Asam Urat)');
+        $sheet->mergeCells('A2:E2');
+        $sheet->setCellValue('A2', 'Masjid Raudhotul Jannah TCE');
         $sheet->getStyle('A2')->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
             'alignment' => [
@@ -249,8 +429,8 @@ class KesehatanGuestController extends Controller
             ]
         ]);
 
-        $sheet->mergeCells('A3:G3');
-        $sheet->setCellValue('A3', 'Tanggal: 18 April 2026');
+        $sheet->mergeCells('A3:E3');
+        $sheet->setCellValue('A3', 'Tanggal: ' . now()->parse($eventDate)->translatedFormat('d F Y'));
         $sheet->getStyle('A3')->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
             'alignment' => [
@@ -259,26 +439,17 @@ class KesehatanGuestController extends Controller
             ]
         ]);
 
-        $sheet->mergeCells('A4:G4');
-        $sheet->setCellValue('A4', 'MASJID RAUDHOTUL JANNAH TCE');
-        $sheet->getStyle('A4')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-            ]
-        ]);
-
         // ====================== HEADER TABEL ======================
-        $header = ['NO', 'NAMA', 'ALAMAT', 'GD', 'K', 'AU', 'NO HP'];
+        $header = ['NO', 'NAMA LENGKAP', 'ALAMAT', 'CEK GULA DARAH', 'NO HP'];
+        
         $col = 'A';
         foreach ($header as $h) {
-            $sheet->setCellValue($col . '6', $h);
+            $sheet->setCellValue($col . '5', $h);
             $col++;
         }
 
-        // Styling Header (hijau)
-        $sheet->getStyle('A6:G6')->applyFromArray([
+        // Styling Header
+        $sheet->getStyle('A5:E5')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF']
@@ -294,8 +465,7 @@ class KesehatanGuestController extends Controller
         ]);
 
         // ====================== ISI DATA ======================
-        $row = 7;
-
+        $row = 6;
         foreach ($data as $index => $item) {
             $cek = $item->cek_kesehatan ?? [];
 
@@ -303,27 +473,22 @@ class KesehatanGuestController extends Controller
             $sheet->setCellValue('B' . $row, $item->nama_lengkap ?? '');
             $sheet->setCellValue('C' . $row, $item->alamat ?? '-');
             $sheet->setCellValue('D' . $row, in_array('gula_darah', $cek) ? '✓' : '');
-            $sheet->setCellValue('E' . $row, in_array('kolesterol', $cek) ? '✓' : '');
-            $sheet->setCellValue('F' . $row, in_array('asam_urat', $cek) ? '✓' : '');
-            $sheet->setCellValue('G' . $row, $item->no_hp ? "'" . $item->no_hp : '');
+            $sheet->setCellValue('E' . $row, $item->no_hp ? "'" . $item->no_hp : '');
 
             $row++;
         }
 
-        // Lanjutkan nomor urut sampai 150 (baris kosong)
-        for ($i = $row; $i <= 156; $i++) {
-            $nomor = $i - 6;
-            $sheet->setCellValue('A' . $i, $nomor);
+        // Tambahkan baris kosong sampai baris ke-150 (untuk keperluan cetak)
+        for ($i = $row; $i <= 150; $i++) {
+            $sheet->setCellValue('A' . $i, $i - 5);
             $sheet->setCellValue('B' . $i, '');
             $sheet->setCellValue('C' . $i, '');
             $sheet->setCellValue('D' . $i, '');
             $sheet->setCellValue('E' . $i, '');
-            $sheet->setCellValue('F' . $i, '');
-            $sheet->setCellValue('G' . $i, '');
         }
 
-        // Border untuk semua baris data
-        $sheet->getStyle('A7:G156')->applyFromArray([
+        // Border semua tabel
+        $sheet->getStyle('A5:E150')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
@@ -331,20 +496,18 @@ class KesehatanGuestController extends Controller
             ]
         ]);
 
-        // ====================== PENGATURAN LEBAR KOLOM (SESUAI PERMINTAAN) ======================
-        $sheet->getColumnDimension('A')->setWidth(6);      // NO
-        $sheet->getColumnDimension('B')->setWidth(25);     // NAMA
-        $sheet->getColumnDimension('C')->setWidth(20);     // ALAMAT
-        $sheet->getColumnDimension('D')->setWidth(5);      // Gula Darah
-        $sheet->getColumnDimension('E')->setWidth(5);      // Kolesterol
-        $sheet->getColumnDimension('F')->setWidth(5);      // Asam Urat
-        $sheet->getColumnDimension('G')->setWidth(18);     // NO HP
+        // ====================== LEBAR KOLOM ======================
+        $sheet->getColumnDimension('A')->setWidth(6);     // NO
+        $sheet->getColumnDimension('B')->setWidth(30);    // NAMA LENGKAP
+        $sheet->getColumnDimension('C')->setWidth(28);    // ALAMAT
+        $sheet->getColumnDimension('D')->setWidth(15);    // CEK GULA DARAH
+        $sheet->getColumnDimension('E')->setWidth(18);    // NO HP
 
         // Freeze pane
-        $sheet->freezePane('A7');
+        $sheet->freezePane('A6');
 
         // ====================== DOWNLOAD ======================
-        $filename = "Pemeriksaan_Darah_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+        $filename = "Cek_Gula_Darah_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 

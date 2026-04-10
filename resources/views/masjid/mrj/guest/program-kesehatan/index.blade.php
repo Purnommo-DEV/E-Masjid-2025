@@ -73,7 +73,7 @@
         <!-- ==================== TAB DONOR DARAH ==================== -->
         <div id="tab-donor" class="tab-content hidden">
             <div class="flex justify-end mb-6">
-                <a href="{{ route('kesehatan.export.donor') }}" class="btn btn-success shadow-md hover:shadow-lg">
+                <a href="{{ route('donor-darah.export.donor') }}" class="btn btn-success shadow-md hover:shadow-lg">
                     📥 Export Excel Donor Darah
                 </a>
             </div>
@@ -110,7 +110,7 @@
         <!-- ==================== TAB CEK KESEHATAN ==================== -->
         <div id="tab-cek" class="tab-content hidden">
             <div class="flex justify-end mb-6">
-                <a href="{{ route('kesehatan.export.cek-kesehatan') }}" class="btn btn-success shadow-md hover:shadow-lg">
+                <a href="{{ route('donor-darah.export.cek-kesehatan') }}" class="btn btn-success shadow-md hover:shadow-lg">
                     📥 Export Excel Cek Kesehatan
                 </a>
             </div>
@@ -152,7 +152,7 @@
         <!-- ==================== TAB CEK KATARAK ==================== -->
         <div id="tab-katarak" class="tab-content hidden">
             <div class="flex justify-end mb-6">
-                <a href="{{ route('kesehatan.export.cek-katarak') }}" class="btn btn-success shadow-md hover:shadow-lg">
+                <a href="{{ route('donor-darah.export.cek-katarak') }}" class="btn btn-success shadow-md hover:shadow-lg">
                     📥 Export Excel Cek Katarak
                 </a>
             </div>
