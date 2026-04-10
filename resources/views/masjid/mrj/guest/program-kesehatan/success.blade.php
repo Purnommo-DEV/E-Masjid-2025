@@ -123,7 +123,7 @@
                     </div>
 
                     <!-- Tombol Daftar Lagi -->
-                    <a href="{{ route('kesehatan.daftar') }}"
+                    <a href="{{ route('donor-darah.daftar') }}"
                        class="block w-full text-center py-5 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-600 hover:text-white font-semibold rounded-2xl transition-all duration-300 text-lg hover:shadow-md">
                         ← Daftar Lagi
                     </a>
