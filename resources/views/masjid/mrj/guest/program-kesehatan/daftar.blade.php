@@ -8,7 +8,7 @@
     {{-- OPEN GRAPH (WA & FB) --}}
     <meta property="og:type" content="website">
     <meta property="og:title" content="Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE">
-    <meta property="og:description" content="Program kesehatan gratis: Donor Darah, Pemeriksaan Gula Darah, dan Pemeriksaan Tensi Darah.">
+    <meta property="og:description" content="Program Kesehatan : Donor Darah, Pemeriksaan Gula Darah, dan Pemeriksaan Tensi Darah.">
     <meta property="og:image" content="{{ secure_url('mrj.png') }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:site_name" content="Masjid Raudhotul Jannah TCE">
@@ -61,14 +61,18 @@
                                 Assalamu’alaikum warahmatullahi wabarakatuh.
                             </p>
                             <p class="text-slate-600 text-sm mt-2">
-                                Silakan lengkapi form di bawah ini dengan data yang benar.
+                                Silakan melengkapi form berikut dengan data yang sesuai.
+                            </p>
+                            <!-- TAMBAHAN DI SINI -->
+                            <p class="text-center text-slate-600 text-sm mt-2">
+                                Mari ambil bagian dalam kegiatan kebaikan ini, sekaligus menjaga kesehatan diri.
                             </p>
                         </div>
 
                         <!-- Kerjasama -->
                         <div class="mb-6">
                             <p class="text-center text-emerald-700 font-medium text-sm mb-4">
-                                Bekerja sama dengan
+                               Bersama dalam kolaborasi kebaikan
                             </p>
                             
                             <div class="grid grid-cols-1 gap-3">
@@ -130,7 +134,7 @@
                         <!-- HP -->
                         <div>
                             <label class="block pb-2">
-                                <span class="font-semibold text-slate-700 text-sm">Nomor HP / WhatsApp (Mohon diisi)</span>
+                                <span class="font-semibold text-slate-700 text-sm">Nomor HP / WhatsApp (Wajib diisi)</span>
                             </label>
                             <input type="tel" name="no_hp" required
                                    class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-sm"
@@ -155,7 +159,7 @@
                             
                             <!-- Catatan -->
                             <p class="text-xs text-emerald-600 mb-4">
-                                Anda dapat memilih satu atau lebih program sesuai kebutuhan Anda.
+                                Silakan memilih satu atau lebih layanan sesuai kebutuhan..
                             </p>                     
                             
                             <div class="space-y-3 mt-2">
@@ -165,7 +169,7 @@
                                     <input type="checkbox" name="donor_darah" class="w-5 h-5 accent-emerald-600 mt-1">
                                     <div class="flex-1">
                                         <div class="font-semibold text-sm text-emerald-800">Donor Darah</div>
-                                        <p class="text-slate-500 text-xs mt-1">Mendonorkan darah untuk menyelamatkan nyawa sesama.</p>
+                                        <p class="text-slate-500 text-xs mt-1">Berpartisipasi dalam donor darah sebagai bentuk kepedulian kepada sesama.</p>
                                     </div>
                                 </label>
 
@@ -174,7 +178,7 @@
                                     <input type="checkbox" name="cek_kesehatan[]" value="gula_darah" class="w-5 h-5 accent-emerald-600 mt-1">
                                     <div class="flex-1">
                                         <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Gula Darah</div>
-                                        <p class="text-slate-500 text-xs mt-1">Pengukuran kadar gula darah secara gratis.</p>
+                                        <p class="text-slate-500 text-xs mt-1">Pemeriksaan kadar gula darah tanpa biaya</p>
                                     </div>
                                 </label>
 
@@ -183,7 +187,7 @@
                                     <input type="checkbox" name="cek_kesehatan[]" value="tensi_darah" class="w-5 h-5 accent-emerald-600 mt-1">
                                     <div class="flex-1">
                                         <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Tensi Darah</div>
-                                        <p class="text-slate-500 text-xs mt-1">Pengukuran tekanan darah (sistolik & diastolik).</p>
+                                        <p class="text-slate-500 text-xs mt-1">Pemeriksaan tekanan darah untuk mengetahui kondisi kesehatan secara umum.</p>
                                     </div>
                                 </label>
 
@@ -195,7 +199,7 @@
                             <button type="submit" id="btnSubmit"
                                 class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 
                                        text-white font-semibold text-sm md:text-base rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                                <span id="btnText">Daftar Sekarang</span>
+                                <span id="btnText">Daftar & Ikuti Kegiatan</span>
                                 <span id="spinner" class="hidden animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
                             </button>
                         </div>
