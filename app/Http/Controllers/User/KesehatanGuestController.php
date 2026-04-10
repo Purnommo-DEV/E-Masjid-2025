@@ -393,15 +393,14 @@ class KesehatanGuestController extends Controller
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Cek Gula Darah');
+        $sheet->setTitle('Cek Kesehatan');
 
-        // ====================== PAGE SETUP + MARGIN LEGA ======================
+        // ====================== PAGE SETUP + MARGIN ======================
         $sheet->getPageSetup()
             ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT)
             ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
             ->setHorizontalCentered(true);
 
-        // Margin supaya tidak mentok kiri-kanan
         $sheet->getPageMargins()
             ->setTop(0.8)
             ->setRight(0.8)
@@ -409,8 +408,8 @@ class KesehatanGuestController extends Controller
             ->setBottom(0.8);
 
         // ====================== JUDUL ======================
-        $sheet->mergeCells('A1:E1');
-        $sheet->setCellValue('A1', 'PENDAFTARAN CEK GULA DARAH');
+        $sheet->mergeCells('A1:F1');
+        $sheet->setCellValue('A1', 'PENDAFTARAN CEK KESEHATAN');
         $sheet->getStyle('A1')->applyFromArray([
             'font' => ['bold' => true, 'size' => 16],
             'alignment' => [
@@ -419,7 +418,7 @@ class KesehatanGuestController extends Controller
             ]
         ]);
 
-        $sheet->mergeCells('A2:E2');
+        $sheet->mergeCells('A2:F2');
         $sheet->setCellValue('A2', 'Masjid Raudhotul Jannah TCE');
         $sheet->getStyle('A2')->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
@@ -429,7 +428,7 @@ class KesehatanGuestController extends Controller
             ]
         ]);
 
-        $sheet->mergeCells('A3:E3');
+        $sheet->mergeCells('A3:F3');
         $sheet->setCellValue('A3', 'Tanggal: ' . now()->parse($eventDate)->translatedFormat('d F Y'));
         $sheet->getStyle('A3')->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
@@ -440,7 +439,7 @@ class KesehatanGuestController extends Controller
         ]);
 
         // ====================== HEADER TABEL ======================
-        $header = ['NO', 'NAMA LENGKAP', 'ALAMAT', 'CEK GULA DARAH', 'NO HP'];
+        $header = ['NO', 'NAMA LENGKAP', 'ALAMAT', 'CEK GULA DARAH', 'CEK TENSI DARAH', 'NO HP'];
         
         $col = 'A';
         foreach ($header as $h) {
@@ -448,8 +447,8 @@ class KesehatanGuestController extends Controller
             $col++;
         }
 
-        // Styling Header
-        $sheet->getStyle('A5:E5')->applyFromArray([
+        // Styling Header (hijau)
+        $sheet->getStyle('A5:F5')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF']
@@ -473,22 +472,24 @@ class KesehatanGuestController extends Controller
             $sheet->setCellValue('B' . $row, $item->nama_lengkap ?? '');
             $sheet->setCellValue('C' . $row, $item->alamat ?? '-');
             $sheet->setCellValue('D' . $row, in_array('gula_darah', $cek) ? '✓' : '');
-            $sheet->setCellValue('E' . $row, $item->no_hp ? "'" . $item->no_hp : '');
+            $sheet->setCellValue('E' . $row, in_array('tensi_darah', $cek) ? '✓' : '');
+            $sheet->setCellValue('F' . $row, $item->no_hp ? "'" . $item->no_hp : '');
 
             $row++;
         }
 
-        // Tambahkan baris kosong sampai baris ke-150 (untuk keperluan cetak)
+        // Tambahkan baris kosong sampai baris ke-150
         for ($i = $row; $i <= 150; $i++) {
             $sheet->setCellValue('A' . $i, $i - 5);
             $sheet->setCellValue('B' . $i, '');
             $sheet->setCellValue('C' . $i, '');
             $sheet->setCellValue('D' . $i, '');
             $sheet->setCellValue('E' . $i, '');
+            $sheet->setCellValue('F' . $i, '');
         }
 
         // Border semua tabel
-        $sheet->getStyle('A5:E150')->applyFromArray([
+        $sheet->getStyle('A5:F150')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
@@ -497,17 +498,18 @@ class KesehatanGuestController extends Controller
         ]);
 
         // ====================== LEBAR KOLOM ======================
-        $sheet->getColumnDimension('A')->setWidth(6);     // NO
-        $sheet->getColumnDimension('B')->setWidth(30);    // NAMA LENGKAP
-        $sheet->getColumnDimension('C')->setWidth(28);    // ALAMAT
-        $sheet->getColumnDimension('D')->setWidth(15);    // CEK GULA DARAH
-        $sheet->getColumnDimension('E')->setWidth(18);    // NO HP
+        $sheet->getColumnDimension('A')->setWidth(6);      // NO
+        $sheet->getColumnDimension('B')->setWidth(30);     // NAMA LENGKAP
+        $sheet->getColumnDimension('C')->setWidth(28);     // ALAMAT
+        $sheet->getColumnDimension('D')->setWidth(18);     // CEK GULA DARAH
+        $sheet->getColumnDimension('E')->setWidth(18);     // CEK TENSI DARAH
+        $sheet->getColumnDimension('F')->setWidth(18);     // NO HP
 
         // Freeze pane
         $sheet->freezePane('A6');
 
         // ====================== DOWNLOAD ======================
-        $filename = "Cek_Gula_Darah_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+        $filename = "Cek_Kesehatan_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
