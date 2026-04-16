@@ -173,12 +173,37 @@
                                     </div>
                                 </label>
 
-                                <!-- Pemeriksaan Gula Darah -->
-                                <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition-all">
-                                    <input type="checkbox" name="cek_kesehatan[]" value="gula_darah" class="w-5 h-5 accent-emerald-600 mt-1">
+                                @php
+                                    $isFull = $jumlahGulaDarah >= $kuotaGulaDarah;
+                                @endphp
+
+                                <label class="flex gap-3 p-4 border rounded-xl cursor-pointer transition-all
+                                    {{ $isFull ? 'border-red-300 bg-red-50 cursor-not-allowed opacity-70' : 'border-emerald-100 hover:border-emerald-400' }}">
+
+                                    <input 
+                                        type="checkbox" 
+                                        name="cek_kesehatan[]" 
+                                        value="gula_darah"
+                                        class="w-5 h-5 accent-emerald-600 mt-1"
+                                        {{ $isFull ? 'disabled' : '' }}
+                                    >
+
                                     <div class="flex-1">
-                                        <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Gula Darah</div>
-                                        <p class="text-slate-500 text-xs mt-1">Pemeriksaan kadar gula darah tanpa biaya</p>
+                                        <div class="font-semibold text-sm 
+                                            {{ $isFull ? 'text-red-700' : 'text-emerald-800' }}">
+                                            Pemeriksaan Gula Darah
+                                        </div>
+
+                                        <p class="text-xs mt-1 
+                                            {{ $isFull ? 'text-red-500' : 'text-slate-500' }}">
+                                            
+                                            @if($isFull)
+                                                Mohon maaf, kuota pemeriksaan ini telah terpenuhi
+                                            @else
+                                                Pemeriksaan kadar gula darah tanpa biaya
+                                            @endif
+
+                                        </p>
                                     </div>
                                 </label>
 

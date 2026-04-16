@@ -44,9 +44,17 @@ class KesehatanGuestController extends Controller
 
     public function create()
     {
-        $eventDate = now()->format('Y-m-d'); // Ubah manual sesuai jadwal event
+        $eventDate = now()->format('Y-m-d');
 
-        return view('masjid.' . masjid() . '.guest.program-kesehatan.daftar', compact('eventDate'));
+        $jumlahGulaDarah = KesehatanRegistration::whereJsonContains('cek_kesehatan', 'gula_darah')->count();
+
+        $kuotaGulaDarah = 40;
+
+        return view('masjid.' . masjid() . '.guest.program-kesehatan.daftar', compact(
+            'eventDate',
+            'jumlahGulaDarah',
+            'kuotaGulaDarah'
+        ));
     }
 
     // public function store(Request $request)
