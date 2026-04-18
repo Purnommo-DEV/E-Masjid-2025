@@ -15,21 +15,17 @@ class KesehatanGuestController extends Controller
     {
         $eventDate = now()->format('Y-m-d');
 
-        $allRegistrations = KesehatanRegistration::where('event_date', $eventDate)
-            ->latest()->get();
+        $allRegistrations = KesehatanRegistration::get();
 
         $totalPendaftar = $allRegistrations->count();
 
-        $donorDarah = KesehatanRegistration::where('event_date', $eventDate)
-            ->where('donor_darah', true)->latest()->get();
+        $donorDarah = KesehatanRegistration::where('donor_darah', true)->latest()->get();
 
-        $cekKesehatan = KesehatanRegistration::where('event_date', $eventDate)
-            ->whereNotNull('cek_kesehatan')
+        $cekKesehatan = KesehatanRegistration::whereNotNull('cek_kesehatan')
             ->whereJsonLength('cek_kesehatan', '>', 0)
             ->latest()->get();
 
-        $cekKatarak = KesehatanRegistration::where('event_date', $eventDate)
-            ->where('cek_mata_katarak', true)->latest()->get();
+        $cekKatarak = KesehatanRegistration::where('cek_mata_katarak', true)->latest()->get();
 
         $seoData = new SEOData(
             title: 'Daftar Pendaftar Program Kesehatan',
@@ -112,11 +108,8 @@ class KesehatanGuestController extends Controller
 
     public function exportDonorDarah(Request $request)
     {
-        $eventDate = $request->get('event_date', now()->format('Y-m-d'));
-    
         // Ambil data donor darah
-        $data = KesehatanRegistration::where('event_date', $eventDate)
-            ->where('donor_darah', true)
+        $data = KesehatanRegistration::where('donor_darah', true)
             ->get();
 
         $spreadsheet = new Spreadsheet();
@@ -228,7 +221,7 @@ class KesehatanGuestController extends Controller
         $sheet->freezePane('A7');
 
         // ====================== DOWNLOAD ======================
-        $filename = "Pendaftaran_Donor_Darah_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+        $filename = "Pendaftaran_Donor_Darah_" . now()->format('d_F_Y') . ".xlsx";
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
@@ -391,11 +384,8 @@ class KesehatanGuestController extends Controller
 
     public function exportCekKesehatanNew(Request $request)
     {
-        $eventDate = $request->get('event_date', now()->format('Y-m-d'));
-
         // Ambil data pendaftar yang memilih cek kesehatan
-        $data = KesehatanRegistration::where('event_date', $eventDate)
-            ->whereNotNull('cek_kesehatan')
+        $data = KesehatanRegistration::whereNotNull('cek_kesehatan')
             ->whereJsonLength('cek_kesehatan', '>', 0)
             ->get();
 
@@ -437,7 +427,7 @@ class KesehatanGuestController extends Controller
         ]);
 
         $sheet->mergeCells('A3:F3');
-        $sheet->setCellValue('A3', 'Tanggal: ' . now()->parse($eventDate)->translatedFormat('d F Y'));
+        $sheet->setCellValue('A3', 'Tanggal: ' . now()->translatedFormat('d F Y'));
         $sheet->getStyle('A3')->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
             'alignment' => [
@@ -482,8 +472,16 @@ class KesehatanGuestController extends Controller
             $sheet->setCellValue('D' . $row, in_array('gula_darah', $cek) ? '✓' : '');
             $sheet->setCellValue('E' . $row, in_array('tensi_darah', $cek) ? '✓' : '');
             $sheet->setCellValue('F' . $row, $item->no_hp ? "'" . $item->no_hp : '');
+            
+            $sheet->getStyle('D' . $row)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
-            $row++;
+            $sheet->getStyle('E' . $row)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+            
+                $row++;
         }
 
         // Tambahkan baris kosong sampai baris ke-150
@@ -494,6 +492,14 @@ class KesehatanGuestController extends Controller
             $sheet->setCellValue('D' . $i, '');
             $sheet->setCellValue('E' . $i, '');
             $sheet->setCellValue('F' . $i, '');
+            
+            $sheet->getStyle('D' . $i)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+
+            $sheet->getStyle('E' . $i)->getAlignment()
+                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
+                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
         }
 
         // Border semua tabel
@@ -517,7 +523,7 @@ class KesehatanGuestController extends Controller
         $sheet->freezePane('A6');
 
         // ====================== DOWNLOAD ======================
-        $filename = "Cek_Kesehatan_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+        $filename = "Cek_Kesehatan_" . now()->format('d_F_Y') . ".xlsx";
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
@@ -531,11 +537,8 @@ class KesehatanGuestController extends Controller
 
     public function exportCekKatarak(Request $request)
     {
-        $eventDate = $request->get('event_date', now()->format('Y-m-d'));
-    
         // Ambil data cek katarak
-        $data = KesehatanRegistration::where('event_date', $eventDate)
-            ->where('cek_mata_katarak', true)
+        $data = KesehatanRegistration::where('cek_mata_katarak', true)
             ->get();
 
         $spreadsheet = new Spreadsheet();
@@ -647,7 +650,7 @@ class KesehatanGuestController extends Controller
         $sheet->freezePane('A7');
 
         // ====================== DOWNLOAD ======================
-        $filename = "Cek_Katarak_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+        $filename = "Cek_Katarak_" . now()->format('d_F_Y') . ".xlsx";
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
