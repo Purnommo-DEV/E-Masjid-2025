@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Feedback;
 use App\Models\KesehatanRegistration;
+use Illuminate\Http\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use RalphJSmit\Laravel\SEO\Support\SEOData;
@@ -51,6 +52,33 @@ class KesehatanGuestController extends Controller
             'jumlahGulaDarah',
             'kuotaGulaDarah'
         ));
+    }
+
+    // ===================== FEEDBACK =====================
+    public function feedback()
+    {
+        return view('masjid.' . masjid() . '.guest.program-kesehatan.feedback');
+    }
+
+    public function storeFeedback(Request $request)
+    {
+        $request->validate([
+            'nama'  => 'nullable|string|max:255',
+            'saran' => 'required|string|min:10|max:1000',
+        ]);
+
+        // Simpan ke database (buat model Feedback jika belum ada)
+        Feedback::create([
+            'nama'       => $request->nama,
+            'saran'      => $request->saran,
+            'program'    => 'kesehatan',
+            'created_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Terima kasih atas saran Anda.'
+        ]);
     }
 
     // public function store(Request $request)

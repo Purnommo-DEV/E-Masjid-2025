@@ -162,6 +162,10 @@ Route::prefix('daftar-donor-darah')->name('donor-darah.')->group(function () {
     Route::get('/export/donor-darah', [KesehatanGuestController::class, 'exportDonorDarah'])->name('export.donor');
     Route::get('/export/cek-kesehatan', [KesehatanGuestController::class, 'exportCekKesehatanNew'])->name('export.cek-kesehatan');
     Route::get('/export/cek-katarak', [KesehatanGuestController::class, 'exportCekKatarak'])->name('export.cek-katarak');
+    
+    // === FEEDBACK BARU ===
+    Route::get('/feedback', [KesehatanGuestController::class, 'feedback'])->name('feedback');
+    Route::post('/feedback', [KesehatanGuestController::class, 'storeFeedback'])->name('feedback.store');
 });
 
 Route::get('/donor-darah/success', function () {
