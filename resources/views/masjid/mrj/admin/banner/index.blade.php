@@ -222,7 +222,7 @@
                         </div>
 
                         <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
-                            <img id="bannerPreview" src="{{ asset('images/masjid-banner.jpg') }}"
+                            <img id="bannerPreview" src="{{ asset('assets/e-masjid/images/masjid-banner.jpg') }}"
                                  alt="Preview"
                                  class="w-full h-40 object-cover">
                         </div>
@@ -289,7 +289,7 @@
         document.getElementById('bannerId').value = '';
         document.getElementById('bannerModalTitle').textContent = 'Tambah Banner';
         document.getElementById('is_active').checked = true;
-        document.getElementById('bannerPreview').src = "{{ asset('images/masjid-banner.jpg') }}";
+        document.getElementById('bannerPreview').src = "{{ asset('assets/e-masjid/images/masjid-banner.jpg') }}";
 
         if (tinymce.get('banner_deskripsi')) {
             tinymce.get('banner_deskripsi').setContent('');
@@ -332,7 +332,7 @@
                 bannerForm.url_tujuan.value      = res.url_tujuan || '';
                 document.getElementById('is_active').checked = !!res.is_active;
 
-                document.getElementById('bannerPreview').src = res.gambar_url || "{{ asset('images/masjid-banner.jpg') }}";
+                document.getElementById('bannerPreview').src = res.gambar_url || "{{ asset('assets/e-masjid/images/masjid-banner.jpg') }}";
 
                 if (tinymce.get('banner_deskripsi')) {
                     tinymce.get('banner_deskripsi').setContent(res.deskripsi || '');
@@ -399,9 +399,20 @@
             },
             error: xhr => {
                 if (xhr.status === 422) {
-                    const errors = xhr.responseJSON.errors || {};
+
+                    let errors = {};
+
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        errors = xhr.responseJSON.errors;
+                    } else {
+                        console.error(xhr.responseText); // 🔥 lihat error asli
+                        Swal.fire('Error', 'Validasi gagal / response bukan JSON', 'error');
+                        return;
+                    }
+
                     Object.keys(errors).forEach(field => {
                         const msg = errors[field][0];
+
                         const errorElem = document.querySelector(`[data-error="${field}"]`);
                         if (errorElem) errorElem.textContent = msg;
 

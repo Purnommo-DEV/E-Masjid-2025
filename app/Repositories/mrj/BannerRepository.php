@@ -16,11 +16,19 @@ class BannerRepository implements BannerRepositoryInterface
             ->latest()
             ->get()
             ->map(function ($b) {
+
                 $media = $b->getFirstMedia('banner');
 
                 if ($media) {
+
                     $folder = $media->custom_properties['folder'] ?? 'banner';
-                    $imgUrl = asset('storage/'.$folder.'/'.$media->file_name);
+
+                    // 🔥 FIX: paksa ke struktur baru
+                    if (!str_contains($folder, 'e-masjid')) {
+                        $folder = 'e-masjid/' . $folder;
+                    }
+
+                    $imgUrl = asset('storage/' . $folder . '/' . $media->file_name);
 
                     $gambarHtml = '<img src="'.$imgUrl
                         .'" width="80" class="rounded shadow-sm object-cover">';
@@ -33,7 +41,7 @@ class BannerRepository implements BannerRepositoryInterface
                     'judul'    => $b->judul,
                     'subjudul' => $b->subjudul,
                     'status'   => '<span class="badge '.($b->is_active ? 'bg-success' : 'bg-secondary').'">'
-                                  .($b->is_active ? 'Aktif' : 'Nonaktif').'</span>',
+                                .($b->is_active ? 'Aktif' : 'Nonaktif').'</span>',
                     'urutan'   => $b->urutan,
                     'gambar'   => $gambarHtml,
                 ];
@@ -94,16 +102,23 @@ class BannerRepository implements BannerRepositoryInterface
         $banner = $this->find($id);
         if (!$banner) return false;
 
-        $folder = 'banner';
-
         foreach ($banner->getMedia('banner') as $media) {
-            $filePath = storage_path('app/public/'.$folder.'/'.$media->file_name);
+
+            // ambil folder dari DB
+            $folder = $media->custom_properties['folder'] ?? 'e-masjid/banner';
+
+            $filePath = public_html_path('storage/'.$folder.'/'.$media->file_name);
+
+            // 🔥 hapus file kalau ada
             if (file_exists($filePath)) {
                 @unlink($filePath);
             }
+
+            // 🔥 hapus record media
             $media->delete();
         }
 
+        // 🔥 hapus banner
         $banner->delete();
 
         return true;
@@ -111,47 +126,63 @@ class BannerRepository implements BannerRepositoryInterface
 
     protected function handleBannerMedia(Banner $banner, UploadedFile $file, bool $replaceOld = false): void
     {
-        $folder = 'banner';
+        // 📂 folder tujuan (RELATIF URL)
+        $folder = 'storage/e-masjid/banner';
 
-        // pastikan folder ada
-        Storage::disk('public')->makeDirectory($folder);
+        // 📁 path ke public_html
+        $destinationPath = public_html_path($folder);
 
+        // 🔧 pastikan folder ada
+        if (!file_exists($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
+        // 🔥 hapus file lama jika replace
         if ($replaceOld) {
             foreach ($banner->getMedia('banner') as $old) {
-                $oldFilePath = storage_path('app/public/'.$folder.'/'.$old->file_name);
-                if (file_exists($oldFilePath)) {
-                    @unlink($oldFilePath);
+
+                $oldFile = $destinationPath . '/' . $old->file_name;
+
+                if (file_exists($oldFile)) {
+                    @unlink($oldFile);
                 }
+
                 $old->delete();
             }
         }
 
-        // upload baru via Spatie
+        // 🚀 upload via Spatie (sementara)
         $media = $banner->addMedia($file)
-            ->usingFileName(Str::random(20).'.'.$file->getClientOriginalExtension())
+            ->usingFileName(Str::random(20) . '.' . $file->getClientOriginalExtension())
             ->preservingOriginal()
             ->toMediaCollection('banner');
 
-        // pindah file dari folder tmp spatie ke /storage/app/public/banner
+        // 📦 ambil file sementara
         $tempPath = $media->getPath();
-        $newPath  = storage_path('app/public/'.$folder.'/'.$media->file_name);
 
+        // 🎯 tujuan akhir
+        $newPath = $destinationPath . '/' . $media->file_name;
+
+        // 🔄 pindahkan file ke public_html
         if (file_exists($tempPath)) {
+
             if (file_exists($newPath)) {
                 @unlink($newPath);
             }
+
             rename($tempPath, $newPath);
 
+            // 🧹 hapus folder temp Spatie
             $oldDir = dirname($tempPath);
             if (is_dir($oldDir) && count(scandir($oldDir)) === 2) {
                 @rmdir($oldDir);
             }
         }
 
-        // simpan metadata
+        // 💾 simpan metadata (PENTING BANGET)
         $media->update([
             'custom_properties' => [
-                'folder'        => $folder,
+                'folder'        => 'e-masjid/banner', // ❗ TANPA "storage/"
                 'original_name' => $file->getClientOriginalName(),
             ],
         ]);

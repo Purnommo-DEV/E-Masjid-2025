@@ -102,3 +102,16 @@ if (!function_exists('terbilang')) {
         elseif ($x < 1000000000000) return terbilang($x / 1000000000) . " miliar" . terbilang(fmod($x,1000000000));
     }
 }
+
+if (!function_exists('public_html_path')) {
+    function public_html_path($path = '')
+    {
+        // kalau di local (tidak ada public_html)
+        if (!is_dir(base_path('../public_html'))) {
+            return public_path($path); // fallback ke public Laravel
+        }
+
+        // kalau di hosting
+        return base_path('../public_html/' . $path);
+    }
+}

@@ -67,6 +67,13 @@ return [
             'visibility' => 'public',
         ],
 
+        'public_html' => [
+            'driver' => 'local',
+            'root' => base_path('../public_html/storage'),
+            'url' => env('APP_URL').'/storage',
+            'visibility' => 'public',
+        ],
+
     ],
 
     /*
