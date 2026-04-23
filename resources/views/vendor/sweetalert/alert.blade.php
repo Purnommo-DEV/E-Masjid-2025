@@ -7,8 +7,16 @@
         <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-{{ config('sweetalert.theme') }}" rel="stylesheet">
     @endif
 
+    @php
+        $masjid = masjid();
+        $localPath = "assets/{$masjid}/vendor/sweetalert/sweetalert.all.js";
+        $defaultPath = "vendor/sweetalert/sweetalert.all.js";
+    @endphp
+
     @if (config('sweetalert.neverLoadJS') === false)
-        <script src="{{ $cdn ?? asset('vendor/sweetalert/sweetalert.all.js') }}"></script>
+        <script src="{{ asset($localPath) }}" 
+            onerror="this.onerror=null; this.src='{{ asset($defaultPath) }}';">
+        </script>
     @endif
 
     @if (Session::has('alert.delete') || Session::has('alert.config'))

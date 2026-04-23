@@ -22,7 +22,7 @@
                 <div class="mb-12 lg:mb-16 rounded-3xl overflow-hidden shadow-2xl border border-emerald-100/70 group bg-white">
                     <div class="grid lg:grid-cols-2 gap-0">
                         <div class="h-64 lg:h-auto overflow-hidden relative">
-                            <img src="{{ $featured->gambar_url ?? '/storage/404.jpg' }}"
+                            <img src="{{ $featured->gambar_url ?? '/storage/404.png' }}"
                                  alt="{{ $featured->judul }}"
                                  class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
@@ -58,7 +58,7 @@
                         <!-- Gambar dengan aspect ratio fixed -->
                         <div class="relative overflow-hidden aspect-[4/3] bg-gradient-to-br from-gray-50 to-teal-50">
                            
-                            <img src="{{ $berita->gambar_url ?? '/storage/404.jpg' }}"
+                            <img src="{{ $berita->gambar_url ?? '/storage/404.png' }}"
                                  alt="{{ $berita->judul }}"
                                  class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                                 

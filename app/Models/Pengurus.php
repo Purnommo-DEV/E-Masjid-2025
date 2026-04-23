@@ -1,22 +1,36 @@
 <?php
-// app/Models/Pengurus.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Pengurus extends Model implements HasMedia
+class Pengurus extends Model
 {
-    use InteractsWithMedia;
+    protected $fillable = ['masjid_code', 'nama', 'jabatan', 'keterangan', 'foto_path', 'urutan', 'created_by', 'updated_by'];
 
-    protected $fillable = ['nama', 'jabatan', 'keterangan', 'urutan'];
-
-    public function registerMediaCollections(): void
+    protected static function boot()
     {
-        $this->addMediaCollection('foto')
-            ->singleFile()
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
+        parent::boot();
+
+        static::creating(function ($pengurus) {
+            if (!$pengurus->masjid_code) {
+                $pengurus->masjid_code = masjid();
+            }
+        });
+
+        static::addGlobalScope('masjid', function ($query) {
+            $query->where('masjid_code', masjid());
+        });
+    }
+
+    // Accessor untuk foto URL
+    public function getFotoUrlAttribute(): ?string
+    {
+        return get_image_url($this->foto_path);
+    }
+
+    public function author()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

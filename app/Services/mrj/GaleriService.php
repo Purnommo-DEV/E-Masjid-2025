@@ -7,29 +7,42 @@ use App\Models\Galeri;
 
 class GaleriService implements GaleriServiceInterface
 {
-    /**
-     * Ambil foto-foto terbaru untuk Home (thumbnail grid)
-     */
     public function latestFotos(int $limit = 12): array
     {
         return Galeri::with('media')
             ->where('tipe', 'foto')
+            ->where('is_published', true)
             ->latest()
-            ->take($limit)
+            ->limit($limit)
             ->get()
-            ->map(function ($g) {
-                $media = $g->getFirstMedia('foto');
-
-                $img = $media
-                    ? asset('storage/' . ($media->custom_properties['folder'] ?? 'galeri/default') . '/' . $media->file_name)
-                    : asset('storage/404.jpg');
-
+            ->map(function ($galeri) {
+                // Gunakan accessor thumbnail_url dari model
+                $thumbnailUrl = $galeri->thumbnail_url;
+                
                 return [
-                    'id'    => $g->id,
-                    'judul' => $g->judul,
-                    'img'   => $img,
+                    'id'    => $galeri->id,
+                    'judul' => $galeri->judul,
+                    'img'   => $thumbnailUrl ?: asset('storage/404.png'),
                 ];
             })
             ->toArray();
+    }
+
+    public function getByKategori(string $slug, int $perPage = 12)
+    {
+        return Galeri::with('media', 'kategoris')
+            ->where('is_published', true)
+            ->whereHas('kategoris', function ($q) use ($slug) {
+                $q->where('slug', $slug);
+            })
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    public function findById($id)
+    {
+        return Galeri::with('media', 'kategoris')
+            ->where('is_published', true)
+            ->findOrFail($id);
     }
 }

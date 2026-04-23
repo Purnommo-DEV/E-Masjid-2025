@@ -56,7 +56,7 @@
             <!-- Gambar Utama -->
             <div class="relative mb-10 lg:mb-12 rounded-3xl overflow-hidden shadow-2xl border border-emerald-100/70 group">
                 @if($berita->hasMedia('gambar') )
-                    <img src="{{ $berita->gambar_url ?? '/storage/404.jpg' }}"
+                    <img src="{{ $berita->gambar_url ?? '/storage/404.png' }}"
                          alt="{{ $berita->judul }}"
                          class="w-full h-auto max-h-[600px] object-cover transition-transform duration-700 group-hover:scale-105">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
@@ -129,7 +129,7 @@
                                 <a href="{{ $item['url'] }}" class="block mb-6 group">
                                     <div class="flex gap-4">
                                         <div class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
-                                            <img src="{{ $item['gambar'] ?? '/storage/404.jpg' }}" alt="{{ $item['judul'] }}" class="w-full h-full object-cover">
+                                            <img src="{{ $item['gambar'] ?? '/storage/404.png' }}" alt="{{ $item['judul'] }}" class="w-full h-full object-cover">
                                         </div>
                                         <div>
                                             <h4 class="text-base font-semibold text-slate-900 group-hover:text-emerald-700 transition line-clamp-2">

@@ -1,38 +1,61 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class ProfilMasjid extends Model implements HasMedia
+class ProfilMasjid extends Model
 {
-    use InteractsWithMedia;
-
     protected $table = 'profil_masjids';
     protected $guarded = ['id'];
 
-    public function registerMediaCollections(): void
+    protected $casts = [
+        'latitude' => 'decimal:8',
+        'longitude' => 'decimal:8',
+    ];
+
+    protected static function boot()
     {
-        $this->addMediaCollection('logo')
-            ->singleFile()
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
+        parent::boot();
 
-        $this->addMediaCollection('struktur')
-            ->singleFile()
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp']);
+        static::creating(function ($profil) {
+            if (!$profil->masjid_code) {
+                $profil->masjid_code = masjid();
+            }
+        });
 
-        $this->addMediaCollection('logo')
-            ->useDisk('public')
-            ->useFallbackUrl('/images/default-logo.png')
-            ->singleFile(); // hanya 1 logo
+        static::addGlobalScope('masjid', function ($query) {
+            $query->where('masjid_code', masjid());
+        });
     }
 
-    public function getRekeningFormattedAttribute()
+    // Accessor untuk logo
+    public function getLogoUrlAttribute(): ?string
+    {
+        return get_image_url($this->logo_path) ?: asset('images/default-logo.png');
+    }
+
+    // Accessor untuk struktur
+    public function getStrukturUrlAttribute(): ?string
+    {
+        return get_image_url($this->struktur_path);
+    }
+
+    // Accessor untuk QRIS
+    public function getQrisUrlAttribute(): ?string
+    {
+        return get_image_url($this->qris_path);
+    }
+
+    // Format rekening
+    public function getRekeningFormattedAttribute(): string
     {
         $rek = $this->rekening ?? '';
-        // Tambah spasi tiap 4 digit
         return preg_replace('/(.{4})(?!$)/', '$1 ', $rek);
+    }
+
+    public function hasDonationInfo(): bool
+    {
+        return $this->bank_name || $this->rekening || $this->qris_path;
     }
 }

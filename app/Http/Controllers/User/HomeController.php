@@ -20,9 +20,10 @@ use App\Models\Layanan;
 use App\Models\Galeri;
 use App\Models\PesanJamaah;
 use Carbon\Carbon;
-use Illuminate\Http\Request; // PASTIKAN INI ADA DAN BENAR
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Http;
+use RalphJSmit\Laravel\SEO\Support\SEOData;
 
 class HomeController extends Controller
 {
@@ -65,9 +66,9 @@ class HomeController extends Controller
 
         $profil = ProfilMasjid::first();
 
-        // 🔹 ambil pages banner via service
         $banner    = $this->bannerService->sliderPages(3);
         $acaras    = $this->acaraService->upcoming(6);
+        $acaraSelesai = $this->acaraService->latestCompleted(3);
         $beritas   = $this->beritaService->latestForHome(4);
         $pengumuman = $this->pengumumanService->latestForHome(4);
 
@@ -83,23 +84,21 @@ class HomeController extends Controller
         $quoteHarianList = $this->quoteHarianRepo->all()
             ->where('is_active', true)
             ->inRandomOrder()
-            ->limit(20)  // optional, supaya tidak load 100 semua
+            ->limit(20)
             ->get();
-        // $khutbahJumat = $this->khutbahJumatRepo->comingSoon();
 
-        // === TAMBAHKAN SEO KHUSUS UNTUK HALAMAN HOME ===
-        $seoData = new \RalphJSmit\Laravel\SEO\Support\SEOData(
+        $seoData = new SEOData(
             title: 'Masjid Raudhotul Jannah Taman Cipulir Estate',
             description: 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kajian, agenda kegiatan, berita jamaah, serta program Ramadhan dan pelayanan umat.',
             image: secure_asset('images/default-share.jpg'),
-            // Opsional: tambah author, published_time, dll kalau relevan
         );
 
-        return view('masjid.'.masjid().'.guest.index', compact(
+        return view('masjid.' . masjid() . '.guest.index', compact(
             'profil',
             'banner',
             'acaras',
             'beritas',
+            'acaraSelesai',
             'pengumuman',
             'layanans',
             'galeri',
@@ -122,12 +121,11 @@ class HomeController extends Controller
 
     public function kirimPesan(Request $request)
     {
-        // Validasi input biasa
         $validator = Validator::make($request->all(), [
             'nama'     => 'required|string|max:191',
             'telepon'  => 'nullable|string|max:32',
             'pesan'    => 'required|string',
-            'g-recaptcha-response' => 'required', // token reCAPTCHA wajib
+            'g-recaptcha-response' => 'required',
         ]);
 
         if ($validator->fails()) {
@@ -138,7 +136,6 @@ class HomeController extends Controller
             ], 422);
         }
 
-        // Verifikasi reCAPTCHA v3
         $recaptchaResponse = $request->input('g-recaptcha-response');
         $secret = env('RECAPTCHA_SECRET_KEY');
 
@@ -150,7 +147,6 @@ class HomeController extends Controller
 
         $recaptchaData = $response->json();
 
-        // Skor minimal 0.5 (bisa diubah jadi 0.4 kalau mau lebih ketat)
         if (!$recaptchaData['success'] || $recaptchaData['score'] < 0.5) {
             return response()->json([
                 'success' => false,
@@ -158,7 +154,6 @@ class HomeController extends Controller
             ], 422);
         }
 
-        // Aman → simpan
         $pesan = PesanJamaah::create([
             'nama'     => $request->nama,
             'telepon'  => $request->telepon ?? null,
@@ -181,15 +176,13 @@ class HomeController extends Controller
             ->latest()
             ->get()
             ->map(function($g){
-
-                $media = $g->getFirstMedia('foto');
-
+                // Gunakan accessor thumbnail_url dari model
+                $thumbnailUrl = $g->thumbnail_url;
+                
                 return [
                     'id' => $g->id,
                     'judul' => $g->judul,
-                    'img' => $media
-                        ? asset('storage/'.$media->custom_properties['folder'].'/'.$media->file_name)
-                        : null,
+                    'img' => $thumbnailUrl,
                 ];
             })
             ->filter(fn($g) => $g['img'] !== null)
@@ -202,16 +195,10 @@ class HomeController extends Controller
 
     public function galeriDetail($id)
     {
-        // ambil 1 album galeri
         $galeri = Galeri::where('is_published', 1)->findOrFail($id);
 
-        // ambil HANYA foto milik album itu
-        $fotos = $galeri->getMedia('foto')->map(function ($media) {
-            return [
-                'url' => asset('storage/' . $media->custom_properties['folder'] . '/' . $media->file_name),
-                'caption' => $media->name ?? '',
-            ];
-        });
+        // Gunakan accessor dari model
+        $fotos = $galeri->fotos;
 
         return response()->json([
             'fotos' => $fotos
@@ -223,33 +210,29 @@ class HomeController extends Controller
         $request->validate([
             'lat'  => 'required|numeric|between:-90,90',
             'lng'  => 'required|numeric|between:-180,180',
-            // optional: tambah accuracy kalau mau filter
             'accuracy' => 'nullable|numeric|min:0|max:10000',
         ]);
 
         $lat = $request->lat;
         $lng = $request->lng;
 
-        // Reverse geocoding Nominatim
         $url = "https://nominatim.openstreetmap.org/reverse?format=json"
              . "&lat={$lat}&lon={$lng}"
-             . "&zoom=10&addressdetails=1"; // zoom=10 cukup untuk dapat kota/provinsi
+             . "&zoom=10&addressdetails=1";
 
         try {
             $response = Http::withHeaders([
-                'User-Agent'      => 'MasjidRaudhotulJannah/1.0 (contact: your@email.com)', // WAJIB! Nominatim butuh identitas
-                'Referer'         => url('/'), // optional tapi bagus
-                'Accept-Language' => 'id,en', // prioritas bahasa Indonesia
+                'User-Agent'      => 'MasjidRaudhotulJannah/1.0 (contact: your@email.com)',
+                'Referer'         => url('/'),
+                'Accept-Language' => 'id,en',
             ])->timeout(8)->get($url);
 
             if (!$response->successful()) {
-                Log::warning("Nominatim gagal - HTTP {$response->status()} | Lat/Lng: {$lat},{$lng}");
+                \Log::warning("Nominatim gagal - HTTP {$response->status()} | Lat/Lng: {$lat},{$lng}");
                 return response()->json(['success' => false, 'message' => 'Gagal mendapatkan lokasi']);
             }
 
             $data = $response->json();
-
-            // Ambil nama kota/provinsi secara lebih pintar
             $address = $data['address'] ?? [];
 
             $city = $address['city'] 
@@ -262,11 +245,10 @@ class HomeController extends Controller
                  ?? null;
 
             if (!$city) {
-                Log::warning("Nominatim tidak menemukan kota | Response: " . json_encode($data));
+                \Log::warning("Nominatim tidak menemukan kota | Response: " . json_encode($data));
                 return response()->json(['success' => false, 'message' => 'Lokasi tidak dikenali']);
             }
 
-            // Normalisasi nama kota supaya cocok dengan config kota_kemenag
             $city = strtolower(trim($city));
 
             session([
@@ -277,10 +259,10 @@ class HomeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'city'    => ucwords($city), // tampilkan capitalized di frontend kalau mau
+                'city'    => ucwords($city),
             ]);
         } catch (\Throwable $e) {
-            Log::error("Exception reverse geocode: " . $e->getMessage() . " | Lat/Lng: {$lat},{$lng}");
+            \Log::error("Exception reverse geocode: " . $e->getMessage() . " | Lat/Lng: {$lat},{$lng}");
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server']);
         }
     }

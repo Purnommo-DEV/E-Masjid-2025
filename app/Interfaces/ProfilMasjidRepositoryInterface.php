@@ -10,4 +10,5 @@ interface ProfilMasjidRepositoryInterface
     public function createPengurus(array $data);
     public function updatePengurus($id, array $data);
     public function deletePengurus($id);
+    public function reorderPengurus(array $order);
 }

@@ -4,17 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use RalphJSmit\Laravel\SEO\Support\HasSEO;
 use RalphJSmit\Laravel\SEO\Support\SEOData;
 use RalphJSmit\Laravel\SEO\SchemaCollection;
 
-class Berita extends Model implements HasMedia
+class Berita extends Model
 {
     use HasSEO;
-    use InteractsWithMedia;
 
     protected $table = 'beritas';
     protected $guarded = ['id'];
@@ -27,16 +23,74 @@ class Berita extends Model implements HasMedia
     protected static function boot()
     {
         parent::boot();
-        static::creating(function ($b) {
-            $b->slug = Str::slug($b->judul);
-            $b->created_by = auth()->id();
+
+        static::creating(function ($berita) {
+            if (!$berita->masjid_code) {
+                $berita->masjid_code = masjid();
+            }
+            $berita->slug = Str::slug($berita->judul);
+            $berita->created_by = auth()->id();
         });
 
-        static::updating(function ($b) {
-            $b->slug = Str::slug($b->judul);
+        static::updating(function ($berita) {
+            if ($berita->isDirty('judul')) {
+                $berita->slug = Str::slug($berita->judul);
+            }
+            if ($berita->isDirty('is_published') && 
+                $berita->is_published === true && 
+                $berita->getOriginal('is_published') === false) {
+                $berita->published_at = now();
+            }
+        });
+
+        static::addGlobalScope('masjid', function ($query) {
+            $query->where('masjid_code', masjid());
         });
     }
 
+    // Relasi ke media (multiple gambar)
+    public function media()
+    {
+        return $this->hasMany(BeritaMedia::class)->orderBy('urutan');
+    }
+
+    // Ambil gambar cover (gambar pertama atau yang ditandai is_cover=true)
+    public function coverImage()
+    {
+        return $this->hasOne(BeritaMedia::class)->where('is_cover', true);
+    }
+
+    // Accessor untuk URL cover
+    public function getCoverUrlAttribute(): ?string
+    {
+        $cover = $this->coverImage;
+        if ($cover) {
+            return get_image_url($cover->image_path);
+        }
+        
+        $first = $this->media()->first();
+        if ($first) {
+            return get_image_url($first->image_path);
+        }
+        
+        return null;
+    }
+
+    // Accessor untuk semua gambar (array)
+    public function getGalleryAttribute(): array
+    {
+        return $this->media->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'url' => get_image_url($item->image_path),
+                'file_name' => $item->file_name,
+                'is_cover' => $item->is_cover,
+                'urutan' => $item->urutan,
+            ];
+        })->toArray();
+    }
+
+    // Kategori
     public function kategoris()
     {
         return $this->belongsToMany(Kategori::class, 'berita_kategori');
@@ -47,98 +101,41 @@ class Berita extends Model implements HasMedia
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function registerMediaCollections(): void
+    // Scopes
+    public function scopePublished($query)
     {
-        $this->addMediaCollection('gambar');
+        return $query->where('is_published', true)
+            ->where(function ($q) {
+                $q->whereNull('published_at')->orWhere('published_at', '<=', now());
+            });
     }
 
-    public function registerMediaConversions(Media $media = null): void
+    public function scopeLatest($query)
     {
-        $this->addMediaConversion('thumb')
-            ->width(400)
-            ->height(300)
-            ->sharpen(10);
+        return $query->orderBy('published_at', 'desc');
     }
 
-    // Override getUrl agar selalu pakai custom folder jika ada
-    public function getUrl($conversion = '')
+    // Accessor excerpt
+    public function getExcerptAttribute($length = 160): string
     {
-        $media = $this->getFirstMedia('gambar');
-        if (!$media) {
-            return null;
-        }
-
-        // Prioritaskan custom folder dari custom_properties
-        if ($conversion === '' && $media->hasCustomProperty('folder')) {
-            $folder = $media->getCustomProperty('folder');
-            return asset('storage/' . $folder . '/' . $media->file_name);
-        }
-
-        // Fallback default Spatie (hanya jika custom folder tidak ada)
-        return $media->getUrl($conversion);
+        return Str::limit(strip_tags($this->isi ?? ''), $length);
     }
 
-    public function getGambarUrlAttribute(): ?string
-    {
-        return $this->getUrl();
-    }
-
+    // SEO
     public function getDynamicSEOData(): SEOData
     {
-        // Ambil gambar cover (sama seperti sebelumnya)
-        $media = $this->getFirstMedia('gambar') ?? $this->getFirstMedia('banner');
-        $coverImage = $media
-            ? secure_asset('storage/' . ($media->custom_properties['folder'] ?? 'berita') . '/' . $media->file_name)
-            : secure_asset('images/default-share.jpg'); // default umum
+        $coverImage = $this->cover_url ?? secure_asset('images/default-share.jpg');
 
-        // Cek apakah ini program Ramadhan (dari kategori)
-        $isRamadhan = $this->kategoris->contains(function ($kategori) {
-            return Str::slug($kategori->nama) === 'program-ramadhan-1447h' 
-                || Str::slug($kategori->slug ?? '') === 'program-ramadhan-1447h';
-        });
-
-        if ($isRamadhan) {
-            // Override gambar default khusus Ramadhan
-            $coverImage = secure_asset('images/default-ramadhan.png');
-
-            // Deskripsi lebih spesifik Ramadhan
-            $description = $this->excerpt
-                ? Str::limit(strip_tags($this->excerpt), 158)
-                : ($this->judul . ' — Program Ramadan 1447 H di Masjid Raudhotul Jannah TCE. Informasi lengkap seputar ibadah, kajian, dan kegiatan sosial selama bulan Ramadhan.');
-        } else {
-            // Deskripsi default (seperti berita biasa)
-            $description = $this->excerpt
-                ? Str::limit(strip_tags($this->excerpt), 158)
-                : Str::limit(strip_tags($this->isi ?? ''), 158);
-        }
+        $description = $this->excerpt ?: Str::limit(strip_tags($this->isi ?? ''), 158);
 
         return new SEOData(
-            title: $this->judul . ($isRamadhan ? ' | Program Ramadhan 1447 H' : '') . ' | Masjid Raudhotul Jannah',
+            title: $this->judul . ' | ' . masjid_name(),
             description: $description,
-            author: $this->createdBy?->name ?? 'Tim Masjid Raudhotul Jannah',
+            author: $this->author?->name ?? 'Tim Masjid',
             image: $coverImage,
             published_time: $this->published_at,
             modified_time: $this->updated_at,
-            // Schema: Article utama + kalau Ramadhan bisa tambah custom jika perlu
             schema: SchemaCollection::make()->addArticle(),
         );
-    }
-
-    public function getCustomImageUrl(Media $media, string $conversion = ''): string
-    {
-        $folder = $media->getCustomProperty('folder');
-        $fileName = $media->file_name;
-
-        if ($folder && $fileName) {
-            $path = $folder . '/' . $fileName;
-            if ($conversion && $media->hasGeneratedConversion($conversion)) {
-                // Jika pakai conversion, ambil nama file conversion (Spatie simpan di attribute file_name_{conversion})
-                $path = $folder . '/' . $media->getAttribute("file_name_{$conversion}");
-            }
-            return asset('storage/' . $path);
-        }
-
-        // Fallback ke default Spatie kalau custom folder gagal
-        return $media->getUrl($conversion);
     }
 }

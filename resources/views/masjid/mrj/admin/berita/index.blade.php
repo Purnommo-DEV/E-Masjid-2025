@@ -39,8 +39,8 @@
     }
     .header-action:hover { transform: translateY(-3px); }
 
-    dialog.modal { z-index: 9990 !important; }
-    dialog.modal::backdrop { background: rgba(15,23,42,0.55); backdrop-filter: blur(4px) saturate(1.02); z-index: 9989 !important; }
+    dialog.modal { z-index: 1050; }
+    dialog.modal::backdrop { background: rgba(15,23,42,0.55); backdrop-filter: blur(4px) saturate(1.02); }
     .modal-box {
         border-radius: 12px;
         box-shadow: 0 26px 60px rgba(2,6,23,0.16);
@@ -48,7 +48,7 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        z-index: 9991 !important;
+        position: relative;
     }
 
     .modal-form {
@@ -72,6 +72,16 @@
         outline: none;
         box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
         border-color: #10b981;
+    }
+    .form-control.is-invalid {
+        border-color: #ef4444;
+        background: #fef2f2;
+    }
+    .invalid-feedback {
+        font-size: 0.75rem;
+        color: #ef4444;
+        margin-top: 0.25rem;
+        display: block;
     }
 
     .dropzone {
@@ -112,19 +122,40 @@
     .select2-container--open .select2-dropdown, .select2-container--open, .select2-container {
         z-index: 99999 !important;
     }
+    
+    /* SweetAlert z-index fix */
     .swal2-container, .swal2-popup {
         z-index: 100000 !important;
+    }
+
+    /* Loader Style untuk tombol */
+    .btn-loader {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .spinner-border {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 
     .modal-loading-overlay {
         position: absolute;
         inset: 0;
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.85);
         display: none;
         align-items: center;
         justify-content: center;
         z-index: 50;
-        backdrop-filter: blur(2px);
+        backdrop-filter: blur(3px);
     }
     .modal-loading-overlay.active { display: flex; }
     .spinner {
@@ -135,7 +166,6 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     /* Multiple preview */
     .preview-multi {
@@ -246,6 +276,7 @@
                 <div>
                     <label class="block text-sm font-medium mb-1">Judul <span class="text-red-500">*</span></label>
                     <input type="text" name="judul" class="form-control" required placeholder="Contoh: Bakti Sosial Minggu Ini">
+                    <div class="invalid-feedback"></div>
                 </div>
 
                 <div>
@@ -255,6 +286,7 @@
                             <option value="{{ $k->id }}">{{ $k->nama }}</option>
                         @endforeach
                     </select>
+                    <div class="invalid-feedback"></div>
                 </div>
 
                 <div>
@@ -267,6 +299,7 @@
                         <div class="text-sm text-gray-600">Klik atau seret gambar (jpg/png, max 1MB per file)</div>
                     </label>
                     <input type="file" name="gambar[]" id="gambarInput" class="hidden" accept="image/*" multiple>
+                    <div class="invalid-feedback" data-error="gambar"></div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div id="kolomFotoLama" style="display:none;">
@@ -292,15 +325,13 @@
                 <div>
                     <label class="block text-sm font-medium mb-2">Isi Berita <span class="text-red-500">*</span></label>
                     <textarea name="isi" id="isiEditor" class="form-control w-full" rows="12" placeholder="Tulis isi berita lengkap di sini..."></textarea>
+                    <div class="invalid-feedback" data-error="isi"></div>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <button type="button" id="cancelBeritaBtn" class="btn btn-outline">Batal</button>
-                <button type="submit" id="submitBtn" class="btn bg-emerald-600 hover:bg-emerald-700 text-white">
-                    <span id="submitText">Simpan</span>
-                    <span id="submitLoader" class="hidden loading loading-spinner loading-sm"></span>
-                </button>
+                <button type="button" id="cancelBeritaBtn" class="btn btn-outline px-4 py-2 rounded-md border text-slate-700 hover:bg-slate-50">Batal</button>
+                <button type="submit" id="submitBtn" class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-full font-semibold">Simpan</button>
             </div>
 
             <div id="modalLoader" class="modal-loading-overlay">
@@ -324,6 +355,8 @@
 
 <script>
     let table = null;
+    let isSubmitting = false;
+    let isTinyMceInitialized = false;
     const modal = document.getElementById('beritaModal');
     const $modal = $(modal);
     const form = $('#beritaForm');
@@ -331,67 +364,102 @@
 
     let tinyObserver = null;
 
-    tinymce.init({
-        selector: '#isiEditor',
-        height: 480,
-        menubar: true,
-        branding: false,
-        plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table paste help wordcount',
-        toolbar: 'undo redo | formatselect fontselect fontsizeselect | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table | removeformat code preview fullscreen',
-        fontsize_formats: "8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 20pt 24pt 28pt 32pt 36pt 48pt 60pt 72pt",
-        font_formats: "Arial=arial,helvetica,sans-serif;Helvetica=helvetica,arial,sans-serif;Times New Roman=times new roman,times;Georgia=georgia,serif;Verdana=verdana,geneva,sans-serif;Tahoma=tahoma,arial,helvetica,sans-serif;Poppins=poppins,sans-serif;",
-        content_style: "body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.7; } h2 { font-size: 22px; } h3 { font-size: 18px; }",
-
-        setup: function (editor) {
-
-            editor.on('init', function () {
-
-                const dialog = document.getElementById('beritaModal');
-
-                // hentikan observer lama (INI YANG PENTING)
-                if (tinyObserver) {
-                    tinyObserver.disconnect();
-                    tinyObserver = null;
+    // Helper function untuk SweetAlert yang selalu di atas modal
+    function showAlertOnTop(icon, title, text, callback = null) {
+        const wasOpen = modal && modal.open;
+        if (wasOpen) {
+            modal.close();
+        }
+        
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            didOpen: () => {
+                const swalContainer = document.querySelector('.swal2-container');
+                if (swalContainer) {
+                    swalContainer.style.zIndex = '99999';
                 }
+            }
+        }).then((result) => {
+            if (wasOpen && modal) {
+                modal.showModal();
+            }
+            if (callback) callback(result);
+        });
+    }
 
-                tinyObserver = new MutationObserver(() => {
-                    document.querySelectorAll(
-                        '.tox-tinymce-aux, .tox-dialog-wrap, .tox-menu, .tox-collection, .tox-silver-sink'
-                    ).forEach(el => {
-                        if (!dialog.contains(el)) {
-                            dialog.appendChild(el);
-                        }
+    // Reset error messages
+    function resetErrors() {
+        $('.invalid-feedback').text('');
+        $('.form-control').removeClass('is-invalid');
+    }
+
+    // Fungsi untuk menginisialisasi atau mengembalikan TinyMCE
+    function initTinyMCE() {
+        if (tinymce.get('isiEditor')) {
+            // Jika sudah ada, jangan inisialisasi ulang
+            return;
+        }
+        
+        tinymce.init({
+            selector: '#isiEditor',
+            height: 480,
+            menubar: true,
+            branding: false,
+            plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table paste help wordcount',
+            toolbar: 'undo redo | formatselect fontselect fontsizeselect | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image table | removeformat code preview fullscreen',
+            fontsize_formats: "8pt 9pt 10pt 11pt 12pt 14pt 16pt 18pt 20pt 24pt 28pt 32pt 36pt 48pt 60pt 72pt",
+            font_formats: "Arial=arial,helvetica,sans-serif;Helvetica=helvetica,arial,sans-serif;Times New Roman=times new roman,times;Georgia=georgia,serif;Verdana=verdana,geneva,sans-serif;Tahoma=tahoma,arial,helvetica,sans-serif;Poppins=poppins,sans-serif;",
+            content_style: "body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.7; } h2 { font-size: 22px; } h3 { font-size: 18px; }",
+            setup: function (editor) {
+                editor.on('init', function () {
+                    const dialog = document.getElementById('beritaModal');
+                    if (tinyObserver) {
+                        tinyObserver.disconnect();
+                        tinyObserver = null;
+                    }
+                    tinyObserver = new MutationObserver(() => {
+                        document.querySelectorAll(
+                            '.tox-tinymce-aux, .tox-dialog-wrap, .tox-menu, .tox-collection, .tox-silver-sink'
+                        ).forEach(el => {
+                            if (!dialog.contains(el)) {
+                                dialog.appendChild(el);
+                            }
+                        });
+                    });
+                    tinyObserver.observe(document.body, {
+                        childList: true,
+                        subtree: true
                     });
                 });
-
-                tinyObserver.observe(document.body, {
-                    childList: true,
-                    subtree: true
+                editor.on('remove', function () {
+                    if (tinyObserver) {
+                        tinyObserver.disconnect();
+                        tinyObserver = null;
+                    }
                 });
-            });
+            }
+        });
+        isTinyMceInitialized = true;
+    }
 
-            // ketika editor dihancurkan → bersihkan observer
-            editor.on('remove', function () {
-                if (tinyObserver) {
-                    tinyObserver.disconnect();
-                    tinyObserver = null;
-                }
-            });
+    // Fungsi untuk menghancurkan TinyMCE (opsional, untuk reset)
+    function destroyTinyMCE() {
+        if (tinymce.get('isiEditor')) {
+            tinymce.get('isiEditor').remove();
         }
-    });
+        isTinyMceInitialized = false;
+    }
 
     function closeDialog(el) {
         try {
-
-            // tutup semua popup TinyMCE dulu
-            if (tinymce.activeEditor) {
-                tinymce.activeEditor.execCommand('mceRemoveNode', false, null);
-                tinymce.activeEditor.hide();
-            }
-
+            // Jangan hancurkan TinyMCE saat modal ditutup
+            // Biarkan saja tetap ada
             if (typeof el.close === 'function') el.close();
             else el.classList.remove('modal-open');
-
         } catch (e) {
             el.classList.remove('modal-open');
         }
@@ -401,13 +469,23 @@
         try {
             if (typeof el.showModal === 'function') el.showModal();
             else el.classList.add('modal-open');
+            
+            // Pastikan TinyMCE tetap ada setelah modal dibuka
+            setTimeout(() => {
+                if (tinymce.get('isiEditor')) {
+                    // Refresh editor jika perlu
+                    tinymce.get('isiEditor').focus();
+                }
+            }, 100);
         } catch (e) {
             el.classList.add('modal-open');
         }
     }
 
-
     $(function(){
+        // Inisialisasi TinyMCE saat halaman load
+        initTinyMCE();
+        
         table = $('#beritaTable').DataTable({
             processing: true,
             ajax: '{{ route('admin.berita.data') }}',
@@ -457,11 +535,11 @@
 
             files.forEach(file => {
                 if (file.size > 1048576) {
-                    Swal.fire('Ukuran terlalu besar!', 'Maksimal 1MB per file.', 'warning');
+                    showAlertOnTop('warning', 'Ukuran terlalu besar!', 'Maksimal 1MB per file.');
                     return;
                 }
                 if (!file.type.startsWith('image/')) {
-                    Swal.fire('File tidak valid!', 'Hanya gambar diperbolehkan.', 'error');
+                    showAlertOnTop('error', 'File tidak valid!', 'Hanya gambar diperbolehkan.');
                     return;
                 }
                 uploadedFiles.push(file);
@@ -498,69 +576,89 @@
             renderMultiplePreview();
         };
 
-        // Hapus lama
         window.hapusFotoLama = function(url) {
-            closeDialog(modal);
+            const wasOpen = modal && modal.open;
+            if (wasOpen) {
+                modal.close();
+            }
+            
             Swal.fire({
                 title: 'Yakin?',
                 text: 'Hapus gambar ini?',
                 icon: 'warning',
-                showCancelButton: true
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Hapus',
+                cancelButtonText: 'Batal',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    const swalContainer = document.querySelector('.swal2-container');
+                    if (swalContainer) {
+                        swalContainer.style.zIndex = '99999';
+                    }
+                }
             }).then(result => {
                 if (result.isConfirmed) {
                     let deleted = $('#deletedGambar').val();
                     deleted = deleted ? deleted + ',' + url : url;
                     $('#deletedGambar').val(deleted);
                     $(`[data-url="${url}"]`).remove();
+                    $(`.preview-item`).each(function() {
+                        if ($(this).data('url') === url) {
+                            $(this).remove();
+                        }
+                    });
                 }
-                showDialog(modal);
+                if (wasOpen && modal) {
+                    modal.showModal();
+                }
             });
         };
     });
 
     window.addBerita = function(){
+        resetErrors();
         uploadedFiles = [];
         form[0].reset();
         $('#gambarInput').val('');
-        $('.is-invalid').removeClass('is-invalid');
-        $('.invalid-feedback').remove();
         $('#deletedGambar').val('');
         $('#method').val('POST');
         form.attr('action', '{{ route('admin.berita.store') }}');
         $('#beritaModalTitle').text('Tambah Berita');
         $('.select2').val(null).trigger('change');
 
-        // Reset preview gambar baru & lama
         $('#previewGambar').html('<div class="text-sm text-gray-600">Belum ada gambar baru.</div>');
         $('#kolomFotoLama').hide();
         $('#daftarFotoLama').empty();
 
+        // Reset konten TinyMCE tanpa menghancurkannya
+        if (tinymce.get('isiEditor')) {
+            tinymce.get('isiEditor').setContent('');
+        }
+
         showDialog(modal);
         setTimeout(() => $('[name=judul]').focus(), 120);
-        tinymce.get('isiEditor')?.setContent('');
     };
 
     window.editBerita = function(id) {
+        resetErrors();
         uploadedFiles = [];
         form[0].reset();
         $('#gambarInput').val('');
-        $('.is-invalid').removeClass('is-invalid');
-        $('.invalid-feedback').remove();
         $('#deletedGambar').val('');
-
-        // RESET PREVIEW GAMBAR BARU (ini yang hilang!)
         $('#previewGambar').html('<div class="text-sm text-gray-600">Belum ada gambar baru</div>');
-
         $('#kolomFotoLama').show();
         $('#daftarFotoLama').html('<div class="text-sm text-gray-600 text-center py-4">Memuat data...</div>');
 
         showDialog(modal);
 
         $.get(`{{ url('admin/berita') }}/${id}`, function(data) {
-            console.log('Data edit berita (harus pakai slug):', data);
-
             $('[name="judul"]').val(data.judul || '');
-            tinymce.get('isiEditor')?.setContent(data.isi || '');
+            
+            // Set konten TinyMCE tanpa menghancurkan editor
+            if (tinymce.get('isiEditor')) {
+                tinymce.get('isiEditor').setContent(data.isi || '');
+            }
+            
             $('.select2').val(data.kategori_ids || []).trigger('change');
             $('[name="is_published"]').prop('checked', !!data.is_published);
 
@@ -590,75 +688,83 @@
             $('#beritaModalTitle').text('Edit Berita: ' + (data.judul || 'ID ' + id));
         }).fail(function() {
             closeDialog(modal);
-            Swal.fire('Error', 'Gagal memuat data berita.', 'error');
+            showAlertOnTop('error', 'Error', 'Gagal memuat data berita.');
         });
     };
     
     window.deleteBerita = function(id){
+        const wasOpen = modal && modal.open;
+        if (wasOpen) {
+            modal.close();
+        }
+        
         Swal.fire({
             title: 'Yakin?',
             text: 'Berita akan dihapus permanen!',
             icon: 'warning',
-            showCancelButton: true
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+            allowOutsideClick: false,
+            didOpen: () => {
+                const swalContainer = document.querySelector('.swal2-container');
+                if (swalContainer) {
+                    swalContainer.style.zIndex = '99999';
+                }
+            }
         }).then(result => {
             if (result.isConfirmed) {
                 $.ajax({
                     url: `{{ url('admin/berita') }}/${id}`,
                     type: 'DELETE',
                     data: { _token: '{{ csrf_token() }}' },
-                    success: () => {
+                    success: (res) => {
                         table.ajax.reload();
                         Swal.fire('Berhasil', 'Berita dihapus.', 'success');
                     },
-                    error: () => Swal.fire('Error', 'Gagal menghapus.', 'error')
+                    error: (xhr) => {
+                        showAlertOnTop('error', 'Error', xhr.responseJSON?.message || 'Gagal menghapus.');
+                    }
                 });
+            } else if (wasOpen && modal) {
+                modal.showModal();
             }
         });
     };
 
+    // Submit dengan loader
     form.on('submit', function(e) {
         e.preventDefault();
-
-        $('#submitBtn').prop('disabled', true);
-        $('#submitText').addClass('hidden');
-        $('#submitLoader').removeClass('hidden');
+        
+        if (isSubmitting) return;
+        
+        resetErrors();
+        
+        const submitBtn = $('#submitBtn');
+        const originalBtnText = submitBtn.html();
+        
+        isSubmitting = true;
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<span class="btn-loader"><span class="spinner-border"></span> Menyimpan...</span>');
         $('#modalLoader').addClass('active');
 
-        tinymce.triggerSave();
-
-        // Buat FormData baru dari form (sudah termasuk semua field lain)
-        let formData = new FormData(this);
-
-        // Hapus gambar[] yang mungkin berasal dari <input type="file"> asli
-        // (penting, karena kalau tidak dihapus, browser bisa kirim file lama/kosong)
-        formData.delete('gambar[]');
-
-        // Debug: tampilkan berapa file yang ada di uploadedFiles
-        console.log('=== DEBUG UPLOAD GAMBAR ===');
-        console.log('Jumlah file di uploadedFiles:', uploadedFiles.length);
-        
-        if (uploadedFiles.length === 0) {
-            console.warn('Tidak ada file baru yang diupload (uploadedFiles kosong)');
+        // Simpan konten TinyMCE ke textarea
+        if (tinymce.get('isiEditor')) {
+            tinymce.get('isiEditor').save();
         }
 
-        // Tambahkan semua file dari array uploadedFiles
-        uploadedFiles.forEach((file, index) => {
-            formData.append('gambar[]', file);
-            console.log(`File ke-${index + 1}: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
-        });
+        let formData = new FormData(this);
+        formData.delete('gambar[]');
 
-        // Jika mode edit, tambahkan _method
+        if (uploadedFiles.length > 0) {
+            uploadedFiles.forEach((file, index) => {
+                formData.append('gambar[]', file);
+            });
+        }
+
         const method = $('#method').val();
         if (method === 'PUT') {
             formData.append('_method', 'PUT');
-        }
-
-        // Debug: cek apakah FormData punya gambar[]
-        // (FormData sulit di-inspect langsung, tapi kita bisa log keys)
-        for (let pair of formData.entries()) {
-            if (pair[0] === 'gambar[]') {
-                console.log('FormData mengandung gambar[] → nama file:', pair[1].name);
-            }
         }
 
         $.ajax({
@@ -668,35 +774,52 @@
             processData: false,
             contentType: false,
             cache: false,
-            timeout: 60000,           // tambah timeout agar tidak gagal di file besar
+            timeout: 60000,
             success: function(res) {
-                console.log('=== SUCCESS RESPONSE ===', res);
-                uploadedFiles = [];   // reset array setelah berhasil
+                uploadedFiles = [];
                 closeDialog(modal);
                 table.ajax.reload();
-                Swal.fire('Berhasil', res.message || 'Data tersimpan', 'success');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: res.message || 'Data tersimpan',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
             error: function(xhr) {
-                console.error('=== ERROR AJAX ===', xhr);
                 const json = xhr.responseJSON || {};
                 if (json.errors) {
-                    $('.is-invalid').removeClass('is-invalid');
-                    $('.invalid-feedback').remove();
+                    $('.invalid-feedback').text('');
+                    $('.form-control').removeClass('is-invalid');
+                    
                     Object.keys(json.errors).forEach(key => {
                         const input = $(`[name="${key}"], [name="${key}[]"]`);
+                        const errorDiv = input.siblings('.invalid-feedback');
                         if (input.length) {
                             input.addClass('is-invalid');
-                            input.after(`<div class="invalid-feedback">${json.errors[key][0]}</div>`);
+                            if (errorDiv.length) {
+                                errorDiv.text(json.errors[key][0]);
+                            } else {
+                                input.after(`<div class="invalid-feedback">${json.errors[key][0]}</div>`);
+                            }
+                        } else {
+                            $(`[data-error="${key}"]`).text(json.errors[key][0]);
                         }
                     });
+                    
+                    const firstError = $('.is-invalid').first();
+                    if (firstError.length) {
+                        firstError[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 } else {
-                    Swal.fire('Gagal', json.message || 'Terjadi kesalahan server', 'error');
+                    showAlertOnTop('error', 'Gagal', json.message || 'Terjadi kesalahan server');
                 }
             },
             complete: function() {
-                $('#submitBtn').prop('disabled', false);
-                $('#submitText').removeClass('hidden');
-                $('#submitLoader').addClass('hidden');
+                isSubmitting = false;
+                submitBtn.prop('disabled', false);
+                submitBtn.html(originalBtnText);
                 $('#modalLoader').removeClass('active');
             }
         });

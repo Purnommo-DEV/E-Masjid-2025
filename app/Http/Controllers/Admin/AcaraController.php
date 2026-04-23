@@ -12,7 +12,7 @@ class AcaraController extends Controller
 
     public function index()
     {
-        return view('masjid.'.masjid().'.admin.acara.index');
+        return view('masjid.' . masjid() . '.admin.acara.index');
     }
 
     public function data()
@@ -51,19 +51,11 @@ class AcaraController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Acara berhasil disimpan!']);
     }
-
+    
     public function edit($id)
     {
         $acara = $this->repo->find($id);
 
-        $poster = $acara->getMedia('poster')->map(function ($m) {
-            $folder = $m->custom_properties['folder'] ?? 'acara/default';
-            return [
-                'folder' => $folder,
-                'file_name' => $m->file_name,
-                'url' => asset('storage/' . $folder . '/' . $m->file_name),
-            ];
-        })->toArray();
         return response()->json([
             'id' => $acara->id,
             'judul' => $acara->judul,
@@ -72,9 +64,9 @@ class AcaraController extends Controller
             'selesai' => $acara->selesai?->format('Y-m-d\TH:i'),
             'lokasi' => $acara->lokasi,
             'penyelenggara' => $acara->penyelenggara,
-            'waktu_teks' => $acara->waktu_teks,
             'pemateri' => $acara->pemateri,
-            'poster' => $poster, // Kirim folder + file_name + URL
+            'waktu_teks' => $acara->waktu_teks,
+            'poster_url' => $acara->poster_url, // Kirim URL poster (string, bukan array)
             'kategori_ids' => $acara->kategoris->pluck('id')->toArray(),
             'is_published' => $acara->is_published,
         ]);
@@ -109,12 +101,12 @@ class AcaraController extends Controller
             'kategori_ids' => $request->kategori_id ?? [],
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Acara diperbarui!']);
+        return response()->json(['success' => true, 'message' => 'Acara berhasil diperbarui!']);
     }
 
     public function destroy($id)
     {
         $this->repo->delete($id);
-        return response()->json(['success' => true, 'message' => 'Acara dihapus!']);
+        return response()->json(['success' => true, 'message' => 'Acara berhasil dihapus!']);
     }
 }

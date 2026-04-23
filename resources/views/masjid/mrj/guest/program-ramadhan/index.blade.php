@@ -58,7 +58,7 @@
                             $media = $berita->getFirstMedia('gambar') ?? $berita->getFirstMedia('banner');
                             $imgUrl = $media
                                 ? asset('storage/' . ($media->custom_properties['folder'] ?? 'berita') . '/' . $media->file_name)
-                                : asset('storage/404.jpg');
+                                : asset('storage/404.png');
 
                             // Excerpt / ringkasan
                             $excerpt = $berita->excerpt

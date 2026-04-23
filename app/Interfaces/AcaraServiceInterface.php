@@ -1,22 +1,13 @@
 <?php
 
 namespace App\Interfaces;
+use App\Models\Acara;
 
 interface AcaraServiceInterface
 {
-    /**
-     * Ambil upcoming acara (untuk home/agenda). Mengembalikan collection/array siap dipakai blade.
-     *
-     * @param int $limit
-     * @return array
-     */
     public function upcoming(int $limit = 6): array;
-
-    /**
-     * Ambil daftar acara paginated (optional).
-     *
-     * @param int $perPage
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
+    public function latestCompleted(int $limit = 3): array;
     public function paginate(int $perPage = 12);
+    public function getBySlug(string $slug);
+    public function getRelated(Acara $acara, int $limit = 3): array;
 }

@@ -5,186 +5,165 @@ namespace App\Repositories\mrj;
 use App\Interfaces\BannerRepositoryInterface;
 use App\Models\Banner;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class BannerRepository implements BannerRepositoryInterface
 {
+    /**
+     * Ambil semua banner untuk DataTable
+     */
     public function all()
     {
-        return Banner::with('media')
+        return Banner::withoutGlobalScope('masjid')
+            ->where('masjid_code', masjid())
             ->latest()
             ->get()
-            ->map(function ($b) {
-
-                $media = $b->getFirstMedia('banner');
-
-                if ($media) {
-
-                    $folder = $media->custom_properties['folder'] ?? 'banner';
-
-                    // 🔥 FIX: paksa ke struktur baru
-                    if (!str_contains($folder, 'e-masjid')) {
-                        $folder = 'e-masjid/' . $folder;
-                    }
-
-                    $imgUrl = asset('storage/' . $folder . '/' . $media->file_name);
-
-                    $gambarHtml = '<img src="'.$imgUrl
-                        .'" width="80" class="rounded shadow-sm object-cover">';
-                } else {
-                    $gambarHtml = '<small class="text-muted">Tanpa Gambar</small>';
-                }
-
+            ->map(function ($banner) {
                 return [
-                    'id'       => $b->id,
-                    'judul'    => $b->judul,
-                    'subjudul' => $b->subjudul,
-                    'status'   => '<span class="badge '.($b->is_active ? 'bg-success' : 'bg-secondary').'">'
-                                .($b->is_active ? 'Aktif' : 'Nonaktif').'</span>',
-                    'urutan'   => $b->urutan,
-                    'gambar'   => $gambarHtml,
+                    'id'                => $banner->id,
+                    'judul'             => $banner->judul,
+                    'subjudul'          => $banner->subjudul,
+                    'catatan_singkat'   => $banner->catatan_singkat ?? '-',
+                    'button_label'      => $banner->button_label ?? 'Lihat Detail',
+                    'urutan'            => $banner->urutan,
+                    'is_active'         => $banner->is_active,
+                    'status'            => $this->renderStatusBadge($banner->is_active),
+                    'gambar'            => $this->renderGambarHtml($banner),
                 ];
             });
     }
 
+    /**
+     * Cari banner by ID
+     */
     public function find($id)
     {
-        return Banner::findOrFail($id);
+        return Banner::withoutGlobalScope('masjid')
+            ->where('masjid_code', masjid())
+            ->where('id', $id)
+            ->firstOrFail();
     }
 
+    /**
+     * Create banner baru
+     */
     public function create(array $data)
     {
-        $banner = Banner::create([
-            'judul'      => $data['judul'],
-            'subjudul'   => $data['subjudul'] ?? null,
-            'catatan'    => $data['catatan'] ?? null,
-            'url_tujuan' => $data['url_tujuan'] ?? null,
-            'is_active'  => $data['is_active'] ?? false,
-            'urutan'     => $data['urutan'] ?? 0,
-            'created_by' => auth()->id(),
-        ]);
+        return DB::transaction(function () use ($data) {
+            $banner = Banner::create([
+                'masjid_code'      => masjid(),
+                'judul'            => $data['judul'],
+                'subjudul'         => $data['subjudul'] ?? null,
+                'catatan_singkat'  => $data['catatan_singkat'] ?? null,
+                'label_tombol'     => $data['label_tombol'] ?? null,
+                'url_tujuan'       => $data['url_tujuan'] ?? null,
+                'deskripsi'        => $data['deskripsi'] ?? null,
+                'is_active'        => $data['is_active'] ?? false,
+                'urutan'           => $data['urutan'] ?? 0,
+                'created_by'       => auth()->id(),
+            ]);
 
-        if (!empty($data['gambar']) && $data['gambar'] instanceof UploadedFile) {
-            $this->handleBannerMedia($banner, $data['gambar'], replaceOld: false);
-        }
+            // Upload gambar dengan optimasi WebP
+            if (!empty($data['gambar']) && $data['gambar'] instanceof UploadedFile) {
+                // Opsi 1: Upload + konversi WebP (tanpa resize)
+                $imagePath = upload_image($data['gambar'], 'banner', null, true);
+                
+                // Opsi 2: Upload + resize + konversi WebP (lebih optimal)
+                // $imagePath = upload_image_optimized($data['gambar'], 'banner', null, [
+                //     'max_width' => 1920,
+                //     'max_height' => 1080,
+                //     'quality' => 75
+                // ]);
+                
+                $banner->update(['image_path' => $imagePath]);
+            }
 
-        return $banner;
+            return $banner->fresh();
+        });
     }
 
     public function update($id, array $data)
     {
-        $banner = $this->find($id);
+        return DB::transaction(function () use ($id, $data) {
+            $banner = $this->find($id);
+            
+            $updateData = [
+                'judul'            => $data['judul'],
+                'subjudul'         => $data['subjudul'] ?? null,
+                'catatan_singkat'  => $data['catatan_singkat'] ?? null,
+                'label_tombol'     => $data['label_tombol'] ?? null,
+                'url_tujuan'       => $data['url_tujuan'] ?? null,
+                'deskripsi'        => $data['deskripsi'] ?? null,
+                'is_active'        => $data['is_active'] ?? false,
+                'urutan'           => $data['urutan'] ?? 0,
+                'updated_by'       => auth()->id(),
+            ];
+            
+            // Upload gambar baru dengan konversi WebP
+            if (!empty($data['gambar']) && $data['gambar'] instanceof UploadedFile) {
+                $imagePath = upload_image($data['gambar'], 'banner', $banner->image_path, true);
+                
+                // Opsi 2: Upload + resize + konversi WebP (lebih optimal)
+                // $imagePath = upload_image_optimized($data['gambar'], 'banner', null, [
+                //     'max_width' => 1920,
+                //     'max_height' => 1080,
+                //     'quality' => 75
+                // ]);
 
-        $file = $data['gambar'] ?? null; // sudah pasti UploadedFile/null dari controller
-        unset($data['gambar']);
-
-        $banner->update([
-            'judul'      => $data['judul'],
-            'subjudul'   => $data['subjudul'] ?? null,
-            'catatan'    => $data['catatan'] ?? null,
-            'url_tujuan' => $data['url_tujuan'] ?? null,
-            'is_active'  => $data['is_active'] ?? false,
-            'urutan'     => $data['urutan'] ?? 0,
-            'updated_by' => auth()->id(),
-        ]);
-
-        // 🔥 kalau ada file baru → hapus lama & ganti baru
-        if ($file instanceof UploadedFile) {
-            $this->handleBannerMedia($banner, $file, replaceOld: true);
-        }
-
-        return $banner->fresh();
+                $updateData['image_path'] = $imagePath;
+            }
+            
+            $banner->update($updateData);
+            
+            return $banner->fresh();
+        });
     }
 
+    /**
+     * Delete banner
+     */
     public function delete($id)
     {
-        $banner = $this->find($id);
-        if (!$banner) return false;
-
-        foreach ($banner->getMedia('banner') as $media) {
-
-            // ambil folder dari DB
-            $folder = $media->custom_properties['folder'] ?? 'e-masjid/banner';
-
-            $filePath = public_html_path('storage/'.$folder.'/'.$media->file_name);
-
-            // 🔥 hapus file kalau ada
-            if (file_exists($filePath)) {
-                @unlink($filePath);
+        return DB::transaction(function () use ($id) {
+            $banner = $this->find($id);
+            
+            // Hapus file gambar
+            if ($banner->image_path) {
+                delete_image($banner->image_path);
             }
-
-            // 🔥 hapus record media
-            $media->delete();
-        }
-
-        // 🔥 hapus banner
-        $banner->delete();
-
-        return true;
+            
+            return $banner->delete();
+        });
     }
 
-    protected function handleBannerMedia(Banner $banner, UploadedFile $file, bool $replaceOld = false): void
+    /**
+     * Render status badge
+     */
+    protected function renderStatusBadge(bool $isActive): string
     {
-        // 📂 folder tujuan (RELATIF URL)
-        $folder = 'storage/e-masjid/banner';
+        $badgeClass = $isActive ? 'bg-success' : 'bg-secondary';
+        $statusText = $isActive ? 'Aktif' : 'Nonaktif';
+        
+        return '<span class="badge ' . $badgeClass . '">' . $statusText . '</span>';
+    }
 
-        // 📁 path ke public_html
-        $destinationPath = public_html_path($folder);
-
-        // 🔧 pastikan folder ada
-        if (!file_exists($destinationPath)) {
-            mkdir($destinationPath, 0755, true);
+    /**
+     * Render gambar HTML untuk DataTable
+     */
+    protected function renderGambarHtml(Banner $banner): string
+    {
+        $imageUrl = $banner->gambar_url;
+        
+        // Cek apakah gambar default atau tidak
+        if ($imageUrl && $imageUrl !== asset('assets/e-masjid/images/masjid-banner.jpg')) {
+            return '<img src="' . $imageUrl . '" 
+                           width="80" 
+                           height="50" 
+                           class="rounded shadow-sm object-cover" 
+                           style="height: 50px; object-fit: cover;"
+                           loading="lazy">';
         }
-
-        // 🔥 hapus file lama jika replace
-        if ($replaceOld) {
-            foreach ($banner->getMedia('banner') as $old) {
-
-                $oldFile = $destinationPath . '/' . $old->file_name;
-
-                if (file_exists($oldFile)) {
-                    @unlink($oldFile);
-                }
-
-                $old->delete();
-            }
-        }
-
-        // 🚀 upload via Spatie (sementara)
-        $media = $banner->addMedia($file)
-            ->usingFileName(Str::random(20) . '.' . $file->getClientOriginalExtension())
-            ->preservingOriginal()
-            ->toMediaCollection('banner');
-
-        // 📦 ambil file sementara
-        $tempPath = $media->getPath();
-
-        // 🎯 tujuan akhir
-        $newPath = $destinationPath . '/' . $media->file_name;
-
-        // 🔄 pindahkan file ke public_html
-        if (file_exists($tempPath)) {
-
-            if (file_exists($newPath)) {
-                @unlink($newPath);
-            }
-
-            rename($tempPath, $newPath);
-
-            // 🧹 hapus folder temp Spatie
-            $oldDir = dirname($tempPath);
-            if (is_dir($oldDir) && count(scandir($oldDir)) === 2) {
-                @rmdir($oldDir);
-            }
-        }
-
-        // 💾 simpan metadata (PENTING BANGET)
-        $media->update([
-            'custom_properties' => [
-                'folder'        => 'e-masjid/banner', // ❗ TANPA "storage/"
-                'original_name' => $file->getClientOriginalName(),
-            ],
-        ]);
+        
+        return '<small class="text-muted">Tanpa Gambar</small>';
     }
 }

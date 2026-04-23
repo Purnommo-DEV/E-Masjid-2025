@@ -376,6 +376,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+     
+        // Set config dinamis berdasarkan masjid
+        $masjidCode = config('app.masjid', 'default');
+        
+        // Ambil konfigurasi dari masjids.php
+        $masjidConfig = config("masjids.{$masjidCode}", []);
+        
+        // Merge ke config app
+        config([
+            'app.masjid_name' => $masjidConfig['name'] ?? config('app.masjid_name'),
+            'app.masjid_address' => $masjidConfig['address'] ?? '',
+            'app.masjid_phone' => $masjidConfig['phone'] ?? '',
+            'app.masjid_email' => $masjidConfig['email'] ?? '',
+        ]);
+    
         // Paksa HTTPS kalau lewat Cloudflare / tunnel
         if (request()->header('x-forwarded-proto') === 'https') {
             URL::forceScheme('https');

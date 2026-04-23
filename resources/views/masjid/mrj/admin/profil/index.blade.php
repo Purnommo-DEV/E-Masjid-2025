@@ -5,13 +5,11 @@
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-<!-- Libraries (pastikan urutan: jQuery -> SweetAlert2 -> Alpine jika butuh) -->
+<!-- Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.12/dist/sweetalert2.all.min.js"></script>
-<!-- NOTE: kita tidak butuh Alpine untuk modal pengurus sekarang -->
 
-<!-- ===== Card wrapper + colored header (DESIGN ONLY) ===== -->
 <div class="max-w-7xl mx-auto card-wrapper">
 
     <div class="card-top">
@@ -41,118 +39,68 @@
 
                     <form id="profilForm" enctype="multipart/form-data" class="space-y-6" novalidate>
                         @csrf
+                        @method('PUT')
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {{-- Nama + Singkatan + Telepon --}}
-                        <div class="md:col-span-2">
-                            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                            <div class="md:col-span-2">
+                                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                    {{-- Nama Masjid --}}
+                                    <div class="md:col-span-6">
+                                        <label class="label">
+                                            <span class="label-text font-semibold text-emerald-1000">
+                                                Nama Masjid <span class="text-red-500">*</span>
+                                            </span>
+                                        </label>
+                                        <input id="nama" type="text" name="nama" required value="{{ $profil->nama ?? '' }}"
+                                            class="input input-bordered border-base-800 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-9000" />
+                                        <p class="text-xs text-red-500 hidden field-error" data-for="nama"></p>
+                                    </div>
 
-                                {{-- Nama Masjid --}}
-                                <div class="md:col-span-6">
-                                    <label class="label">
-                                        <span class="label-text font-semibold text-emerald-1000">
-                                            Nama Masjid <span class="text-red-500">*</span>
-                                        </span>
-                                    </label>
-                                <input
-                                    id="nama"
-                                    type="text"
-                                    name="nama"
-                                    required
-                                    value="{{ $profil->nama }}"
-                                    class="input input-bordered border-base-800 w-full
-                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-9000"
-                                />
+                                    {{-- Singkatan --}}
+                                    <div class="md:col-span-3">
+                                        <label class="label">
+                                            <span class="label-text font-semibold text-emerald-1000">Singkatan</span>
+                                        </label>
+                                        <input id="singkatan" type="text" name="singkatan" maxlength="4" placeholder="MRJ"
+                                            value="{{ $profil->singkatan ?? '' }}"
+                                            class="input input-bordered border-base-900 w-full uppercase tracking-widest focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800" />
+                                        <p class="text-xs text-gray-500">Maks. 4 huruf</p>
+                                        <p class="text-xs text-red-500 hidden field-error" data-for="singkatan"></p>
+                                    </div>
 
-                                    <p class="text-xs text-red-500 hidden field-error" data-for="nama"></p>
+                                    {{-- Telepon --}}
+                                    <div class="md:col-span-3">
+                                        <label class="label">
+                                            <span class="label-text font-semibold text-emerald-1000">Telepon</span>
+                                        </label>
+                                        <input id="telepon" type="text" name="telepon" value="{{ $profil->telepon ?? '' }}"
+                                            class="input input-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800" />
+                                        <p class="text-xs text-red-500 hidden field-error" data-for="telepon"></p>
+                                    </div>
                                 </div>
-
-                                {{-- Singkatan --}}
-                                <div class="md:col-span-3">
-                                    <label class="label">
-                                        <span class="label-text font-semibold text-emerald-1000">
-                                            Singkatan
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="singkatan"
-                                        type="text"
-                                        name="singkatan"
-                                        maxlength="4"
-                                        placeholder="MRJ"
-                                        value="{{ $profil->singkatan ?? '' }}"
-                                        class="input input-bordered border-base-900 w-full uppercase tracking-widest
-                                               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                                    />
-
-                                    <p class="text-xs text-gray-500">
-                                        Maks. 4 huruf
-                                    </p>
-                                    <p class="text-xs text-red-500 hidden field-error" data-for="singkatan"></p>
-                                </div>
-
-                                {{-- Telepon --}}
-                                <div class="md:col-span-3">
-                                    <label class="label">
-                                        <span class="label-text font-semibold text-emerald-1000">
-                                            Telepon
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="telepon"
-                                        type="text"
-                                        name="telepon"
-                                        value="{{ $profil->telepon }}"
-                                        class="input input-bordered border-base-900 w-full
-                                               focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                                    />
-                                    <p class="text-xs text-red-500 hidden field-error" data-for="telepon"></p>
-                                </div>
-
                             </div>
-                        </div>
-
 
                             {{-- Alamat --}}
                             <div class="md:col-span-2">
                                 <label for="alamat" class="block text-sm font-semibold text-emerald-1000 mb-2">Alamat</label>
-                                <textarea
-                                    id="alamat"
-                                    name="alamat"
-                                    rows="3"
-                                    class="textarea textarea-bordered border-base-900 w-full
-                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                                >{{ $profil->alamat }}</textarea>
+                                <textarea id="alamat" name="alamat" rows="3"
+                                    class="textarea textarea-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800">{{ $profil->alamat ?? '' }}</textarea>
                                 <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="alamat"></p>
                             </div>
 
                             {{-- Latitude --}}
                             <div>
                                 <label for="lat" class="block text-sm font-semibold text-emerald-1000 mb-2">Latitude <span class="text-red-500">*</span></label>
-                                <input
-                                    type="text"
-                                    id="lat"
-                                    name="latitude"
-                                    required
-                                    value="{{ $profil->latitude }}"
-                                    class="input input-bordered border-base-900 w-full
-                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                                />
+                                <input type="text" id="lat" name="latitude" required value="{{ $profil->latitude ?? '' }}"
+                                    class="input input-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800" />
                                 <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="latitude"></p>
                             </div>
 
                             {{-- Longitude --}}
                             <div>
                                 <label for="lng" class="block text-sm font-semibold text-emerald-1000 mb-2">Longitude <span class="text-red-500">*</span></label>
-                                <input
-                                    type="text"
-                                    id="lng"
-                                    name="longitude"
-                                    required
-                                    value="{{ $profil->longitude }}"
-                                    class="input input-bordered border-base-900 w-full
-                                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                                />
+                                <input type="text" id="lng" name="longitude" required value="{{ $profil->longitude ?? '' }}"
+                                    class="input input-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800" />
                                 <p class="mt-1 text-xs text-red-500 hidden field-error" data-for="longitude"></p>
                             </div>
 
@@ -165,14 +113,14 @@
                                         <div class="px-3 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700 text-sm">Pilih logo</div>
                                     </label>
                                     <div id="logoPreview" class="w-20 h-20 rounded-xl overflow-hidden border bg-white shadow-sm">
-                                        @if($profil->getFirstMedia('logo'))
-                                            <img src="{{ $profil->getFirstMediaUrl('logo') }}" alt="logo" class="w-full h-full object-cover">
+                                        @if($profil->logo_url)
+                                            <img src="{{ $profil->logo_url }}" alt="logo" class="w-full h-full object-cover">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada</div>
                                         @endif
                                     </div>
                                 </div>
-                                <p class="mt-1 text-xs text-gray-500">Format: JPG/PNG - Max 2MB</p>
+                                <p class="mt-1 text-xs text-gray-500">Format: JPG/PNG/WEBP - Max 2MB</p>
                             </div>
 
                             {{-- Struktur Organisasi --}}
@@ -184,8 +132,8 @@
                                         <div class="px-3 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700 text-sm">Pilih file</div>
                                     </label>
                                     <div id="strukturPreview" class="w-32 rounded-xl overflow-hidden border bg-white shadow-sm">
-                                        @if($profil->getFirstMedia('struktur'))
-                                            <img src="{{ $profil->getFirstMediaUrl('struktur') }}" alt="struktur" class="w-full h-full object-cover">
+                                        @if($profil->struktur_url)
+                                            <img src="{{ $profil->struktur_url }}" alt="struktur" class="w-full h-full object-cover">
                                         @else
                                             <div class="w-full h-full flex items-center justify-center text-xs text-gray-400 px-2">Belum ada</div>
                                         @endif
@@ -200,32 +148,27 @@
                             <h3 class="text-2xl font-bold text-emerald-1000">Data Donasi & Infaq</h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Nama Bank -->
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Nama Bank</label>
-                                    <input type="text" name="bank_name" value="{{ $profil->bank_name ?? 'BCA' }}" class="input input-bordered w-full" placeholder="BCA, Mandiri, dll">
+                                    <input type="text" name="bank_name" value="{{ $profil->bank_name ?? '' }}" class="input input-bordered w-full">
                                 </div>
 
-                                <!-- Kode Bank -->
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Kode Bank</label>
-                                    <input type="text" name="bank_code" value="{{ $profil->bank_code ?? '014' }}" class="input input-bordered w-full" placeholder="014 untuk BCA">
+                                    <input type="text" name="bank_code" value="{{ $profil->bank_code ?? '' }}" class="input input-bordered w-full">
                                 </div>
 
-                                <!-- Nomor Rekening -->
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-semibold mb-2">Nomor Rekening</label>
-                                    <input type="text" name="rekening" value="{{ $profil->rekening ?? '' }}" class="input input-bordered w-full" placeholder="1234567890 (tanpa spasi)">
+                                    <input type="text" name="rekening" value="{{ $profil->rekening ?? '' }}" class="input input-bordered w-full">
                                     <p class="text-xs text-gray-500 mt-1">Spasi akan ditambahkan otomatis tiap 4 digit di tampilan</p>
                                 </div>
 
-                                <!-- Atas Nama -->
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-semibold mb-2">Atas Nama</label>
-                                    <input type="text" name="atas_nama" value="{{ $profil->atas_nama ?? 'Takmir Masjid Al-Hidaya' }}" class="input input-bordered w-full">
+                                    <input type="text" name="atas_nama" value="{{ $profil->atas_nama ?? '' }}" class="input input-bordered w-full">
                                 </div>
 
-                                <!-- QRIS Upload -->
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-semibold mb-2">Gambar QRIS</label>
                                     <div class="flex items-center gap-4">
@@ -234,20 +177,19 @@
                                             <div class="px-4 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700">Pilih QRIS</div>
                                         </label>
                                         <div id="qrisPreview" class="w-40 h-40 rounded-xl overflow-hidden border bg-white shadow-sm">
-                                            @if($profil->qris)
-                                                <img src="{{ Storage::url($profil->qris) }}" alt="QRIS" class="w-full h-full object-contain">
+                                            @if($profil->qris_url)
+                                                <img src="{{ $profil->qris_url }}" alt="QRIS" class="w-full h-full object-contain">
                                             @else
                                                 <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada QRIS</div>
                                             @endif
                                         </div>
                                     </div>
-                                    <p class="mt-2 text-xs text-gray-500">Format PNG/JPG, max 2MB. Akan ditampilkan di halaman donasi.</p>
+                                    <p class="mt-2 text-xs text-gray-500">Format PNG/JPG/WEBP, max 2MB.</p>
                                 </div>
 
-                                <!-- WA Konfirmasi -->
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-semibold mb-2">WhatsApp Konfirmasi Donasi</label>
-                                    <input type="text" name="wa_konfirmasi" value="{{ $profil->wa_konfirmasi ?? $profil->telepon }}" class="input input-bordered w-full" placeholder="6281234567890">
+                                    <input type="text" name="wa_konfirmasi" value="{{ $profil->wa_konfirmasi ?? $profil->telepon ?? '' }}" class="input input-bordered w-full">
                                     <p class="text-xs text-gray-500 mt-1">Nomor WA untuk konfirmasi setelah transfer/scan QRIS</p>
                                 </div>
                             </div>
@@ -268,8 +210,6 @@
                     <div class="mt-10">
                         <div class="flex justify-between items-center">
                             <h3 class="text-2xl font-bold text-emerald-1000">Struktur Kepengurusan</h3>
-
-                            <!-- Panggil helper openPengurus() -->
                             <button onclick="openPengurus()" class="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-sm shadow">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                                 Tambah
@@ -281,8 +221,8 @@
                                 <div class="flex items-center justify-between p-4 rounded-xl bg-emerald-50 border border-emerald-100 shadow-sm pengurus-card" data-id="{{ $p->id }}">
                                     <div class="flex items-center gap-4">
                                         <div class="avatar">
-                                            @if($p->getFirstMedia('foto'))
-                                                <img src="{{ $p->getFirstMediaUrl('foto') }}" alt="{{ $p->nama }}" class="w-14 h-14 rounded-full object-cover border">
+                                            @if($p->foto_url)
+                                                <img src="{{ $p->foto_url }}" alt="{{ $p->nama }}" class="w-14 h-14 rounded-full object-cover border">
                                             @else
                                                 <div class="w-14 h-14 rounded-full bg-emerald-700 text-white flex items-center justify-center text-lg font-bold">
                                                     {{ Str::upper(substr($p->nama, 0, 1)) }}
@@ -312,9 +252,7 @@
                 {{-- MAP --}}
                 <div>
                     <h3 class="text-xl font-bold text-emerald-1000 mb-2">Lokasi di Peta</h3>
-
                     <div id="map" class="rounded-2xl h-80 shadow border border-emerald-100 overflow-hidden"></div>
-
                     <p class="text-gray-600 text-sm mt-3">Klik peta untuk mengubah lokasi atau geser marker.</p>
                 </div>
 
@@ -323,7 +261,7 @@
     </div>
 </div>
 
-{{-- MODAL PENGURUS (dialog plain JS, DaisyUI style) --}}
+{{-- MODAL PENGURUS --}}
 <dialog id="pengurusModal" class="modal">
     <div class="modal-box w-11/12 max-w-lg p-6">
         <div class="flex items-start justify-between">
@@ -340,7 +278,6 @@
                 <div id="fotoPreview" class="w-24 h-24 rounded-full bg-gray-100 shadow flex items-center justify-center overflow-hidden">
                     <div class="text-sm text-gray-400">Preview</div>
                 </div>
-
                 <label class="w-full">
                     <input type="file" id="fotoInputModal" name="foto" accept="image/*" class="hidden">
                     <div id="pickFotoBtn" class="px-3 py-2 border border-dashed rounded-lg text-sm text-emerald-700 bg-emerald-50 text-center cursor-pointer">Pilih foto</div>
@@ -349,37 +286,19 @@
 
             <div>
                 <label class="block text-sm font-semibold mb-1">Nama <span class="text-red-500">*</span></label>
-                <input
-                    type="text"
-                    id="namaModal"
-                    name="nama"
-                    class="input input-bordered border-base-900 w-full
-                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                />
+                <input type="text" id="namaModal" name="nama" class="input input-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800" />
                 <p class="mt-1 text-xs text-red-500 hidden field-error-modal" data-for="nama"></p>
             </div>
 
             <div>
                 <label class="block text-sm font-semibold mb-1">Jabatan <span class="text-red-500">*</span></label>
-                <input
-                    type="text"
-                    id="jabatanModal"
-                    name="jabatan"
-                    class="input input-bordered border-base-900 w-full
-                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                />
+                <input type="text" id="jabatanModal" name="jabatan" class="input input-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800" />
                 <p class="mt-1 text-xs text-red-500 hidden field-error-modal" data-for="jabatan"></p>
             </div>
 
             <div>
                 <label class="block text-sm font-semibold mb-1">Keterangan</label>
-                <textarea
-                    id="keteranganModal"
-                    name="keterangan"
-                    rows="3"
-                    class="textarea textarea-bordered border-base-900 w-full
-                           focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"
-                ></textarea>
+                <textarea id="keteranganModal" name="keterangan" rows="3" class="textarea textarea-bordered border-base-900 w-full focus:border-emerald-600 focus:ring-2 focus:ring-emerald-800"></textarea>
             </div>
 
             <div class="flex justify-end gap-2 mt-3">
@@ -392,22 +311,12 @@
 
 @endsection
 
-
 @push('style')
 <style>
-
     @layer components {
-      .input,
-      .textarea {
-        @apply border-emerald-400;          /* border normal emerald soft */
-      }
-
-      .input:focus,
-      .textarea:focus {
-        @apply border-emerald-600 ring-2 ring-emerald-500/20;  /* lebih bold + ring */
-      }
+        .input, .textarea { @apply border-emerald-400; }
+        .input:focus, .textarea:focus { @apply border-emerald-600 ring-2 ring-emerald-500/20; }
     }
-    /* Card wrapper */
     .card-wrapper {
         border-radius: 1rem;
         overflow: hidden;
@@ -415,8 +324,6 @@
         border: 1px solid rgba(15,23,42,0.04);
         margin: 1.5rem auto;
     }
-
-    /* Top header */
     .card-top {
         background: linear-gradient(90deg, #065f46 0%, #059669 50%, #10b981 100%);
         padding: 18px 0;
@@ -427,7 +334,6 @@
         margin: 0 auto;
         padding: 0 1.5rem;
     }
-
     .card-title {
         font-size: 1.5rem;
         font-weight: 800;
@@ -440,8 +346,6 @@
         color: rgba(255,255,255,0.92);
         font-size: 0.95rem;
     }
-
-    /* top button */
     .btn-top {
         display: inline-flex;
         gap: .6rem;
@@ -451,18 +355,12 @@
         padding: .5rem .9rem;
         border-radius: 999px;
         border: 1px solid rgba(255,255,255,0.08);
-        box-shadow: 0 6px 18px rgba(4,120,87,0.06);
         transition: transform .12s ease, background .12s ease;
     }
     .btn-top svg { stroke: currentColor; }
     .btn-top:hover { transform: translateY(-3px); background: rgba(255,255,255,0.18); }
-
-    /* body */
     .card-body { background: #fff; }
-
     .inner { padding: 1.2rem 0 1.8rem; }
-
-    /* Pengurus card */
     .pengurus-card {
         transition: transform .12s ease, box-shadow .12s ease;
     }
@@ -470,28 +368,16 @@
         transform: translateY(-4px);
         box-shadow: 0 12px 30px rgba(2,6,23,0.06);
     }
-
-    /* Modal look: slightly larger and rounded */
     dialog.modal .modal-box {
         border-radius: 0.9rem;
         box-shadow: 0 18px 40px rgba(2,6,23,0.12);
     }
-
-    /* Buttons small tweaks */
-    .btn, .btn-top, button {
-        font-weight: 600;
-        letter-spacing: -0.2px;
-    }
-
-    /* helper kecil untuk preview agar rapi */
     #logoPreview img, #strukturPreview img, #fotoPreview img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
     }
-
-    /* responsive compact tweaks */
     @media (max-width: 1024px) {
         .w-14 { width: 48px; height: 48px; }
         #logoPreview, #strukturPreview { width: 56px; height: 56px; }
@@ -499,12 +385,9 @@
         .card-top-inner { padding-left: 1rem; padding-right: 1rem; }
         .inner { padding-left: 1rem; padding-right: 1rem; }
     }
-
     [x-cloak] { display: none !important; }
     .field-error { min-height: 1rem; }
     .field-error-modal { min-height: 1rem; }
-
-    /* COMPACT SIDEBAR STYLES */
     body.sidebar-collapsed .pengurus-card .nama-jabatan { display: none; }
     body.sidebar-collapsed .pengurus-card .avatar img,
     body.sidebar-collapsed .pengurus-card .avatar { width: 36px; height: 36px; }
@@ -514,13 +397,11 @@
 </style>
 @endpush
 
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 @push('scripts')
 <script>
-    // (Semua script kamu tidak diubah — salin persis script yang sebelumnya ada)
     // ========== HELPERS ==========
     function showFieldError(name, message) {
         const el = document.querySelector(`.field-error[data-for="${name}"]`);
@@ -547,6 +428,50 @@
     document.getElementById('qrisInput')?.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
+        
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+        
+        // Validasi tipe file
+        if (!file.type.startsWith('image/')) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Format File Tidak Didukung',
+                html: `<strong>${file.name}</strong><br>File harus berupa gambar (PNG, JPG, JPEG, WEBP)`,
+                confirmButtonColor: '#10b981'
+            });
+            this.value = '';
+            document.getElementById('qrisPreview').innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada QRIS</div>';
+            return;
+        }
+        
+        // Validasi ukuran 2MB
+        if (file.size > 2 * 1024 * 1024) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Ukuran File Terlalu Besar',
+                html: `
+                    <div class="text-left">
+                        <p><strong>File:</strong> ${file.name}</p>
+                        <p><strong>Ukuran:</strong> ${fileSizeMB} MB</p>
+                        <p><strong>Maksimal:</strong> 2 MB</p>
+                        <hr class="my-3">
+                        <p class="text-sm text-gray-600">💡 Tips:</p>
+                        <ul class="text-sm text-gray-600 text-left">
+                            <li>• Kompres gambar menggunakan tools seperti <a href="https://tinypng.com" target="_blank" class="text-emerald-600">TinyPNG</a></li>
+                            <li>• Ubah ke format WebP yang lebih ringan</li>
+                            <li>• Gunakan gambar dengan resolusi yang lebih kecil</li>
+                        </ul>
+                    </div>
+                `,
+                confirmButtonColor: '#10b981',
+                confirmButtonText: 'Mengerti'
+            });
+            this.value = '';
+            document.getElementById('qrisPreview').innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada QRIS</div>';
+            return;
+        }
+        
+        // Preview gambar
         const reader = new FileReader();
         reader.onload = ev => {
             document.getElementById('qrisPreview').innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-contain">`;
@@ -565,7 +490,7 @@
                 preview.innerHTML = '';
                 if (this.files && this.files[0]) {
                     const file = this.files[0];
-                    if (file.size > 3 * 1024 * 1024) {
+                    if (file.size > 2 * 1024 * 1024) {
                         showFieldError('logo','Ukuran file terlalu besar (max 2MB)');
                         this.value = '';
                         preview.innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada</div>`;
@@ -624,26 +549,13 @@
         initMap();
 
         $('#singkatan').on('input', function () {
-            this.value = this.value
-                .toUpperCase()
-                .replace(/[^A-Z]/g, '');
-        });
-
-        // Realtime simple validation on input
-        $('#profilForm').on('input change', '.form-input', function() {
-            const name = $(this).attr('name');
-            if ($(this).prop('required') && !$(this).val().trim()) {
-                showFieldError(name, 'Kolom ini wajib diisi');
-            } else {
-                clearFieldError(name);
-            }
+            this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
         });
 
         $('#profilForm').on('submit', function(e) {
             e.preventDefault();
             clearAllFieldErrors();
 
-            // front-end checks
             const requiredFields = ['nama','latitude','longitude'];
             let valid = true;
             requiredFields.forEach(f => {
@@ -659,7 +571,6 @@
                 return;
             }
 
-            // disable submit
             $('#saveBtn').prop('disabled', true);
             $('#saveBtnText').text('Menyimpan...');
 
@@ -674,16 +585,57 @@
                 success: res => {
                     Swal.fire('Berhasil!', res.message, 'success').then(() => location.reload());
                 },
-                error: xhr => {
-                    const msg = xhr.responseJSON?.message || 'Gagal menyimpan';
-                    Swal.fire('Error', msg, 'error');
+                error: function(xhr) {
                     $('#saveBtn').prop('disabled', false);
                     $('#saveBtnText').text('Simpan Profil');
+                    
+                    let errorMessage = 'Gagal menyimpan data';
+                    let errorDetail = '';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        // Ambil error pertama
+                        const firstError = Object.values(xhr.responseJSON.errors)[0];
+                        errorDetail = Array.isArray(firstError) ? firstError[0] : firstError;
+                        
+                        // Cek apakah error tentang QRIS
+                        if (errorDetail.toLowerCase().includes('qris') || errorDetail.toLowerCase().includes('ukuran')) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Upload Gagal',
+                                html: `
+                                    <div class="text-left">
+                                        <p class="font-semibold text-red-600">${errorDetail}</p>
+                                        <hr class="my-3">
+                                        <p class="text-sm text-gray-600">💡 Solusi:</p>
+                                        <ul class="text-sm text-gray-600 text-left">
+                                            <li>• Kompres gambar QRIS Anda</li>
+                                            <li>• Gunakan format WebP yang lebih ringan</li>
+                                            <li>• Pastikan ukuran file dibawah 2MB</li>
+                                        </ul>
+                                    </div>
+                                `,
+                                confirmButtonColor: '#10b981'
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Validasi Gagal',
+                                html: `<p>${errorDetail}</p>`,
+                                confirmButtonColor: '#10b981'
+                            });
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: xhr.responseJSON?.message || 'Terjadi kesalahan pada server',
+                            confirmButtonColor: '#10b981'
+                        });
+                    }
                 }
             });
         });
 
-        // reset
         $('#resetBtn').on('click', function() { location.reload(); });
 
         // Sortable pengurus
@@ -700,7 +652,7 @@
     });
 
     /********************************************************
-     *  Pengurus modal (plain JS dialog) + helpers
+     *  Pengurus modal
      ********************************************************/
     (function(){
         const modal = document.getElementById('pengurusModal');
@@ -746,13 +698,12 @@
                 document.getElementById('namaModal').value = detail.nama ?? '';
                 document.getElementById('jabatanModal').value = detail.jabatan ?? '';
                 document.getElementById('keteranganModal').value = detail.keterangan ?? '';
-                if (detail.foto_url || detail.fotoUrl || detail.foto) {
-                    fotoPreview.innerHTML = `<img src="${detail.foto_url ?? detail.fotoUrl ?? detail.foto}" class="w-full h-full object-cover">`;
+                if (detail.foto_url) {
+                    fotoPreview.innerHTML = `<img src="${detail.foto_url}" class="w-full h-full object-cover">`;
                 } else {
                     fotoPreview.innerHTML = `<div class="text-sm text-gray-400">Preview</div>`;
                 }
             }
-
             showDialog(modal);
             setTimeout(()=>{ const el = document.getElementById('namaModal'); if (el) el.focus(); }, 100);
         };
@@ -767,6 +718,11 @@
         fotoInput?.addEventListener('change', function(e) {
             const file = this.files?.[0];
             if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                Swal.fire('Error', 'Ukuran foto maksimal 2MB', 'error');
+                this.value = '';
+                return;
+            }
             const reader = new FileReader();
             reader.onload = ev => fotoPreview.innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
             reader.readAsDataURL(file);
@@ -843,114 +799,6 @@
                     Swal.fire('Error', xhr.responseJSON?.message || 'Gagal', 'error');
                 }
             });
-        });
-    })();
-
-    /********************************************************
-     *  Additional features: file validators + sidebar detection
-     ********************************************************/
-    (function(){
-        const validators = {
-            logoInput: {
-                maxSize: 2 * 1024 * 1024, // 2MB
-                exts: ['png','jpg','jpeg','webp']
-            },
-            strukturInput: {
-                maxSize: 5 * 1024 * 1024, // 5MB
-                exts: ['png','jpg','jpeg','webp','pdf']
-            },
-            fotoInputModal: {
-                maxSize: 3 * 1024 * 1024, // 3MB
-                exts: ['png','jpg','jpeg','webp']
-            }
-        };
-
-        function extFromName(name) {
-            return (name || '').split('.').pop().toLowerCase();
-        }
-
-        function validateFile(file, rules) {
-            if (!file) return { ok: true };
-            const ext = extFromName(file.name);
-            if (rules.exts && rules.exts.indexOf(ext) === -1) {
-                return { ok: false, reason: `Format tidak diizinkan (${rules.exts.join(', ')})` };
-            }
-            if (rules.maxSize && file.size > rules.maxSize) {
-                return { ok: false, reason: `Ukuran file terlalu besar (max ${Math.round(rules.maxSize/1024/1024)}MB)` };
-            }
-            return { ok: true };
-        }
-
-        document.addEventListener('DOMContentLoaded', function(){
-            const logoEl = document.getElementById('logoInput');
-            const strukturEl = document.getElementById('strukturInput');
-            const fotoModalEl = document.getElementById('fotoInputModal');
-
-            if (logoEl) {
-                logoEl.addEventListener('change', function(){
-                    const file = this.files[0];
-                    const res = validateFile(file, validators.logoInput);
-                    if (!res.ok) {
-                        this.value = '';
-                        if (typeof Swal !== 'undefined') Swal.fire('Gagal', res.reason, 'error'); else alert(res.reason);
-                        document.getElementById('logoPreview').innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada</div>`;
-                    }
-                });
-            }
-
-            if (strukturEl) {
-                strukturEl.addEventListener('change', function(){
-                    const file = this.files[0];
-                    const res = validateFile(file, validators.strukturInput);
-                    if (!res.ok) {
-                        this.value = '';
-                        if (typeof Swal !== 'undefined') Swal.fire('Gagal', res.reason, 'error'); else alert(res.reason);
-                        document.getElementById('strukturPreview').innerHTML = `<div class="w-full h-full flex items-center justify-center text-xs text-gray-400 px-2">Belum ada</div>`;
-                    }
-                });
-            }
-
-            if (fotoModalEl) {
-                fotoModalEl.addEventListener('change', function(e){
-                    const file = this.files[0];
-                    const res = validateFile(file, validators.fotoInputModal);
-                    if (!res.ok) {
-                        this.value = '';
-                        if (typeof Swal !== 'undefined') Swal.fire('Gagal', res.reason, 'error'); else alert(res.reason);
-                        try {
-                            const rootImg = document.getElementById('fotoPreview');
-                            if (rootImg) rootImg.innerHTML = `<div class="text-sm text-gray-400">Preview</div>`;
-                        } catch(e){}
-                        return;
-                    }
-                });
-            }
-
-            // SIDEBAR COLLAPSE DETECTION
-            function updateSidebarState() {
-                const aside = document.querySelector('aside[aria-label="Sidebar"]');
-                if (!aside) return;
-                const rect = aside.getBoundingClientRect();
-                const collapsed = rect.width <= 64 || aside.classList.contains('-translate-x-full') || window.getComputedStyle(aside).transform === 'none' && rect.width <= 64;
-                document.body.classList.toggle('sidebar-collapsed', collapsed);
-            }
-
-            setTimeout(updateSidebarState, 300);
-            window.addEventListener('resize', () => setTimeout(updateSidebarState, 150));
-
-            const asideNode = document.querySelector('aside[aria-label="Sidebar"]');
-            if (asideNode) {
-                const mo = new MutationObserver(muts => {
-                    for (const m of muts) {
-                        if (m.attributeName === 'class' || m.attributeName === 'style') {
-                            updateSidebarState();
-                        }
-                    }
-                });
-                mo.observe(asideNode, { attributes: true, attributeFilter: ['class','style'] });
-            }
-
-            window.addEventListener('sidebar:changed', updateSidebarState);
         });
     })();
 </script>

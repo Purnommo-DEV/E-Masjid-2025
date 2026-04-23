@@ -54,24 +54,6 @@ Route::get('/run-migrate', function () {
     return 'Migration berhasil dijalankan!';
 });
 
-// Aktifkan Maintenance Mode (ON)
-Route::get('/maintenance-on', function () {
-    Artisan::call('down', [
-        '--secret' => 'rahasia12345',     // ganti dengan secret yang aman
-        '--message' => 'Website sedang maintenance. Silakan kembali nanti.',
-        '--retry' => 60,
-    ]);
-
-    return 'Maintenance Mode telah AKTIF!<br><br>
-            Akses bypass: <a href="/rahasia12345">Klik di sini</a><br>
-            (Secret: rahasia12345)';
-});
-
-// Nonaktifkan Maintenance Mode (OFF)
-Route::get('/maintenance-off', function () {
-    Artisan::call('up');
-});
-
 Route::get('/manifest.json', function () {
     $kode = masjid(); // dari helper kamu
 
@@ -225,7 +207,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Profil Masjid
         Route::get('profil/', [ProfilMasjidController::class, 'index'])->name('admin.profil');
-        Route::post('profil/', [ProfilMasjidController::class, 'updateProfil'])->name('admin.profil.update');
+        Route::put('profil/', [ProfilMasjidController::class, 'updateProfil'])->name('admin.profil.update');
         Route::post('/pengurus', [ProfilMasjidController::class, 'storePengurus'])->name('admin.profil.pengurus.store');
         Route::get('/pengurus/{id}', [ProfilMasjidController::class, 'editPengurus'])->name('admin.profil.pengurus.edit');
         Route::put('/pengurus/{id}', [ProfilMasjidController::class, 'updatePengurus'])->name('admin.profil.pengurus.update');
@@ -279,6 +261,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('galeri/{id}', [GaleriController::class, 'edit'])->name('admin.galeri.edit');
         Route::put('galeri/{id}', [GaleriController::class, 'update'])->name('admin.galeri.update');
         Route::delete('galeri/{id}', [GaleriController::class, 'destroy'])->name('admin.galeri.destroy');
+        Route::get('galeri-api/{id}/fotos', [GaleriController::class, 'apiFotos'])->name('galeri.api.fotos');
 
         // Pengumuman
         Route::get('pengumuman', [PengumumanController::class, 'index'])->name('admin.pengumuman.index');

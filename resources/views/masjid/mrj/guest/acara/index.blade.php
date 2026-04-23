@@ -25,7 +25,7 @@
                             <!-- Poster -->
                             @if($acara->hasMedia('poster'))
                                 <div class="h-48 overflow-hidden">
-                                    <img src="{{ $acara->poster_url ?? '/storage/404.jpg' }}" alt="{{ $acara->judul }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <img src="{{ $acara->poster_url ?? '/storage/404.png' }}" alt="{{ $acara->judul }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
                                 </div>
                             @else
                                 <div class="h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">

@@ -9,34 +9,29 @@ class BannerService implements BannerServiceInterface
 {
     public function sliderPages(int $perPage = 3): array
     {
-        // 1️⃣ Ambil banner aktif + media
+        // 1️⃣ Ambil banner aktif + urutkan (tanpa with('media'))
         $banners = Banner::query()
             ->where('is_active', true)
+            ->whereNotNull('image_path')  // Hanya yang punya gambar
             ->orderBy('urutan')
-            ->with('media')
+            ->orderBy('id', 'asc')
             ->get();
 
         if ($banners->isEmpty()) {
             return [];
         }
 
-        // 2️⃣ Mapping ke array yang ramah blade
-        $bannerArr = $banners->map(function ($b) {
-            $media = $b->getFirstMedia('banner');
-
+        // 2️⃣ Mapping ke array yang ramah blade (langsung pakai image_path)
+        $bannerArr = $banners->map(function ($banner) {
             return [
-                'title'    => $b->judul,
-                'subtitle' => $b->subjudul,
-                'note'     => $b->note,
-                'image'    => $media
-                    ? asset(
-                        'storage/' .
-                        ($media->custom_properties['folder'] ?? 'banner') .
-                        '/' . $media->file_name
-                    )
-                    : asset('images/masjid-banner.jpg'),
-                'button'   => $b->button_label,
-                'url'      => $b->button_url,
+                'id'       => $banner->id,
+                'title'    => $banner->judul,
+                'subtitle' => $banner->subjudul,
+                'note'     => $banner->catatan_singkat,  // ← catatan_singkat
+                'image'    => $banner->gambar_url,       // ← pakai accessor
+                'button'   => $banner->label_tombol,     // ← label_tombol
+                'url'      => $banner->url_tujuan,       // ← url_tujuan
+                'deskripsi'=> $banner->deskripsi,
             ];
         })->toArray();
 
@@ -48,7 +43,7 @@ class BannerService implements BannerServiceInterface
             return [];
         }
 
-        // biar bisa looping tanpa jeda → duplikasi array
+        // Biar bisa looping tanpa jeda → duplikasi array
         $loopSource = array_merge($bannerArr, $bannerArr);
         $pageCount  = (int) ceil($total / $perPage);
 
@@ -58,5 +53,27 @@ class BannerService implements BannerServiceInterface
         }
 
         return $pages;
+    }
+    
+    /**
+     * Ambil semua banner aktif (untuk keperluan lain)
+     */
+    public function getAllActive(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Banner::query()
+            ->where('is_active', true)
+            ->whereNotNull('image_path')
+            ->orderBy('urutan')
+            ->get();
+    }
+    
+    /**
+     * Ambil banner by ID (untuk detail)
+     */
+    public function find($id): ?Banner
+    {
+        return Banner::where('is_active', true)
+            ->where('id', $id)
+            ->first();
     }
 }

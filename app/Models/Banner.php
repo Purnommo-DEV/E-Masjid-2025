@@ -3,69 +3,47 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Banner extends Model implements HasMedia
+class Banner extends Model
 {
-    use InteractsWithMedia;
-
     protected $table = 'banners';
     protected $guarded = ['id'];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'starts_at' => 'datetime',
-        'ends_at'   => 'datetime',
         'created_by'=> 'integer',
+        'updated_by'=> 'integer',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | RELATION (AUTHOR OPTIONAL)
-    |--------------------------------------------------------------------------
-    */
+    // Auto-set masjid_code saat create
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (!$model->masjid_code) {
+                $model->masjid_code = masjid();
+            }
+        });
+        
+        static::addGlobalScope('masjid', function ($query) {
+            $query->where('masjid_code', masjid());
+        });
+    }
+
     public function author()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | MEDIA COLLECTION (1 banner = 1 gambar)
-    |--------------------------------------------------------------------------
-    */
-    public function registerMediaCollections(): void
+    public function getGambarUrlAttribute(): string
     {
-        $this->addMediaCollection('banner')->singleFile();
+        return get_image_url($this->image_path) ?: asset('assets/e-masjid/images/masjid-banner.jpg');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | MEDIA CONVERSIONS (optional thumbnail)
-    |--------------------------------------------------------------------------
-    */
-    public function registerMediaConversions(Media $media = null): void
+    
+    // Alias
+    public function getImageUrlAttribute(): string
     {
-        // contoh kalau mau resizing otomatis
-        // $this->addMediaConversion('thumb')
-        //     ->width(600)->height(300)
-        //     ->sharpen(10);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | ACCESSOR: Mengambil URL media (fallback default image)
-    |--------------------------------------------------------------------------
-    */
-    public function getBannerUrlAttribute(): string
-    {
-        $media = $this->getFirstMedia('banner');
-
-        return $media
-            ? $media->getUrl()          // otomatis baca folder custom_properties
-            : asset('images/default-banner.jpg'); // fallback default
+        return $this->gambar_url;
     }
 }

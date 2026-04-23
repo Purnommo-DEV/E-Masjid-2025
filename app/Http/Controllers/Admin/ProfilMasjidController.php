@@ -1,11 +1,11 @@
 <?php
-// app/Http/Controllers/Admin/ProfilMasjidController.php
+
 namespace App\Http\Controllers\Admin;
 
-use App\Interfaces\ProfilMasjidRepositoryInterface;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Interfaces\ProfilMasjidRepositoryInterface;
 use App\Models\Pengurus;
+use Illuminate\Http\Request;
 
 class ProfilMasjidController extends Controller
 {
@@ -20,7 +20,7 @@ class ProfilMasjidController extends Controller
     {
         $profil = $this->repo->getProfil();
         $pengurus = $this->repo->getPengurus();
-        return view('masjid.'.masjid().'.admin.profil.index', compact('profil', 'pengurus'));
+        return view('masjid.' . masjid() . '.admin.profil.index', compact('profil', 'pengurus'));
     }
 
     public function updateProfil(Request $request)
@@ -32,20 +32,23 @@ class ProfilMasjidController extends Controller
             'email'         => 'nullable|email',
             'latitude'      => 'required|numeric|between:-90,90',
             'longitude'     => 'required|numeric|between:-180,180',
-            'singkatan'     => 'nullable|string|max:10', // tambahkan jika ada
-            'logo'          => 'nullable|image|mimes:jpeg,png,webp|max:3048',
-            'struktur'      => 'nullable|image|mimes:jpeg,png,webp|max:3072',
-
-            // Validasi field donasi baru
+            'singkatan'     => 'nullable|string|max:10',
+            'logo'          => 'nullable|image|mimes:jpeg,png,webp|max:2048',
+            'struktur'      => 'nullable|image|mimes:jpeg,png,webp|max:2048',
             'bank_name'     => 'nullable|string|max:100',
             'bank_code'     => 'nullable|string|max:10',
             'rekening'      => 'nullable|string|max:50',
             'atas_nama'     => 'nullable|string|max:100',
-            'qris'          => 'nullable|image|mimes:png,jpeg,jpg|max:3048',
+            'qris'          => 'nullable|image|mimes:png,jpeg,jpg,webp|max:2048',
             'wa_konfirmasi' => 'nullable|string|max:20',
+        ], [
+            'qris.max' => 'Ukuran file QRIS terlalu besar. Maksimal 2MB. File Anda: ' . round($request->file('qris')?->getSize() / 1024 / 1024, 2) . 'MB',
+            'qris.image' => 'File QRIS harus berupa gambar (PNG, JPG, JPEG, WEBP)',
+            'qris.mimes' => 'Format QRIS harus PNG, JPG, JPEG, atau WEBP',
+            'logo.max' => 'Ukuran logo terlalu besar. Maksimal 2MB',
+            'struktur.max' => 'Ukuran file struktur terlalu besar. Maksimal 2MB',
         ]);
 
-        // Kumpulkan SEMUA data yang akan disimpan (profil + donasi)
         $data = $request->only([
             'nama',
             'singkatan',
@@ -61,17 +64,15 @@ class ProfilMasjidController extends Controller
             'wa_konfirmasi',
         ]);
 
-        // Kirim file upload (logo, struktur, qris) secara terpisah
         $data['logo']     = $request->file('logo');
         $data['struktur'] = $request->file('struktur');
         $data['qris']     = $request->file('qris');
 
-        // Panggil repository dengan data lengkap
         $this->repo->updateProfil($data);
 
         return response()->json([
             'success' => true,
-            'message' => 'Profil dan data donasi berhasil diperbarui!'
+            'message' => 'Profil berhasil diperbarui!'
         ]);
     }
 
@@ -93,7 +94,7 @@ class ProfilMasjidController extends Controller
             'foto' => $request->file('foto'),
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Pengurus ditambahkan!']);
+        return response()->json(['success' => true, 'message' => 'Pengurus berhasil ditambahkan!']);
     }
 
     public function editPengurus($id)
@@ -105,7 +106,7 @@ class ProfilMasjidController extends Controller
             'jabatan' => $pengurus->jabatan,
             'keterangan' => $pengurus->keterangan,
             'urutan' => $pengurus->urutan,
-            'foto_url' => $pengurus->getFirstMediaUrl('foto'),
+            'foto_url' => $pengurus->foto_url,
         ]);
     }
 
@@ -127,21 +128,19 @@ class ProfilMasjidController extends Controller
             'foto' => $request->file('foto'),
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Pengurus diperbarui!']);
+        return response()->json(['success' => true, 'message' => 'Pengurus berhasil diperbarui!']);
     }
 
     public function destroyPengurus($id)
     {
         $this->repo->deletePengurus($id);
-        return response()->json(['success' => true, 'message' => 'Pengurus dihapus!']);
+        return response()->json(['success' => true, 'message' => 'Pengurus berhasil dihapus!']);
     }
 
     public function reorderPengurus(Request $request)
     {
         $request->validate(['order' => 'required|array']);
-        foreach ($request->order as $index => $id) {
-            Pengurus::where('id', $id)->update(['urutan' => $index + 1]);
-        }
+        $this->repo->reorderPengurus($request->order);
         return response()->json(['success' => true]);
     }
 }

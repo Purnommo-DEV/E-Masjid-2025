@@ -47,7 +47,6 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
-        z-index: 9991 !important;
     }
 
     /* Scrollable form content */
@@ -73,6 +72,16 @@
         outline: none;
         box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
         border-color: #10b981;
+    }
+    .form-control.is-invalid {
+        border-color: #ef4444;
+        background: #fef2f2;
+    }
+    .invalid-feedback {
+        font-size: 0.75rem;
+        color: #ef4444;
+        margin-top: 0.25rem;
+        display: block;
     }
 
     /* Dropzone */
@@ -139,16 +148,35 @@
         .card-header { padding: .9rem 1rem; }
     }
 
-    /* Tambahan untuk loader */
+    /* Loader Style untuk tombol */
+    .btn-loader {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .spinner-border {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Modal loader overlay */
     .modal-loading-overlay {
         position: absolute;
         inset: 0;
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.85);
         display: none;
         align-items: center;
         justify-content: center;
         z-index: 50;
-        backdrop-filter: blur(2px);
+        backdrop-filter: blur(3px);
     }
     .modal-loading-overlay.active {
         display: flex;
@@ -161,16 +189,19 @@
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
+    
     .tox-tinymce-aux,
     .tox-dialog-wrap {
         z-index: 10000 !important;
     }
     .modal-box {
         overflow: visible !important;
+        position: relative;
+    }
+    
+    /* Dialog modal z-index */
+    dialog.modal {
+        z-index: 1050;
     }
 </style>
 @endpush
@@ -210,7 +241,7 @@
 
 <!-- Modal -->
 <dialog id="acaraModal" class="modal">
-    <div class="modal-box w-11/12 max-w-4xl p-0">
+    <div class="modal-box w-11/12 max-w-4xl p-0" style="position: relative;">
         <form id="acaraForm" class="modal-form" enctype="multipart/form-data">
             @csrf
             <input type="hidden" id="method" value="POST">
@@ -229,16 +260,19 @@
                     <div>
                         <label class="block text-sm font-medium mb-1">Judul <span class="text-red-500">*</span></label>
                         <input type="text" name="judul" class="form-control" required placeholder="Contoh: Pengajian Rutin Jumat">
+                        <div class="invalid-feedback"></div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-1">Mulai <span class="text-red-500">*</span></label>
                             <input type="datetime-local" name="mulai" class="form-control" required>
+                            <div class="invalid-feedback"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Selesai</label>
                             <input type="datetime-local" name="selesai" class="form-control">
+                            <div class="invalid-feedback"></div>
                         </div>
                     </div>
 
@@ -246,10 +280,12 @@
                         <div>
                             <label class="block text-sm font-medium mb-1">Lokasi</label>
                             <input type="text" name="lokasi" class="form-control" placeholder="Contoh: Masjid Al-Ikhlas">
+                            <div class="invalid-feedback"></div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">Penyelenggara</label>
                             <input type="text" name="penyelenggara" class="form-control" placeholder="Contoh: Takmir Masjid">
+                            <div class="invalid-feedback"></div>
                         </div>
                     </div>
 
@@ -257,12 +293,14 @@
                         <label class="block text-sm font-medium mb-1">Pemateri / Pengisi</label>
                         <input type="text" name="pemateri" class="form-control" placeholder="Contoh: Ust. Fulan / Ustzh. Maryam">
                         <p class="text-xs text-gray-500 mt-1">Opsional</p>
+                        <div class="invalid-feedback"></div>
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium mb-1">Waktu (teks)</label>
                         <input type="text" name="waktu_teks" class="form-control" placeholder="Contoh: Ba’da Maghrib">
                         <p class="text-xs text-gray-500 mt-1">Akan diprioritaskan jika diisi</p>
+                        <div class="invalid-feedback"></div>
                     </div>
 
                     <div>
@@ -272,6 +310,7 @@
                                 <option value="{{ $k->id }}">{{ $k->nama }}</option>
                             @endforeach
                         </select>
+                        <div class="invalid-feedback"></div>
                     </div>
 
                     <div class="flex items-center gap-3">
@@ -291,6 +330,7 @@
                         <div class="text-sm text-gray-600">Klik atau seret gambar (jpg/png, max 1MB)</div>
                     </label>
                     <input type="file" name="poster" id="gambarInput" class="hidden" accept="image/*">
+                    <div class="invalid-feedback" data-error="poster"></div>
 
                     <div class="space-y-4">
                         <div id="kolomFotoLama" style="display:none;">
@@ -313,13 +353,15 @@
             <div class="px-6 pb-6">
                 <label class="block text-sm font-medium mb-2">Deskripsi</label>
                 <textarea name="deskripsi" id="deskripsiEditor" class="form-control w-full" rows="10" placeholder="Isi lengkap acara..."></textarea>
+                <div class="invalid-feedback" data-error="deskripsi"></div>
             </div>
 
             <!-- Footer sticky -->
             <div class="modal-footer">
-                <button type="button" id="cancelAcaraBtn" class="btn btn-outline">Batal</button>
-                <button type="submit" class="btn bg-emerald-600 hover:bg-emerald-700 text-white">Simpan</button>
+                <button type="button" id="cancelAcaraBtn" class="btn btn-outline px-4 py-2 rounded-md border text-slate-700 hover:bg-slate-50">Batal</button>
+                <button type="submit" id="submitBtn" class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-full font-semibold">Simpan</button>
             </div>
+            
             <!-- Loader overlay (seluruh modal) -->
             <div id="modalLoader" class="modal-loading-overlay">
                 <div class="text-center">
@@ -332,7 +374,7 @@
 </dialog>
 
 @push('scripts')
-<!-- dependencies (kept same libs but load order recommended) -->
+<!-- dependencies -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
@@ -343,11 +385,45 @@
 
 <script>
     let table = null;
+    let isSubmitting = false;
     const modal = document.getElementById('acaraModal');
     const $modal = $('#acaraModal');
     const form = $('#acaraForm');
 
     let tinyObserver = null;
+
+    // Helper function untuk SweetAlert yang selalu di atas modal
+    function showAlertOnTop(icon, title, text, callback = null) {
+        const wasOpen = modal && modal.open;
+        if (wasOpen) {
+            modal.close();
+        }
+        
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            didOpen: () => {
+                const swalContainer = document.querySelector('.swal2-container');
+                if (swalContainer) {
+                    swalContainer.style.zIndex = '99999';
+                }
+            }
+        }).then((result) => {
+            if (wasOpen && modal) {
+                modal.showModal();
+            }
+            if (callback) callback(result);
+        });
+    }
+
+    // Reset error messages
+    function resetErrors() {
+        $('.invalid-feedback').text('');
+        $('.form-control').removeClass('is-invalid');
+    }
 
     tinymce.init({
         selector: '#deskripsiEditor',
@@ -361,12 +437,9 @@
         content_style: "body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.7; } h2 { font-size: 22px; } h3 { font-size: 18px; }",
 
         setup: function (editor) {
-
             editor.on('init', function () {
-
                 const dialog = document.getElementById('acaraModal');
 
-                // hentikan observer lama (INI YANG PENTING)
                 if (tinyObserver) {
                     tinyObserver.disconnect();
                     tinyObserver = null;
@@ -388,7 +461,6 @@
                 });
             });
 
-            // ketika editor dihancurkan → bersihkan observer
             editor.on('remove', function () {
                 if (tinyObserver) {
                     tinyObserver.disconnect();
@@ -415,12 +487,12 @@
                     data: null, orderable: false, render: function(d){
                         return `
                             <div class="inline-flex gap-2">
-                            <button class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-yellow-50 hover:bg-yellow-100 text-yellow-700 shadow-sm btn-ghost-ico" title="Edit" onclick="editAcara(${d.id})">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l11-11a2.828 2.828 0 0 0-4-4L4 16v4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
-                            <button class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-red-50 hover:bg-red-100 text-red-700 shadow-sm btn-ghost-ico" title="Hapus" onclick="deleteAcara(${d.id})">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
+                                <button class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-yellow-50 hover:bg-yellow-100 text-yellow-700 shadow-sm" title="Edit" onclick="editAcara(${d.id})">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l11-11a2.828 2.828 0 0 0-4-4L4 16v4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                                <button class="inline-flex items-center justify-center w-9 h-9 rounded-md bg-red-50 hover:bg-red-100 text-red-700 shadow-sm" title="Hapus" onclick="deleteAcara(${d.id})">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
                             </div>
                         `;
                     }
@@ -434,7 +506,12 @@
         $('#closeAcaraModalBtn, #cancelAcaraBtn').on('click', ()=> closeDialog(modal));
         if(modal) modal.addEventListener('cancel', (e)=>{ e.preventDefault(); closeDialog(modal); });
 
-        if($.fn.select2){ $('.select2').each(function(){ if($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy'); $(this).select2({ width:'100%', dropdownParent: $modal.length ? $modal : $('body') }); }); }
+        if($.fn.select2){ 
+            $('.select2').each(function(){ 
+                if($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy'); 
+                $(this).select2({ width:'100%', dropdownParent: $modal.length ? $modal : $('body') }); 
+            }); 
+        }
 
         // make dropzone clickable via keyboard
         $('.dropzone').on('keypress', function(e){ if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#gambarInput').trigger('click'); } });
@@ -443,22 +520,46 @@
     // gambar preview
     $(document).on('change', '#gambarInput', function(e){
         const file = e.target.files[0];
-        const preview = $('#previewGambar'); preview.empty();
-        if(!file){ preview.html('<div class="text-muted small">Belum ada gambar.</div>'); return; }
+        const preview = $('#previewGambar'); 
+        preview.empty();
+        if(!file){ 
+            preview.html('<div class="text-muted small">Belum ada gambar.</div>'); 
+            return; 
+        }
         const maxSize = 5 * 1024 * 1024;
-        if(file.size > maxSize){ Swal.fire('Ukuran terlalu besar!', 'Maksimal 2MB.', 'warning'); $(this).val(''); preview.html('<div class="text-muted small">Belum ada gambar.</div>'); return; }
-        if(!file.type.startsWith('image/')){ Swal.fire('File tidak valid!', 'Hanya gambar diperbolehkan.', 'error'); $(this).val(''); preview.html('<div class="text-muted small">Belum ada gambar.</div>'); return; }
+        if(file.size > maxSize){ 
+            showAlertOnTop('warning', 'Ukuran terlalu besar!', 'Maksimal 2MB.'); 
+            $(this).val(''); 
+            preview.html('<div class="text-muted small">Belum ada gambar.</div>'); 
+            return; 
+        }
+        if(!file.type.startsWith('image/')){ 
+            showAlertOnTop('error', 'File tidak valid!', 'Hanya gambar diperbolehkan.'); 
+            $(this).val(''); 
+            preview.html('<div class="text-muted small">Belum ada gambar.</div>'); 
+            return; 
+        }
 
         const reader = new FileReader();
-        reader.onload = function(ev){ const html = `<div class="preview-image-box mb-2"><img src="${ev.target.result}" alt="Preview"></div>`; preview.append(html); };
+        reader.onload = function(ev){ 
+            const html = `<div class="preview-image-box mb-2"><img src="${ev.target.result}" alt="Preview"></div>`; 
+            preview.append(html); 
+        };
         reader.readAsDataURL(file);
     });
 
     // add
     window.addAcara = function(){
-        form[0].reset(); $('.is-invalid').removeClass('is-invalid'); $('.invalid-feedback').remove();
-        $('#method').val('POST'); form.attr('action', '{{ route('admin.acara.store') }}'); $('#acaraModalTitle').text('Tambah Acara');
-        if($.fn.select2) $('.select2').val(null).trigger('change'); $('#previewGambar').empty(); $('#kolomFotoLama').hide(); showDialog(modal); setTimeout(()=> $('[name=judul]').focus(), 120);
+        resetErrors();
+        form[0].reset(); 
+        $('#method').val('POST'); 
+        form.attr('action', '{{ route('admin.acara.store') }}'); 
+        $('#acaraModalTitle').text('Tambah Acara');
+        if($.fn.select2) $('.select2').val(null).trigger('change'); 
+        $('#previewGambar').empty().html('<div class="text-muted small">Belum ada gambar.</div>'); 
+        $('#kolomFotoLama').hide(); 
+        showDialog(modal); 
+        setTimeout(()=> $('[name=judul]').focus(), 120);
 
         if (tinymce.get('deskripsiEditor')) {
             tinymce.get('deskripsiEditor').setContent('');
@@ -467,12 +568,28 @@
 
     // edit
     window.editAcara = function(id){
+        resetErrors();
         $.get(`{{ url('admin/acara') }}/${id}`, function(data){
-            form[0].reset(); $('#previewGambar, #daftarFotoLama').empty(); $('#kolomFotoLama').show();
+            form[0].reset(); 
+            $('#previewGambar').empty().html('<div class="text-muted small">Belum ada gambar.</div>');
+            $('#daftarFotoLama').empty(); 
+            
+            // Tampilkan foto lama jika ada
+            if(data.poster_url){ 
+                $('#kolomFotoLama').show();
+                const html = `<div class="preview-image-box mb-2"><img src="${data.poster_url}" alt="Foto lama" style="max-width: 100%; height: auto; border-radius: 8px;"></div>`; 
+                $('#daftarFotoLama').append(html); 
+            } else { 
+                $('#kolomFotoLama').hide();
+                $('#daftarFotoLama').html('<div class="text-muted small">Tidak ada foto lama.</div>'); 
+            }
+            
             $('[name=judul]').val(data.judul); 
+            
             if (tinymce.get('deskripsiEditor')) {
                 tinymce.get('deskripsiEditor').setContent(data.deskripsi || '');
             }
+            
             $('[name=mulai]').val(data.mulai); 
             $('[name=selesai]').val(data.selesai);
             $('[name=lokasi]').val(data.lokasi); 
@@ -480,27 +597,78 @@
             $('[name=pemateri]').val(data.pemateri);
             $('[name=waktu_teks]').val(data.waktu_teks);
 
-            if(data.poster && data.poster.length > 0){ $('#daftarFotoLama').empty(); data.poster.forEach(foto => { const html = `<div class="preview-image-box mb-2"><img src="${foto.url}" alt="Foto lama"></div>`; $('#daftarFotoLama').append(html); }); } else { $('#daftarFotoLama').html('<div class="text-muted small">Tidak ada foto lama.</div>'); }
-
-            if($.fn.select2){ $('.select2').val(data.kategori_ids || []).trigger('change'); } else { $('[name="kategori_id[]"]').val(data.kategori_ids || []); }
+            if($.fn.select2){ 
+                $('.select2').val(data.kategori_ids || []).trigger('change'); 
+            } else { 
+                $('[name="kategori_id[]"]').val(data.kategori_ids || []); 
+            }
+            
             $('[name=is_published]').prop('checked', data.is_published);
-            $('#method').val('PUT'); form.attr('action', `{{ url('admin/acara') }}/${id}`); $('#acaraModalTitle').text('Edit Acara'); showDialog(modal); setTimeout(()=> $('[name=judul]').focus(), 120);
+            $('#method').val('PUT'); 
+            form.attr('action', `{{ url('admin/acara') }}/${id}`); 
+            $('#acaraModalTitle').text('Edit Acara'); 
+            showDialog(modal); 
+            setTimeout(()=> $('[name=judul]').focus(), 120);
+        }).fail(function() {
+            showAlertOnTop('error', 'Error', 'Gagal memuat data acara.');
+        });
+    };
+    // delete
+    window.deleteAcara = function(id){
+        const wasOpen = modal && modal.open;
+        if (wasOpen) {
+            modal.close();
+        }
+        
+        Swal.fire({ 
+            title: 'Yakin?', 
+            text: 'Acara akan dihapus!', 
+            icon: 'warning', 
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Hapus',
+            cancelButtonText: 'Batal',
+            allowOutsideClick: false,
+            didOpen: () => {
+                const swalContainer = document.querySelector('.swal2-container');
+                if (swalContainer) {
+                    swalContainer.style.zIndex = '99999';
+                }
+            }
+        }).then(result => { 
+            if(result.isConfirmed){ 
+                $.ajax({ 
+                    url: `{{ url('admin/acara') }}/${id}`, 
+                    type:'DELETE', 
+                    data: {_token: '{{ csrf_token() }}'}, 
+                    success: (res)=>{ 
+                        table.ajax.reload(); 
+                        Swal.fire('Berhasil','Acara dihapus.','success'); 
+                    },
+                    error: (xhr) => {
+                        showAlertOnTop('error', 'Error', xhr.responseJSON?.message || 'Gagal menghapus acara.');
+                    }
+                }); 
+            } else if (wasOpen && modal) {
+                modal.showModal();
+            }
         });
     };
 
-    // delete
-    window.deleteAcara = function(id){
-        Swal.fire({ title: 'Yakin?', text: 'Acara akan dihapus!', icon: 'warning', showCancelButton:true }).then(result => { if(result.isConfirmed){ $.ajax({ url: `{{ url('admin/acara') }}/${id}`, type:'DELETE', data: {_token: '{{ csrf_token() }}'}, success: ()=>{ table.ajax.reload(); Swal.fire('Berhasil','Acara dihapus.','success'); } }); } });
-    };
-
-    // submit
+    // submit with loader
     form.on('submit', function(e){
         e.preventDefault();
-
+        
+        if (isSubmitting) return;
+        
+        resetErrors();
+        
+        const submitBtn = $('#submitBtn');
+        const originalBtnText = submitBtn.html();
+        
         // Tampilkan loader
-        $('#submitBtn').prop('disabled', true);
-        $('#submitText').addClass('hidden');
-        $('#submitLoader').removeClass('hidden');
+        isSubmitting = true;
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<span class="btn-loader"><span class="spinner-border"></span> Menyimpan...</span>');
         $('#modalLoader').addClass('active');
 
         tinymce.triggerSave();
@@ -516,37 +684,52 @@
             processData: false,
             contentType: false,
             success: res => {
-                // Sembunyikan loader
-                $('#submitBtn').prop('disabled', false);
-                $('#submitText').removeClass('hidden');
-                $('#submitLoader').addClass('hidden');
-                $('#modalLoader').removeClass('active');
-
                 closeDialog(modal);
                 table.ajax.reload();
-                Swal.fire('Berhasil', res.message || 'Data berhasil disimpan', 'success');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: res.message || 'Data berhasil disimpan',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
             error: xhr => {
-                // Sembunyikan loader juga saat error
-                $('#submitBtn').prop('disabled', false);
-                $('#submitText').removeClass('hidden');
-                $('#submitLoader').addClass('hidden');
-                $('#modalLoader').removeClass('active');
-
                 const json = xhr.responseJSON || {};
                 if (json.errors) {
-                    $('.invalid-feedback').remove();
-                    $('.is-invalid').removeClass('is-invalid');
+                    $('.invalid-feedback').text('');
+                    $('.form-control').removeClass('is-invalid');
+                    
                     Object.keys(json.errors).forEach(k => {
                         const el = $(`[name="${k}"]`);
+                        const errorDiv = el.siblings('.invalid-feedback');
                         if (el.length) {
                             el.addClass('is-invalid');
-                            el.after(`<div class="invalid-feedback">${json.errors[k][0]}</div>`);
+                            if (errorDiv.length) {
+                                errorDiv.text(json.errors[k][0]);
+                            } else {
+                                el.after(`<div class="invalid-feedback">${json.errors[k][0]}</div>`);
+                            }
+                        } else {
+                            // Untuk field seperti poster atau deskripsi
+                            $(`[data-error="${k}"]`).text(json.errors[k][0]);
                         }
                     });
+                    
+                    // Scroll ke error pertama
+                    const firstError = $('.is-invalid').first();
+                    if (firstError.length) {
+                        firstError[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 } else {
-                    Swal.fire('Error', json.message || 'Gagal menyimpan data.', 'error');
+                    showAlertOnTop('error', 'Error', json.message || 'Gagal menyimpan data.');
                 }
+            },
+            complete: function() {
+                isSubmitting = false;
+                submitBtn.prop('disabled', false);
+                submitBtn.html(originalBtnText);
+                $('#modalLoader').removeClass('active');
             }
         });
     });

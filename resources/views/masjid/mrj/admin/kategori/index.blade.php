@@ -59,7 +59,7 @@
         background: rgba(15,23,42,0.55);
         backdrop-filter: blur(4px) saturate(1.02);
     }
-    dialog.modal { border: none; padding: 0; }
+    dialog.modal { border: none; padding: 0; z-index: 1050; }
     .modal-box { border-radius: 12px; box-shadow: 0 18px 40px rgba(2,6,23,0.12); }
 
     /* badge color preview */
@@ -69,6 +69,32 @@
 
     /* input plain */
     .input-plain { border: 1px solid #e6e6e6; border-radius: 8px; padding: .5rem .75rem; width: 100%; }
+    .input-plain.error { border-color: #ef4444; background: #fef2f2; }
+    .error-text { font-size: 0.75rem; color: #ef4444; margin-top: 0.25rem; display: block; }
+
+    /* Loader Style */
+    .btn-loader {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .spinner-border {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* SweetAlert z-index fix */
+    .swal2-container {
+        z-index: 99999 !important;
+    }
 
     @media (max-width:640px) {
         .card-header { padding: .9rem 1rem; }
@@ -128,24 +154,27 @@
 
             <div class="grid grid-cols-1 gap-3">
                 <div>
-                    <label class="block text-sm font-medium mb-1">Nama Kategori</label>
+                    <label class="block text-sm font-medium mb-1">Nama Kategori <span class="text-red-500">*</span></label>
                     <input type="text" name="nama" class="input-plain" required>
+                    <small class="error-text" data-error="nama"></small>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium mb-1">Tipe Kategori</label>
+                    <label class="block text-sm font-medium mb-1">Tipe Kategori <span class="text-red-500">*</span></label>
                     <select name="tipe" class="input-plain" required>
                         <option value="berita">Berita</option>
                         <option value="acara">Acara</option>
                         <option value="galeri">Galeri</option>
                         <option value="lainnya">Lainnya</option>
                     </select>
+                    <small class="error-text" data-error="tipe"></small>
                 </div>
 
                 <div class="flex items-center gap-3">
                     <div style="flex:1">
                         <label class="block text-sm font-medium mb-1">Warna</label>
                         <input type="color" name="warna" class="input-plain" value="#007bff" style="height:44px;padding:.25rem">
+                        <small class="error-text" data-error="warna"></small>
                     </div>
                     <div style="width:90px;text-align:center">
                         <label class="block text-sm font-medium mb-1 invisible">Preview</label>
@@ -155,8 +184,8 @@
             </div>
 
             <div class="flex justify-end gap-2 mt-5">
-                <button type="button" id="cancelKategoriBtn" class="px-4 py-2 rounded-md border">Batal</button>
-                <button type="submit" class="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Simpan</button>
+                <button type="button" id="cancelKategoriBtn" class="px-4 py-2 rounded-md border text-slate-700 hover:bg-slate-50">Batal</button>
+                <button type="submit" id="submitBtn" class="px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Simpan</button>
             </div>
         </form>
     </div>
@@ -170,18 +199,62 @@
 
 <script>
     let table = null;
+    let isSubmitting = false;
     const modal = document.getElementById('kategoriModal');
-    const $modal = $('#kategoriModal');
     const form = $('#kategoriForm');
+    const kategoriForm = document.getElementById('kategoriForm');
 
-    // show/close dialog helpers (fallback)
+    // Helper function untuk SweetAlert yang selalu di atas modal
+    function showAlertOnTop(icon, title, text, callback = null) {
+        // Tutup modal sementara jika terbuka
+        const wasOpen = modal && modal.open;
+        if (wasOpen) {
+            modal.close();
+        }
+        
+        Swal.fire({
+            icon: icon,
+            title: title,
+            text: text,
+            confirmButtonText: 'OK',
+            allowOutsideClick: false,
+            didOpen: () => {
+                // Pastikan z-index tinggi
+                const swalContainer = document.querySelector('.swal2-container');
+                if (swalContainer) {
+                    swalContainer.style.zIndex = '99999';
+                }
+            }
+        }).then((result) => {
+            // Buka kembali modal jika sebelumnya terbuka
+            if (wasOpen && modal) {
+                modal.showModal();
+            }
+            if (callback) callback(result);
+        });
+    }
+
+    // show/close dialog helpers
     function showDialog(d) {
-        try { if (typeof d.showModal === 'function') d.showModal(); else d.classList.add('modal-open'); }
+        try { 
+            if (typeof d.showModal === 'function') d.showModal(); 
+            else d.classList.add('modal-open'); 
+        }
         catch(e){ d.classList.add('modal-open'); }
     }
+    
     function closeDialog(d) {
-        try { if (typeof d.close === 'function') d.close(); else d.classList.remove('modal-open'); }
+        try { 
+            if (typeof d.close === 'function') d.close(); 
+            else d.classList.remove('modal-open'); 
+        }
         catch(e){ d.classList.remove('modal-open'); }
+    }
+    
+    // Reset error messages
+    function resetErrors() {
+        $('#kategoriForm .error-text').text('');
+        $('#kategoriForm .input-plain').removeClass('error');
     }
 
     $(function () {
@@ -238,20 +311,23 @@
 
     // open add
     window.addKategori = function () {
-        form[0].reset();
+        resetErrors();
+        kategoriForm.reset();
         $('#method').val('POST');
         form.attr('action', '{{ route('admin.kategori.store') }}');
         $('#kategoriModalTitle').text('Tambah Kategori');
-        $('#warnaPreview').css('background', $('input[name="warna"]').val() || '#007bff');
+        $('input[name="warna"]').val('#007bff');
+        $('#warnaPreview').css('background', '#007bff');
         showDialog(modal);
         setTimeout(()=> $('[name=nama]').focus(), 120);
     };
 
     // open edit
     window.editKategori = function (id) {
+        resetErrors();
         $.get(`{{ url('admin/kategori') }}/${id}`)
             .done(function (data) {
-                form[0].reset();
+                kategoriForm.reset();
                 $('[name=nama]').val(data.nama);
                 $('[name=tipe]').val(data.tipe);
                 $('[name=warna]').val(data.warna || '#007bff');
@@ -263,15 +339,32 @@
                 setTimeout(()=> $('[name=nama]').focus(), 120);
             })
             .fail(function () {
-                Swal.fire('Error', 'Gagal memuat data.', 'error');
+                showAlertOnTop('error', 'Error', 'Gagal memuat data.');
             });
     };
 
     // delete
     window.deleteKategori = function (id) {
+        // Tutup modal jika terbuka
+        const wasOpen = modal && modal.open;
+        if (wasOpen) {
+            modal.close();
+        }
+        
         Swal.fire({
-            title: 'Yakin?', text: 'Kategori akan dihapus!', icon: 'warning',
-            showCancelButton: true, confirmButtonText: 'Ya', cancelButtonText: 'Batal'
+            title: 'Yakin?', 
+            text: 'Kategori akan dihapus!', 
+            icon: 'warning',
+            showCancelButton: true, 
+            confirmButtonText: 'Ya', 
+            cancelButtonText: 'Batal',
+            allowOutsideClick: false,
+            didOpen: () => {
+                const swalContainer = document.querySelector('.swal2-container');
+                if (swalContainer) {
+                    swalContainer.style.zIndex = '99999';
+                }
+            }
         }).then(result => {
             if (result.isConfirmed) {
                 $.ajax({
@@ -282,31 +375,86 @@
                         table.ajax.reload();
                         Swal.fire('Berhasil', res.message, 'success');
                     },
-                    error: xhr => Swal.fire('Error', xhr.responseJSON?.message || 'Gagal.', 'error')
+                    error: xhr => {
+                        showAlertOnTop('error', 'Error', xhr.responseJSON?.message || 'Gagal menghapus.');
+                    }
                 });
+            } else if (wasOpen && modal) {
+                // Buka kembali modal jika batal dan sebelumnya terbuka
+                modal.showModal();
             }
         });
     };
 
-    // submit form
+    // submit form with loader
     form.on('submit', function (e) {
         e.preventDefault();
+        
+        // Prevent double submission
+        if (isSubmitting) return;
+        
+        resetErrors();
+        
         let formData = new FormData(this);
         let method = $('#method').val();
         let action = form.attr('action');
+        const submitBtn = $('#submitBtn');
+        const originalBtnText = submitBtn.html();
+        
         if (method === 'PUT') formData.append('_method', 'PUT');
 
+        // Show loader
+        isSubmitting = true;
+        submitBtn.prop('disabled', true);
+        submitBtn.html('<span class="btn-loader"><span class="spinner-border"></span> Menyimpan...</span>');
+
         $.ajax({
-            url: action, type: 'POST', data: formData,
-            processData: false, contentType: false,
+            url: action, 
+            type: 'POST', 
+            data: formData,
+            processData: false, 
+            contentType: false,
             success: res => {
                 closeDialog(modal);
                 table.ajax.reload();
-                Swal.fire('Berhasil', res.message, 'success');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
             error: xhr => {
-                let msg = xhr.responseJSON?.errors?.nama?.[0] || xhr.responseJSON?.message || 'Gagal.';
-                Swal.fire('Error', msg, 'error');
+                if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                    // Handle validation errors
+                    const errors = xhr.responseJSON.errors;
+                    Object.keys(errors).forEach(field => {
+                        const msg = errors[field][0];
+                        const errorElem = $(`[data-error="${field}"]`);
+                        if (errorElem.length) {
+                            errorElem.text(msg);
+                        }
+                        const input = $(`[name="${field}"]`);
+                        if (input.length && input.hasClass('input-plain')) {
+                            input.addClass('error');
+                        }
+                    });
+                    
+                    // Scroll ke error pertama
+                    const firstError = $('.error-text:not(:empty)').first();
+                    if (firstError.length) {
+                        firstError[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else {
+                    showAlertOnTop('error', 'Error', xhr.responseJSON?.message || 'Terjadi kesalahan.');
+                }
+            },
+            complete: function() {
+                // Reset button state
+                isSubmitting = false;
+                submitBtn.prop('disabled', false);
+                submitBtn.html(originalBtnText);
             }
         });
     });

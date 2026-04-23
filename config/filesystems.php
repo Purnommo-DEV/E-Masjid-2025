@@ -29,51 +29,26 @@ return [
     */
 
     'disks' => [
-
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app/private'),
-            'serve' => true,
+            'root' => storage_path('app'),
             'throw' => false,
-            'report' => false,
         ],
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => env('APP_URL').'/storage',
+            'root' => env('PUBLIC_STORAGE_PATH', public_path('../storage')),
+            'url' => '/storage',
             'visibility' => 'public',
-            'throw' => false,
-            'report' => false,
         ],
 
-        's3' => [
-            'driver' => 's3',
-            'key' => env('AWS_ACCESS_KEY_ID'),
-            'secret' => env('AWS_SECRET_ACCESS_KEY'),
-            'region' => env('AWS_DEFAULT_REGION'),
-            'bucket' => env('AWS_BUCKET'),
-            'url' => env('AWS_URL'),
-            'endpoint' => env('AWS_ENDPOINT'),
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-            'throw' => false,
-            'report' => false,
-        ],
-
-        'media' => [
+        // Optional: khusus untuk upload masjid
+        'masjid' => [
             'driver' => 'local',
-            'root' => storage_path('app/public/media'),
-            'url' => env('APP_URL').'/storage/media',
+            'root' => public_path('../storage/' . env('APP_MASJID', 'default')),
+            'url' => '/storage/' . env('APP_MASJID', 'default'),
             'visibility' => 'public',
         ],
-
-        'public_html' => [
-            'driver' => 'local',
-            'root' => base_path('../public_html/storage'),
-            'url' => env('APP_URL').'/storage',
-            'visibility' => 'public',
-        ],
-
     ],
 
     /*
@@ -88,7 +63,7 @@ return [
     */
 
     'links' => [
-        public_path('storage') => storage_path('app/public'),
+        public_path('storage') => public_path('../storage'),  // ← Untuk local development
     ],
 
 ];

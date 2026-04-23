@@ -10,11 +10,17 @@ class BannerController extends Controller
 {
     public function __construct(protected BannerRepositoryInterface $repo) {}
 
+    /**
+     * Tampilkan halaman index banner
+     */
     public function index()
     {
-        return view('masjid.'.masjid().'.admin.banner.index');
+        return view('masjid.' . masjid() . '.admin.banner.index');
     }
 
+    /**
+     * Ambil data untuk DataTable
+     */
     public function data()
     {
         $rows = $this->repo->all();
@@ -22,72 +28,105 @@ class BannerController extends Controller
         return response()->json(['data' => $rows]);
     }
 
+    /**
+     * Store banner baru
+     */
     public function store(Request $request)
     {
+        dd(1);
         $validated = $request->validate([
             'judul'           => ['required', 'string', 'max:255'],
             'subjudul'        => ['nullable', 'string', 'max:255'],
             'catatan_singkat' => ['nullable', 'string', 'max:255'],
-            'label_tombol'    => ['nullable', 'string', 'max:50'],
+            'button_label'    => ['nullable', 'string', 'max:50'],
             'urutan'          => ['nullable', 'integer', 'min:0'],
-            'url_tujuan'      => ['nullable', 'url'],
+            'button_url'      => ['nullable', 'url'],
             'deskripsi'       => ['nullable', 'string'],
-            // <== nggak pakai boolean / in lagi
             'is_active'       => ['nullable'],
             'gambar'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        $this->repo->create(array_merge($validated, [
-            // tetap pakai helper boolean supaya di DB boolean beneran
+        $banner = $this->repo->create(array_merge($validated, [
             'is_active' => $request->boolean('is_active'),
         ]));
 
-        return response()->json(['success' => true, 'message' => 'Banner ditambahkan!']);
-    }
-
-    public function edit($id)
-    {
-        $b = $this->repo->find($id);
-
         return response()->json([
-            'id'              => $b->id,
-            'judul'           => $b->judul,
-            'subjudul'        => $b->subjudul,
-            'catatan_singkat' => $b->catatan_singkat,
-            'label_tombol'    => $b->label_tombol,
-            'urutan'          => $b->urutan,
-            'url_tujuan'      => $b->url_tujuan,
-            'deskripsi'       => $b->deskripsi,
-            'is_active'       => $b->is_active,
-            'gambar_url'      => $b->gambar_url,
+            'success' => true,
+            'message' => 'Banner berhasil ditambahkan!',
+            'data'    => $banner
         ]);
     }
 
+    /**
+     * Get data banner untuk edit
+     */
+    public function edit($id)
+    {
+        $banner = $this->repo->find($id);
+
+        if (!$banner) {
+            return response()->json(['error' => 'Banner tidak ditemukan'], 404);
+        }
+
+        return response()->json([
+            'id'              => $banner->id,
+            'judul'           => $banner->judul,
+            'subjudul'        => $banner->subjudul,
+            'catatan_singkat' => $banner->catatan_singkat,
+            'button_label'    => $banner->button_label,
+            'urutan'          => $banner->urutan,
+            'button_url'      => $banner->button_url,
+            'deskripsi'       => $banner->deskripsi,
+            'is_active'       => $banner->is_active,
+            'gambar_url'      => $banner->gambar_url,
+        ]);
+    }
+
+    /**
+     * Update banner
+     */
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
             'judul'           => ['required', 'string', 'max:255'],
             'subjudul'        => ['nullable', 'string', 'max:255'],
             'catatan_singkat' => ['nullable', 'string', 'max:255'],
-            'label_tombol'    => ['nullable', 'string', 'max:50'],
+            'button_label'    => ['nullable', 'string', 'max:50'],
             'urutan'          => ['nullable', 'integer', 'min:0'],
-            'url_tujuan'      => ['nullable', 'url'],
+            'button_url'      => ['nullable', 'url'],
             'deskripsi'       => ['nullable', 'string'],
-            // <== longgar
             'is_active'       => ['nullable'],
             'gambar'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        $this->repo->update($id, array_merge($validated, [
+        $banner = $this->repo->update($id, array_merge($validated, [
             'is_active' => $request->boolean('is_active'),
         ]));
 
-        return response()->json(['success' => true, 'message' => 'Banner diperbarui!']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Banner berhasil diperbarui!',
+            'data'    => $banner
+        ]);
     }
 
+    /**
+     * Delete banner
+     */
     public function destroy($id)
     {
-        $this->repo->delete($id);
-        return response()->json(['success' => true, 'message' => 'Banner dihapus!']);
+        $deleted = $this->repo->delete($id);
+        
+        if (!$deleted) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Banner gagal dihapus!'
+            ], 400);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Banner berhasil dihapus!'
+        ]);
     }
 }

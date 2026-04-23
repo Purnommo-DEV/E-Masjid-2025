@@ -97,6 +97,35 @@
         .banner-modal-body{padding: .75rem 1rem 1rem;}
         .banner-modal-header,.banner-modal-footer{padding: .75rem 1rem;}
     }
+    
+    /* Loader Style */
+    .btn-loader {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .spinner-border {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ffffff;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* SweetAlert z-index fix */
+    .swal2-container {
+        z-index: 9999 !important;
+    }
+    
+    /* Modal overlay fix */
+    .modal[open] {
+        z-index: 1000;
+    }
 </style>
 @endpush
 
@@ -184,8 +213,8 @@
                             <div class="grid grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)] gap-3">
                                 <div>
                                     <label class="block text-xs font-semibold mb-1">Label Tombol</label>
-                                    <input type="text" name="label_tombol" class="input-plain" placeholder="Lihat Detail">
-                                    <small class="error-text" data-error="label_tombol"></small>
+                                    <input type="text" name="button_label" class="input-plain" placeholder="Lihat Detail">
+                                    <small class="error-text" data-error="button_label"></small>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold mb-1">Urutan</label>
@@ -196,9 +225,9 @@
 
                             <div>
                                 <label class="block text-xs font-semibold mb-1">Link / URL Tujuan</label>
-                                <input type="text" name="url_tujuan" class="input-plain"
+                                <input type="text" name="button_url" class="input-plain"
                                        placeholder="Contoh: http://127.0.0.1:8000/acara/slug-kajian">
-                                <small class="error-text" data-error="url_tujuan"></small>
+                                <small class="error-text" data-error="button_url"></small>
                                 <p class="text-[10px] text-slate-400 mt-1">
                                     Bisa diisi URL detail kajian, donasi, atau halaman lain. Kosongkan jika tidak ada.
                                 </p>
@@ -245,7 +274,7 @@
                         onclick="closeBannerModal()">
                     Batal
                 </button>
-                <button type="submit"
+                <button type="submit" id="submitBtn"
                         class="px-5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-sm text-white font-semibold">
                     Simpan
                 </button>
@@ -267,6 +296,7 @@
     let bannerTable;
     const bannerModal = document.getElementById('bannerModal');
     const bannerForm  = document.getElementById('bannerForm');
+    let isSubmitting = false;
 
     function showDialog(d){
         if (typeof d.showModal === 'function') d.showModal();
@@ -327,9 +357,9 @@
                 bannerForm.judul.value           = res.judul || '';
                 bannerForm.subjudul.value        = res.subjudul || '';
                 bannerForm.catatan_singkat.value = res.catatan_singkat || '';
-                bannerForm.label_tombol.value    = res.label_tombol || '';
+                bannerForm.button_label.value    = res.button_label || '';
                 bannerForm.urutan.value          = res.urutan ?? 0;
-                bannerForm.url_tujuan.value      = res.url_tujuan || '';
+                bannerForm.button_url.value      = res.button_url || '';
                 document.getElementById('is_active').checked = !!res.is_active;
 
                 document.getElementById('bannerPreview').src = res.gambar_url || "{{ asset('assets/e-masjid/images/masjid-banner.jpg') }}";
@@ -369,13 +399,19 @@
         });
     };
 
-    // submit
+    // submit dengan loader
     bannerForm.addEventListener('submit', function(e){
         e.preventDefault();
+        
+        // Prevent double submission
+        if (isSubmitting) return;
+        
         resetErrors();
 
         const method = document.getElementById('bannerMethod').value;
         const formData = new FormData(bannerForm);
+        const submitBtn = document.getElementById('submitBtn');
+        const originalBtnText = submitBtn.innerHTML;
 
         // masukkan content TinyMCE
         if (tinymce.get('banner_deskripsi')) {
@@ -386,6 +422,11 @@
             formData.append('_method', 'PUT');
         }
 
+        // Show loader
+        isSubmitting = true;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="btn-loader"><span class="spinner-border"></span> Menyimpan...</span>';
+
         $.ajax({
             url: bannerForm.action,
             method: 'POST',
@@ -395,24 +436,46 @@
             success: res => {
                 closeBannerModal();
                 bannerTable.ajax.reload();
-                Swal.fire('Berhasil', res.message, 'success');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil',
+                    text: res.message,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
             },
             error: xhr => {
                 if (xhr.status === 422) {
-
                     let errors = {};
 
                     if (xhr.responseJSON && xhr.responseJSON.errors) {
                         errors = xhr.responseJSON.errors;
                     } else {
-                        console.error(xhr.responseText); // 🔥 lihat error asli
-                        Swal.fire('Error', 'Validasi gagal / response bukan JSON', 'error');
+                        console.error(xhr.responseText);
+                        
+                        // Tutup modal sementara
+                        const modal = document.getElementById('bannerModal');
+                        const isModalOpen = modal && modal.open;
+                        if (isModalOpen) {
+                            modal.close();
+                        }
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Validasi Gagal',
+                            text: 'Terjadi kesalahan validasi. Silakan periksa form Anda.',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            // Buka modal lagi setelah alert ditutup
+                            if (isModalOpen && modal) {
+                                modal.showModal();
+                            }
+                        });
                         return;
                     }
 
                     Object.keys(errors).forEach(field => {
                         const msg = errors[field][0];
-
                         const errorElem = document.querySelector(`[data-error="${field}"]`);
                         if (errorElem) errorElem.textContent = msg;
 
@@ -421,9 +484,37 @@
                             input.classList.add('error');
                         }
                     });
+                    
+                    const firstError = document.querySelector('.error-text:not(:empty)');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 } else {
-                    Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan.', 'error');
+                    // Tutup modal sementara
+                    const modal = document.getElementById('bannerModal');
+                    const isModalOpen = modal && modal.open;
+                    if (isModalOpen) {
+                        modal.close();
+                    }
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: xhr.responseJSON?.message || 'Terjadi kesalahan.',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Buka modal lagi setelah alert ditutup
+                        if (isModalOpen && modal) {
+                            modal.showModal();
+                        }
+                    });
                 }
+            },
+            complete: function() {
+                // Reset button state
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
             }
         });
     });
@@ -437,7 +528,7 @@
                 { data: 'gambar', orderable: false, searchable: false },
                 { data: 'judul' },
                 { data: 'catatan_singkat', defaultContent:'-' },
-                { data: 'label_tombol', defaultContent:'Lihat Detail' },
+                { data: 'button_label', defaultContent:'Lihat Detail' },
                 { data: 'urutan' },
                 {
                     data: 'is_active',

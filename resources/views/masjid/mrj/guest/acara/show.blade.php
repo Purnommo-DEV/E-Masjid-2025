@@ -71,7 +71,7 @@
             <!-- Poster -->
             <div class="relative mb-12 lg:mb-16 rounded-3xl overflow-hidden shadow-2xl border-2 border-emerald-100/50 group">
                 @if($acara->hasMedia('poster') || $acara->poster_url)
-                    <img src="{{ $acara->poster_url ?? '/storage/404.jpg' }}"
+                    <img src="{{ $acara->poster_url ?? '/storage/404.png' }}"
                          alt="{{ $acara->judul }}"
                          class="w-full h-auto max-h-[600px] object-cover transition-transform duration-700 group-hover:scale-105">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
@@ -218,7 +218,7 @@
                         @foreach($related as $item)
                             <div class="group bg-white rounded-3xl border border-emerald-100/50 shadow-lg hover:shadow-2xl hover:border-emerald-300 transition-all duration-500 overflow-hidden transform hover:-translate-y-3">
                                 <div class="h-56 overflow-hidden relative">
-                                    <img src="{{ $item['image'] ?? '/storage/404.jpg' }}"
+                                    <img src="{{ $item['image'] ?? '/storage/404.png' }}"
                                          alt="{{ $item['title'] }}"
                                          class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                                     <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>

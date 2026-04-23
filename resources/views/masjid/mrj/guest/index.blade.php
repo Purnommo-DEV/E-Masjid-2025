@@ -1,7 +1,49 @@
 @extends('masjid.master-guest')
 
 @push('head')
+    {{-- Di <head> --}}
+    <meta name="description" content="{{ $profil->deskripsi ?? 'Informasi kegiatan, jadwal sholat, dan layanan masjid terupdate.' }}">
+    <meta property="og:title" content="{{ $profil->nama ?? 'Masjid' }} - Portal Informasi Umat">
+    <meta property="og:description" content="{{ $profil->tagline ?? 'Menghidupkan shalat berjamaah, mempererat silaturahmi, dan menebar kebaikan.' }}">
+    <meta property="og:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
+
     <script src="https://www.google.com/recaptcha/api.js?render={{ env('RECAPTCHA_SITE_KEY') }}"></script>
+    <style>
+        /* Ganti di bagian @media (max-width: 480px) */
+        @media (max-width: 480px) {
+            /* Perbaikan: ukuran teks lebih besar */
+            #jadwal .grid > div .text-xs,
+            #jadwal .grid > div .text-sm {
+                font-size: 0.75rem !important;  /* diperbesar */
+            }
+            #jadwal .grid > div .text-lg,
+            #jadwal .grid > div .text-xl {
+                font-size: 1.25rem !important;  /* diperbesar dari 1.35rem */
+            }
+        }
+        /* Responsive Donasi Section */
+        @media (max-width: 640px) {
+            #donasi .grid.md\:grid-cols-2 {
+                gap: 1rem;
+            }
+            #donasi .bg-gradient-to-br.from-emerald-50\/80 {
+                padding: 1rem;
+            }
+            #donasi .w-14.h-14 {
+                width: 3rem;
+                height: 3rem;
+            }
+            #donasi .text-3xl {
+                font-size: 1.5rem;
+            }
+            /* QRIS di mobile */
+            #donasi [style*="width: 190px"] {
+                width: 150px !important;
+                height: 150px !important;
+            }
+        }
+    </style>
 @endpush
 
 @section('content')
@@ -36,12 +78,20 @@
                 <div class="grid lg:grid-cols-2 gap-12 xl:gap-16 items-center">
                     <!-- Hero Text -->
                     <div class="space-y-8 text-center lg:text-left">
+                        @php
+                            $profil = \App\Models\ProfilMasjid::first();
+                        @endphp
+
                         <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/60 backdrop-blur-sm border border-emerald-200/50 shadow-sm text-sm text-emerald-800">
-                            <span class="relative flex h-3 w-3">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70"></span>
-                                <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
-                            </span>
-                            Selamat Datang di {!! profil('nama') ?? 'Masjid' !!}
+                            @if($profil && $profil->logo_url)
+                                <img src="{{ $profil->logo_url }}" alt="Logo" class="w-6 h-6 rounded-full object-cover">
+                            @else
+                                <span class="relative flex h-3 w-3">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-70"></span>
+                                    <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-600"></span>
+                                </span>
+                            @endif
+                            Selamat Datang di {{ $profil->nama ?? 'Masjid' }}
                         </div>
 
                         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
@@ -117,7 +167,7 @@
                                                 <div class="text-xs md:text-sm font-semibold text-{{ $data['color'] }}-700 uppercase tracking-wide mb-2 md:mb-3">
                                                     {{ $data['label'] }}
                                                 </div>
-                                                <div class="text-2xl md:text-3xl font-extrabold text-slate-900 group-hover:text-{{ $data['color'] }}-700 transition-colors whitespace-nowrap drop-shadow-sm">
+                                                <div class="text-lg md:text-xl font-extrabold text-slate-900 group-hover:text-{{ $data['color'] }}-700 transition-colors whitespace-nowrap drop-shadow-sm">
                                                     {{ $jadwalSholat[$key] ?? '--:--' }}
                                                 </div>
                                             </div>
@@ -250,164 +300,300 @@
 
         {{-- SECTION AGENDA --}}
         <section id="acara" class="py-12 sm:py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50/50 relative overflow-hidden">
-            <!-- Optional subtle background pattern atau blob -->
+            <!-- Subtle background pattern -->
             <div class="absolute inset-0 opacity-10 pointer-events-none">
                 <div class="absolute -top-20 -left-20 w-96 h-96 bg-teal-200 rounded-full blur-3xl"></div>
+                <div class="absolute bottom-0 right-0 w-80 h-80 bg-emerald-200 rounded-full blur-3xl"></div>
             </div>
 
             <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
+                
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-10 gap-4">
                     <div>
                         <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">AGENDA TERDEKAT</p>
                         <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-3">
-                            Kegiatan & Kajian Mendatang
+                            Kegiatan Mendatang
                             <span class="hidden sm:block h-1.5 w-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></span>
                         </h2>
+                        <p class="text-sm text-slate-500 mt-1">Kegiatan & kajian yang akan segera dilaksanakan</p>
                     </div>
-                    <a href="{{ route('acara.index') }}" 
-                       class="text-sm sm:text-base text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-2 hover:underline transition">
-                        Lihat Semua Agenda →
-                    </a>
+                    @if(count($acaras) > 0)
+                        <a href="{{ route('acara.index') }}" 
+                        class="text-sm sm:text-base text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-2 hover:underline transition">
+                            Lihat Semua Agenda →
+                        </a>
+                    @endif
                 </div>
 
-                <div class="grid lg:grid-cols-[3fr_1fr] gap-6 xl:gap-8">
-                    <!-- List Acara Utama -->
-                    <div class="space-y-5 sm:space-y-6">
-                        @forelse(array_slice($acaras, 0, 3) as $acara)
-                            <div class="group bg-white rounded-2xl sm:rounded-3xl border border-emerald-100/60 shadow-md hover:shadow-xl hover:border-emerald-300/70 transition-all duration-300 overflow-hidden hover:-translate-y-1.5">
+                @if(count($acaras) > 0)
+                    {{-- ADA AGENDA --}}
+                    <div class="grid lg:grid-cols-[3fr_1fr] gap-6 xl:gap-8">
+                        <!-- List Acara Utama -->
+                        <div class="space-y-5 sm:space-y-6">
+                            @foreach(array_slice($acaras, 0, 3) as $acara)
+                                <div class="group bg-white rounded-2xl sm:rounded-3xl border border-emerald-100/60 shadow-md hover:shadow-xl hover:border-emerald-300/70 transition-all duration-300 overflow-hidden hover:-translate-y-1.5">
+                                    <div class="p-5 sm:p-6 lg:p-7">
+                                        <!-- Badge & Tanggal -->
+                                        <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
+                                            <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-sm font-medium shadow-sm">
+                                                {{ $acara['kategori'] ?? 'Kajian' }}
+                                            </span>
+                                            <span class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                                                {{ $acara['tanggal_label'] ?? $acara['tanggal'] ?? 'Segera' }}
+                                            </span>
+                                        </div>
 
-                                <div class="p-5 sm:p-6 lg:p-7">
-                                    <!-- Badge & Tanggal -->
-                                    <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
-                                        <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-sm font-medium shadow-sm">
-                                            {{ $acara['kategori'] ?? 'Kajian' }}
-                                        </span>
-                                        <span class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                                            {{ $acara['tanggal_label'] ?? $acara['tanggal'] ?? 'Segera' }}
+                                        <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-tight">
+                                            {{ $acara['title'] ?? $acara['judul'] ?? 'Judul Acara' }}
+                                        </h3>
+
+                                        <p class="text-sm sm:text-base text-slate-600 mb-5 line-clamp-3 leading-relaxed">
+                                            {{ Str::limit(strip_tags($acara['excerpt'] ?? $acara['deskripsi'] ?? ''), 140) }}
+                                        </p>
+
+                                        <div class="flex flex-wrap gap-6 mb-6 text-sm text-slate-700">
+                                            <div class="flex items-center gap-2.5">
+                                                <span class="text-xl text-emerald-600">⏰</span>
+                                                <span class="font-medium">{{ $acara['waktu_label'] ?? $acara['waktu'] ?? '-' }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2.5">
+                                                <span class="text-xl text-rose-600">📍</span>
+                                                <span class="font-medium">{{ $acara['lokasi'] ?? 'Masjid' }}</span>
+                                            </div>
+                                        </div>
+
+                                        <a href="{{ $acara['url'] ?? route('acara.show', $acara['slug'] ?? '#') }}"
+                                        class="inline-flex items-center px-6 py-2.5 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 font-medium rounded-full transition-all duration-300 text-sm shadow-sm hover:shadow">
+                                            Detail Acara →
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <!-- Sidebar -->
+                        <aside class="space-y-6 lg:space-y-8 h-fit">
+                            <!-- Shalat Jum'at -->
+                            <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-800 text-white shadow-2xl overflow-hidden ring-1 ring-emerald-500/30">
+                                <div class="p-6 sm:p-7 lg:p-8">
+                                    <div class="flex items-center justify-between mb-5">
+                                        <div>
+                                            <p class="text-xs uppercase tracking-widest text-emerald-200/90 font-medium">Shalat Jum’at</p>
+                                            <h3 class="text-xl font-bold mt-1">Pekan Ini</h3>
+                                        </div>
+                                        <span class="inline-flex px-4 py-1.5 bg-white/25 backdrop-blur-md rounded-full text-xs font-semibold shadow-sm">
+                                            Segera Hadir
                                         </span>
                                     </div>
-
-                                    <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-tight">
-                                        {{ $acara['title'] ?? $acara['judul'] ?? 'Judul Acara' }}
-                                    </h3>
-
-                                    <p class="text-sm sm:text-base text-slate-600 mb-5 line-clamp-3 leading-relaxed">
-                                        {{ Str::limit(strip_tags($acara['excerpt'] ?? $acara['deskripsi'] ?? ''), 140) }}
-                                    </p>
-
-                                    <div class="flex flex-wrap gap-6 mb-6 text-sm text-slate-700">
-                                        <div class="flex items-center gap-2.5">
-                                            <span class="text-xl text-emerald-600">⏰</span>
-                                            <span class="font-medium">{{ $acara['waktu_label'] ?? $acara['waktu'] ?? '-' }}</span>
+                                    <dl class="space-y-3 text-sm">
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl">🕌</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Khatib</dt>
+                                                <dd class="font-bold">{{ $jumat['khatib'] ?? 'Ust. Dr. Muhammad' }}</dd>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center gap-2.5">
-                                            <span class="text-xl text-rose-600">📍</span>
-                                            <span class="font-medium">{{ $acara['lokasi'] ?? 'Masjid' }}</span>
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl mt-0.5">📖</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Tema</dt>
+                                                <dd class="font-semibold">{{ $jumat['tema'] ?? 'Jaga Hati di Era Digital' }}</dd>
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    <a href="{{ $acara['url'] ?? route('acara.show', $acara['slug'] ?? '#') }}"
-                                       class="inline-flex items-center px-6 py-2.5 
-                                              border-2 border-emerald-600 text-emerald-700 
-                                              hover:bg-emerald-50 hover:text-emerald-800 
-                                              font-medium rounded-full transition-all duration-300 text-sm shadow-sm hover:shadow">
-                                        Detail Acara →
-                                    </a>
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl mt-0.5">📅</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Tanggal</dt>
+                                                <dd class="font-semibold">{{ $jumat['tgl'] ?? 'Jum’at, 12 Jan' }}</dd>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl mt-0.5">⏰</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Waktu</dt>
+                                                <dd class="font-semibold">{{ $jumat['jam'] ?? '11.45 - 12.30' }}</dd>
+                                            </div>
+                                        </div>
+                                    </dl>
                                 </div>
                             </div>
-                        @empty
-                            <div class="bg-white/80 rounded-2xl border border-dashed border-emerald-200 p-10 text-center text-slate-500">
-                                <p class="text-xl font-medium mb-2">Belum ada agenda terdekat</p>
-                                <p class="text-sm">Pantau terus untuk update kegiatan terbaru</p>
-                            </div>
-                        @endforelse
 
-                        @if(count($acaras) > 3)
-                            <div class="text-center mt-10 sm:mt-12">
-                                <a href="{{ route('acara.index') }}" 
-                                   class="group inline-flex items-center gap-3 px-10 sm:px-14 py-4 sm:py-5 
-                                          bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 
-                                          hover:brightness-110 hover:scale-[1.04] 
-                                          text-white font-bold rounded-full 
-                                          shadow-xl hover:shadow-2xl transition-all duration-300 text-base sm:text-lg">
-                                    <span class="text-xl sm:text-2xl">📅</span>
-                                    Lihat Semua Agenda
+                            <!-- Mini Kalender -->
+                            <div class="rounded-2xl sm:rounded-3xl bg-white border border-emerald-100/60 shadow-md p-6">
+                                <div class="flex items-center justify-between mb-5">
+                                    <h3 class="text-lg font-semibold text-slate-900">Kalender Minggu Ini</h3>
+                                    <span class="text-sm text-slate-500">{{ now()->translatedFormat('F Y') }}</span>
+                                </div>
+                                <div class="grid grid-cols-7 gap-2 text-center text-sm">
+                                    @for($i = 0; $i < 7; $i++)
+                                        @php
+                                            $date = now()->addDays($i);
+                                            $isToday = $date->isToday();
+                                        @endphp
+                                        <div class="flex flex-col items-center">
+                                            <span class="text-slate-400 text-xs font-medium">{{ $date->translatedFormat('D') }}</span>
+                                            <span class="mt-1 flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold 
+                                                        {{ $isToday ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400' : 'bg-slate-50 border border-slate-200 hover:bg-emerald-50' }}">
+                                                {{ $date->format('d') }}
+                                            </span>
+                                        </div>
+                                    @endfor
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                @else
+                    {{-- TIDAK ADA AGENDA - 1 BARIS 2 CARD (JUM'AT + KALENDER) --}}
+                    <div>
+                        <!-- Pesan Kosong - Responsif Mobile -->
+                        <div class="text-center py-8 sm:py-12 md:py-16 bg-white/60 rounded-2xl sm:rounded-3xl border border-dashed border-emerald-200 backdrop-blur-sm mb-6 sm:mb-8">
+                            <div class="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-emerald-50 mb-3 sm:mb-4">
+                                <span class="text-3xl sm:text-4xl">📅</span>
+                            </div>
+                            <h3 class="text-lg sm:text-xl font-semibold text-slate-700 mb-2">Belum Ada Kegiatan Mendatang</h3>
+                            <p class="text-slate-500 max-w-md mx-auto text-xs sm:text-sm px-4">
+                                Saat ini belum ada jadwal kegiatan. 
+                                Pantau terus website ini atau follow media sosial kami untuk update terbaru.
+                            </p>
+                            
+                            <!-- Tombol aksi - responsive: column di mobile, row di desktop -->
+                            <div class="flex flex-col sm:flex-row gap-3 justify-center mt-5 sm:mt-6 px-4">
+                                <a href="{{ route('galeri.index') }}" 
+                                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 bg-emerald-50 text-emerald-700 rounded-full text-xs sm:text-sm font-medium hover:bg-emerald-100 transition-all hover:scale-105">
+                                    📸 Lihat Galeri
+                                </a>
+                                <a href="{{ route('berita.index') }}" 
+                                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 bg-slate-50 text-slate-600 rounded-full text-xs sm:text-sm font-medium hover:bg-slate-100 transition-all hover:scale-105">
+                                    📰 Baca Berita
+                                </a>
+                                <a href="#donasi" 
+                                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-full text-xs sm:text-sm font-medium hover:brightness-110 transition-all hover:scale-105">
+                                    🤲 Donasi Sekarang
                                 </a>
                             </div>
-                        @endif
-                    </div>
-
-                    <!-- Sidebar -->
-                    <aside class="space-y-6 lg:space-y-8 h-fit">
-                        <!-- Shalat Jum'at – Lebih menonjol -->
-                        <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-800 text-white shadow-2xl overflow-hidden ring-1 ring-emerald-500/30">
-                            <div class="p-6 sm:p-7 lg:p-8">
-                                <div class="flex items-center justify-between mb-5">
-                                    <div>
-                                        <p class="text-xs uppercase tracking-widest text-emerald-200/90 font-medium">Shalat Jum’at</p>
-                                        <h3 class="text-xl font-bold mt-1">Pekan Ini</h3>
-                                    </div>
-                                    <span class="inline-flex px-4 py-1.5 bg-white/25 backdrop-blur-md rounded-full text-xs font-semibold shadow-sm">
-                                        Segera Hadir
-                                    </span>
-                                </div>
-                                <dl class="space-y-3 text-sm">
-                                    <div class="flex items-start gap-4">
-                                        <span class="text-2xl">🕌</span>
-                                        <div>
-                                            <dt class="text-emerald-200/80 text-xs uppercase">Khatib</dt>
-                                            <dd class="font-bold">{{ $jumat['khatib'] ?? 'Ust. Dr. Muhammad' }}</dd>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-4">
-                                        <span class="text-2xl mt-0.5">📖</span>
-                                        <div>
-                                            <dt class="text-emerald-200/80 text-xs uppercase">Tema</dt>
-                                            <dd class="font-semibold">{{ $jumat['tema'] ?? 'Jaga Hati di Era Digital' }}</dd>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-4">
-                                        <span class="text-2xl mt-0.5">📅</span>
-                                        <div>
-                                            <dt class="text-emerald-200/80 text-xs uppercase">Tanggal</dt>
-                                            <dd class="font-semibold">{{ $jumat['tgl'] ?? 'Jum’at, 12 Jan' }}</dd>
-                                        </div>
-                                    </div>
-                                    <div class="flex items-start gap-4">
-                                        <span class="text-2xl mt-0.5">⏰</span>
-                                        <div>
-                                            <dt class="text-emerald-200/80 text-xs uppercase">Waktu</dt>
-                                            <dd class="font-semibold">{{ $jumat['jam'] ?? '11.45 - 12.30' }}</dd>
-                                        </div>
-                                    </div>
-                                </dl>
-                            </div>
                         </div>
 
-                        <!-- Mini Kalender – Lebih hidup -->
-                        <div class="rounded-2xl sm:rounded-3xl bg-white border border-emerald-100/60 shadow-md p-6">
-                            <div class="flex items-center justify-between mb-5">
-                                <h3 class="text-lg font-semibold text-slate-900">Kalender Minggu Ini</h3>
-                                <span class="text-sm text-slate-500">{{ now()->translatedFormat('F Y') }}</span>
-                            </div>
-                            <div class="grid grid-cols-7 gap-2 text-center text-sm">
-                                @for($i = 0; $i < 7; $i++)
-                                    @php
-                                        $date = now()->addDays($i);
-                                        $isToday = $date->isToday();
-                                    @endphp
-                                    <div class="flex flex-col items-center">
-                                        <span class="text-slate-400 text-xs font-medium">{{ $date->translatedFormat('D') }}</span>
-                                        <span class="mt-1 flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold 
-                                                     {{ $isToday ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400' : 'bg-slate-50 border border-slate-200 hover:bg-emerald-50' }}">
-                                            {{ $date->format('d') }}
+                        {{-- 1 BARIS 2 CARD (JADWAL JUM'AT + KALENDER) --}}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Card Shalat Jum'at -->
+                            <div class="rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-700 via-teal-700 to-emerald-800 text-white shadow-2xl overflow-hidden ring-1 ring-emerald-500/30">
+                                <div class="p-6 sm:p-7">
+                                    <div class="flex items-center justify-between mb-5">
+                                        <div>
+                                            <p class="text-xs uppercase tracking-widest text-emerald-200/90 font-medium">Shalat Jum’at</p>
+                                            <h3 class="text-xl font-bold mt-1">Pekan Ini</h3>
+                                        </div>
+                                        <span class="inline-flex px-4 py-1.5 bg-white/25 backdrop-blur-md rounded-full text-xs font-semibold shadow-sm">
+                                            Segera Hadir
                                         </span>
                                     </div>
-                                @endfor
+                                    <dl class="space-y-3 text-sm">
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl">🕌</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Khatib</dt>
+                                                <dd class="font-bold">{{ $jumat['khatib'] ?? 'Ust. Dr. Muhammad' }}</dd>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl mt-0.5">📖</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Tema</dt>
+                                                <dd class="font-semibold">{{ $jumat['tema'] ?? 'Jaga Hati di Era Digital' }}</dd>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl mt-0.5">📅</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Tanggal</dt>
+                                                <dd class="font-semibold">{{ $jumat['tgl'] ?? 'Jum’at, 12 Jan' }}</dd>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-start gap-4">
+                                            <span class="text-2xl mt-0.5">⏰</span>
+                                            <div>
+                                                <dt class="text-emerald-200/80 text-xs uppercase">Waktu</dt>
+                                                <dd class="font-semibold">{{ $jumat['jam'] ?? '11.45 - 12.30' }}</dd>
+                                            </div>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <!-- Card Kalender -->
+                            <div class="rounded-2xl sm:rounded-3xl bg-white border border-emerald-100/60 shadow-md p-6">
+                                <div class="flex items-center justify-between mb-5">
+                                    <h3 class="text-lg font-semibold text-slate-900">📅 Kalender Kegiatan</h3>
+                                    <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">{{ now()->translatedFormat('F Y') }}</span>
+                                </div>
+                                
+                                @php
+                                    $days = [];
+                                    $currentDate = now();
+                                    
+                                    // Cari hari Senin pertama (1 = Monday)
+                                    while($currentDate->dayOfWeek != 1) {
+                                        $currentDate = $currentDate->subDay();
+                                    }
+                                    
+                                    // Ambil 5 hari (Senin - Jumat)
+                                    for($i = 0; $i < 5; $i++) {
+                                        $date = $currentDate->copy()->addDays($i);
+                                        $isToday = $date->isToday();
+                                        $isFriday = $date->isFriday();
+                                        $days[] = ['date' => $date, 'isToday' => $isToday, 'isFriday' => $isFriday];
+                                    }
+                                @endphp
+                                
+                                <!-- Tabel Kalender Manual (Pakai Table agar pasti horizontal) -->
+                                <table class="w-full">
+                                    <tr class="text-center">
+                                        @foreach($days as $day)
+                                            <th class="pb-2 text-xs font-medium {{ $day['isFriday'] ? 'text-emerald-600' : 'text-slate-500' }}">
+                                                {{ $day['date']->translatedFormat('D') }}
+                                            </th>
+                                        @endforeach
+                                    </tr>
+                                    <tr class="text-center">
+                                        @foreach($days as $day)
+                                            @php $date = $day['date']; @endphp
+                                            <td class="py-1">
+                                                <span class="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold
+                                                    @if($day['isToday'])
+                                                        bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400
+                                                    @elseif($day['isFriday'])
+                                                        bg-emerald-100 text-emerald-700 border-2 border-emerald-400
+                                                    @else
+                                                        bg-slate-50 text-emerald-800 border border-slate-200
+                                                    @endif
+                                                ">
+                                                    {{ $date->format('d') }}
+                                                </span>
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                </table>
+                                
+                                <!-- Legenda -->
+                                <div class="mt-5 pt-3 border-t border-slate-100 flex flex-wrap justify-center gap-4 text-xs">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3 h-3 rounded-full bg-emerald-600"></div>
+                                        <span class="text-slate-500">Hari Ini</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3 h-3 rounded-full bg-emerald-100 border-2 border-emerald-400"></div>
+                                        <span class="text-slate-500">Hari Jum'at</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-3 h-3 rounded-full bg-slate-50 border border-slate-200"></div>
+                                        <span class="text-slate-500">Hari Biasa</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </aside>
-                </div>
+                    </div>
+                @endif
+
             </div>
         </section>
 
@@ -436,7 +622,10 @@
                                     Pengingat Harian
                                 </h3>
                                 <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
-                                    “Sesungguhnya bersama kesulitan ada kemudahan.” — QS. Al-Insyirah: 6
+                                                                               <span class="mt-1 flex h-10 w-10 items-center justify-center rounded-full text-base font-semibold 
+                                                        {{ $isToday ? 'bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-400' : 'bg-slate-50 border border-slate-200 hover:bg-emerald-50' }}">
+                                                {{ $date->format('d') }}
+                                            </span> “Sesungguhnya bersama kesulitan ada kemudahan.” — QS. Al-Insyirah: 6
                                 </div>
                             </div>
                         @endif
@@ -468,7 +657,7 @@
 
                                 <!-- Gambar -->
                                 <div class="relative flex-shrink-0 sm:w-48 md:w-56 overflow-hidden rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto">
-                                    <img src="{{ $b['gambar'] ?? asset('storage/404.jpg') }}"
+                                    <img src="{{ $b['gambar'] ?? asset('storage/404.png') }}"
                                          loading="lazy"
                                          alt="{{ $b['judul'] }}"
                                          class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
@@ -645,172 +834,278 @@
             </div>
         </section>
 
-        {{-- === DONASI === --}}
-        <section id="donasi" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+        {{-- === QUOTE HARIAN === --}}
+        <section class="py-10">
             <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
-                <!-- Slider Motivasi dari Database - Full Lebar + Batas Super Jelas -->
+                <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-5 sm:px-6 py-6 sm:py-8 shadow-xl relative overflow-hidden">
+                    <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-3">Pengingat Harian</p>
+
+                    <!-- Container quote -->
+                    <div id="quote-container" class="relative min-h-[180px] sm:min-h-[140px] lg:min-h-[120px] overflow-hidden">
+                        @if($quoteHarianList->isNotEmpty())
+                            <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out flex flex-col">
+                                <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                                    {{ $quoteHarianList->first()->title }}
+                                </h3>
+                                <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                                    {{ $quoteHarianList->first()->text }}
+                                </div>
+                            </div>
+                        @else
+                            <div class="quote-item absolute inset-0 opacity-100 transition-all duration-800 ease-in-out flex flex-col">
+                                <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                                    Pengingat Harian
+                                </h3>
+                                <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                                    “Sesungguhnya bersama kesulitan ada kemudahan.” — QS. Al-Insyirah: 6
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {{-- === DONASI === --}}
+        <section id="donasi" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50 relative overflow-hidden">
+            
+            {{-- Background decorative elements --}}
+            <div class="absolute inset-0 pointer-events-none">
+                <div class="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200/30 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-teal-200/30 rounded-full blur-3xl"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-100/20 rounded-full blur-3xl"></div>
+            </div>
+
+            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
+                
+                <!-- Header Donasi - DIPERINDAH -->
+                <div class="text-center mb-12 relative">
+                    <!-- Decorative line atas -->
+                    <div class="flex justify-center items-center gap-3 mb-4">
+                        <div class="h-px w-12 bg-gradient-to-r from-transparent to-emerald-400"></div>
+                        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 backdrop-blur-sm border border-emerald-200/50 shadow-sm">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">DONASI & INFAQ</span>
+                        </div>
+                        <div class="h-px w-12 bg-gradient-to-l from-transparent to-emerald-400"></div>
+                    </div>
+
+                    <!-- Title dengan gradient & shadow -->
+                    <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-4 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-500 bg-clip-text text-transparent drop-shadow-sm">
+                        🤲 Jadikan Harta Lebih Berkah
+                    </h2>
+                    <!-- Deskripsi dengan border elegant -->
+                    <div class="max-w-2xl mx-auto relative">
+                        <div class="absolute left-0 top-0 w-8 h-8 border-l-2 border-t-2 border-emerald-300/50 rounded-tl-2xl"></div>
+                        <div class="absolute right-0 top-0 w-8 h-8 border-r-2 border-t-2 border-emerald-300/50 rounded-tr-2xl"></div>
+                        <div class="absolute left-0 bottom-0 w-8 h-8 border-l-2 border-b-2 border-emerald-300/50 rounded-bl-2xl"></div>
+                        <div class="absolute right-0 bottom-0 w-8 h-8 border-r-2 border-b-2 border-emerald-300/50 rounded-br-2xl"></div>
+                        
+                        <p class="text-base sm:text-lg text-slate-600 leading-relaxed px-6 py-3">
+                            Setiap rupiah yang Anda titipkan akan menjadi bagian dari adzan yang berkumandang,
+                            shalat berjamaah, kajian ilmu, serta kegiatan sosial umat.
+                        </p>
+                    </div>
+                    
+                    <p class="mt-3 text-slate-500 text-sm text-center flex items-center justify-center gap-3">
+                        <span class="hidden sm:block flex-1 h-px bg-emerald-300"></span>
+                        <span>InsyaAllah menjadi <span class="font-semibold text-emerald-600">amal jariyah</span> yang pahalanya terus mengalir</span>
+                        <span class="hidden sm:block flex-1 h-px bg-emerald-300"></span>
+                    </p>
+                </div>
+
+                <!-- Slider Motivasi (jika ada) -->
                 @if($sliders->isNotEmpty())
-                    <div id="motivasiCarousel" class="relative mb-12 lg:mb-16">
+                    <div id="motivasiCarousel" class="relative mb-12">
                         <div class="overflow-hidden rounded-3xl shadow-2xl">
                             <div class="motivasi-track flex transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] snap-x snap-mandatory">
                                 @foreach($sliders as $slide)
                                     <div class="w-full shrink-0 snap-start relative group">
-                                        <!-- Slide utama dengan border pemisah tipis + shadow lapisan -->
-                                        <div class="bg-gradient-to-br {{ $slide->gradient ?? 'from-emerald-700 via-teal-700 to-cyan-700' }} text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[420px] sm:min-h-[400px] lg:min-h-[380px] flex flex-col justify-between items-center shadow-2xl border {{ $slide->border_color ?? 'border-emerald-500/30' }} overflow-hidden group-hover:scale-[1.02] transition-transform duration-400 border-l-4 border-r-4 border-l-white/10 border-r-white/10">
-                                            <div class="flex flex-col items-center justify-center flex-grow space-y-4 lg:space-y-6 px-4 sm:px-8 lg:px-16">
-                                                <h3 class="text-xl sm:text-2xl lg:text-4xl font-extrabold leading-tight">
+                                        <div class="bg-gradient-to-br {{ $slide->gradient ?? 'from-emerald-700 via-teal-700 to-cyan-700' }} text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[380px] sm:min-h-[360px] flex flex-col justify-between items-center shadow-2xl overflow-hidden group-hover:scale-[1.02] transition-transform duration-400">
+                                            <!-- Decorative pattern -->
+                                            <div class="absolute inset-0 opacity-10 pointer-events-none">
+                                                <div class="absolute -top-20 -right-20 w-60 h-60 bg-white rounded-full blur-2xl"></div>
+                                                <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-white rounded-full blur-2xl"></div>
+                                            </div>
+                                            
+                                            <div class="flex flex-col items-center justify-center flex-grow space-y-4 px-4 sm:px-8 relative z-10">
+                                                <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl mb-2 shadow-lg">
+                                                    💝
+                                                </div>
+                                                <h3 class="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight">
                                                     {!! $slide->title !!}
                                                 </h3>
-                                                <p class="text-lg sm:text-xl lg:text-2xl font-semibold line-clamp-4 sm:line-clamp-none">
+                                                <p class="text-base sm:text-lg lg:text-xl font-semibold">
                                                     {!! $slide->subtitle !!}
                                                 </p>
                                             </div>
                                             <a href="{{ $slide->button_link ?? '#rekening' }}"
-                                               class="btn btn-lg bg-white text-emerald-800 hover:bg-yellow-300 hover:text-emerald-900 font-bold px-8 sm:px-12 py-4 sm:py-5 rounded-full shadow-xl text-lg sm:text-xl mt-auto w-full sm:w-auto max-w-xs transition-all">
+                                            class="btn btn-lg bg-white text-emerald-800 hover:bg-amber-100 hover:text-emerald-900 font-bold px-6 sm:px-10 py-3 sm:py-4 rounded-full shadow-xl text-base sm:text-lg mt-4 w-full sm:w-auto max-w-xs transition-all relative z-10">
                                                 {{ $slide->button_text ?? 'Yuk Sedekah Sekarang' }}
                                             </a>
                                         </div>
-
-                                        <!-- Overlay gelap samping untuk efek pemisah kuat (non-aktif) -->
-                                        <div class="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-black/40 to-transparent pointer-events-none opacity-60 group-[.active]:opacity-0 transition-opacity duration-400"></div>
-                                        <div class="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-black/40 to-transparent pointer-events-none opacity-60 group-[.active]:opacity-0 transition-opacity duration-400"></div>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
-
-                        <!-- Dots Navigation -->
-                        <div class="flex justify-center gap-3 sm:gap-4 mt-6 sm:mt-8">
+                        <div class="flex justify-center gap-3 mt-4">
                             @foreach($sliders as $index => $slide)
-                                <button class="motivasi-dot w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full bg-emerald-300 hover:bg-emerald-700 transition" data-index="{{ $index }}"></button>
+                                <button class="motivasi-dot w-2.5 h-2.5 rounded-full bg-emerald-300 hover:bg-emerald-600 transition" data-index="{{ $index }}"></button>
                             @endforeach
                         </div>
                     </div>
-                @else
-                    <!-- Fallback -->
-                    <div class="text-center py-12 bg-white rounded-3xl shadow-lg border border-emerald-100">
-                        <p class="text-xl text-slate-600">Belum ada slide motivasi untuk Ramadhan saat ini.</p>
-                        <p class="text-sm text-slate-500 mt-2">Admin akan segera menambahkannya.</p>
-                    </div>
                 @endif
 
-                <div class="max-w-4xl mx-auto bg-white rounded-3xl border border-emerald-100/50 shadow-2xl overflow-hidden">
-                    <div class="p-8 lg:p-12">
-                        <!-- Rekening Tunggal -->
-                        <div class="text-center mb-10">
-                            <div class="text-center max-w-2xl mx-auto mb-10">
-                                <h3 class="text-2xl font-bold text-emerald-800 mb-4">
-                                    Jadikan Harta Lebih Berkah
-                                </h3>
-
-                                <p class="text-slate-700 leading-relaxed text-base">
-                                    Setiap rupiah yang Anda titipkan akan menjadi bagian dari adzan yang berkumandang,
-                                    shalat berjamaah, kajian ilmu, serta kegiatan sosial umat.
-                                </p>
-
-                                <p class="mt-3 text-slate-600">
-                                    InsyaAllah menjadi <span class="font-semibold text-emerald-700">amal jariyah</span>
-                                    yang pahalanya terus mengalir, meski kita telah tiada.
-                                </p>
+                <!-- Card Donasi Utama - dengan efek glassmorphism lebih elegan -->
+                <div class="w-full bg-white/95 backdrop-blur-sm rounded-3xl border border-emerald-100/50 shadow-2xl overflow-hidden transition-all duration-300 hover:shadow-emerald-200/30">
+                    
+                    <!-- Header Card dengan Gradien + Ikon -->
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-center relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-20">
+                            <div class="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-2xl"></div>
+                            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-white rounded-full blur-2xl"></div>
+                        </div>
+                        <div class="relative z-10">
+                            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm mb-3 shadow-lg">
+                                <span class="text-3xl">💚</span>
                             </div>
-                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Salurkan Sedekah Anda</h3>
-                            <div class="inline-block bg-emerald-50 rounded-2xl p-5 sm:p-6 shadow-inner w-full max-w-md mx-auto">
-                                <p class="text-lg font-semibold text-emerald-700 mb-2">Bank {!! profil('bank_name') !!} • {!! profil('bank_code') !!}</p>
+                            <h3 class="text-xl sm:text-2xl font-bold text-white">Salurkan Donasi & Infaq</h3>
+                            <p class="text-emerald-100 text-sm mt-1">Donasi Anda akan menjadi amal jariyah yang terus mengalir</p>
+                        </div>
+                    </div>
+
+                    <div class="p-6 sm:p-8 lg:p-10">
+                        
+                        <!-- 2 Kolom: Rekening Bank + QRIS dengan efek hover -->
+                        <div class="grid md:grid-cols-2 gap-6 mb-8">
+                            
+                            <!-- Kolom Kiri: Rekening Bank -->
+                            <div class="bg-gradient-to-br from-emerald-50/80 to-white rounded-2xl p-5 flex flex-col h-full border border-emerald-100/50 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                                <div class="text-center">
+                                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 mb-3 shadow-md">
+                                        <span class="text-xl text-white">🏦</span>
+                                    </div>
+                                    <h4 class="text-lg font-bold text-emerald-800 mb-1">Transfer Bank</h4>
+                                    <p class="text-xs text-slate-500 mb-3">Donasi via rekening berikut</p>
+                                </div>
                                 
-                                <!-- Nomor rekening + copy – dengan chunking & hint -->
-                                <div class="relative flex items-center justify-center gap-3 mb-3 bg-white/70 rounded-xl px-4 py-3 shadow-sm">
-                                    <p 
-                                        id="rekeningNum" 
-                                        class="text-xl sm:text-2xl font-bold text-slate-900 tracking-widest whitespace-nowrap overflow-x-auto touch-pan-x"
-                                        style="max-width: 75%; scrollbar-width: thin;"
-                                    >
-                                        {{ trim(chunk_split(preg_replace('/\D/','', profil('rekening')), 4, ' ')) }}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onclick="copyToClipboard('{!! profil('rekening') !!}')"
-                                        class="btn btn-sm btn-circle bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 tooltip tooltip-bottom before:content-[attr(data-tip)]"
-                                        data-tip="Salin nomor rekening"
-                                    >
-                                        📋
-                                    </button>
-
-                                    <!-- Indikator scroll horizontal kecil (hanya muncul jika overflow) -->
-                                    <div class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-60 text-xs text-slate-500 hidden sm:block">
-                                        → geser
+                                <div class="bg-white rounded-xl p-4 shadow-sm flex-1 border border-emerald-100">
+                                    <div class="text-center mb-2">
+                                        <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                                            {{ profil('bank_name') ?? 'BANK BCA' }}
+                                        </span>
                                     </div>
-                                </div>
-
-                                <!-- Instruksi tambahan untuk user yang mungkin bingung -->
-                                <p class="text-xs text-slate-500 mt-1 italic">
-                                    Tekan lama nomor rekening jika ingin salin manual
-                                </p>
-
-                                <p class="text-base text-slate-600 mt-2">a/n {!! profil('atas_nama') !!}</p>
-                            </div>
-                            <p class="text-sm text-slate-500 mt-4 italic">
-                                Donasi digunakan untuk operasional masjid, kegiatan dakwah,
-                                pendidikan Al-Qur’an, serta layanan sosial jamaah.
-                            </p>
-
-                            <p class="text-sm text-emerald-700 mt-2 font-medium">
-                                📊 Laporan penyaluran dipublikasikan secara berkala.
-                            </p>
-                        </div>
-
-                        <!-- QRIS -->
-                        <div class="text-center mb-10">
-                            <h3 class="text-2xl font-bold text-emerald-800 mb-4">Sedekah Lebih Mudah (QRIS)</h3>
-                            <div class="mx-auto w-64 h-64 sm:w-72 sm:h-72 bg-white p-4 rounded-2xl shadow-lg border border-teal-100 relative cursor-pointer group"onclick="document.getElementById('qris-modal').showModal()">
-                                <img src="{{ asset('storage/'.profil('qris')) }}" loading="lazy" alt="QRIS Donasi" class="w-full h-full object-contain group-hover:scale-105 pb-3">
-                                <a href="{{ asset('storage/'.profil('qris')) }}" download="QRIS_{{ profil('nama') }}.png"
-                                   class="absolute -bottom-4 left-1/2 -translate-x-1/2 btn btn-sm bg-emerald-600 text-white shadow-md">
-                                    Simpan QRIS
-                                </a>
-                            </div>
-                            <!-- Modal Preview QRIS -->
-                            <dialog id="qris-modal" class="modal">
-                                <div class="modal-box bg-white rounded-3xl shadow-2xl max-w-md sm:max-w-lg p-0 overflow-hidden">
-                                    <!-- Header Modal -->
-                                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-center">
-                                        <h3 class="text-2xl font-bold text-white">Preview QRIS Donasi</h3>
-                                        <p class="text-emerald-100/90 text-sm mt-1">
-                                            Scan untuk donasi ke {{ profil('nama') ?? 'Masjid' }}
+                                    <div class="flex items-center justify-center gap-2 my-2 bg-slate-50 rounded-lg p-2">
+                                        <p id="rekeningNum" class="text-base sm:text-lg font-mono font-bold text-slate-800 tracking-wider break-all text-center">
+                                            {{ trim(chunk_split(preg_replace('/\D/','', profil('rekening') ?? '1234567890'), 4, ' ')) }}
                                         </p>
+                                        <button onclick="copyToClipboard('{{ profil('rekening') ?? '' }}')"
+                                                class="btn btn-xs btn-circle bg-emerald-600 hover:bg-emerald-700 text-white w-7 h-7 min-h-0 text-sm shadow-md transition-all hover:scale-110"
+                                                title="Salin nomor rekening">
+                                            📋
+                                        </button>
                                     </div>
+                                    <p class="text-xs text-slate-600 text-center font-medium">a/n {{ profil('atas_nama') ?? 'TAKMIR MASJID' }}</p>
+                                </div>
+                                <p class="text-xs text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
+                                    <span>💡</span> Klik 📋 untuk menyalin nomor rekening
+                                </p>
+                            </div>
 
-                                    <!-- Gambar Besar -->
-                                    <div class="p-6 sm:p-8 bg-white">
-                                        <img src="{{ asset('storage/' . profil('qris')) }}" 
-                                             alt="QRIS Donasi" 
-                                             class="w-full h-auto max-h-[500px] object-contain mx-auto rounded-xl shadow-inner">
+                            <!-- Kolom Kanan: QRIS -->
+                            <div class="bg-gradient-to-br from-emerald-50/80 to-white rounded-2xl p-5 flex flex-col h-full border border-emerald-100/50 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                                <div class="text-center">
+                                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 mb-3 shadow-md">
+                                        <span class="text-xl text-white">📱</span>
                                     </div>
-
-                                    <!-- Footer Modal -->
-                                    <div class="modal-action p-6 border-t border-emerald-100 flex justify-center gap-4">
-                                        <form method="dialog">
-                                            <button class="btn btn-outline text-emerald-700 btn-emerald-700 px-8 py-3 rounded-full text-lg">
-                                                Tutup
-                                            </button>
-                                        </form>
-                                        <a href="{{ asset('storage/' . profil('qris')) }}" 
-                                           download="QRIS_{{ Str::slug(profil('nama')) }}.png"
-                                           class="btn btn-primary px-8 py-3 rounded-full text-lg">
-                                            Simpan Gambar
-                                        </a>
+                                    <h4 class="text-lg font-bold text-emerald-800 mb-1">Scan QRIS</h4>
+                                    <p class="text-xs text-slate-500 mb-3">Donasi lebih mudah & cepat</p>
+                                </div>
+                                
+                                <!-- QRIS Box -->
+                                <div class="flex justify-center items-center flex-1">
+                                    <div class="relative group/qris">
+                                        <div class="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-25 group-hover/qris:opacity-75 transition duration-300"></div>
+                                        <div style="width: 190px; height: 190px; background: white; padding: 14px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); cursor: pointer; transition: all 0.3s ease; position: relative;"
+                                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 20px 30px -10px rgba(0, 0, 0, 0.15)'"
+                                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 25px -5px rgba(0, 0, 0, 0.1)'"
+                                            onclick="document.getElementById('qris-modal').showModal()">
+                                            @if($profil->qris_url)
+                                                <img src="{{ $profil->qris_url }}" 
+                                                    loading="lazy" 
+                                                    alt="QRIS Donasi" 
+                                                    style="width: 100%; height: 100%; object-fit: contain;"
+                                                    onerror="this.src='{{ asset('storage/404.png') }}'">
+                                            @else
+                                                <div class="flex flex-col items-center justify-center h-full text-center">
+                                                    <span class="text-3xl mb-2">📷</span>
+                                                    <span class="text-[10px] text-gray-400">QRIS belum tersedia</span>
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
-
-                                <!-- Klik luar modal untuk close (DaisyUI default) -->
-                                <form method="dialog" class="modal-backdrop">
-                                    <button>close</button>
-                                </form>
-                            </dialog>
-                            <p class="text-sm text-slate-600 mt-6">Konfirmasi via WhatsApp setelah transfer</p>
+                                
+                                <div class="text-center mt-4">
+                                    @if($profil->qris_url)
+                                        <a href="{{ $profil->qris_url }}" 
+                                        download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
+                                        class="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 transition-all hover:gap-2">
+                                            📥 Download QRIS
+                                        </a>
+                                    @else
+                                        <p class="text-xs text-slate-400">QRIS akan segera tersedia</p>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Quotes tentang Sedekah / Infaq -->
-                        <div class="bg-gradient-to-r from-emerald-600/10 to-teal-600/10 rounded-2xl p-6 lg:p-8 text-center">
+                        <!-- Informasi Donasi - Responsif Mobile -->
+                        <div class="bg-gradient-to-r from-emerald-50/80 to-teal-50/80 rounded-xl p-4 text-center border border-emerald-100">
+                            <!-- Grid 1 kolom di mobile, flex row di desktop -->
+                            <div class="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 text-xs text-slate-600">
+                                <div class="flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-full shadow-sm">
+                                    <span class="text-emerald-600 text-sm">✓</span>
+                                    <span class="font-medium text-xs sm:text-sm">100% untuk kegiatan masjid</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-full shadow-sm">
+                                    <span class="text-emerald-600 text-sm">✓</span>
+                                    <span class="font-medium text-xs sm:text-sm">Laporan transparan berkala</span>
+                                </div>
+                                <div class="flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-full shadow-sm">
+                                    <span class="text-emerald-600 text-sm">✓</span>
+                                    <span class="font-medium text-xs sm:text-sm">Amal jariyah</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Konfirmasi WA - lebih menonjol -->
+                        <div class="text-center mt-8">
+                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', profil('wa_konfirmasi') ?? profil('telepon') ?? '628121073583') }}?text=Assalamu%27alaikum%20saya%20ingin%20konfirmasi%20donasi"
+                            target="_blank"
+                            class="group relative inline-flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-sm overflow-hidden">
+                                <span class="absolute inset-0 w-0 bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 group-hover:w-full"></span>
+                                <span class="relative z-10 text-xl">💬</span>
+                                <span class="relative z-10">Konfirmasi Donasi via WhatsApp</span>
+                            </a>
+                            <p class="text-xs text-slate-500 mt-3">
+                                Konfirmasi donasi untuk mendapatkan bukti & laporan penyaluran
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Quote Infaq - lebih elegan -->
+                <div class="w-full mt-10">
+                    <div class="relative group">
+                        <div class="absolute inset-0 bg-gradient-to-r from-emerald-400/20 to-teal-400/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                        <div class="relative bg-gradient-to-r from-emerald-600/5 to-teal-600/5 backdrop-blur-sm rounded-2xl p-6 text-center border border-emerald-200/30">
+                            <div class="absolute top-3 left-3 text-emerald-300/50 text-4xl">“</div>
+                            <div class="absolute bottom-3 right-3 text-emerald-300/50 text-4xl">”</div>
                             @php
                                 $infaqQuotes = [
                                     ['text' => '“Perumpamaan orang-orang yang menafkahkan hartanya di jalan Allah adalah seperti sebutir benih yang menumbuhkan tujuh tangkai, pada tiap-tiap tangkai seratus biji...”', 'sumber' => 'QS. Al-Baqarah: 261'],
@@ -820,35 +1115,72 @@
                                 ];
                                 $randomInfaq = $infaqQuotes[array_rand($infaqQuotes)];
                             @endphp
-                            <p class="text-base lg:text-lg italic text-emerald-800 mb-3">
-                                “{{ $randomInfaq['text'] }}”
+                            <p class="text-sm sm:text-base italic text-emerald-800 mb-3 leading-relaxed">
+                                {{ $randomInfaq['text'] }}
                             </p>
-                            <p class="text-sm text-slate-600 font-medium">
-                                — {{ $randomInfaq['sumber'] }}
-                            </p>
-                        </div>
-                        <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 mt-8 text-center">
-                            <p class="text-emerald-800 italic">
-                                “Ya Allah, terimalah sedekah dari para dermawan kami,
-                                lapangkan rezekinya, sehatkan badannya,
-                                dan jadikan sebagai pemberat amal kebaikan di akhirat.”
-                            </p>
-                        </div>
-                        <!-- CTA Besar -->
-                        <div class="text-center mt-10">
-                            <a href="https://wa.me/628121073583?text=Assalamu'alaikum%20Bapak%20Ari%20saya%20ingin%20donasi..."
-                               target="_blank"
-                               class="inline-flex items-center px-8 sm:px-12 py-4 sm:py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold rounded-full shadow-2xl text-lg sm:text-xl">
-                                💚 Konfirmasi Sedekah
-                            </a>
-                            <p class="text-sm text-slate-600 mt-4">
-                                Konfirmasi donasi melalui WA untuk mendapatkan laporan penyaluran. Jazakumullah khairan.
-                            </p>
+                            <div class="flex items-center justify-center gap-2">
+                                <div class="h-px w-8 bg-emerald-300"></div>
+                                <p class="text-xs text-slate-500 font-medium tracking-wide">
+                                    — {{ $randomInfaq['sumber'] }}
+                                </p>
+                                <div class="h-px w-8 bg-emerald-300"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Doa Penutup -->
+                <div class="w-full mt-6">
+                    <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center backdrop-blur-sm">
+                        <div class="flex justify-center mb-2">
+                            <span class="text-2xl animate-pulse">🤲</span>
+                        </div>
+                        <p class="text-emerald-800 italic text-sm leading-relaxed">
+                            “Ya Allah, terimalah sedekah dari para dermawan kami, lapangkan rezekinya, sehatkan badannya, dan jadikan sebagai pemberat amal kebaikan di akhirat.”
+                        </p>
+                        <p class="text-emerald-600 text-xs font-medium mt-2">Aamiin Ya Rabbal Alamin</p>
+                    </div>
+                </div>
+
             </div>
         </section>
+
+        <!-- Modal QRIS Preview -->
+        <dialog id="qris-modal" class="modal">
+            <div class="modal-box bg-white rounded-3xl shadow-2xl max-w-md sm:max-w-lg p-0 overflow-hidden">
+                <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center">
+                    <h3 class="text-xl font-bold text-white">Preview QRIS Donasi</h3>
+                    <p class="text-emerald-100/90 text-xs mt-1">
+                        Scan untuk donasi ke {{ $profil->nama ?? 'Masjid' }}
+                    </p>
+                </div>
+                <div class="p-6 bg-white">
+                    @if($profil->qris_url)
+                        <img src="{{ $profil->qris_url }}" 
+                            alt="QRIS Donasi" 
+                            class="w-full h-auto max-h-[400px] object-contain mx-auto rounded-xl"
+                            onerror="this.src='{{ asset('storage/404.png') }}'">
+                    @else
+                        <div class="w-full h-48 flex items-center justify-center text-gray-400">QRIS belum tersedia</div>
+                    @endif
+                </div>
+                <div class="modal-action p-5 border-t border-emerald-100 flex justify-center gap-3">
+                    <form method="dialog">
+                        <button class="btn btn-outline text-emerald-700 px-6 py-2 rounded-full text-sm">Tutup</button>
+                    </form>
+                    @if($profil->qris_url)
+                        <a href="{{ $profil->qris_url }}" 
+                        download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
+                        class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full text-sm">
+                            Simpan Gambar
+                        </a>
+                    @endif
+                </div>
+            </div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </dialog>
 
         {{-- === GALERI + MODAL === --}}
         <section class="py-16 bg-gradient-to-br from-emerald-50 via-slate-50 to-sky-50">
@@ -856,9 +1188,8 @@
                 <div class="flex justify-between mb-5">
                     <div>
                         <p class="text-[11px] uppercase tracking-[0.2em] text-emerald-700">Galeri</p>
-                        <h2 class="text-xl sm:text-2xl font-semibold text-slate-900">Suasana Masjid</h2>
+                        <h2 class="text-xl sm:text-2xl font-semibold text-slate-900">Dokumentasi Kegiatan</h2>
                     </div>
-
                     <a href="{{ route('galeri.index') }}" class="text-xs text-emerald-700">Lihat semua →</a>
                 </div>
 
@@ -873,15 +1204,16 @@
                             data-img="{{ $g['img'] }}">
                             
                             <img src="{{ $g['img'] }}" 
-                                 loading="lazy" class="w-full h-20 sm:h-28 md:h-32 object-cover group-hover:scale-110 transition">
+                                loading="lazy" 
+                                class="w-full h-20 sm:h-28 md:h-32 object-cover group-hover:scale-110 transition"
+                                onerror="this.src='{{ asset('storage/404.png') }}'">
 
                             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-end">
                                 <p class="text-[10px] text-white px-2 pb-2">{{ $g['judul'] }}</p>
                             </div>
-
                         </button>
                     @empty
-                        <p class="text-sm text-gray-500">Belum ada foto galeri.</p>
+                        <p class="text-sm text-gray-500 col-span-full">Belum ada foto galeri.</p>
                     @endforelse
                 </div>
             </div>
@@ -947,7 +1279,6 @@
         </section>
 
         {{-- === KONTAK === --}}
-        
         <section id="layanan_jamaah" class="py-16 bg-gradient-to-br from-slate-50 to-white">
             <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="grid lg:grid-cols-2 gap-8 lg:gap-12">
@@ -1056,6 +1387,15 @@
         </section>
 
     </div>
+
+    <button id="backToTop"
+            class="fixed bottom-6 z-40 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full p-3 shadow-xl transition-all duration-300 hover:scale-110 opacity-0 invisible"
+            style="left: 2%"
+            aria-label="Kembali ke atas">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+        </svg>
+    </button>
 
 @endsection
 
@@ -1463,637 +1803,685 @@
 @push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    $('#contactPesan').on('input', function() {
+        const val = $(this).val().trim();
+        if (val.length < 10 && val.length > 0) {
+            $(this).addClass('border-yellow-500');
+            $('#error-pesan').text('Pesan minimal 10 karakter').removeClass('hidden');
+        } else {
+            $(this).removeClass('border-yellow-500');
+            $('#error-pesan').addClass('hidden');
+        }
+    });
 
+    // Lazy loading images
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.classList.remove('lazy');
+                observer.unobserve(img);
+            }
+        });
+    });
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const container = document.getElementById('quote-container');
-            if (!container) return;
+    document.querySelectorAll('img[data-src]').forEach(img => {
+        imageObserver.observe(img);
+    });
 
-            // Ambil semua quote aktif dari Blade (sudah di-pass dari controller)
-            const quotes = @json($quoteHarianList->map(function($q) {
-                return ['title' => $q->title, 'text' => $q->text];
-            })->toArray());
+    // Back to Top
+    const backToTop = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+            backToTop.classList.remove('opacity-0', 'invisible');
+            backToTop.classList.add('opacity-100', 'visible');
+        } else {
+            backToTop.classList.add('opacity-0', 'invisible');
+            backToTop.classList.remove('opacity-100', 'visible');
+        }
+    });
+    backToTop.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 
-            if (quotes.length <= 1) return; // tidak perlu rotate kalau cuma 1 atau kosong
-
-            // Acak urutan quote setiap load halaman
-            quotes.sort(() => Math.random() - 0.5);
-
-            let currentIndex = 0;
-            let timer = null;
-
-            // Buat elemen quote baru
-            function createQuoteElement(quote) {
-                const div = document.createElement('div');
-                div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out flex flex-col';
-                div.innerHTML = `
-                    <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
-                        ${quote.title}
-                    </h3>
-                    <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
-                        ${quote.text}
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.getElementById('quote-container');
+        if (container && quotes.length === 0) {
+            container.innerHTML = `
+                <div class="quote-item absolute inset-0 opacity-100 flex flex-col">
+                    <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1">Pengingat Harian</h3>
+                    <div class="quote-text mt-3 text-base sm:text-lg">
+                        "Sesungguhnya bersama kesulitan ada kemudahan." — QS. Al-Insyirah: 6
                     </div>
-                `;
-                return div;
+                </div>
+            `;
+        }
+        if (!container) return;
+
+        // Ambil semua quote aktif dari Blade (sudah di-pass dari controller)
+        const quotes = @json($quoteHarianList->map(function($q) {
+            return ['title' => $q->title, 'text' => $q->text];
+        })->toArray());
+
+        if (quotes.length <= 1) return; // tidak perlu rotate kalau cuma 1 atau kosong
+
+        // Acak urutan quote setiap load halaman
+        quotes.sort(() => Math.random() - 0.5);
+
+        let currentIndex = 0;
+        let timer = null;
+
+        // Buat elemen quote baru
+        function createQuoteElement(quote) {
+            const div = document.createElement('div');
+            div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out flex flex-col';
+            div.innerHTML = `
+                <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                    ${quote.title}
+                </h3>
+                <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                    ${quote.text}
+                </div>
+            `;
+            return div;
+        }
+
+        // Ganti quote dengan animasi
+        function rotateQuote() {
+            const oldQuote = container.querySelector('.quote-item.opacity-100');
+            if (oldQuote) {
+                oldQuote.classList.remove('opacity-100', 'translate-y-0');
+                oldQuote.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => oldQuote.remove(), 800);
             }
 
-            // Ganti quote dengan animasi
-            function rotateQuote() {
-                const oldQuote = container.querySelector('.quote-item.opacity-100');
-                if (oldQuote) {
-                    oldQuote.classList.remove('opacity-100', 'translate-y-0');
-                    oldQuote.classList.add('opacity-0', '-translate-y-4');
-                    setTimeout(() => oldQuote.remove(), 800);
-                }
+            currentIndex = (currentIndex + 1) % quotes.length;
+            const newQuote = createQuoteElement(quotes[currentIndex]);
+            container.appendChild(newQuote);
 
-                currentIndex = (currentIndex + 1) % quotes.length;
-                const newQuote = createQuoteElement(quotes[currentIndex]);
-                container.appendChild(newQuote);
-
-                setTimeout(() => {
-                    newQuote.classList.remove('opacity-0', 'translate-y-4');
-                    newQuote.classList.add('opacity-100', 'translate-y-0');
-                }, 50);
-            }
-
-            // Mulai rotasi
-            function startRotation() {
-                if (timer) clearInterval(timer);
-                timer = setInterval(rotateQuote, 7000); // ganti setiap 7 detik
-            }
-
-            // Pause saat hover
-            container.addEventListener('mouseenter', () => {
-                if (timer) {
-                    clearInterval(timer);
-                    timer = null;
-                }
-            });
-
-            container.addEventListener('mouseleave', () => {
-                if (!timer) startRotation();
-            });
-
-            // Mulai setelah baca quote pertama (delay 5 detik)
             setTimeout(() => {
-                rotateQuote();
-                startRotation();
-            }, 5000);
+                newQuote.classList.remove('opacity-0', 'translate-y-4');
+                newQuote.classList.add('opacity-100', 'translate-y-0');
+            }, 50);
+        }
+
+        // Mulai rotasi
+        function startRotation() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(rotateQuote, 7000); // ganti setiap 7 detik
+        }
+
+        // Pause saat hover
+        container.addEventListener('mouseenter', () => {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
         });
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const carousel = document.getElementById('motivasiCarousel');
-            if (!carousel) return;
+        container.addEventListener('mouseleave', () => {
+            if (!timer) startRotation();
+        });
 
-            const track = carousel.querySelector('.motivasi-track');
-            const dots = carousel.querySelectorAll('.motivasi-dot');
-            let current = 0;
-            const total = dots.length;
-            let timer = null;
+        // Mulai setelah baca quote pertama (delay 5 detik)
+        setTimeout(() => {
+            rotateQuote();
+            startRotation();
+        }, 5000);
+    });
 
-            function setDot(i) {
-                dots.forEach((d, idx) => {
-                    d.classList.toggle('bg-emerald-600', idx === i);
-                    d.classList.toggle('bg-emerald-300', idx !== i);
-                    d.classList.toggle('w-4', idx === i);
-                    d.classList.toggle('h-4', idx === i);
-                });
-            }
+    document.addEventListener('DOMContentLoaded', function () {
+        const carousel = document.getElementById('motivasiCarousel');
+        if (!carousel) return;
 
-            function go(index) {
-                if (index < 0) index = total - 1;
-                if (index >= total) index = 0;
-                track.style.transform = `translateX(-${index * 100}%)`;
-                setDot(index);
-                current = index;
+        const track = carousel.querySelector('.motivasi-track');
+        const dots = carousel.querySelectorAll('.motivasi-dot');
+        let current = 0;
+        const total = dots.length;
+        let timer = null;
 
-                // Tambah class active ke slide yang sedang dilihat (untuk overlay)
-                document.querySelectorAll('.motivasi-track > div').forEach((slide, i) => {
-                    slide.classList.toggle('active', i === index);
-                });
-            }
-
-            function startAuto() {
-                stopAuto();
-                timer = setInterval(() => go(current + 1), 6000); // 6 detik per slide
-            }
-
-            function stopAuto() {
-                if (timer) {
-                    clearInterval(timer);
-                    timer = null;
-                }
-            }
-
-            dots.forEach(dot => {
-                dot.addEventListener('click', () => {
-                    go(parseInt(dot.dataset.index));
-                    startAuto();
-                });
+        function setDot(i) {
+            dots.forEach((d, idx) => {
+                d.classList.toggle('bg-emerald-600', idx === i);
+                d.classList.toggle('bg-emerald-300', idx !== i);
+                d.classList.toggle('w-4', idx === i);
+                d.classList.toggle('h-4', idx === i);
             });
+        }
 
-            carousel.addEventListener('mouseenter', stopAuto);
-            carousel.addEventListener('mouseleave', startAuto);
+        function go(index) {
+            if (index < 0) index = total - 1;
+            if (index >= total) index = 0;
+            track.style.transform = `translateX(-${index * 100}%)`;
+            setDot(index);
+            current = index;
 
-            // Mulai
-            go(0);
-            startAuto();
+            // Tambah class active ke slide yang sedang dilihat (untuk overlay)
+            document.querySelectorAll('.motivasi-track > div').forEach((slide, i) => {
+                slide.classList.toggle('active', i === index);
+            });
+        }
+
+        function startAuto() {
+            stopAuto();
+            timer = setInterval(() => go(current + 1), 6000); // 6 detik per slide
+        }
+
+        function stopAuto() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        }
+
+        dots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                go(parseInt(dot.dataset.index));
+                startAuto();
+            });
         });
 
-        function copyToClipboard(text) {
-            const el = document.getElementById('rekeningNum');
-            if (!el) return;
+        carousel.addEventListener('mouseenter', stopAuto);
+        carousel.addEventListener('mouseleave', startAuto);
 
-            // Simpan original untuk feedback
-            const originalColor = el.style.color || '';
+        // Mulai
+        go(0);
+        startAuto();
+    });
 
-            // Fungsi feedback sukses
-            function showSuccess() {
-                el.style.color = '#10b981';
-                el.classList.add('font-medium');
-                setTimeout(() => {
-                    el.style.color = originalColor;
-                    el.classList.remove('font-medium');
-                }, 2500);
-            }
+    function copyToClipboard(text) {
+        const el = document.getElementById('rekeningNum');
+        if (!el) return;
 
-            // Coba modern Clipboard API dulu
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text)
-                    .then(showSuccess)
-                    .catch(err => {
-                        console.warn('Clipboard API gagal:', err);
-                        fallbackCopy();
-                    });
-            } else {
-                // Langsung fallback jika API tidak ada
-                fallbackCopy();
-            }
+        // Simpan original untuk feedback
+        const originalColor = el.style.color || '';
 
-            function fallbackCopy() {
-                // Buat textarea sementara
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                textarea.setAttribute('readonly', '');
-                textarea.style.position = 'absolute';
-                textarea.style.left = '-9999px';
-                document.body.appendChild(textarea);
-
-                textarea.select();
-                textarea.setSelectionRange(0, 99999); // Untuk mobile
-
-                try {
-                    const successful = document.execCommand('copy');
-                    if (successful) {
-                        showSuccess();
-                    } else {
-                        alert('Gagal menyalin otomatis. Tekan lama nomor rekening lalu pilih "Salin".');
-                    }
-                } catch (err) {
-                    console.error('Fallback copy gagal:', err);
-                    alert('Gagal menyalin. Tekan lama nomor rekening lalu pilih "Salin".');
-                }
-
-                document.body.removeChild(textarea);
-            }
+        // Fungsi feedback sukses
+        function showSuccess() {
+            el.style.color = '#10b981';
+            el.classList.add('font-medium');
+            setTimeout(() => {
+                el.style.color = originalColor;
+                el.classList.remove('font-medium');
+            }, 2500);
         }
 
-        // buka modal menggunakan atribut data dari tombol (sudah ada fungsi openPengumumanPreview sebelumnya)
-        function openPengumumanPreview(btn) {
-            const title = btn.getAttribute('data-pengumuman-judul') || '';
-            const isi   = btn.getAttribute('data-pengumuman-isi') || '';
-            const url   = btn.getAttribute('data-pengumuman-url') || '#';
+        // Coba modern Clipboard API dulu
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(showSuccess)
+                .catch(err => {
+                    console.warn('Clipboard API gagal:', err);
+                    fallbackCopy();
+                });
+        } else {
+            // Langsung fallback jika API tidak ada
+            fallbackCopy();
+        }
 
-            const modal = document.getElementById('pengumumanModal');
-            const elTitle = document.getElementById('pengumumanModalTitle');
-            const elBody  = document.getElementById('pengumumanModalBody');
-            const elDate  = document.getElementById('pengumumanModalDate');
-            const elDetail= document.getElementById('pengumumanModalDetail');
+        function fallbackCopy() {
+            // Buat textarea sementara
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
 
-            elTitle.textContent = title;
-            // jika isi mengandung HTML yang aman, gunakan innerHTML setelah sanitasi.
-            // di sini kita menampilkan text saja supaya aman:
-            elBody.textContent = isi;
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // Untuk mobile
 
-            // tanggal: jika tersedia di tombol, gunakan; kalau tidak biarkan kosong
-            const tanggalAttr = btn.getAttribute('data-pengumuman-tanggal');
-            if (tanggalAttr) elDate.textContent = tanggalAttr;
-            else {
-                const parent = btn.closest('article');
-                const dateEl = parent ? parent.querySelector('.text-amber-700, .text-amber-700') : null;
-                elDate.textContent = dateEl ? dateEl.textContent.trim() : '';
-            }
-
-            elDetail.href = url;
-
-            // focus & open
             try {
-                if (typeof modal.showModal === 'function') {
-                    modal.showModal();
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showSuccess();
                 } else {
-                    // polyfill fallback: add class to show
-                    modal.classList.add('modal-open');
-                    modal.style.display = 'block';
+                    alert('Gagal menyalin otomatis. Tekan lama nomor rekening lalu pilih "Salin".');
                 }
-                // move focus to title for accessibility
-                elTitle.focus && elTitle.focus();
-            } catch (e) {
-                // fallback
-                modal.classList.add('modal-open');
+            } catch (err) {
+                console.error('Fallback copy gagal:', err);
+                alert('Gagal menyalin. Tekan lama nomor rekening lalu pilih "Salin".');
             }
+
+            document.body.removeChild(textarea);
+        }
+    }
+
+    function openPengumumanPreview(btn) {
+        const title = btn.getAttribute('data-pengumuman-judul') || '';
+        const isi   = btn.getAttribute('data-pengumuman-isi') || '';
+        const url   = btn.getAttribute('data-pengumuman-url') || '#';
+
+        const modal = document.getElementById('pengumumanModal');
+        const elTitle = document.getElementById('pengumumanModalTitle');
+        const elBody  = document.getElementById('pengumumanModalBody');
+        const elDate  = document.getElementById('pengumumanModalDate');
+        const elDetail= document.getElementById('pengumumanModalDetail');
+
+        elTitle.textContent = title;
+        // jika isi mengandung HTML yang aman, gunakan innerHTML setelah sanitasi.
+        // di sini kita menampilkan text saja supaya aman:
+        elBody.textContent = isi;
+
+        // tanggal: jika tersedia di tombol, gunakan; kalau tidak biarkan kosong
+        const tanggalAttr = btn.getAttribute('data-pengumuman-tanggal');
+        if (tanggalAttr) elDate.textContent = tanggalAttr;
+        else {
+            const parent = btn.closest('article');
+            const dateEl = parent ? parent.querySelector('.text-amber-700, .text-amber-700') : null;
+            elDate.textContent = dateEl ? dateEl.textContent.trim() : '';
         }
 
-        function closePengumumanPreview() {
-            const modal = document.getElementById('pengumumanModal');
-            try {
-                if (typeof modal.close === 'function') modal.close();
-                else {
-                    modal.classList.remove('modal-open');
-                    modal.style.display = 'none';
-                }
-            } catch (e) {
+        elDetail.href = url;
+
+        // focus & open
+        try {
+            if (typeof modal.showModal === 'function') {
+                modal.showModal();
+            } else {
+                // polyfill fallback: add class to show
+                modal.classList.add('modal-open');
+                modal.style.display = 'block';
+            }
+            // move focus to title for accessibility
+            elTitle.focus && elTitle.focus();
+        } catch (e) {
+            // fallback
+            modal.classList.add('modal-open');
+        }
+    }
+
+    function closePengumumanPreview() {
+        const modal = document.getElementById('pengumumanModal');
+        try {
+            if (typeof modal.close === 'function') modal.close();
+            else {
                 modal.classList.remove('modal-open');
                 modal.style.display = 'none';
             }
+        } catch (e) {
+            modal.classList.remove('modal-open');
+            modal.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('pengumumanModal');
+            if (!modal) return;
+            // only close if modal is open
+            if (modal.open || modal.classList.contains('modal-open')) closePengumumanPreview();
+        }
+    });
+
+    window.addEventListener('load', function () {
+        const loader = document.getElementById('page-loader');
+
+        // simpan hash tujuan
+        const hash = window.location.hash;
+
+        if (loader) {
+            loader.classList.add('opacity-0','pointer-events-none');
+
+            setTimeout(() => {
+                loader.remove();
+
+                // 🔥 setelah loader hilang → baru scroll
+                if(hash){
+                    const target = document.querySelector(hash);
+                    if(target){
+                        setTimeout(()=>{
+                            target.scrollIntoView({
+                                behavior:'smooth',
+                                block:'start'
+                            });
+                        },150);
+                    }
+                }
+            }, 600);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded',function(){
+        const carousel=document.getElementById('bannerCarousel');
+        if(!carousel)return;
+
+        const track=carousel.querySelector('.banner-track');
+        const pages=track.querySelectorAll('.banner-page');
+        const dots=carousel.querySelectorAll('.banner-dot');
+
+        let current=0,total=pages.length,timer=null;
+
+        function setDot(i){
+            dots.forEach((d,idx)=>{
+                d.classList.toggle('bg-emerald-500',idx===i);
+                d.classList.toggle('bg-emerald-200',idx!==i);
+                d.classList.toggle('w-4',idx===i);
+            });
+        }
+        function go(i){
+            if(i<0)i=total-1;
+            if(i>=total)i=0;
+            track.style.transform=`translateX(-${i*100}%)`;
+            setDot(i);
+            current=i;
+        }
+        function start(){
+            stop();
+            timer=setInterval(()=>go(current+1),6000);
+        }
+        function stop(){ if(timer){clearInterval(timer);timer=null;}}
+
+        dots.forEach(d=>d.onclick=()=>{go(+d.dataset.index);start();});
+        carousel.addEventListener('mouseenter',stop);
+        carousel.addEventListener('mouseleave',start);
+
+        go(0);start();
+
+
+        // Galeri Modal
+        const items=document.querySelectorAll('[data-galeri-item]');
+        const modal=document.getElementById('galeriModal');
+        const modalImg=document.getElementById('galeriModalImg');
+        const modalTitle=document.getElementById('galeriModalTitle');
+
+        items.forEach(btn=>{
+            btn.onclick=()=>{
+                modalImg.src=btn.dataset.img;
+                modalTitle.textContent=btn.dataset.title;
+                modal.showModal();
+            }
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const modal = document.getElementById('galeriModal');
+        const modalImg = document.getElementById('galeriModalImg');
+        const modalTitle = document.getElementById('galeriModalTitle');
+        const thumbsBox = document.getElementById('galeriThumbs'); // pastikan id ini ada di blade
+        const prevBtn = document.getElementById('galeriPrev');
+        const nextBtn = document.getElementById('galeriNext');
+        const counter = document.getElementById('galeriCounter');
+        const closeBtn = document.getElementById('closeGaleriModalBtn');
+
+        let fotos = []; // array of {url, caption}
+        let index = 0;
+
+        function openModal() {
+            try { if (typeof modal.showModal === 'function') modal.showModal(); else modal.classList.add('modal-open'); }
+            catch (e) { modal.classList.add('modal-open'); }
+        }
+        function closeModal() {
+            try { if (typeof modal.close === 'function') modal.close(); else modal.classList.remove('modal-open'); }
+            catch (e) { modal.classList.remove('modal-open'); }
         }
 
-        // close on ESC
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('pengumumanModal');
-                if (!modal) return;
-                // only close if modal is open
-                if (modal.open || modal.classList.contains('modal-open')) closePengumumanPreview();
-            }
-        });
+        function isModalOpen() {
+            if (!modal) return false;
+            if (typeof modal.open !== 'undefined') return !!modal.open;
+            return modal.classList.contains('modal-open');
+        }
 
-        window.addEventListener('load', function () {
-            const loader = document.getElementById('page-loader');
-
-            // simpan hash tujuan
-            const hash = window.location.hash;
-
-            if (loader) {
-                loader.classList.add('opacity-0','pointer-events-none');
-
-                setTimeout(() => {
-                    loader.remove();
-
-                    // 🔥 setelah loader hilang → baru scroll
-                    if(hash){
-                        const target = document.querySelector(hash);
-                        if(target){
-                            setTimeout(()=>{
-                                target.scrollIntoView({
-                                    behavior:'smooth',
-                                    block:'start'
-                                });
-                            },150);
-                        }
-                    }
-                }, 600);
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded',function(){
-            const carousel=document.getElementById('bannerCarousel');
-            if(!carousel)return;
-
-            const track=carousel.querySelector('.banner-track');
-            const pages=track.querySelectorAll('.banner-page');
-            const dots=carousel.querySelectorAll('.banner-dot');
-
-            let current=0,total=pages.length,timer=null;
-
-            function setDot(i){
-                dots.forEach((d,idx)=>{
-                    d.classList.toggle('bg-emerald-500',idx===i);
-                    d.classList.toggle('bg-emerald-200',idx!==i);
-                    d.classList.toggle('w-4',idx===i);
-                });
-            }
-            function go(i){
-                if(i<0)i=total-1;
-                if(i>=total)i=0;
-                track.style.transform=`translateX(-${i*100}%)`;
-                setDot(i);
-                current=i;
-            }
-            function start(){
-                stop();
-                timer=setInterval(()=>go(current+1),6000);
-            }
-            function stop(){ if(timer){clearInterval(timer);timer=null;}}
-
-            dots.forEach(d=>d.onclick=()=>{go(+d.dataset.index);start();});
-            carousel.addEventListener('mouseenter',stop);
-            carousel.addEventListener('mouseleave',start);
-
-            go(0);start();
-
-
-            // Galeri Modal
-            const items=document.querySelectorAll('[data-galeri-item]');
-            const modal=document.getElementById('galeriModal');
-            const modalImg=document.getElementById('galeriModalImg');
-            const modalTitle=document.getElementById('galeriModalTitle');
-
-            items.forEach(btn=>{
-                btn.onclick=()=>{
-                    modalImg.src=btn.dataset.img;
-                    modalTitle.textContent=btn.dataset.title;
-                    modal.showModal();
-                }
+        // safe event bindings
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (modal) {
+            modal.addEventListener('click', (ev) => {
+                // close when clicking backdrop (modal element itself)
+                if (ev.target === modal) closeModal();
             });
-        });
+        }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const modal = document.getElementById('galeriModal');
-            const modalImg = document.getElementById('galeriModalImg');
-            const modalTitle = document.getElementById('galeriModalTitle');
-            const thumbsBox = document.getElementById('galeriThumbs'); // pastikan id ini ada di blade
-            const prevBtn = document.getElementById('galeriPrev');
-            const nextBtn = document.getElementById('galeriNext');
-            const counter = document.getElementById('galeriCounter');
-            const closeBtn = document.getElementById('closeGaleriModalBtn');
+        function updateCounter() {
+            if (!counter) return;
+            counter.textContent = fotos.length ? `${index + 1} / ${fotos.length}` : '';
+        }
 
-            let fotos = []; // array of {url, caption}
-            let index = 0;
-
-            function openModal() {
-                try { if (typeof modal.showModal === 'function') modal.showModal(); else modal.classList.add('modal-open'); }
-                catch (e) { modal.classList.add('modal-open'); }
-            }
-            function closeModal() {
-                try { if (typeof modal.close === 'function') modal.close(); else modal.classList.remove('modal-open'); }
-                catch (e) { modal.classList.remove('modal-open'); }
-            }
-
-            function isModalOpen() {
-                if (!modal) return false;
-                if (typeof modal.open !== 'undefined') return !!modal.open;
-                return modal.classList.contains('modal-open');
-            }
-
-            // safe event bindings
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-            if (modal) {
-                modal.addEventListener('click', (ev) => {
-                    // close when clicking backdrop (modal element itself)
-                    if (ev.target === modal) closeModal();
-                });
-            }
-
-            function updateCounter() {
-                if (!counter) return;
-                counter.textContent = fotos.length ? `${index + 1} / ${fotos.length}` : '';
-            }
-
-            function setImage(i) {
-                if (!modalImg) return;
-                if (!fotos.length) {
-                    modalImg.src = '';
-                    modalImg.alt = '';
-                    updateCounter();
-                    // remove highlight if thumbsBox exists
-                    if (thumbsBox) Array.from(thumbsBox.children).forEach(ch => { ch.classList.remove('ring'); ch.classList.remove('ring-emerald-400'); });
-                    return;
-                }
-
-                index = (Number(i) + fotos.length) % fotos.length;
-                modalImg.src = fotos[index].url;
-                modalImg.alt = fotos[index].caption || fotos[index].file_name || '';
+        function setImage(i) {
+            if (!modalImg) return;
+            if (!fotos.length) {
+                modalImg.src = '';
+                modalImg.alt = '';
                 updateCounter();
+                // remove highlight if thumbsBox exists
+                if (thumbsBox) Array.from(thumbsBox.children).forEach(ch => { ch.classList.remove('ring'); ch.classList.remove('ring-emerald-400'); });
+                return;
+            }
 
-                // highlight thumb (use add/remove to avoid multi-token errors)
-                if (thumbsBox) {
-                    Array.from(thumbsBox.children).forEach((child, idx) => {
-                        if (idx === index) {
-                            child.classList.add('ring');
-                            child.classList.add('ring-emerald-400');
-                        } else {
-                            child.classList.remove('ring');
-                            child.classList.remove('ring-emerald-400');
-                        }
-                    });
-                    // ensure the active thumb is visible (scroll into view if overflow)
-                    const active = thumbsBox.children[index];
-                    if (active && typeof active.scrollIntoView === 'function') {
-                        active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            index = (Number(i) + fotos.length) % fotos.length;
+            modalImg.src = fotos[index].url;
+            modalImg.alt = fotos[index].caption || fotos[index].file_name || '';
+            updateCounter();
+
+            // highlight thumb (use add/remove to avoid multi-token errors)
+            if (thumbsBox) {
+                Array.from(thumbsBox.children).forEach((child, idx) => {
+                    if (idx === index) {
+                        child.classList.add('ring');
+                        child.classList.add('ring-emerald-400');
+                    } else {
+                        child.classList.remove('ring');
+                        child.classList.remove('ring-emerald-400');
                     }
-                }
-            }
-
-            function renderThumbs() {
-                if (!thumbsBox) return;
-                thumbsBox.innerHTML = '';
-
-                fotos.forEach((f, i) => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'inline-block border rounded overflow-hidden';
-                    btn.style.width = '90px';
-                    btn.style.height = '64px';
-                    btn.style.flex = '0 0 auto';
-                    btn.style.padding = '0';
-                    btn.style.margin = '0 6px 6px 0';
-                    btn.setAttribute('aria-label', f.caption || `Foto ${i+1}`);
-                    btn.innerHTML = `<img src="${f.url}" loading="lazy" class="w-full h-full object-cover" alt="${(f.caption||f.file_name||'foto')}">`;
-                    btn.addEventListener('click', () => setImage(i));
-                    thumbsBox.appendChild(btn);
                 });
+                // ensure the active thumb is visible (scroll into view if overflow)
+                const active = thumbsBox.children[index];
+                if (active && typeof active.scrollIntoView === 'function') {
+                    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }
+        }
+
+        function renderThumbs() {
+            if (!thumbsBox) return;
+            thumbsBox.innerHTML = '';
+
+            fotos.forEach((f, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'inline-block border rounded overflow-hidden';
+                btn.style.width = '90px';
+                btn.style.height = '64px';
+                btn.style.flex = '0 0 auto';
+                btn.style.padding = '0';
+                btn.style.margin = '0 6px 6px 0';
+                btn.setAttribute('aria-label', f.caption || `Foto ${i+1}`);
+                btn.innerHTML = `<img src="${f.url}" loading="lazy" class="w-full h-full object-cover" alt="${(f.caption||f.file_name||'foto')}">`;
+                btn.addEventListener('click', () => setImage(i));
+                thumbsBox.appendChild(btn);
+            });
+        }
+
+        if (prevBtn) prevBtn.addEventListener('click', () => setImage(index - 1));
+        if (nextBtn) nextBtn.addEventListener('click', () => setImage(index + 1));
+
+        document.addEventListener('keydown', (e) => {
+            if (!isModalOpen()) return;
+            if (e.key === 'ArrowLeft') setImage(index - 1);
+            if (e.key === 'ArrowRight') setImage(index + 1);
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Delegate click on gallery items (buttons with data-galeri-item and data-id)
+        document.body.addEventListener('click', (ev) => {
+            const btn = ev.target.closest('[data-galeri-item]');
+            if (!btn) return;
+
+            const id = btn.dataset.id || null;
+            const fallbackImg = btn.dataset.img || null;
+            const title = btn.dataset.title || '';
+
+            if (modalTitle) modalTitle.textContent = title || '';
+
+            if (!id) {
+                // if no id, show single fallback image
+                fotos = fallbackImg ? [{ url: fallbackImg, caption: title }] : [];
+                renderThumbs();
+                setImage(0);
+                openModal();
+                return;
             }
 
-            if (prevBtn) prevBtn.addEventListener('click', () => setImage(index - 1));
-            if (nextBtn) nextBtn.addEventListener('click', () => setImage(index + 1));
+            // Fetch full foto list
+            $.ajax({
+                url: `/home/galeri/${encodeURIComponent(id)}`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(data) {
+                    try {
+                        fotos = Array.isArray(data.fotos)
+                            ? data.fotos.map(function(f) {
+                                return {
+                                    url: f.url || (f.file_name ? `/storage/galeri/${f.file_name}` : ''),
+                                    caption: f.caption || f.file_name || ''
+                                };
+                            })
+                            : [];
 
-            document.addEventListener('keydown', (e) => {
-                if (!isModalOpen()) return;
-                if (e.key === 'ArrowLeft') setImage(index - 1);
-                if (e.key === 'ArrowRight') setImage(index + 1);
-                if (e.key === 'Escape') closeModal();
-            });
-
-            // Delegate click on gallery items (buttons with data-galeri-item and data-id)
-            document.body.addEventListener('click', (ev) => {
-                const btn = ev.target.closest('[data-galeri-item]');
-                if (!btn) return;
-
-                const id = btn.dataset.id || null;
-                const fallbackImg = btn.dataset.img || null;
-                const title = btn.dataset.title || '';
-
-                if (modalTitle) modalTitle.textContent = title || '';
-
-                if (!id) {
-                    // if no id, show single fallback image
-                    fotos = fallbackImg ? [{ url: fallbackImg, caption: title }] : [];
-                    renderThumbs();
-                    setImage(0);
-                    openModal();
-                    return;
-                }
-
-                // Fetch full foto list
-                $.ajax({
-                    url: `/home/galeri/${encodeURIComponent(id)}`,
-                    method: 'GET',
-                    dataType: 'json',
-                    success: function(data) {
-                        try {
-                            fotos = Array.isArray(data.fotos)
-                                ? data.fotos.map(function(f) {
-                                    return {
-                                        url: f.url || (f.file_name ? `/storage/galeri/${f.file_name}` : ''),
-                                        caption: f.caption || f.file_name || ''
-                                    };
-                                })
-                                : [];
-
-                            // fallback to single image if empty
-                            if (!fotos.length && fallbackImg) {
-                                fotos = [{ url: fallbackImg, caption: title }];
-                            }
-
-                            renderThumbs();
-                            setImage(0);
-                            openModal();
-                        } catch (e) {
-                            console.error('Galeri parse error', e);
-                            // fallback
-                            if (fallbackImg) {
-                                fotos = [{ url: fallbackImg, caption: title }];
-                                renderThumbs();
-                                setImage(0);
-                                openModal();
-                            } else if (window.Swal) {
-                                Swal.fire('Error', 'Gagal memproses data galeri.', 'error');
-                            }
+                        // fallback to single image if empty
+                        if (!fotos.length && fallbackImg) {
+                            fotos = [{ url: fallbackImg, caption: title }];
                         }
-                    },
-                    error: function(xhr, status, err) {
-                        console.error('Galeri fetch error', status, err);
+
+                        renderThumbs();
+                        setImage(0);
+                        openModal();
+                    } catch (e) {
+                        console.error('Galeri parse error', e);
+                        // fallback
                         if (fallbackImg) {
                             fotos = [{ url: fallbackImg, caption: title }];
                             renderThumbs();
                             setImage(0);
                             openModal();
                         } else if (window.Swal) {
-                            Swal.fire('Error', 'Gagal memuat foto galeri dari server.', 'error');
+                            Swal.fire('Error', 'Gagal memproses data galeri.', 'error');
                         }
                     }
-                });
+                },
+                error: function(xhr, status, err) {
+                    console.error('Galeri fetch error', status, err);
+                    if (fallbackImg) {
+                        fotos = [{ url: fallbackImg, caption: title }];
+                        renderThumbs();
+                        setImage(0);
+                        openModal();
+                    } else if (window.Swal) {
+                        Swal.fire('Error', 'Gagal memuat foto galeri dari server.', 'error');
+                    }
+                }
             });
         });
+    });
 
-        // pastikan functions setImage(index) dan index var ada di scope
-        const prevBtn = document.getElementById('galeriPrev');
-        const nextBtn = document.getElementById('galeriNext');
-        const prevPill = document.getElementById('galeriPrevPill');
-        const nextPill = document.getElementById('galeriNextPill');
+    // pastikan functions setImage(index) dan index var ada di scope
+    const prevBtn = document.getElementById('galeriPrev');
+    const nextBtn = document.getElementById('galeriNext');
+    const prevPill = document.getElementById('galeriPrevPill');
+    const nextPill = document.getElementById('galeriNextPill');
 
-        // fallback: jika fungsi setImage belum ada, gunakan dispatch click pada element lain
-        function safePrev() {
-            if (typeof setImage === 'function') setImage(index - 1);
-            else document.dispatchEvent(new CustomEvent('galeriPrev'));
-        }
-        function safeNext() {
-            if (typeof setImage === 'function') setImage(index + 1);
-            else document.dispatchEvent(new CustomEvent('galeriNext'));
-        }
+    // fallback: jika fungsi setImage belum ada, gunakan dispatch click pada element lain
+    function safePrev() {
+        if (typeof setImage === 'function') setImage(index - 1);
+        else document.dispatchEvent(new CustomEvent('galeriPrev'));
+    }
+    function safeNext() {
+        if (typeof setImage === 'function') setImage(index + 1);
+        else document.dispatchEvent(new CustomEvent('galeriNext'));
+    }
 
-        if (prevBtn) prevBtn.addEventListener('click', safePrev);
-        if (nextBtn) nextBtn.addEventListener('click', safeNext);
-        if (prevPill) prevPill.addEventListener('click', safePrev);
-        if (nextPill) nextPill.addEventListener('click', safeNext);
+    if (prevBtn) prevBtn.addEventListener('click', safePrev);
+    if (nextBtn) nextBtn.addEventListener('click', safeNext);
+    if (prevPill) prevPill.addEventListener('click', safePrev);
+    if (nextPill) nextPill.addEventListener('click', safeNext);
 
-        // keyboard hint: left/right also control
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') safePrev();
-            if (e.key === 'ArrowRight') safeNext();
-        });
+    // keyboard hint: left/right also control
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') safePrev();
+        if (e.key === 'ArrowRight') safeNext();
+    });
 
-        const $form   = $('#contactForm');
-        const $btn    = $('#contactSubmitBtn');
-        const $status = $('#contactStatus');
+    const $form   = $('#contactForm');
+    const $btn    = $('#contactSubmitBtn');
+    const $status = $('#contactStatus');
 
-        // pastikan meta csrf ada
-        const csrf = $('meta[name="csrf-token"]').attr('content');
+    // pastikan meta csrf ada
+    const csrf = $('meta[name="csrf-token"]').attr('content');
 
-        $form.on('submit', function(e) {
-            e.preventDefault();
+    $form.on('submit', function(e) {
+        e.preventDefault();
 
-            // Reset UI sebelum kirim
-            $('.error, .invalid-feedback').remove();
-            $('input, textarea').removeClass('border-red-500');
-            $status.html('').removeClass('text-green-600 text-red-600');
-            $btn.prop('disabled', true).text('Mengirim...');
+        // Reset UI sebelum kirim
+        $('.error, .invalid-feedback').remove();
+        $('input, textarea').removeClass('border-red-500');
+        $status.html('').removeClass('text-green-600 text-red-600');
+        $btn.prop('disabled', true).text('Mengirim...');
 
-            // Generate reCAPTCHA v3 token (invisible)
-            grecaptcha.ready(function() {
-                grecaptcha.execute('{{ env('RECAPTCHA_SITE_KEY') }}', {action: 'submit_saran'})
-                    .then(function(token) {
-                        // Masukkan token ke hidden input
-                        $('#recaptchaToken').val(token);
+        // Generate reCAPTCHA v3 token (invisible)
+        grecaptcha.ready(function() {
+            grecaptcha.execute('{{ env('RECAPTCHA_SITE_KEY') }}', {action: 'submit_saran'})
+                .then(function(token) {
+                    // Masukkan token ke hidden input
+                    $('#recaptchaToken').val(token);
 
-                        // Siapkan data form
-                        const formData = $form.serialize();
+                    // Siapkan data form
+                    const formData = $form.serialize();
 
-                        $.ajax({
-                            url: '{{ route("kontak.kirim") }}',
-                            type: 'POST',
-                            data: formData,
-                            success: function(res) {
-                                if (res.success) {
-                                    $status.html('<span class="text-green-600 font-medium">' + (res.message || 'Pesan berhasil dikirim! Terima kasih.') + '</span>');
-                                    $form[0].reset(); // reset hanya saat sukses
-                                } else {
-                                    $status.html('<span class="text-red-600">' + (res.message || 'Gagal mengirim.') + '</span>');
-                                }
-                            },
-                            error: function(xhr) {
-                                let errorMsg = 'Terjadi kesalahan. Coba lagi nanti.';
-                                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
-                                    const errors = xhr.responseJSON.errors;
-                                    let firstError = '';
-
-                                    $.each(errors, function(field, messages) {
-                                        const msg = messages[0];
-                                        firstError = firstError || msg;
-
-                                        // Tampil error di bawah field
-                                        const $input = $form.find('[name="' + field + '"]');
-                                        if ($input.length) {
-                                            $input.addClass('border-red-500');
-                                            $input.after('<div class="error text-red-600 text-xs mt-1">' + msg + '</div>');
-                                        }
-                                    });
-
-                                    if (firstError) {
-                                        $status.html('<span class="text-red-600">' + firstError + '</span>');
-                                    }
-                                } else {
-                                    // Error lain (500, network, dll)
-                                    try {
-                                        const json = xhr.responseJSON || JSON.parse(xhr.responseText);
-                                        errorMsg = json.message || errorMsg;
-                                    } catch (e) {
-                                        // ignore parse error
-                                    }
-                                    $status.html('<span class="text-red-600">' + errorMsg + '</span>');
-                                }
-                            },
-                            complete: function() {
-                                $btn.prop('disabled', false).text('Kirim Pesan');
+                    $.ajax({
+                        url: '{{ route("kontak.kirim") }}',
+                        type: 'POST',
+                        data: formData,
+                        success: function(res) {
+                            if (res.success) {
+                                $status.html('<span class="text-green-600 font-medium">' + (res.message || 'Pesan berhasil dikirim! Terima kasih.') + '</span>');
+                                $form[0].reset(); // reset hanya saat sukses
+                            } else {
+                                $status.html('<span class="text-red-600">' + (res.message || 'Gagal mengirim.') + '</span>');
                             }
-                        });
-                    })
-                    .catch(function(error) {
-                        $status.html('<span class="text-red-600">Gagal verifikasi reCAPTCHA. Coba lagi atau refresh halaman.</span>');
-                        $btn.prop('disabled', false).text('Kirim Pesan');
+                        },
+                        error: function(xhr) {
+                            let errorMsg = 'Terjadi kesalahan. Coba lagi nanti.';
+                            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                                const errors = xhr.responseJSON.errors;
+                                let firstError = '';
+
+                                $.each(errors, function(field, messages) {
+                                    const msg = messages[0];
+                                    firstError = firstError || msg;
+
+                                    // Tampil error di bawah field
+                                    const $input = $form.find('[name="' + field + '"]');
+                                    if ($input.length) {
+                                        $input.addClass('border-red-500');
+                                        $input.after('<div class="error text-red-600 text-xs mt-1">' + msg + '</div>');
+                                    }
+                                });
+
+                                if (firstError) {
+                                    $status.html('<span class="text-red-600">' + firstError + '</span>');
+                                }
+                            } else {
+                                // Error lain (500, network, dll)
+                                try {
+                                    const json = xhr.responseJSON || JSON.parse(xhr.responseText);
+                                    errorMsg = json.message || errorMsg;
+                                } catch (e) {
+                                    // ignore parse error
+                                }
+                                $status.html('<span class="text-red-600">' + errorMsg + '</span>');
+                            }
+                        },
+                        complete: function() {
+                            $btn.prop('disabled', false).text('Kirim Pesan');
+                        }
                     });
-            });
+                })
+                .catch(function(error) {
+                    $status.html('<span class="text-red-600">Gagal verifikasi reCAPTCHA. Coba lagi atau refresh halaman.</span>');
+                    $btn.prop('disabled', false).text('Kirim Pesan');
+                });
         });
+    });
 
 
     /* ===================== DETEKSI LOKASI USER ===================== */
@@ -2150,6 +2538,5 @@
         }, 2500); // tunggu halaman selesai render dulu
 
     })();
-
 </script>
 @endpush

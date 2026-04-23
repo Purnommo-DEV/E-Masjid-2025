@@ -1,115 +1,155 @@
 <?php
+
 namespace App\Repositories\mrj;
 
 use App\Interfaces\ProfilMasjidRepositoryInterface;
 use App\Models\ProfilMasjid;
 use App\Models\Pengurus;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
 class ProfilMasjidRepository implements ProfilMasjidRepositoryInterface
 {
     public function getProfil()
     {
-        return ProfilMasjid::first() ?? new ProfilMasjid();
+        return ProfilMasjid::withoutGlobalScope('masjid')
+            ->where('masjid_code', masjid())
+            ->first();
     }
 
     public function updateProfil(array $data)
     {
-        $profil = ProfilMasjid::updateOrCreate(
-            ['id' => 1],
-            collect($data)->except(['logo', 'struktur', 'qris'])->toArray()
-        );
-
-        $disk = Storage::disk('public');
-
-        // Fungsi helper untuk upload & replace media
-        $uploadAndReplace = function ($file, $type, $folder) use ($profil, $disk) {
-            if (!$file instanceof \Illuminate\Http\UploadedFile) {
-                return;
+        return DB::transaction(function () use ($data) {
+            $profil = $this->getProfil();
+            
+            if (!$profil) {
+                $profil = ProfilMasjid::create([
+                    'masjid_code' => masjid(),
+                    'nama' => $data['nama'] ?? '',
+                ]);
             }
 
-            $name = $file->getClientOriginalName();
-            $targetPath = "{$folder}/{$name}";
+            $updateData = [
+                'nama' => $data['nama'],
+                'singkatan' => $data['singkatan'] ?? null,
+                'alamat' => $data['alamat'],
+                'telepon' => $data['telepon'] ?? null,
+                'email' => $data['email'] ?? null,
+                'latitude' => $data['latitude'],
+                'longitude' => $data['longitude'],
+                'bank_name' => $data['bank_name'] ?? null,
+                'bank_code' => $data['bank_code'] ?? null,
+                'rekening' => $data['rekening'] ?? null,
+                'atas_nama' => $data['atas_nama'] ?? null,
+                'wa_konfirmasi' => $data['wa_konfirmasi'] ?? null,
+            ];
 
-            // Hapus file & media lama jika ada
-            $oldMedia = $profil->getFirstMedia($type);
-            if ($oldMedia) {
-                $oldPath = $oldMedia->getPath(); // path relatif dari storage
-                if ($disk->exists($oldPath)) {
-                    $disk->delete($oldPath);
+            // Upload logo
+            if (!empty($data['logo']) && $data['logo'] instanceof UploadedFile) {
+                $updateData['logo_path'] = upload_image($data['logo'], 'profil/logo', $profil->logo_path, true);
+            }
+
+            // Upload struktur
+            if (!empty($data['struktur']) && $data['struktur'] instanceof UploadedFile) {
+                $updateData['struktur_path'] = upload_image($data['struktur'], 'profil/struktur', $profil->struktur_path, true);
+            }
+
+            // Upload QRIS
+            if (!empty($data['qris']) && $data['qris'] instanceof UploadedFile) {
+                try {
+                    $updateData['qris_path'] = upload_image($data['qris'], 'profil/qris', $profil->qris_path, true);
+                } catch (\Exception $e) {
+                    throw new \Exception('QRIS: ' . $e->getMessage());
                 }
-                $oldMedia->delete();
             }
 
-            // Simpan file baru ke folder custom
-            $disk->putFileAs($folder, $file, $name);
+            $profil->update($updateData);
 
-            // Jika pakai Spatie Media Library untuk logo/struktur (opsional, bisa dihapus jika tidak perlu)
-            if (in_array($type, ['logo', 'struktur'])) {
-                $media = $profil->addMedia($file)
-                    ->usingFileName($name)
-                    ->preservingOriginal()
-                    ->toMediaCollection($type);
-
-                $media->setCustomProperty('folder', $folder);
-                $media->setCustomProperty('original_name', $name);
-                $media->save();
-            }
-
-            // Untuk QRIS, simpan path ke kolom qris
-            if ($type === 'qris') {
-                $profil->qris = $targetPath;
-                $profil->save();
-            }
-        };
-
-        // Proses upload untuk logo, struktur, dan qris
-        $uploadAndReplace($data['logo'] ?? null, 'logo', 'profil/logo');
-        $uploadAndReplace($data['struktur'] ?? null, 'struktur', 'profil/struktur');
-        $uploadAndReplace($data['qris'] ?? null, 'qris', 'donasi/qris');
-
-        return $profil;
+            return $profil;
+        });
     }
 
     public function getPengurus()
     {
-        return Pengurus::with('media')->orderBy('urutan')->get();
+        return Pengurus::withoutGlobalScope('masjid')
+            ->where('masjid_code', masjid())
+            ->orderBy('urutan')
+            ->get()
+            ->map(function ($pengurus) {
+                // Tambahkan foto_url ke setiap pengurus
+                $pengurus->foto_url = $pengurus->foto_url;
+                return $pengurus;
+            });
     }
 
     public function createPengurus(array $data)
     {
-        $pengurus = Pengurus::create(collect($data)->except('foto')->toArray());
-        if (isset($data['foto'])) {
-            $this->upload($pengurus, $data['foto'], 'foto', 'profil/pengurus');
-        }
-        return $pengurus;
+        return DB::transaction(function () use ($data) {
+            $pengurus = Pengurus::create([
+                'masjid_code' => masjid(),
+                'nama' => $data['nama'],
+                'jabatan' => $data['jabatan'],
+                'keterangan' => $data['keterangan'] ?? null,
+                'urutan' => $data['urutan'] ?? 0,
+                'created_by' => auth()->id(),
+            ]);
+
+            if (!empty($data['foto']) && $data['foto'] instanceof UploadedFile) {
+                $fotoPath = upload_image($data['foto'], 'pengurus', null, true);
+                $pengurus->update(['foto_path' => $fotoPath]);
+            }
+
+            return $pengurus;
+        });
     }
 
     public function updatePengurus($id, array $data)
     {
-        $pengurus = Pengurus::findOrFail($id);
-        $pengurus->update(collect($data)->except('foto')->toArray());
-        if (isset($data['foto'])) {
-            $pengurus->clearMediaCollection('foto');
-            $this->upload($pengurus, $data['foto'], 'foto', 'profil/pengurus');
-        }
-        return $pengurus;
+        return DB::transaction(function () use ($id, $data) {
+            $pengurus = Pengurus::withoutGlobalScope('masjid')
+                ->where('masjid_code', masjid())
+                ->where('id', $id)
+                ->firstOrFail();
+
+            $updateData = [
+                'nama' => $data['nama'],
+                'jabatan' => $data['jabatan'],
+                'keterangan' => $data['keterangan'] ?? null,
+                'urutan' => $data['urutan'] ?? 0,
+                'updated_by' => auth()->id(),
+            ];
+
+            if (!empty($data['foto']) && $data['foto'] instanceof UploadedFile) {
+                $updateData['foto_path'] = upload_image($data['foto'], 'pengurus', $pengurus->foto_path, true);
+            }
+
+            $pengurus->update($updateData);
+
+            return $pengurus;
+        });
     }
 
     public function deletePengurus($id)
     {
-        $pengurus = Pengurus::findOrFail($id);
-        $pengurus->clearMediaCollection('foto');
-        $pengurus->delete();
+        return DB::transaction(function () use ($id) {
+            $pengurus = Pengurus::withoutGlobalScope('masjid')
+                ->where('masjid_code', masjid())
+                ->where('id', $id)
+                ->firstOrFail();
+
+            if ($pengurus->foto_path) {
+                delete_image($pengurus->foto_path);
+            }
+
+            return $pengurus->delete();
+        });
     }
 
-    private function upload($model, $file, $collection, $folder)
+    public function reorderPengurus(array $order)
     {
-        Storage::disk('public')->makeDirectory($folder);
-        $model->addMedia($file)
-            ->usingFileName($file->getClientOriginalName())
-            ->toMediaCollection($collection);
-
-
+        foreach ($order as $index => $id) {
+            Pengurus::where('id', $id)->update(['urutan' => $index + 1]);
+        }
+        return true;
     }
 }
