@@ -39,7 +39,7 @@ class AcaraRepository implements AcaraRepositoryInterface
             ->with('kategoris')
             ->findOrFail($id);
         
-        // Return data termasuk poster_url untuk edit
+        // Return data termasuk image_path untuk edit
         return $acara;
     }
 
@@ -137,7 +137,7 @@ class AcaraRepository implements AcaraRepositoryInterface
 
     protected function renderPosterHtml(Acara $acara): string
     {
-        $imageUrl = $acara->poster_url;
+        $imageUrl = get_image_url($acara->image_path);
 
         if ($imageUrl) {
             return '<img src="' . $imageUrl . '" 

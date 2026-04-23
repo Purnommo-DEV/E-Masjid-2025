@@ -9,20 +9,19 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="{{ $berita->judul }}">
     <meta property="og:description" content="{{ Str::limit(strip_tags(html_entity_decode($berita->excerpt ?? $berita->isi)), 150) }}">
-    <meta property="og:image" content="{{ $berita->gambar_url ?? asset('images/default.jpg') }}">
+    <meta property="og:image" content="{{ $berita->cover_url ?? asset('images/default.jpg') }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:locale" content="id_ID">
 
-    {{-- 🔥 UPGRADE TAMBAHAN --}}
     <meta property="og:site_name" content="Masjid Raudhotul Jannah">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
 
-    {{-- TWITTER (WA juga kadang pakai ini) --}}
+    {{-- TWITTER --}}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $berita->judul }}">
     <meta name="twitter:description" content="{{ Str::limit(strip_tags(html_entity_decode($berita->excerpt ?? $berita->isi)), 150) }}">
-    <meta name="twitter:image" content="{{ $berita->gambar_url ?? asset('images/default.jpg') }}">
+    <meta name="twitter:image" content="{{ $berita->cover_url ?? asset('images/default.jpg') }}">
 
 @endpush
 
@@ -45,12 +44,16 @@
                 </div>
             </div>
 
-            <!-- Gambar Utama -->
+            <!-- Gambar Utama (Cover) - PERBAIKAN: pakai $berita->cover_url -->
             <div class="relative mb-10 lg:mb-12 rounded-3xl overflow-hidden shadow-2xl border border-emerald-100/70 group">
-                @if($berita->hasMedia('gambar'))
-                    <img src="{{ $berita->gambar_url ?? '/storage/404.png' }}"
+                @php
+                    $coverImage = $berita->cover_url;
+                @endphp
+                @if($coverImage)
+                    <img src="{{ $coverImage }}"
                          alt="{{ $berita->judul }}"
-                         class="w-full h-auto max-h-[500px] lg:max-h-[600px] object-cover transition-transform duration-700 group-hover:scale-105">
+                         class="w-full h-auto max-h-[500px] lg:max-h-[600px] object-cover transition-transform duration-700 group-hover:scale-105"
+                         onerror="this.src='{{ asset('images/default.jpg') }}'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
                 @else
                     <div class="bg-gradient-to-br from-gray-100 to-teal-50 h-80 lg:h-[600px] flex items-center justify-center">
@@ -70,132 +73,60 @@
                             {!! $berita->isi !!}
                         </div>
 
-                        <!-- Galeri + Modal -->
-                        <div x-data="galleryModalData()">
-                            @php
-                                $allMedia = $berita->getMedia('gambar');
-                                $galleryImages = $allMedia->map(function ($media, $index) use ($berita) {
+                        <!-- Galeri Multiple Images -->
+                        @php
+                            $galleryImages = [];
+                            $totalPhotos = 0;
+                            $maxVisible = 6;
+                            
+                            if(isset($berita) && $berita->media) {
+                                $galleryImages = $berita->media->map(function ($media, $index) use ($berita) {
+                                    $imageUrl = get_image_url($media->image_path);
                                     return [
-                                        'url' => $berita->getCustomImageUrl($media),
+                                        'url' => $imageUrl,
+                                        'thumb' => $imageUrl,
                                         'alt' => 'Foto kegiatan ' . $berita->judul . ' - ' . ($index + 1),
                                     ];
+                                })->filter(function ($item) {
+                                    return !empty($item['url']);
                                 })->values()->toArray();
-                                $totalPhotos = $allMedia->count();
-                                $maxVisible = 6;
-                            @endphp
+                                $totalPhotos = count($galleryImages);
+                            }
+                        @endphp
 
-                            @if($totalPhotos > 1)
-                                <div class="mt-12 pt-10 border-t border-emerald-100/50">
-                                    <h3 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-6 text-center lg:text-left">
-                                        Dokumentasi Kegiatan
-                                    </h3>
-                                    <p class="text-sm text-slate-500 mb-6 text-center lg:text-left">
-                                        {{ $totalPhotos }} foto kegiatan tersedia
-                                    </p>
+                        @if($totalPhotos > 1)
+                            <div class="mt-12 pt-10 border-t border-emerald-100/50">
+                                <h3 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-6 text-center lg:text-left">
+                                    Dokumentasi Kegiatan
+                                </h3>
+                                <p class="text-sm text-slate-500 mb-6 text-center lg:text-left">
+                                    {{ $totalPhotos }} foto kegiatan tersedia
+                                </p>
 
-                                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-                                        @foreach($allMedia->take($maxVisible) as $media)
-                                            <button
-                                                type="button"
-                                                @click="open({{ $loop->index }})"
-                                                class="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 group relative">
-                                                <img
-                                                    src="{{ $berita->getCustomImageUrl($media, 'thumb') }}"
-                                                    alt="Foto kegiatan {{ $berita->judul }} - {{ $loop->iteration }}"
-                                                    loading="lazy"
-                                                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                                                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                                                    <span class="text-white text-3xl">🔍</span>
-                                                </div>
-                                            </button>
-                                        @endforeach
-
-                                        @if($totalPhotos > $maxVisible)
-                                            <button
-                                                type="button"
-                                                @click="open({{ $maxVisible }})"
-                                                class="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 group relative bg-gradient-to-br from-emerald-500/80 to-teal-500/80 flex items-center justify-center">
-                                                <div class="text-center text-white z-10">
-                                                    <span class="text-4xl font-bold block">+{{ $totalPhotos - $maxVisible }}</span>
-                                                    <span class="text-sm font-medium">lagi</span>
-                                                </div>
-                                                <div class="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-opacity duration-300"></div>
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- Modal dengan radius fix mobile -->
-                            <dialog id="galleryModal" x-ref="modal" class="modal">
-                                <div class="modal-box max-w-6xl w-11/12 p-0 bg-gradient-to-b from-gray-950/95 via-black/90 to-gray-900/95 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/30 backdrop-blur-md">
-                                    <!-- Close Button -->
-                                    <button
-                                        class="absolute right-4 top-4 z-50 btn btn-circle btn-sm bg-black/50 hover:bg-black/70 text-white border-none backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-110 hover:rotate-90"
-                                        @click="$refs.modal.close()">
-                                        ✕
-                                    </button>
-
-                                    <!-- Image Area -->
-                                    <div class="relative h-[70vh] sm:h-[85vh] flex items-center justify-center bg-black/30 overflow-hidden backdrop-blur-sm">
-                                        <template x-for="(image, index) in images" :key="index">
-                                            <img
-                                                x-show="currentIndex === index"
-                                                x-transition:enter="transition ease-out duration-700 transform"
-                                                x-transition:enter-start="opacity-0 scale-90 blur-md"
-                                                x-transition:enter-end="opacity-100 scale-100 blur-none"
-                                                x-transition:leave="transition ease-in duration-500 transform"
-                                                x-transition:leave-start="opacity-100 scale-100"
-                                                x-transition:leave-end="opacity-0 scale-90 blur-md"
-                                                :src="image.url"
-                                                :alt="image.alt"
-                                                class="max-w-full max-h-full object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
-                                            />
-                                        </template>
-
-                                        <!-- Nav Buttons -->
-                                        <button
-                                            @click="prev()"
-                                            class="absolute left-4 sm:left-10 text-white text-6xl sm:text-7xl opacity-70 hover:opacity-100 hover:scale-110 transition-all duration-300 z-40 drop-shadow-2xl backdrop-blur-sm bg-black/30 hover:bg-black/50 rounded-full w-14 h-14 flex items-center justify-center">
-                                            ❮
-                                        </button>
-                                        <button
-                                            @click="next()"
-                                            class="absolute right-4 sm:right-10 text-white text-6xl sm:text-7xl opacity-70 hover:opacity-100 hover:scale-110 transition-all duration-300 z-40 drop-shadow-2xl backdrop-blur-sm bg-black/30 hover:bg-black/50 rounded-full w-14 h-14 flex items-center justify-center">
-                                            ❯
-                                        </button>
-
-                                        <!-- Counter + Progress -->
-                                        <div class="absolute bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 sm:gap-4">
-                                            <div class="bg-black/60 backdrop-blur-xl text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-full text-lg sm:text-xl font-semibold shadow-xl border border-emerald-500/40">
-                                                <span x-text="currentIndex + 1"></span>
-                                                <span class="text-emerald-400 mx-2">/</span>
-                                                <span x-text="images.length"></span>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+                                    @foreach(array_slice($galleryImages, 0, $maxVisible) as $index => $image)
+                                        <button type="button" onclick="openGallery({{ $index }})" 
+                                            class="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 group relative">
+                                            <img src="{{ $image['thumb'] }}" alt="{{ $image['alt'] }}" loading="lazy" 
+                                                class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                                onerror="this.src='{{ asset('images/default.jpg') }}'">
+                                            <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                                <span class="text-white text-3xl">🔍</span>
                                             </div>
-                                            <div class="w-56 sm:w-96 h-1.5 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
-                                                <div
-                                                    class="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 transition-all duration-700 ease-out"
-                                                    :style="'width: ' + ((currentIndex + 1) / images.length * 100) + '%'"
-                                                ></div>
+                                        </button>
+                                    @endforeach
+
+                                    @if($totalPhotos > $maxVisible)
+                                        <button type="button" onclick="openGallery({{ $maxVisible }})" 
+                                            class="aspect-square rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 group relative bg-gradient-to-br from-emerald-500/80 to-teal-500/80 flex items-center justify-center">
+                                            <div class="text-center text-white z-10">
+                                                <span class="text-4xl font-bold block">+{{ $totalPhotos - $maxVisible }}</span>
+                                                <span class="text-sm font-medium">lagi</span>
                                             </div>
-                                        </div>
-                                    </div>
+                                            <div class="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-opacity duration-300"></div>
+                                        </button>
+                                    @endif
                                 </div>
-
-                                <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-xl">
-                                    <button>close</button>
-                                </form>
-                            </dialog>
-                        </div>
-
-                        <!-- Tags -->
-                        @if($berita->tags)
-                            <div class="mt-10 flex flex-wrap gap-3">
-                                @foreach(explode(',', $berita->tags) as $tag)
-                                    <span class="px-4 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-medium">
-                                        {{ trim($tag) }}
-                                    </span>
-                                @endforeach
                             </div>
                         @endif
                     </div>
@@ -204,10 +135,10 @@
                 <!-- Sidebar -->
                 <div class="lg:col-span-1 order-1 lg:order-2">
                     <div class="bg-white rounded-2xl p-6 lg:p-8 border border-emerald-100 shadow-md lg:sticky lg:top-20">
-                        <div class="lg:pl-2"> <!-- Padding kiri minimal supaya tidak terlalu mepet konten utama -->
+                        <div class="lg:pl-2">
                             <h3 class="text-xl font-bold text-slate-900 mb-6">Bagikan Berita Ini</h3>
                             
-                            <!-- Share Buttons (kembali ke tampilan sederhana seperti sebelumnya) -->
+                            <!-- Share Buttons -->
                             <div class="flex flex-wrap gap-3 mb-10">
                                 <a href="https://www.facebook.com/sharer/sharer.php?u={{ urlencode(url()->current()) }}&display=popup" target="_blank" rel="noopener noreferrer"
                                    class="flex-1 flex items-center justify-center gap-2 bg-[#1877f2] hover:bg-[#166fe5] text-white px-3 py-2.5 rounded-lg text-sm font-medium transition-all shadow hover:shadow-md hover:scale-105">
@@ -238,7 +169,10 @@
                                     <a href="{{ $item['url'] }}" class="block mb-6 group">
                                         <div class="flex gap-4">
                                             <div class="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden">
-                                                <img src="{{ $item['gambar'] ?? '/storage/404.png' }}" alt="{{ $item['judul'] }}" class="w-full h-full object-cover">
+                                                <img src="{{ $item['gambar'] ?? asset('images/default.jpg') }}" 
+                                                     alt="{{ $item['judul'] }}" 
+                                                     class="w-full h-full object-cover"
+                                                     onerror="this.src='{{ asset('images/default.jpg') }}'">
                                             </div>
                                             <div>
                                                 <h4 class="text-base font-semibold text-slate-900 group-hover:text-emerald-700 transition line-clamp-2">
@@ -269,27 +203,106 @@
 
 @push('scripts')
 <script>
-function galleryModalData() {
-    return {
-        currentIndex: 0,
-        images: @json($galleryImages ?? []),
-        open(index) {
-            this.currentIndex = index
-            this.$refs.modal.showModal()
-        },
-        prev() {
-            this.currentIndex =
-                this.currentIndex > 0
-                    ? this.currentIndex - 1
-                    : this.images.length - 1
-        },
-        next() {
-            this.currentIndex =
-                this.currentIndex < this.images.length - 1
-                    ? this.currentIndex + 1
-                    : 0
+    // Data galeri untuk modal
+    let galleryImages = @json($galleryImages ?? []);
+    let currentGalleryIndex = 0;
+    let galleryModal = null;
+
+    function openGallery(index) {
+        currentGalleryIndex = index;
+        if (!galleryModal) {
+            galleryModal = document.getElementById('galleryModal');
+        }
+        updateGalleryImage();
+        galleryModal.showModal();
+    }
+
+    function updateGalleryImage() {
+        const imgElement = document.getElementById('galleryModalImg');
+        const counterElement = document.getElementById('galleryCounter');
+        const progressElement = document.getElementById('galleryProgress');
+        
+        if (imgElement && galleryImages[currentGalleryIndex]) {
+            imgElement.src = galleryImages[currentGalleryIndex].url;
+            imgElement.alt = galleryImages[currentGalleryIndex].alt;
+        }
+        
+        if (counterElement && galleryImages.length) {
+            counterElement.innerHTML = (currentGalleryIndex + 1) + ' / ' + galleryImages.length;
+        }
+        
+        if (progressElement && galleryImages.length) {
+            const percent = ((currentGalleryIndex + 1) / galleryImages.length) * 100;
+            progressElement.style.width = percent + '%';
         }
     }
-}
+
+    function prevGallery() {
+        if (galleryImages.length === 0) return;
+        currentGalleryIndex = (currentGalleryIndex > 0) ? currentGalleryIndex - 1 : galleryImages.length - 1;
+        updateGalleryImage();
+    }
+
+    function nextGallery() {
+        if (galleryImages.length === 0) return;
+        currentGalleryIndex = (currentGalleryIndex < galleryImages.length - 1) ? currentGalleryIndex + 1 : 0;
+        updateGalleryImage();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        galleryModal = document.getElementById('galleryModal');
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (galleryModal && galleryModal.open) {
+                if (e.key === 'ArrowLeft') {
+                    prevGallery();
+                } else if (e.key === 'ArrowRight') {
+                    nextGallery();
+                }
+            }
+        });
+    });
 </script>
+
+<!-- Modal Galeri -->
+<dialog id="galleryModal" class="modal">
+    <div class="modal-box max-w-6xl w-11/12 p-0 bg-gradient-to-b from-gray-950/95 via-black/90 to-gray-900/95 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border border-emerald-500/30 backdrop-blur-md">
+        <!-- Close Button -->
+        <button class="absolute right-4 top-4 z-50 btn btn-circle btn-sm bg-black/50 hover:bg-black/70 text-white border-none backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-110 hover:rotate-90"
+                onclick="document.getElementById('galleryModal').close()">
+            ✕
+        </button>
+
+        <!-- Image Area -->
+        <div class="relative h-[70vh] sm:h-[85vh] flex items-center justify-center bg-black/30 overflow-hidden backdrop-blur-sm">
+            <img id="galleryModalImg"
+                class="max-w-full max-h-full object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-[1.02]"
+                alt="Gallery image">
+
+            <!-- Nav Buttons -->
+            <button onclick="prevGallery()"
+                class="absolute left-4 sm:left-10 text-white text-6xl sm:text-7xl opacity-70 hover:opacity-100 hover:scale-110 transition-all duration-300 z-40 drop-shadow-2xl backdrop-blur-sm bg-black/30 hover:bg-black/50 rounded-full w-14 h-14 flex items-center justify-center">
+                ❮
+            </button>
+            <button onclick="nextGallery()"
+                class="absolute right-4 sm:right-10 text-white text-6xl sm:text-7xl opacity-70 hover:opacity-100 hover:scale-110 transition-all duration-300 z-40 drop-shadow-2xl backdrop-blur-sm bg-black/30 hover:bg-black/50 rounded-full w-14 h-14 flex items-center justify-center">
+                ❯
+            </button>
+
+            <!-- Counter + Progress -->
+            <div class="absolute bottom-6 sm:bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 sm:gap-4">
+                <div class="bg-black/60 backdrop-blur-xl text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-full text-lg sm:text-xl font-semibold shadow-xl border border-emerald-500/40">
+                    <span id="galleryCounter"></span>
+                </div>
+                <div class="w-56 sm:w-96 h-1.5 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
+                    <div id="galleryProgress" class="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 transition-all duration-700 ease-out" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop bg-black/30 backdrop-blur-xl">
+        <button>close</button>
+    </form>
+</dialog>
 @endpush

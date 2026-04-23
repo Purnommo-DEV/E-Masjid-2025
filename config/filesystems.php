@@ -35,18 +35,9 @@ return [
             'throw' => false,
         ],
 
-        // LOCAL
-        // 'public' => [
-        //     'driver' => 'local',
-        //     'root' => env('PUBLIC_STORAGE_PATH', public_path('../storage')),
-        //     'url' => '/storage',
-        //     'visibility' => 'public',
-        // ],
-
-        // HOSTING
         'public' => [
             'driver' => 'local',
-            'root' => '/home/raudhotu/public_html/storage',  // ← Absolute path
+            'root' => env('PUBLIC_STORAGE_PATH', public_path('../storage')),
             'url' => '/storage',
             'visibility' => 'public',
         ],

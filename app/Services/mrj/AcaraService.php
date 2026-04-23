@@ -35,7 +35,7 @@ class AcaraService implements AcaraServiceInterface
                 'pemateri'      => (string) ($acara->pemateri ?? ''),
                 'excerpt'       => $acara->excerpt,
                 'lokasi'        => (string) ($acara->lokasi ?? '-'),
-                'image'         => $acara->poster_url ?? asset('storage/404.png'),
+                'image'         => get_image_url($acara->image_path) ?? asset('storage/404.png'),
                 'mulai'         => $acara->mulai,
                 'selesai'       => $acara->selesai,
             ];
@@ -108,7 +108,7 @@ class AcaraService implements AcaraServiceInterface
                 $query->orderBy('judul', 'desc');
             }
         } else {
-            $query->orderBy('mulai', 'asc'); // default: acara terdekat
+            $query->orderBy('mulai', 'desc'); // default: acara terdekat
         }
 
         $acaras = $query->paginate($perPage);
@@ -122,7 +122,7 @@ class AcaraService implements AcaraServiceInterface
                 'judul'         => $acara->judul,
                 'slug'          => $acara->slug,
                 'excerpt'       => $acara->excerpt,
-                'poster_url'    => $acara->poster_url,
+                'image_path'    => get_image_url($acara->image_path) ?? asset('storage/404.png'),
                 'kategori'      => $kategori,
                 'tanggal_label' => $acara->tanggal_label,
                 'waktu_label'   => $acara->waktu_label,
@@ -175,7 +175,7 @@ class AcaraService implements AcaraServiceInterface
                 'judul'         => $item->judul,
                 'slug'          => $item->slug,
                 'excerpt'       => $item->excerpt,
-                'poster_url'    => $item->poster_url,
+                'image_path'    => get_image_url($item->image_path) ?? asset('storage/404.png'),
                 'kategori'      => $kategori,
                 'tanggal_label' => $item->tanggal_label,
                 'mulai'         => $item->mulai,
@@ -220,7 +220,7 @@ class AcaraService implements AcaraServiceInterface
                     'id'            => $acara->id,
                     'judul'         => $acara->judul,
                     'slug'          => $acara->slug,
-                    'poster_url'    => $acara->poster_url,
+                    'image_path'    => get_image_url($acara->image_path) ?? asset('storage/404.png'),
                     'tanggal_label' => $acara->tanggal_label,
                     'mulai'         => $acara->mulai,
                 ];

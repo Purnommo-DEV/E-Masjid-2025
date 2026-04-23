@@ -20,7 +20,6 @@ class BeritaGuestController extends Controller
     {
         $beritas = $this->beritaService->paginate(9);
 
-        // SEO khusus untuk halaman list berita
         $seoData = new SEOData(
             title: 'Berita Terkini',
             description: 'Kumpulan berita kegiatan, kajian, pengumuman dan informasi terbaru Masjid Raudhotul Jannah Taman Cipulir Estate.',
@@ -40,7 +39,18 @@ class BeritaGuestController extends Controller
 
         $related = $this->beritaService->related(3, $berita->id);
 
-        // Tidak perlu pass seoData manual → model Berita sudah handle via trait HasSEO
-        return view('masjid.' . masjid() . '.guest.berita.show', compact('berita', 'related'));
+        // Siapkan gallery images untuk modal
+        $galleryImages = $berita->media->map(function ($media, $index) use ($berita) {
+            $imageUrl = get_image_url($media->image_path);
+            return [
+                'url' => $imageUrl,
+                'thumb' => $imageUrl,
+                'alt' => 'Foto kegiatan ' . $berita->judul . ' - ' . ($index + 1),
+            ];
+        })->filter(function ($item) {
+            return !empty($item['url']);
+        })->values()->toArray();
+
+        return view('masjid.' . masjid() . '.guest.berita.show', compact('berita', 'related', 'galleryImages'));
     }
 }

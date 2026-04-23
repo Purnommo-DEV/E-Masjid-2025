@@ -46,8 +46,8 @@
             {{-- KOLOM KIRI: MASJID --}}
             <div class="relative">
                 <div class="flex items-center gap-3 mb-4">
-                    @if($profil && $profil->logo_url)
-                        <img src="{{ $profil->logo_url }}" alt="Logo" class="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/50 shadow-lg">
+                    @if(profil('nama') && profil('logo_url'))
+                        <img src="{{ profil('logo_url') }}" alt="Logo" class="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/50 shadow-lg">
                     @else
                         <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-2xl shadow-lg">
                             🕌

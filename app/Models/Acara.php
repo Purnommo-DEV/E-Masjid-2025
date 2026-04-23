@@ -116,7 +116,7 @@ class Acara extends Model
     // SEO
     public function getDynamicSEOData(): SEOData
     {
-        $coverImage = $this->poster_url ?? secure_asset('images/default-share.jpg');
+        $coverImage = $this->image_path ?? secure_asset('images/default-share.jpg');
 
         $description = $this->deskripsi
             ? Str::limit(strip_tags($this->deskripsi), 158)

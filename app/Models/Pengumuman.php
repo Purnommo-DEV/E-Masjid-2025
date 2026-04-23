@@ -1,15 +1,11 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Pengumuman extends Model implements HasMedia
+class Pengumuman extends Model
 {
-    use InteractsWithMedia;
-
     protected $table = 'pengumumans';
     protected $guarded = ['id'];
 
@@ -19,13 +15,6 @@ class Pengumuman extends Model implements HasMedia
         'is_active' => 'boolean',
     ];
 
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('banner')->singleFile();
-    }
-
-    public function registerMediaConversions(Media $media = null): void
-    {
-        //
-    }
+    // Tambah kolom image_path jika belum ada
+    // migration: tambahkan image_path column
 }

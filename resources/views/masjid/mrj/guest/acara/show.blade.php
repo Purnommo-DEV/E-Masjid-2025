@@ -8,11 +8,10 @@
     <meta property="og:type" content="article">
     <meta property="og:title" content="{{ $acara->judul }}">
     <meta property="og:description" content="{{ Str::limit(strip_tags(html_entity_decode($acara->deskripsi ?? $acara->judul)), 150) }}">
-    <meta property="og:image" content="{{ $acara->poster_url ?? asset('images/default.jpg') }}">
+    <meta property="og:image" content="{{ get_image_url($acara->image_path) ?? asset('storage/404.png') }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:locale" content="id_ID">
 
-    {{-- 🔥 UPGRADE TAMBAHAN --}}
     <meta property="og:site_name" content="Masjid Raudhotul Jannah">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -21,9 +20,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $acara->judul }}">
     <meta name="twitter:description" content="{{ Str::limit(strip_tags(html_entity_decode($acara->deskripsi ?? $acara->judul)), 150) }}">
-    <meta name="twitter:image" content="{{ $acara->poster_url ?? asset('images/default.jpg') }}">
+    <meta name="twitter:image" content="{{ get_image_url($acara->image_path) ?? asset('storage/404.png') }}">
 
-    {{-- OPTIONAL (lebih proper untuk event) --}}
     <meta property="article:published_time" content="{{ $acara->mulai }}">
     <meta property="article:author" content="Masjid Raudhotul Jannah">
 
@@ -68,12 +66,13 @@
                 </div>
             </div>
 
-            <!-- Poster -->
+            <!-- Poster - PERBAIKAN: pakai image_path accessor -->
             <div class="relative mb-12 lg:mb-16 rounded-3xl overflow-hidden shadow-2xl border-2 border-emerald-100/50 group">
-                @if($acara->hasMedia('poster') || $acara->poster_url)
-                    <img src="{{ $acara->poster_url ?? '/storage/404.png' }}"
-                         alt="{{ $acara->judul }}"
-                         class="w-full h-auto max-h-[600px] object-cover transition-transform duration-700 group-hover:scale-105">
+                @if($acara->image_path)
+                    <img src="{{ get_image_url($acara->image_path) }}"
+                        alt="{{ $acara->judul }}"
+                        class="w-full h-auto max-h-[600px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        onerror="this.src='{{ asset('storage/404.png') }}'">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent"></div>
                 @else
                     <div class="bg-gradient-to-br from-gray-100 to-teal-50 h-80 lg:h-[600px] flex items-center justify-center">
@@ -160,7 +159,6 @@
                     
                     <!-- Share Buttons -->
                     <div class="flex flex-wrap gap-3 mb-8">
-                        <!-- Facebook -->
                         <a href="https://www.facebook.com/sharer/sharer.php?u={{ url()->current() }}" target="_blank" rel="noopener noreferrer"
                            class="flex-1 flex items-center justify-center gap-2 bg-[#1877f2] hover:bg-[#166fe5] text-white px-3 py-2.5 rounded-lg text-sm font-medium transition-all shadow hover:shadow-md hover:scale-105">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -169,7 +167,6 @@
                             Facebook
                         </a>
 
-                        <!-- X / Twitter -->
                         <a href="https://twitter.com/intent/tweet?url={{ url()->current() }}&text={{ urlencode($acara->judul) }}" target="_blank" rel="noopener noreferrer"
                            class="flex-1 flex items-center justify-center gap-2 bg-[#000000] hover:bg-[#1a1a1a] text-white px-3 py-2.5 rounded-lg text-sm font-medium transition-all shadow hover:shadow-md hover:scale-105">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -178,7 +175,6 @@
                             X
                         </a>
 
-                        <!-- WhatsApp -->
                         <a href="https://api.whatsapp.com/send?text={{ urlencode($acara->judul . ' - ' . url()->current()) }}" target="_blank" rel="noopener noreferrer"
                            class="flex-1 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20b058] text-white px-3 py-2.5 rounded-lg text-sm font-medium transition-all shadow hover:shadow-md hover:scale-105">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -188,8 +184,9 @@
                         </a>
                     </div>
 
-                    <!-- Google Maps Placeholder -->
-                    @if(profil('latitude') && profil('longitude')) <!-- asumsi kolom lat/long ada di model -->
+                    <!-- Google Maps -->
+                    @php $profil = \App\Models\ProfilMasjid::first(); @endphp
+                    @if($profil && $profil->latitude && $profil->longitude)
                         <div class="rounded-xl overflow-hidden shadow-md border border-teal-100 mt-auto">
                             <iframe
                                 class="w-full rounded-xl shadow-md border border-gray-200"
@@ -197,7 +194,7 @@
                                 loading="lazy"
                                 allowfullscreen
                                 referrerpolicy="no-referrer-when-downgrade"
-                                src="https://www.google.com/maps?q={{ profil('latitude') }},{{ profil('longitude') }}&z=20&output=embed">
+                                src="https://www.google.com/maps?q={{ $profil->latitude }},{{ $profil->longitude }}&z=20&output=embed">
                             </iframe>
                         </div>
                     @else
@@ -218,9 +215,10 @@
                         @foreach($related as $item)
                             <div class="group bg-white rounded-3xl border border-emerald-100/50 shadow-lg hover:shadow-2xl hover:border-emerald-300 transition-all duration-500 overflow-hidden transform hover:-translate-y-3">
                                 <div class="h-56 overflow-hidden relative">
-                                    <img src="{{ $item['image'] ?? '/storage/404.png' }}"
+                                    <img src="{{ $item['image'] ?? asset('storage/404.png') }}"
                                          alt="{{ $item['title'] }}"
-                                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                         onerror="this.src='{{ asset('storage/404.png') }}'">
                                     <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                                 </div>
                                 <div class="p-8">

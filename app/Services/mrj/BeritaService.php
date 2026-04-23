@@ -25,7 +25,7 @@ class BeritaService implements BeritaServiceInterface
         return $beritas->map(function ($berita) {
             // Ambil gambar cover atau gambar pertama
             $coverUrl = $berita->cover_url;
-            $imgUrl = $coverUrl ?: asset('storage/404.png');
+            $imgUrl = $coverUrl ?: asset('storage/404.jpg');
 
             $excerpt = $berita->excerpt
                 ? (string) Str::limit(strip_tags($berita->excerpt), 140)
@@ -99,7 +99,7 @@ class BeritaService implements BeritaServiceInterface
                 'slug'      => $berita->slug,
                 'ringkas'   => $berita->excerpt,
                 'waktu'     => $berita->published_at?->translatedFormat('d M Y') ?? '-',
-                'gambar'    => $coverUrl ?: asset('storage/404.png'),
+                'gambar'    => $coverUrl ?: asset('storage/404.jpg'),
                 'kategori'  => $berita->kategoris->pluck('nama')->first() ?? 'Berita',
                 'url'       => route('berita.show', $berita->slug),
             ];
@@ -134,7 +134,7 @@ class BeritaService implements BeritaServiceInterface
                 'slug'     => (string) $berita->slug,
                 'ringkas'  => (string) $excerpt,
                 'waktu'    => $berita->published_at?->translatedFormat('d M Y') ?? '-',
-                'gambar'   => $coverUrl ?: asset('storage/404.png'),
+                'gambar'   => $coverUrl ?: asset('storage/404.jpg'),
                 'kategori' => $berita->kategoris->pluck('nama')->first() ?? 'Berita',
                 'url'      => route('berita.show', $berita->slug),
             ];
@@ -164,7 +164,7 @@ class BeritaService implements BeritaServiceInterface
                 'slug'      => $berita->slug,
                 'ringkas'   => $berita->excerpt,
                 'waktu'     => $berita->published_at?->translatedFormat('d M Y') ?? '-',
-                'gambar'    => $coverUrl ?: asset('storage/404.png'),
+                'gambar'    => $coverUrl ?: asset('storage/404.jpg'),
                 'url'       => route('berita.show', $berita->slug),
             ];
         });
