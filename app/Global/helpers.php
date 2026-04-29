@@ -31,6 +31,83 @@ if (!function_exists('profil')) {
     }
 }
 
+// Helper untuk nomor WA clean (tanpa format)
+if (!function_exists('waNumberClean')) {
+    function waNumberClean($default = '62895704043814')
+    {
+        $noWa = profil('telepon');
+        
+        if (!$noWa) {
+            $noWa = $default;
+        }
+        
+        $clean = preg_replace('/[^0-9]/', '', $noWa);
+        
+        if (substr($clean, 0, 1) === '0') {
+            $clean = '62' . substr($clean, 1);
+        }
+        
+        if (!preg_match('/^62/', $clean)) {
+            $clean = '62' . $clean;
+        }
+        
+        return $clean;
+    }
+}
+
+// Helper untuk nomor WA dengan format strip (untuk display)
+if (!function_exists('waNumberFormatted')) {
+    function waNumberFormatted($default = '62895704043814')
+    {
+        $noWa = profil('telepon');
+        
+        if (!$noWa) {
+            $noWa = $default;
+        }
+        
+        $clean = preg_replace('/[^0-9]/', '', $noWa);
+        
+        // Format lokal Indonesia (awalan 0)
+        if (substr($clean, 0, 2) === '62') {
+            $clean = '0' . substr($clean, 2);
+        }
+        
+        // Format dengan strip: 0812-3456-7890
+        if (strlen($clean) >= 11) {
+            if (strlen($clean) === 11) {
+                return substr($clean, 0, 4) . '-' . substr($clean, 4, 4) . '-' . substr($clean, 8);
+            } else {
+                return substr($clean, 0, 4) . '-' . substr($clean, 4, 4) . '-' . substr($clean, 8);
+            }
+        }
+        
+        return $clean;
+    }
+}
+
+if (!function_exists('waNumberInternational')) {
+    function waNumberInternational($default = '62895704043814')
+    {
+        // Ambil nomor dari profil (atau sumber lain)
+        $noWa = profil('telepon');
+        
+        if (!$noWa) {
+            $noWa = $default;
+        }
+        
+        // Hanya ambil angka
+        $clean = preg_replace('/[^0-9]/', '', $noWa);
+        
+        // Jika diawali 0, ganti dengan 62 (kode Indonesia)
+        if (substr($clean, 0, 1) === '0') {
+            $clean = '62' . substr($clean, 1);
+        }
+        
+        // Jika diawali 62, biarkan
+        return $clean;
+    }
+}
+
 if (!function_exists('masjid_config')) {
     function masjid_config(string $key, $default = null)
     {
@@ -128,8 +205,6 @@ if (!function_exists('public_html_path')) {
 // ============================================
 // IMAGE UPLOAD FUNCTIONS
 // ============================================
-
-// app/helpers.php
 
 if (!function_exists('convert_to_webp')) {
     function convert_to_webp($file, ?int $quality = null): string

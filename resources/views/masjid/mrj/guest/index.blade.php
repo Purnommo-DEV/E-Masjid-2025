@@ -298,6 +298,256 @@
             </div>
         </section>
 
+        {{-- AJAKAN QURBAN --}}
+        @php
+            use App\Models\QurbanSetting;
+            
+
+                $showQurbanOnHome = QurbanSetting::get('show_qurban_on_home', true);
+            
+            if ($showQurbanOnHome) {
+                $homeQurbanBadge = QurbanSetting::get('home_qurban_badge', '✨ HARI RAYA IDUL ADHA 1447 H✨');
+                $homeQurbanTitleLine1 = QurbanSetting::get('home_qurban_title_line1', 'Raih Kemuliaan');
+                $homeQurbanTitleLine2 = QurbanSetting::get('home_qurban_title_line2', 'Ibadah Qurban');
+                $homeQurbanSubtitle = QurbanSetting::get('home_qurban_subtitle', '"Maka dirikanlah shalat karena Tuhanmu dan berqurbanlah!" (QS. Al-Kautsar: 2)');
+                $homeQurbanBenefits = QurbanSetting::get('home_qurban_benefits', ['Mendekatkan diri kepada Allah', 'Berbagi kebahagiaan', 'Amal yang paling mulia']);
+                $homeQurbanBtnDaftarText = QurbanSetting::get('home_qurban_btn_daftar_text', 'Daftar Qurban');
+                $homeQurbanBtnInfoText = QurbanSetting::get('home_qurban_btn_info_text', 'Info Lengkap Qurban');
+                $homeQurbanLinkDaftar = QurbanSetting::get('home_qurban_link_daftar', '/qurban#form-pendaftaran');
+                $homeQurbanLinkInfo = QurbanSetting::get('home_qurban_link_info', '/qurban#info-qurban');
+                $homeQurbanTglPendaftaran = QurbanSetting::get('home_qurban_tgl_pendaftaran', '1 Apr - 20 Mei 2026');
+                $homeQurbanTglPelaksanaan = QurbanSetting::get('home_qurban_tgl_pelaksanaan', '27 Mei 2026');
+                $homeQurbanTglHijriah = QurbanSetting::get('home_qurban_tgl_hijriah', '10 Dzulhijjah 1447 H');
+                $homeQurbanHargaMulai = QurbanSetting::get('home_qurban_harga_mulai', 'Rp 3.000.000,-');
+                $homeQurbanImage = QurbanSetting::get('home_qurban_image', 'storage/qurban-hewan.png');
+                $homeQurbanBgStart = QurbanSetting::get('home_qurban_bg_start', 'from-emerald-900');
+                $homeQurbanBgMid = QurbanSetting::get('home_qurban_bg_mid', 'via-emerald-800');
+                $homeQurbanBgEnd = QurbanSetting::get('home_qurban_bg_end', 'to-emerald-900');
+            }
+        @endphp
+        
+        @if($showQurbanOnHome)
+            <section class="py-12 relative overflow-hidden">
+                <div class="container mx-auto px-6 lg:px-16 xl:px-24">
+                    <div class="relative group">
+                        <div class="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 via-amber-600 to-emerald-700 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition duration-500"></div>
+                        <div class="relative rounded-3xl overflow-hidden bg-gradient-to-br {{ $homeQurbanBgStart }} {{ $homeQurbanBgMid }} {{ $homeQurbanBgEnd }} shadow-2xl">
+                            <div class="absolute inset-0 opacity-10">
+                                <div class="absolute top-0 left-0 w-full h-full" style="background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 40px 40px;"></div>
+                                <div class="absolute -top-20 -right-20 w-80 h-80 bg-amber-500/20 rounded-full blur-3xl"></div>
+                                <div class="absolute -bottom-32 -left-32 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl"></div>
+                            </div>
+                            <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between p-6 md:p-8 lg:p-10 gap-6 lg:gap-8">
+                                <div class="flex-1 text-center lg:text-left space-y-4 lg:space-y-5">
+                                    <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 backdrop-blur-sm rounded-full border border-amber-400/50">
+                                        <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span></span>
+                                        <span class="text-amber-300 text-xs font-semibold tracking-wider">{{ $homeQurbanBadge }}</span>
+                                    </div>
+                                    <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight">
+                                        <span class="text-white">{{ $homeQurbanTitleLine1 }}</span>
+                                        <span class="block mt-2">
+                                            <span class="relative inline-block">
+                                                <span class="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg animate-pulse-label shadow-lg"></span>
+                                                <span class="relative text-white font-bold z-10 px-6 py-2 inline-block drop-shadow-lg">{{ $homeQurbanTitleLine2 }}</span>
+                                            </span>
+                                        </span>
+                                    </h2>
+                                    <p class="text-emerald-100 text-base sm:text-lg leading-relaxed max-w-lg mx-auto lg:mx-0">{!! nl2br(e($homeQurbanSubtitle)) !!}</p>
+                                    @php
+                                        // Decode jika string JSON, atau pastikan array
+                                        $benefits = is_string($homeQurbanBenefits) ? json_decode($homeQurbanBenefits, true) : $homeQurbanBenefits;
+                                        if (!is_array($benefits)) {
+                                            $benefits = [];
+                                        }
+                                    @endphp
+
+                                    <div class="flex flex-wrap justify-center lg:justify-start gap-3 pt-2">
+                                        @foreach($benefits as $benefit)
+                                            <div class="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full">
+                                                <span class="text-amber-400 text-sm">✓</span>
+                                                <span class="text-white text-xs">{{ $benefit }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <div class="flex flex-col sm:flex-row gap-3 pt-4 justify-center lg:justify-start">
+                                        <a href="{{ $homeQurbanLinkDaftar }}" class="group relative inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 text-sm overflow-hidden">
+                                            <span class="absolute inset-0 w-0 bg-gradient-to-r from-amber-600 to-orange-600 transition-all duration-500 group-hover:w-full"></span>
+                                            <span class="relative z-10 text-base">🐏</span>
+                                            <span class="relative z-10">{{ $homeQurbanBtnDaftarText }}</span>
+                                            <span class="relative z-10 group-hover:translate-x-1 transition">→</span>
+                                        </a>
+                                        <a href="{{ $homeQurbanLinkInfo }}" class="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white/10 backdrop-blur-sm border border-white/30 hover:bg-white/20 text-white font-medium rounded-full transition-all duration-300 text-sm hover:scale-105"><span>📖</span>{{ $homeQurbanBtnInfoText }}</a>
+                                    </div>
+                                    <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-900 via-emerald-800 to-emerald-900 shadow-xl border border-emerald-700/50">
+                                        <!-- Background Pattern -->
+                                        <div class="absolute inset-0 opacity-5">
+                                            <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 1px); background-size: 40px 40px;"></div>
+                                        </div>
+                                        
+                                        <!-- Konten Utama -->
+                                        <div class="relative z-10 p-5">
+                                            <!-- Baris 1: Judul & Countdown (Sejajar) -->
+                                            <div class="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4">
+                                                <!-- Kiri: Judul -->
+                                                <div class="text-center sm:text-left">
+                                                    <p class="text-white font-semibold text-base flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                                                        Menuju Hari Raya Idul Adha
+                                                    </p>
+                                                    <p class="text-emerald-300 text-xs mt-0.5 text-center sm:text-left">10 Dzulhijjah 1447 H</p>
+                                                </div>
+                                                <!-- Kanan: Countdown -->
+                                                <div class="flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/10">
+                                                    <div class="text-center min-w-[55px]">
+                                                        <p id="qurbanCountdownDays" class="text-white text-xl md:text-2xl font-bold font-mono">00</p>
+                                                        <p class="text-amber-400/60 text-[9px] uppercase tracking-wider">Hari</p>
+                                                    </div>
+                                                    <span class="text-amber-400/40 text-lg font-mono">:</span>
+                                                    <div class="text-center min-w-[50px]">
+                                                        <p id="qurbanCountdownHours" class="text-white text-xl md:text-2xl font-bold font-mono">00</p>
+                                                        <p class="text-amber-400/60 text-[9px] uppercase tracking-wider">Jam</p>
+                                                    </div>
+                                                    <span class="text-amber-400/40 text-lg font-mono">:</span>
+                                                    <div class="text-center min-w-[50px]">
+                                                        <p id="qurbanCountdownMinutes" class="text-white text-xl md:text-2xl font-bold font-mono">00</p>
+                                                        <p class="text-amber-400/60 text-[9px] uppercase tracking-wider">Menit</p>
+                                                    </div>
+                                                    <span class="text-amber-400/40 text-lg font-mono">:</span>
+                                                    <div class="text-center min-w-[50px]">
+                                                        <p id="qurbanCountdownSeconds" class="text-white text-xl md:text-2xl font-bold font-mono">00</p>
+                                                        <p class="text-amber-400/60 text-[9px] uppercase tracking-wider">Detik</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                                    
+                                            <!-- Progress Bar -->
+                                            <div class="mt-5">
+                                                <div class="flex justify-between text-[10px] text-emerald-300 mb-1.5">
+                                                    <span class="flex items-center gap-1">📅 Pendaftaran Dimulai</span>
+                                                    <span class="flex items-center gap-1">🎯 Hari Raya Idul Adha</span>
+                                                </div>
+                                                <div class="h-1.5 bg-emerald-800/50 rounded-full overflow-hidden">
+                                                    <div id="qurbanProgressBar" class="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full" style="width: 0%; transition: width 0.5s ease;"></div>
+                                                </div>
+                                                <div class="flex justify-between text-[9px] text-emerald-400/60 mt-1">
+                                                    <span>24 April 2026</span>
+                                                    <span>27 Mei 2026</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <script>
+                                        function updateQurbanCountdown() {
+                                            const targetDate = new Date('May 27, 2026 00:00:00').getTime();
+                                            const now = new Date().getTime();
+                                            const diff = targetDate - now;
+                                            
+                                            if (diff <= 0) {
+                                                document.getElementById('qurbanCountdownDays').innerHTML = '00';
+                                                document.getElementById('qurbanCountdownHours').innerHTML = '00';
+                                                document.getElementById('qurbanCountdownMinutes').innerHTML = '00';
+                                                document.getElementById('qurbanCountdownSeconds').innerHTML = '00';
+                                                return;
+                                            }
+                                            
+                                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                                            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                                            
+                                            document.getElementById('qurbanCountdownDays').innerHTML = days.toString().padStart(2, '0');
+                                            document.getElementById('qurbanCountdownHours').innerHTML = hours.toString().padStart(2, '0');
+                                            document.getElementById('qurbanCountdownMinutes').innerHTML = minutes.toString().padStart(2, '0');
+                                            document.getElementById('qurbanCountdownSeconds').innerHTML = seconds.toString().padStart(2, '0');
+                                        }
+
+                                        function updateQurbanProgressBar() {
+                                            const targetDate = new Date('May 27, 2026 00:00:00').getTime();
+                                            const startDate = new Date('April 24, 2026 00:00:00').getTime();
+                                            const now = new Date().getTime();
+                                            
+                                            if (now < startDate) {
+                                                document.getElementById('qurbanProgressBar').style.width = '0%';
+                                                return;
+                                            }
+                                            
+                                            if (now >= targetDate) {
+                                                document.getElementById('qurbanProgressBar').style.width = '100%';
+                                                return;
+                                            }
+                                            
+                                            const total = targetDate - startDate;
+                                            const elapsed = now - startDate;
+                                            let progress = (elapsed / total) * 100;
+                                            progress = Math.min(Math.max(progress, 0), 100);
+                                            
+                                            document.getElementById('qurbanProgressBar').style.width = progress + '%';
+                                        }
+
+                                        setInterval(function() {
+                                            updateQurbanCountdown();
+                                            updateQurbanProgressBar();
+                                        }, 1000);
+
+                                        updateQurbanCountdown();
+                                        updateQurbanProgressBar();
+                                    </script>
+                                    <div class="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-4">
+                                        <div class="flex items-center gap-2 px-3 py-2 bg-emerald-800/50 backdrop-blur-sm rounded-full border border-emerald-600/50 hover:bg-emerald-800/70 transition">
+                                            <span class="text-amber-400 text-sm">📞</span>
+                                            <span class="text-emerald-200 text-xs">Panitia Qurban:</span>
+                                            <a href="https://wa.me/{{ waNumberInternational() }}" target="_blank" class="text-white text-xs font-semibold hover:text-amber-300 transition flex items-center gap-1">
+                                                <span>💚</span> {{ waNumberFormatted() }}
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 flex justify-center items-center">
+                                    <div class="relative group/hewan">
+                                        <div class="absolute inset-0 bg-gradient-to-tr from-amber-500/30 to-emerald-500/30 rounded-full blur-2xl animate-pulse"></div>
+                                        <div class="relative transform hover:scale-105 transition-all duration-500 hover:rotate-2">
+                                            <div class="absolute -top-4 -right-4 w-16 h-16 bg-amber-500/20 rounded-full blur-xl"></div>
+                                            <div class="absolute -bottom-4 -left-4 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl"></div>
+                                            <div class="relative rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
+                                                <img src="{{ asset($homeQurbanImage) }}" alt="Hewan Qurban" loading="lazy" class="w-80 sm:w-96 h-auto object-cover transition-transform duration-700 group-hover/hewan:scale-110" onerror="this.src='https://placehold.co/400x300/059669/white?text=Hewan+Qurban'">
+                                                <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-emerald-900 to-transparent"></div>
+                                            </div>
+                                            <div class="absolute top-1/2 -right-8 animate-spin-slow"><span class="text-xl drop-shadow-lg">✨</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <style>
+                @keyframes pulseLabel { 
+                    0%, 100% { 
+                        opacity: 0.8; 
+                        transform: scale(1); 
+                        box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); 
+                    } 
+                    50% { 
+                        opacity: 1; 
+                        transform: scale(1.02); 
+                        box-shadow: 0 0 30px rgba(245, 158, 11, 0.8); 
+                    } 
+                }
+                @keyframes spin-slow { 
+                    from { transform: rotate(0deg); } 
+                    to { transform: rotate(360deg); } 
+                }
+                .animate-pulse-label { 
+                    animation: pulseLabel 1.5s ease-in-out infinite; 
+                }
+                .animate-spin-slow { 
+                    animation: spin-slow 8s linear infinite; 
+                }
+            </style>
+        @endif
+
         {{-- SECTION AGENDA --}}
         <section id="acara" class="py-12 sm:py-16 bg-gradient-to-br from-emerald-50 via-white to-teal-50/50 relative overflow-hidden">
             <!-- Subtle background pattern -->
@@ -529,23 +779,18 @@
                                 
                                 @php
                                     $days = [];
-                                    $currentDate = now();
+                                    $startDate = now(); // Mulai dari hari ini
                                     
-                                    // Cari hari Senin pertama (1 = Monday)
-                                    while($currentDate->dayOfWeek != 1) {
-                                        $currentDate = $currentDate->subDay();
-                                    }
-                                    
-                                    // Ambil 5 hari (Senin - Jumat)
+                                    // Tampilkan 5 hari ke depan (termasuk hari ini)
                                     for($i = 0; $i < 5; $i++) {
-                                        $date = $currentDate->copy()->addDays($i);
+                                        $date = $startDate->copy()->addDays($i);
                                         $isToday = $date->isToday();
                                         $isFriday = $date->isFriday();
                                         $days[] = ['date' => $date, 'isToday' => $isToday, 'isFriday' => $isFriday];
                                     }
                                 @endphp
                                 
-                                <!-- Tabel Kalender Manual (Pakai Table agar pasti horizontal) -->
+                                <!-- Tabel Kalender -->
                                 <table class="w-full">
                                     <tr class="text-center">
                                         @foreach($days as $day)
@@ -553,7 +798,7 @@
                                                 {{ $day['date']->translatedFormat('D') }}
                                             </th>
                                         @endforeach
-                                    </tr>
+                                    <tr>
                                     <tr class="text-center">
                                         @foreach($days as $day)
                                             @php $date = $day['date']; @endphp
@@ -590,6 +835,7 @@
                                     </div>
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 @endif
@@ -1801,742 +2047,781 @@
 @endpush
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $('#contactPesan').on('input', function() {
-        const val = $(this).val().trim();
-        if (val.length < 10 && val.length > 0) {
-            $(this).addClass('border-yellow-500');
-            $('#error-pesan').text('Pesan minimal 10 karakter').removeClass('hidden');
-        } else {
-            $(this).removeClass('border-yellow-500');
-            $('#error-pesan').addClass('hidden');
-        }
-    });
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    // Lazy loading images
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                img.src = img.dataset.src;
-                img.classList.remove('lazy');
-                observer.unobserve(img);
-            }
-        });
-    });
-
-    document.querySelectorAll('img[data-src]').forEach(img => {
-        imageObserver.observe(img);
-    });
-
-    // Back to Top
-    const backToTop = document.getElementById('backToTop');
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 300) {
-            backToTop.classList.remove('opacity-0', 'invisible');
-            backToTop.classList.add('opacity-100', 'visible');
-        } else {
-            backToTop.classList.add('opacity-0', 'invisible');
-            backToTop.classList.remove('opacity-100', 'visible');
-        }
-    });
-    backToTop.addEventListener('click', () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const container = document.getElementById('quote-container');
-        if (container && quotes.length === 0) {
-            container.innerHTML = `
-                <div class="quote-item absolute inset-0 opacity-100 flex flex-col">
-                    <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1">Pengingat Harian</h3>
-                    <div class="quote-text mt-3 text-base sm:text-lg">
-                        "Sesungguhnya bersama kesulitan ada kemudahan." — QS. Al-Insyirah: 6
-                    </div>
-                </div>
-            `;
-        }
-        if (!container) return;
-
-        // Ambil semua quote aktif dari Blade (sudah di-pass dari controller)
-        const quotes = @json($quoteHarianList->map(function($q) {
-            return ['title' => $q->title, 'text' => $q->text];
-        })->toArray());
-
-        if (quotes.length <= 1) return; // tidak perlu rotate kalau cuma 1 atau kosong
-
-        // Acak urutan quote setiap load halaman
-        quotes.sort(() => Math.random() - 0.5);
-
-        let currentIndex = 0;
-        let timer = null;
-
-        // Buat elemen quote baru
-        function createQuoteElement(quote) {
-            const div = document.createElement('div');
-            div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out flex flex-col';
-            div.innerHTML = `
-                <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
-                    ${quote.title}
-                </h3>
-                <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
-                    ${quote.text}
-                </div>
-            `;
-            return div;
-        }
-
-        // Ganti quote dengan animasi
-        function rotateQuote() {
-            const oldQuote = container.querySelector('.quote-item.opacity-100');
-            if (oldQuote) {
-                oldQuote.classList.remove('opacity-100', 'translate-y-0');
-                oldQuote.classList.add('opacity-0', '-translate-y-4');
-                setTimeout(() => oldQuote.remove(), 800);
-            }
-
-            currentIndex = (currentIndex + 1) % quotes.length;
-            const newQuote = createQuoteElement(quotes[currentIndex]);
-            container.appendChild(newQuote);
-
-            setTimeout(() => {
-                newQuote.classList.remove('opacity-0', 'translate-y-4');
-                newQuote.classList.add('opacity-100', 'translate-y-0');
-            }, 50);
-        }
-
-        // Mulai rotasi
-        function startRotation() {
-            if (timer) clearInterval(timer);
-            timer = setInterval(rotateQuote, 7000); // ganti setiap 7 detik
-        }
-
-        // Pause saat hover
-        container.addEventListener('mouseenter', () => {
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-            }
-        });
-
-        container.addEventListener('mouseleave', () => {
-            if (!timer) startRotation();
-        });
-
-        // Mulai setelah baca quote pertama (delay 5 detik)
-        setTimeout(() => {
-            rotateQuote();
-            startRotation();
-        }, 5000);
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const carousel = document.getElementById('motivasiCarousel');
-        if (!carousel) return;
-
-        const track = carousel.querySelector('.motivasi-track');
-        const dots = carousel.querySelectorAll('.motivasi-dot');
-        let current = 0;
-        const total = dots.length;
-        let timer = null;
-
-        function setDot(i) {
-            dots.forEach((d, idx) => {
-                d.classList.toggle('bg-emerald-600', idx === i);
-                d.classList.toggle('bg-emerald-300', idx !== i);
-                d.classList.toggle('w-4', idx === i);
-                d.classList.toggle('h-4', idx === i);
-            });
-        }
-
-        function go(index) {
-            if (index < 0) index = total - 1;
-            if (index >= total) index = 0;
-            track.style.transform = `translateX(-${index * 100}%)`;
-            setDot(index);
-            current = index;
-
-            // Tambah class active ke slide yang sedang dilihat (untuk overlay)
-            document.querySelectorAll('.motivasi-track > div').forEach((slide, i) => {
-                slide.classList.toggle('active', i === index);
-            });
-        }
-
-        function startAuto() {
-            stopAuto();
-            timer = setInterval(() => go(current + 1), 6000); // 6 detik per slide
-        }
-
-        function stopAuto() {
-            if (timer) {
-                clearInterval(timer);
-                timer = null;
-            }
-        }
-
-        dots.forEach(dot => {
-            dot.addEventListener('click', () => {
-                go(parseInt(dot.dataset.index));
-                startAuto();
-            });
-        });
-
-        carousel.addEventListener('mouseenter', stopAuto);
-        carousel.addEventListener('mouseleave', startAuto);
-
-        // Mulai
-        go(0);
-        startAuto();
-    });
-
-    function copyToClipboard(text) {
-        const el = document.getElementById('rekeningNum');
-        if (!el) return;
-
-        // Simpan original untuk feedback
-        const originalColor = el.style.color || '';
-
-        // Fungsi feedback sukses
-        function showSuccess() {
-            el.style.color = '#10b981';
-            el.classList.add('font-medium');
-            setTimeout(() => {
-                el.style.color = originalColor;
-                el.classList.remove('font-medium');
-            }, 2500);
-        }
-
-        // Coba modern Clipboard API dulu
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text)
-                .then(showSuccess)
-                .catch(err => {
-                    console.warn('Clipboard API gagal:', err);
-                    fallbackCopy();
-                });
-        } else {
-            // Langsung fallback jika API tidak ada
-            fallbackCopy();
-        }
-
-        function fallbackCopy() {
-            // Buat textarea sementara
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.setAttribute('readonly', '');
-            textarea.style.position = 'absolute';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-
-            textarea.select();
-            textarea.setSelectionRange(0, 99999); // Untuk mobile
-
-            try {
-                const successful = document.execCommand('copy');
-                if (successful) {
-                    showSuccess();
+    <script>
+        // Countdown Timer ke 27 Mei 2026
+        function updateCountdown() {
+            // Target: 27 Mei 2026, pukul 00:00:00
+            const targetDate = new Date('May 27, 2026 00:00:00').getTime();
+            const now = new Date().getTime();
+            const diff = targetDate - now;
+            
+            const countdownEl = document.getElementById('qurbanCountdown');
+            if (countdownEl) {
+                if (diff > 0) {
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (86400000)) / (3600000));
+                    const minutes = Math.floor((diff % 3600000) / 60000);
+                    const seconds = Math.floor((diff % 60000) / 1000);
+                    
+                    // Ubah warna berdasarkan kedekatan
+                    if (days <= 7) {
+                        countdownEl.style.color = '#f87171'; // merah kalau < 7 hari
+                    } else if (days <= 30) {
+                        countdownEl.style.color = '#fbbf24'; // kuning kalau < 30 hari
+                    } else {
+                        countdownEl.style.color = '#fcd34d'; // kuning terang
+                    }
+                    
+                    countdownEl.innerHTML = `${days} hari ${hours} jam ${minutes} menit ${seconds} detik`;
                 } else {
-                    alert('Gagal menyalin otomatis. Tekan lama nomor rekening lalu pilih "Salin".');
+                    countdownEl.innerHTML = '🎉 Hari Raya Idul Adha Telah Tiba! 🎉';
+                    countdownEl.style.color = '#34d399'; // hijau saat hari H
                 }
-            } catch (err) {
-                console.error('Fallback copy gagal:', err);
-                alert('Gagal menyalin. Tekan lama nomor rekening lalu pilih "Salin".');
             }
-
-            document.body.removeChild(textarea);
-        }
-    }
-
-    function openPengumumanPreview(btn) {
-        const title = btn.getAttribute('data-pengumuman-judul') || '';
-        const isi   = btn.getAttribute('data-pengumuman-isi') || '';
-        const url   = btn.getAttribute('data-pengumuman-url') || '#';
-
-        const modal = document.getElementById('pengumumanModal');
-        const elTitle = document.getElementById('pengumumanModalTitle');
-        const elBody  = document.getElementById('pengumumanModalBody');
-        const elDate  = document.getElementById('pengumumanModalDate');
-        const elDetail= document.getElementById('pengumumanModalDetail');
-
-        elTitle.textContent = title;
-        // jika isi mengandung HTML yang aman, gunakan innerHTML setelah sanitasi.
-        // di sini kita menampilkan text saja supaya aman:
-        elBody.textContent = isi;
-
-        // tanggal: jika tersedia di tombol, gunakan; kalau tidak biarkan kosong
-        const tanggalAttr = btn.getAttribute('data-pengumuman-tanggal');
-        if (tanggalAttr) elDate.textContent = tanggalAttr;
-        else {
-            const parent = btn.closest('article');
-            const dateEl = parent ? parent.querySelector('.text-amber-700, .text-amber-700') : null;
-            elDate.textContent = dateEl ? dateEl.textContent.trim() : '';
         }
 
-        elDetail.href = url;
+        // Jalankan countdown setiap detik
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+    </script>
 
-        // focus & open
-        try {
-            if (typeof modal.showModal === 'function') {
-                modal.showModal();
+    <script>
+        $('#contactPesan').on('input', function() {
+            const val = $(this).val().trim();
+            if (val.length < 10 && val.length > 0) {
+                $(this).addClass('border-yellow-500');
+                $('#error-pesan').text('Pesan minimal 10 karakter').removeClass('hidden');
             } else {
-                // polyfill fallback: add class to show
-                modal.classList.add('modal-open');
-                modal.style.display = 'block';
+                $(this).removeClass('border-yellow-500');
+                $('#error-pesan').addClass('hidden');
             }
-            // move focus to title for accessibility
-            elTitle.focus && elTitle.focus();
-        } catch (e) {
-            // fallback
-            modal.classList.add('modal-open');
-        }
-    }
+        });
 
-    function closePengumumanPreview() {
-        const modal = document.getElementById('pengumumanModal');
-        try {
-            if (typeof modal.close === 'function') modal.close();
+        // Lazy loading images
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy');
+                    observer.unobserve(img);
+                }
+            });
+        });
+
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
+
+        // Back to Top
+        const backToTop = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTop.classList.remove('opacity-0', 'invisible');
+                backToTop.classList.add('opacity-100', 'visible');
+            } else {
+                backToTop.classList.add('opacity-0', 'invisible');
+                backToTop.classList.remove('opacity-100', 'visible');
+            }
+        });
+        backToTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const container = document.getElementById('quote-container');
+            if (container && quotes.length === 0) {
+                container.innerHTML = `
+                    <div class="quote-item absolute inset-0 opacity-100 flex flex-col">
+                        <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1">Pengingat Harian</h3>
+                        <div class="quote-text mt-3 text-base sm:text-lg">
+                            "Sesungguhnya bersama kesulitan ada kemudahan." — QS. Al-Insyirah: 6
+                        </div>
+                    </div>
+                `;
+            }
+            if (!container) return;
+
+            // Ambil semua quote aktif dari Blade (sudah di-pass dari controller)
+            const quotes = @json($quoteHarianList->map(function($q) {
+                return ['title' => $q->title, 'text' => $q->text];
+            })->toArray());
+
+            if (quotes.length <= 1) return; // tidak perlu rotate kalau cuma 1 atau kosong
+
+            // Acak urutan quote setiap load halaman
+            quotes.sort(() => Math.random() - 0.5);
+
+            let currentIndex = 0;
+            let timer = null;
+
+            // Buat elemen quote baru
+            function createQuoteElement(quote) {
+                const div = document.createElement('div');
+                div.className = 'quote-item absolute inset-0 opacity-0 translate-y-4 transition-all duration-800 ease-in-out flex flex-col';
+                div.innerHTML = `
+                    <h3 class="font-semibold text-base sm:text-lg lg:text-xl mt-1 leading-tight">
+                        ${quote.title}
+                    </h3>
+                    <div class="quote-text mt-3 text-base sm:text-lg leading-relaxed overflow-y-auto flex-1 pr-1 sm:pr-2">
+                        ${quote.text}
+                    </div>
+                `;
+                return div;
+            }
+
+            // Ganti quote dengan animasi
+            function rotateQuote() {
+                const oldQuote = container.querySelector('.quote-item.opacity-100');
+                if (oldQuote) {
+                    oldQuote.classList.remove('opacity-100', 'translate-y-0');
+                    oldQuote.classList.add('opacity-0', '-translate-y-4');
+                    setTimeout(() => oldQuote.remove(), 800);
+                }
+
+                currentIndex = (currentIndex + 1) % quotes.length;
+                const newQuote = createQuoteElement(quotes[currentIndex]);
+                container.appendChild(newQuote);
+
+                setTimeout(() => {
+                    newQuote.classList.remove('opacity-0', 'translate-y-4');
+                    newQuote.classList.add('opacity-100', 'translate-y-0');
+                }, 50);
+            }
+
+            // Mulai rotasi
+            function startRotation() {
+                if (timer) clearInterval(timer);
+                timer = setInterval(rotateQuote, 7000); // ganti setiap 7 detik
+            }
+
+            // Pause saat hover
+            container.addEventListener('mouseenter', () => {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+            });
+
+            container.addEventListener('mouseleave', () => {
+                if (!timer) startRotation();
+            });
+
+            // Mulai setelah baca quote pertama (delay 5 detik)
+            setTimeout(() => {
+                rotateQuote();
+                startRotation();
+            }, 5000);
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const carousel = document.getElementById('motivasiCarousel');
+            if (!carousel) return;
+
+            const track = carousel.querySelector('.motivasi-track');
+            const dots = carousel.querySelectorAll('.motivasi-dot');
+            let current = 0;
+            const total = dots.length;
+            let timer = null;
+
+            function setDot(i) {
+                dots.forEach((d, idx) => {
+                    d.classList.toggle('bg-emerald-600', idx === i);
+                    d.classList.toggle('bg-emerald-300', idx !== i);
+                    d.classList.toggle('w-4', idx === i);
+                    d.classList.toggle('h-4', idx === i);
+                });
+            }
+
+            function go(index) {
+                if (index < 0) index = total - 1;
+                if (index >= total) index = 0;
+                track.style.transform = `translateX(-${index * 100}%)`;
+                setDot(index);
+                current = index;
+
+                // Tambah class active ke slide yang sedang dilihat (untuk overlay)
+                document.querySelectorAll('.motivasi-track > div').forEach((slide, i) => {
+                    slide.classList.toggle('active', i === index);
+                });
+            }
+
+            function startAuto() {
+                stopAuto();
+                timer = setInterval(() => go(current + 1), 6000); // 6 detik per slide
+            }
+
+            function stopAuto() {
+                if (timer) {
+                    clearInterval(timer);
+                    timer = null;
+                }
+            }
+
+            dots.forEach(dot => {
+                dot.addEventListener('click', () => {
+                    go(parseInt(dot.dataset.index));
+                    startAuto();
+                });
+            });
+
+            carousel.addEventListener('mouseenter', stopAuto);
+            carousel.addEventListener('mouseleave', startAuto);
+
+            // Mulai
+            go(0);
+            startAuto();
+        });
+
+        function copyToClipboard(text) {
+            const el = document.getElementById('rekeningNum');
+            if (!el) return;
+
+            // Simpan original untuk feedback
+            const originalColor = el.style.color || '';
+
+            // Fungsi feedback sukses
+            function showSuccess() {
+                el.style.color = '#10b981';
+                el.classList.add('font-medium');
+                setTimeout(() => {
+                    el.style.color = originalColor;
+                    el.classList.remove('font-medium');
+                }, 2500);
+            }
+
+            // Coba modern Clipboard API dulu
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(showSuccess)
+                    .catch(err => {
+                        console.warn('Clipboard API gagal:', err);
+                        fallbackCopy();
+                    });
+            } else {
+                // Langsung fallback jika API tidak ada
+                fallbackCopy();
+            }
+
+            function fallbackCopy() {
+                // Buat textarea sementara
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+
+                textarea.select();
+                textarea.setSelectionRange(0, 99999); // Untuk mobile
+
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        showSuccess();
+                    } else {
+                        alert('Gagal menyalin otomatis. Tekan lama nomor rekening lalu pilih "Salin".');
+                    }
+                } catch (err) {
+                    console.error('Fallback copy gagal:', err);
+                    alert('Gagal menyalin. Tekan lama nomor rekening lalu pilih "Salin".');
+                }
+
+                document.body.removeChild(textarea);
+            }
+        }
+
+        function openPengumumanPreview(btn) {
+            const title = btn.getAttribute('data-pengumuman-judul') || '';
+            const isi   = btn.getAttribute('data-pengumuman-isi') || '';
+            const url   = btn.getAttribute('data-pengumuman-url') || '#';
+
+            const modal = document.getElementById('pengumumanModal');
+            const elTitle = document.getElementById('pengumumanModalTitle');
+            const elBody  = document.getElementById('pengumumanModalBody');
+            const elDate  = document.getElementById('pengumumanModalDate');
+            const elDetail= document.getElementById('pengumumanModalDetail');
+
+            elTitle.textContent = title;
+            // jika isi mengandung HTML yang aman, gunakan innerHTML setelah sanitasi.
+            // di sini kita menampilkan text saja supaya aman:
+            elBody.textContent = isi;
+
+            // tanggal: jika tersedia di tombol, gunakan; kalau tidak biarkan kosong
+            const tanggalAttr = btn.getAttribute('data-pengumuman-tanggal');
+            if (tanggalAttr) elDate.textContent = tanggalAttr;
             else {
+                const parent = btn.closest('article');
+                const dateEl = parent ? parent.querySelector('.text-amber-700, .text-amber-700') : null;
+                elDate.textContent = dateEl ? dateEl.textContent.trim() : '';
+            }
+
+            elDetail.href = url;
+
+            // focus & open
+            try {
+                if (typeof modal.showModal === 'function') {
+                    modal.showModal();
+                } else {
+                    // polyfill fallback: add class to show
+                    modal.classList.add('modal-open');
+                    modal.style.display = 'block';
+                }
+                // move focus to title for accessibility
+                elTitle.focus && elTitle.focus();
+            } catch (e) {
+                // fallback
+                modal.classList.add('modal-open');
+            }
+        }
+
+        function closePengumumanPreview() {
+            const modal = document.getElementById('pengumumanModal');
+            try {
+                if (typeof modal.close === 'function') modal.close();
+                else {
+                    modal.classList.remove('modal-open');
+                    modal.style.display = 'none';
+                }
+            } catch (e) {
                 modal.classList.remove('modal-open');
                 modal.style.display = 'none';
             }
-        } catch (e) {
-            modal.classList.remove('modal-open');
-            modal.style.display = 'none';
         }
-    }
 
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('pengumumanModal');
-            if (!modal) return;
-            // only close if modal is open
-            if (modal.open || modal.classList.contains('modal-open')) closePengumumanPreview();
-        }
-    });
-
-    window.addEventListener('load', function () {
-        const loader = document.getElementById('page-loader');
-
-        // simpan hash tujuan
-        const hash = window.location.hash;
-
-        if (loader) {
-            loader.classList.add('opacity-0','pointer-events-none');
-
-            setTimeout(() => {
-                loader.remove();
-
-                // 🔥 setelah loader hilang → baru scroll
-                if(hash){
-                    const target = document.querySelector(hash);
-                    if(target){
-                        setTimeout(()=>{
-                            target.scrollIntoView({
-                                behavior:'smooth',
-                                block:'start'
-                            });
-                        },150);
-                    }
-                }
-            }, 600);
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded',function(){
-        const carousel=document.getElementById('bannerCarousel');
-        if(!carousel)return;
-
-        const track=carousel.querySelector('.banner-track');
-        const pages=track.querySelectorAll('.banner-page');
-        const dots=carousel.querySelectorAll('.banner-dot');
-
-        let current=0,total=pages.length,timer=null;
-
-        function setDot(i){
-            dots.forEach((d,idx)=>{
-                d.classList.toggle('bg-emerald-500',idx===i);
-                d.classList.toggle('bg-emerald-200',idx!==i);
-                d.classList.toggle('w-4',idx===i);
-            });
-        }
-        function go(i){
-            if(i<0)i=total-1;
-            if(i>=total)i=0;
-            track.style.transform=`translateX(-${i*100}%)`;
-            setDot(i);
-            current=i;
-        }
-        function start(){
-            stop();
-            timer=setInterval(()=>go(current+1),6000);
-        }
-        function stop(){ if(timer){clearInterval(timer);timer=null;}}
-
-        dots.forEach(d=>d.onclick=()=>{go(+d.dataset.index);start();});
-        carousel.addEventListener('mouseenter',stop);
-        carousel.addEventListener('mouseleave',start);
-
-        go(0);start();
-
-
-        // Galeri Modal
-        const items=document.querySelectorAll('[data-galeri-item]');
-        const modal=document.getElementById('galeriModal');
-        const modalImg=document.getElementById('galeriModalImg');
-        const modalTitle=document.getElementById('galeriModalTitle');
-
-        items.forEach(btn=>{
-            btn.onclick=()=>{
-                modalImg.src=btn.dataset.img;
-                modalTitle.textContent=btn.dataset.title;
-                modal.showModal();
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('pengumumanModal');
+                if (!modal) return;
+                // only close if modal is open
+                if (modal.open || modal.classList.contains('modal-open')) closePengumumanPreview();
             }
         });
-    });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const modal = document.getElementById('galeriModal');
-        const modalImg = document.getElementById('galeriModalImg');
-        const modalTitle = document.getElementById('galeriModalTitle');
-        const thumbsBox = document.getElementById('galeriThumbs'); // pastikan id ini ada di blade
-        const prevBtn = document.getElementById('galeriPrev');
-        const nextBtn = document.getElementById('galeriNext');
-        const counter = document.getElementById('galeriCounter');
-        const closeBtn = document.getElementById('closeGaleriModalBtn');
+        window.addEventListener('load', function () {
+            const loader = document.getElementById('page-loader');
 
-        let fotos = []; // array of {url, caption}
-        let index = 0;
+            // simpan hash tujuan
+            const hash = window.location.hash;
 
-        function openModal() {
-            try { if (typeof modal.showModal === 'function') modal.showModal(); else modal.classList.add('modal-open'); }
-            catch (e) { modal.classList.add('modal-open'); }
-        }
-        function closeModal() {
-            try { if (typeof modal.close === 'function') modal.close(); else modal.classList.remove('modal-open'); }
-            catch (e) { modal.classList.remove('modal-open'); }
-        }
+            if (loader) {
+                loader.classList.add('opacity-0','pointer-events-none');
 
-        function isModalOpen() {
-            if (!modal) return false;
-            if (typeof modal.open !== 'undefined') return !!modal.open;
-            return modal.classList.contains('modal-open');
-        }
+                setTimeout(() => {
+                    loader.remove();
 
-        // safe event bindings
-        if (closeBtn) closeBtn.addEventListener('click', closeModal);
-        if (modal) {
-            modal.addEventListener('click', (ev) => {
-                // close when clicking backdrop (modal element itself)
-                if (ev.target === modal) closeModal();
-            });
-        }
-
-        function updateCounter() {
-            if (!counter) return;
-            counter.textContent = fotos.length ? `${index + 1} / ${fotos.length}` : '';
-        }
-
-        function setImage(i) {
-            if (!modalImg) return;
-            if (!fotos.length) {
-                modalImg.src = '';
-                modalImg.alt = '';
-                updateCounter();
-                // remove highlight if thumbsBox exists
-                if (thumbsBox) Array.from(thumbsBox.children).forEach(ch => { ch.classList.remove('ring'); ch.classList.remove('ring-emerald-400'); });
-                return;
-            }
-
-            index = (Number(i) + fotos.length) % fotos.length;
-            modalImg.src = fotos[index].url;
-            modalImg.alt = fotos[index].caption || fotos[index].file_name || '';
-            updateCounter();
-
-            // highlight thumb (use add/remove to avoid multi-token errors)
-            if (thumbsBox) {
-                Array.from(thumbsBox.children).forEach((child, idx) => {
-                    if (idx === index) {
-                        child.classList.add('ring');
-                        child.classList.add('ring-emerald-400');
-                    } else {
-                        child.classList.remove('ring');
-                        child.classList.remove('ring-emerald-400');
-                    }
-                });
-                // ensure the active thumb is visible (scroll into view if overflow)
-                const active = thumbsBox.children[index];
-                if (active && typeof active.scrollIntoView === 'function') {
-                    active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                }
-            }
-        }
-
-        function renderThumbs() {
-            if (!thumbsBox) return;
-            thumbsBox.innerHTML = '';
-
-            fotos.forEach((f, i) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'inline-block border rounded overflow-hidden';
-                btn.style.width = '90px';
-                btn.style.height = '64px';
-                btn.style.flex = '0 0 auto';
-                btn.style.padding = '0';
-                btn.style.margin = '0 6px 6px 0';
-                btn.setAttribute('aria-label', f.caption || `Foto ${i+1}`);
-                btn.innerHTML = `<img src="${f.url}" loading="lazy" class="w-full h-full object-cover" alt="${(f.caption||f.file_name||'foto')}">`;
-                btn.addEventListener('click', () => setImage(i));
-                thumbsBox.appendChild(btn);
-            });
-        }
-
-        if (prevBtn) prevBtn.addEventListener('click', () => setImage(index - 1));
-        if (nextBtn) nextBtn.addEventListener('click', () => setImage(index + 1));
-
-        document.addEventListener('keydown', (e) => {
-            if (!isModalOpen()) return;
-            if (e.key === 'ArrowLeft') setImage(index - 1);
-            if (e.key === 'ArrowRight') setImage(index + 1);
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // Delegate click on gallery items (buttons with data-galeri-item and data-id)
-        document.body.addEventListener('click', (ev) => {
-            const btn = ev.target.closest('[data-galeri-item]');
-            if (!btn) return;
-
-            const id = btn.dataset.id || null;
-            const fallbackImg = btn.dataset.img || null;
-            const title = btn.dataset.title || '';
-
-            if (modalTitle) modalTitle.textContent = title || '';
-
-            if (!id) {
-                // if no id, show single fallback image
-                fotos = fallbackImg ? [{ url: fallbackImg, caption: title }] : [];
-                renderThumbs();
-                setImage(0);
-                openModal();
-                return;
-            }
-
-            // Fetch full foto list
-            $.ajax({
-                url: `/home/galeri/${encodeURIComponent(id)}`,
-                method: 'GET',
-                dataType: 'json',
-                success: function(data) {
-                    try {
-                        fotos = Array.isArray(data.fotos)
-                            ? data.fotos.map(function(f) {
-                                return {
-                                    url: f.url || (f.file_name ? `/storage/galeri/${f.file_name}` : ''),
-                                    caption: f.caption || f.file_name || ''
-                                };
-                            })
-                            : [];
-
-                        // fallback to single image if empty
-                        if (!fotos.length && fallbackImg) {
-                            fotos = [{ url: fallbackImg, caption: title }];
+                    // 🔥 setelah loader hilang → baru scroll
+                    if(hash){
+                        const target = document.querySelector(hash);
+                        if(target){
+                            setTimeout(()=>{
+                                target.scrollIntoView({
+                                    behavior:'smooth',
+                                    block:'start'
+                                });
+                            },150);
                         }
+                    }
+                }, 600);
+            }
+        });
 
-                        renderThumbs();
-                        setImage(0);
-                        openModal();
-                    } catch (e) {
-                        console.error('Galeri parse error', e);
-                        // fallback
+        document.addEventListener('DOMContentLoaded',function(){
+            const carousel=document.getElementById('bannerCarousel');
+            if(!carousel)return;
+
+            const track=carousel.querySelector('.banner-track');
+            const pages=track.querySelectorAll('.banner-page');
+            const dots=carousel.querySelectorAll('.banner-dot');
+
+            let current=0,total=pages.length,timer=null;
+
+            function setDot(i){
+                dots.forEach((d,idx)=>{
+                    d.classList.toggle('bg-emerald-500',idx===i);
+                    d.classList.toggle('bg-emerald-200',idx!==i);
+                    d.classList.toggle('w-4',idx===i);
+                });
+            }
+            function go(i){
+                if(i<0)i=total-1;
+                if(i>=total)i=0;
+                track.style.transform=`translateX(-${i*100}%)`;
+                setDot(i);
+                current=i;
+            }
+            function start(){
+                stop();
+                timer=setInterval(()=>go(current+1),6000);
+            }
+            function stop(){ if(timer){clearInterval(timer);timer=null;}}
+
+            dots.forEach(d=>d.onclick=()=>{go(+d.dataset.index);start();});
+            carousel.addEventListener('mouseenter',stop);
+            carousel.addEventListener('mouseleave',start);
+
+            go(0);start();
+
+
+            // Galeri Modal
+            const items=document.querySelectorAll('[data-galeri-item]');
+            const modal=document.getElementById('galeriModal');
+            const modalImg=document.getElementById('galeriModalImg');
+            const modalTitle=document.getElementById('galeriModalTitle');
+
+            items.forEach(btn=>{
+                btn.onclick=()=>{
+                    modalImg.src=btn.dataset.img;
+                    modalTitle.textContent=btn.dataset.title;
+                    modal.showModal();
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('galeriModal');
+            const modalImg = document.getElementById('galeriModalImg');
+            const modalTitle = document.getElementById('galeriModalTitle');
+            const thumbsBox = document.getElementById('galeriThumbs'); // pastikan id ini ada di blade
+            const prevBtn = document.getElementById('galeriPrev');
+            const nextBtn = document.getElementById('galeriNext');
+            const counter = document.getElementById('galeriCounter');
+            const closeBtn = document.getElementById('closeGaleriModalBtn');
+
+            let fotos = []; // array of {url, caption}
+            let index = 0;
+
+            function openModal() {
+                try { if (typeof modal.showModal === 'function') modal.showModal(); else modal.classList.add('modal-open'); }
+                catch (e) { modal.classList.add('modal-open'); }
+            }
+            function closeModal() {
+                try { if (typeof modal.close === 'function') modal.close(); else modal.classList.remove('modal-open'); }
+                catch (e) { modal.classList.remove('modal-open'); }
+            }
+
+            function isModalOpen() {
+                if (!modal) return false;
+                if (typeof modal.open !== 'undefined') return !!modal.open;
+                return modal.classList.contains('modal-open');
+            }
+
+            // safe event bindings
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+            if (modal) {
+                modal.addEventListener('click', (ev) => {
+                    // close when clicking backdrop (modal element itself)
+                    if (ev.target === modal) closeModal();
+                });
+            }
+
+            function updateCounter() {
+                if (!counter) return;
+                counter.textContent = fotos.length ? `${index + 1} / ${fotos.length}` : '';
+            }
+
+            function setImage(i) {
+                if (!modalImg) return;
+                if (!fotos.length) {
+                    modalImg.src = '';
+                    modalImg.alt = '';
+                    updateCounter();
+                    // remove highlight if thumbsBox exists
+                    if (thumbsBox) Array.from(thumbsBox.children).forEach(ch => { ch.classList.remove('ring'); ch.classList.remove('ring-emerald-400'); });
+                    return;
+                }
+
+                index = (Number(i) + fotos.length) % fotos.length;
+                modalImg.src = fotos[index].url;
+                modalImg.alt = fotos[index].caption || fotos[index].file_name || '';
+                updateCounter();
+
+                // highlight thumb (use add/remove to avoid multi-token errors)
+                if (thumbsBox) {
+                    Array.from(thumbsBox.children).forEach((child, idx) => {
+                        if (idx === index) {
+                            child.classList.add('ring');
+                            child.classList.add('ring-emerald-400');
+                        } else {
+                            child.classList.remove('ring');
+                            child.classList.remove('ring-emerald-400');
+                        }
+                    });
+                    // ensure the active thumb is visible (scroll into view if overflow)
+                    const active = thumbsBox.children[index];
+                    if (active && typeof active.scrollIntoView === 'function') {
+                        active.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }
+                }
+            }
+
+            function renderThumbs() {
+                if (!thumbsBox) return;
+                thumbsBox.innerHTML = '';
+
+                fotos.forEach((f, i) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'inline-block border rounded overflow-hidden';
+                    btn.style.width = '90px';
+                    btn.style.height = '64px';
+                    btn.style.flex = '0 0 auto';
+                    btn.style.padding = '0';
+                    btn.style.margin = '0 6px 6px 0';
+                    btn.setAttribute('aria-label', f.caption || `Foto ${i+1}`);
+                    btn.innerHTML = `<img src="${f.url}" loading="lazy" class="w-full h-full object-cover" alt="${(f.caption||f.file_name||'foto')}">`;
+                    btn.addEventListener('click', () => setImage(i));
+                    thumbsBox.appendChild(btn);
+                });
+            }
+
+            if (prevBtn) prevBtn.addEventListener('click', () => setImage(index - 1));
+            if (nextBtn) nextBtn.addEventListener('click', () => setImage(index + 1));
+
+            document.addEventListener('keydown', (e) => {
+                if (!isModalOpen()) return;
+                if (e.key === 'ArrowLeft') setImage(index - 1);
+                if (e.key === 'ArrowRight') setImage(index + 1);
+                if (e.key === 'Escape') closeModal();
+            });
+
+            // Delegate click on gallery items (buttons with data-galeri-item and data-id)
+            document.body.addEventListener('click', (ev) => {
+                const btn = ev.target.closest('[data-galeri-item]');
+                if (!btn) return;
+
+                const id = btn.dataset.id || null;
+                const fallbackImg = btn.dataset.img || null;
+                const title = btn.dataset.title || '';
+
+                if (modalTitle) modalTitle.textContent = title || '';
+
+                if (!id) {
+                    // if no id, show single fallback image
+                    fotos = fallbackImg ? [{ url: fallbackImg, caption: title }] : [];
+                    renderThumbs();
+                    setImage(0);
+                    openModal();
+                    return;
+                }
+
+                // Fetch full foto list
+                $.ajax({
+                    url: `/home/galeri/${encodeURIComponent(id)}`,
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(data) {
+                        try {
+                            fotos = Array.isArray(data.fotos)
+                                ? data.fotos.map(function(f) {
+                                    return {
+                                        url: f.url || (f.file_name ? `/storage/galeri/${f.file_name}` : ''),
+                                        caption: f.caption || f.file_name || ''
+                                    };
+                                })
+                                : [];
+
+                            // fallback to single image if empty
+                            if (!fotos.length && fallbackImg) {
+                                fotos = [{ url: fallbackImg, caption: title }];
+                            }
+
+                            renderThumbs();
+                            setImage(0);
+                            openModal();
+                        } catch (e) {
+                            console.error('Galeri parse error', e);
+                            // fallback
+                            if (fallbackImg) {
+                                fotos = [{ url: fallbackImg, caption: title }];
+                                renderThumbs();
+                                setImage(0);
+                                openModal();
+                            } else if (window.Swal) {
+                                Swal.fire('Error', 'Gagal memproses data galeri.', 'error');
+                            }
+                        }
+                    },
+                    error: function(xhr, status, err) {
+                        console.error('Galeri fetch error', status, err);
                         if (fallbackImg) {
                             fotos = [{ url: fallbackImg, caption: title }];
                             renderThumbs();
                             setImage(0);
                             openModal();
                         } else if (window.Swal) {
-                            Swal.fire('Error', 'Gagal memproses data galeri.', 'error');
+                            Swal.fire('Error', 'Gagal memuat foto galeri dari server.', 'error');
                         }
                     }
-                },
-                error: function(xhr, status, err) {
-                    console.error('Galeri fetch error', status, err);
-                    if (fallbackImg) {
-                        fotos = [{ url: fallbackImg, caption: title }];
-                        renderThumbs();
-                        setImage(0);
-                        openModal();
-                    } else if (window.Swal) {
-                        Swal.fire('Error', 'Gagal memuat foto galeri dari server.', 'error');
-                    }
-                }
-            });
-        });
-    });
-
-    // pastikan functions setImage(index) dan index var ada di scope
-    const prevBtn = document.getElementById('galeriPrev');
-    const nextBtn = document.getElementById('galeriNext');
-    const prevPill = document.getElementById('galeriPrevPill');
-    const nextPill = document.getElementById('galeriNextPill');
-
-    // fallback: jika fungsi setImage belum ada, gunakan dispatch click pada element lain
-    function safePrev() {
-        if (typeof setImage === 'function') setImage(index - 1);
-        else document.dispatchEvent(new CustomEvent('galeriPrev'));
-    }
-    function safeNext() {
-        if (typeof setImage === 'function') setImage(index + 1);
-        else document.dispatchEvent(new CustomEvent('galeriNext'));
-    }
-
-    if (prevBtn) prevBtn.addEventListener('click', safePrev);
-    if (nextBtn) nextBtn.addEventListener('click', safeNext);
-    if (prevPill) prevPill.addEventListener('click', safePrev);
-    if (nextPill) nextPill.addEventListener('click', safeNext);
-
-    // keyboard hint: left/right also control
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') safePrev();
-        if (e.key === 'ArrowRight') safeNext();
-    });
-
-    const $form   = $('#contactForm');
-    const $btn    = $('#contactSubmitBtn');
-    const $status = $('#contactStatus');
-
-    // pastikan meta csrf ada
-    const csrf = $('meta[name="csrf-token"]').attr('content');
-
-    $form.on('submit', function(e) {
-        e.preventDefault();
-
-        // Reset UI sebelum kirim
-        $('.error, .invalid-feedback').remove();
-        $('input, textarea').removeClass('border-red-500');
-        $status.html('').removeClass('text-green-600 text-red-600');
-        $btn.prop('disabled', true).text('Mengirim...');
-
-        // Generate reCAPTCHA v3 token (invisible)
-        grecaptcha.ready(function() {
-            grecaptcha.execute('{{ env('RECAPTCHA_SITE_KEY') }}', {action: 'submit_saran'})
-                .then(function(token) {
-                    // Masukkan token ke hidden input
-                    $('#recaptchaToken').val(token);
-
-                    // Siapkan data form
-                    const formData = $form.serialize();
-
-                    $.ajax({
-                        url: '{{ route("kontak.kirim") }}',
-                        type: 'POST',
-                        data: formData,
-                        success: function(res) {
-                            if (res.success) {
-                                $status.html('<span class="text-green-600 font-medium">' + (res.message || 'Pesan berhasil dikirim! Terima kasih.') + '</span>');
-                                $form[0].reset(); // reset hanya saat sukses
-                            } else {
-                                $status.html('<span class="text-red-600">' + (res.message || 'Gagal mengirim.') + '</span>');
-                            }
-                        },
-                        error: function(xhr) {
-                            let errorMsg = 'Terjadi kesalahan. Coba lagi nanti.';
-                            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
-                                const errors = xhr.responseJSON.errors;
-                                let firstError = '';
-
-                                $.each(errors, function(field, messages) {
-                                    const msg = messages[0];
-                                    firstError = firstError || msg;
-
-                                    // Tampil error di bawah field
-                                    const $input = $form.find('[name="' + field + '"]');
-                                    if ($input.length) {
-                                        $input.addClass('border-red-500');
-                                        $input.after('<div class="error text-red-600 text-xs mt-1">' + msg + '</div>');
-                                    }
-                                });
-
-                                if (firstError) {
-                                    $status.html('<span class="text-red-600">' + firstError + '</span>');
-                                }
-                            } else {
-                                // Error lain (500, network, dll)
-                                try {
-                                    const json = xhr.responseJSON || JSON.parse(xhr.responseText);
-                                    errorMsg = json.message || errorMsg;
-                                } catch (e) {
-                                    // ignore parse error
-                                }
-                                $status.html('<span class="text-red-600">' + errorMsg + '</span>');
-                            }
-                        },
-                        complete: function() {
-                            $btn.prop('disabled', false).text('Kirim Pesan');
-                        }
-                    });
-                })
-                .catch(function(error) {
-                    $status.html('<span class="text-red-600">Gagal verifikasi reCAPTCHA. Coba lagi atau refresh halaman.</span>');
-                    $btn.prop('disabled', false).text('Kirim Pesan');
                 });
+            });
         });
-    });
 
+        // pastikan functions setImage(index) dan index var ada di scope
+        const prevBtn = document.getElementById('galeriPrev');
+        const nextBtn = document.getElementById('galeriNext');
+        const prevPill = document.getElementById('galeriPrevPill');
+        const nextPill = document.getElementById('galeriNextPill');
 
-    /* ===================== DETEKSI LOKASI USER ===================== */
-    (async function () {
+        // fallback: jika fungsi setImage belum ada, gunakan dispatch click pada element lain
+        function safePrev() {
+            if (typeof setImage === 'function') setImage(index - 1);
+            else document.dispatchEvent(new CustomEvent('galeriPrev'));
+        }
+        function safeNext() {
+            if (typeof setImage === 'function') setImage(index + 1);
+            else document.dispatchEvent(new CustomEvent('galeriNext'));
+        }
 
-        const today = new Date().toISOString().slice(0,10);
-        const lastCheck = localStorage.getItem('masjid_location_date');
+        if (prevBtn) prevBtn.addEventListener('click', safePrev);
+        if (nextBtn) nextBtn.addEventListener('click', safeNext);
+        if (prevPill) prevPill.addEventListener('click', safePrev);
+        if (nextPill) nextPill.addEventListener('click', safeNext);
 
-        // sudah pernah cek hari ini → tidak minta GPS lagi
-        if (lastCheck === today) return;
+        // keyboard hint: left/right also control
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') safePrev();
+            if (e.key === 'ArrowRight') safeNext();
+        });
 
-        // browser tidak support
-        if (!navigator.geolocation) return;
+        const $form   = $('#contactForm');
+        const $btn    = $('#contactSubmitBtn');
+        const $status = $('#contactStatus');
 
-        // jangan ganggu user saat loading awal
-        setTimeout(() => {
+        // pastikan meta csrf ada
+        const csrf = $('meta[name="csrf-token"]').attr('content');
 
-            navigator.geolocation.getCurrentPosition(async (pos) => {
+        $form.on('submit', function(e) {
+            e.preventDefault();
 
-                try {
-                    const res = await fetch("{{ route('set.location') }}", {
-                        method: "POST",
-                            credentials: "same-origin", // 🔥 INI YANG HILANG
-                            headers: {
-                                "Content-Type": "application/json",
-                                "X-CSRF-TOKEN": "{{ csrf_token() }}"
+            // Reset UI sebelum kirim
+            $('.error, .invalid-feedback').remove();
+            $('input, textarea').removeClass('border-red-500');
+            $status.html('').removeClass('text-green-600 text-red-600');
+            $btn.prop('disabled', true).text('Mengirim...');
+
+            // Generate reCAPTCHA v3 token (invisible)
+            grecaptcha.ready(function() {
+                grecaptcha.execute('{{ env('RECAPTCHA_SITE_KEY') }}', {action: 'submit_saran'})
+                    .then(function(token) {
+                        // Masukkan token ke hidden input
+                        $('#recaptchaToken').val(token);
+
+                        // Siapkan data form
+                        const formData = $form.serialize();
+
+                        $.ajax({
+                            url: '{{ route("kontak.kirim") }}',
+                            type: 'POST',
+                            data: formData,
+                            success: function(res) {
+                                if (res.success) {
+                                    $status.html('<span class="text-green-600 font-medium">' + (res.message || 'Pesan berhasil dikirim! Terima kasih.') + '</span>');
+                                    $form[0].reset(); // reset hanya saat sukses
+                                } else {
+                                    $status.html('<span class="text-red-600">' + (res.message || 'Gagal mengirim.') + '</span>');
+                                }
                             },
-                            body: JSON.stringify({
-                            lat: pos.coords.latitude,
-                            lng: pos.coords.longitude
-                            })
+                            error: function(xhr) {
+                                let errorMsg = 'Terjadi kesalahan. Coba lagi nanti.';
+                                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                                    const errors = xhr.responseJSON.errors;
+                                    let firstError = '';
+
+                                    $.each(errors, function(field, messages) {
+                                        const msg = messages[0];
+                                        firstError = firstError || msg;
+
+                                        // Tampil error di bawah field
+                                        const $input = $form.find('[name="' + field + '"]');
+                                        if ($input.length) {
+                                            $input.addClass('border-red-500');
+                                            $input.after('<div class="error text-red-600 text-xs mt-1">' + msg + '</div>');
+                                        }
+                                    });
+
+                                    if (firstError) {
+                                        $status.html('<span class="text-red-600">' + firstError + '</span>');
+                                    }
+                                } else {
+                                    // Error lain (500, network, dll)
+                                    try {
+                                        const json = xhr.responseJSON || JSON.parse(xhr.responseText);
+                                        errorMsg = json.message || errorMsg;
+                                    } catch (e) {
+                                        // ignore parse error
+                                    }
+                                    $status.html('<span class="text-red-600">' + errorMsg + '</span>');
+                                }
+                            },
+                            complete: function() {
+                                $btn.prop('disabled', false).text('Kirim Pesan');
+                            }
                         });
+                    })
+                    .catch(function(error) {
+                        $status.html('<span class="text-red-600">Gagal verifikasi reCAPTCHA. Coba lagi atau refresh halaman.</span>');
+                        $btn.prop('disabled', false).text('Kirim Pesan');
+                    });
+            });
+        });
 
 
-                    const data = await res.json();
+        /* ===================== DETEKSI LOKASI USER ===================== */
+        (async function () {
 
-                    if (data.success) {
-                        localStorage.setItem('masjid_location_date', today);
+            const today = new Date().toISOString().slice(0,10);
+            const lastCheck = localStorage.getItem('masjid_location_date');
 
-                        console.log("Lokasi terdeteksi:", data.city);
+            // sudah pernah cek hari ini → tidak minta GPS lagi
+            if (lastCheck === today) return;
 
-                        // reload sekali agar jadwal ikut kota user
-                        setTimeout(()=>location.reload(), 600);
+            // browser tidak support
+            if (!navigator.geolocation) return;
+
+            // jangan ganggu user saat loading awal
+            setTimeout(() => {
+
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+
+                    try {
+                        const res = await fetch("{{ route('set.location') }}", {
+                            method: "POST",
+                                credentials: "same-origin", // 🔥 INI YANG HILANG
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                                },
+                                body: JSON.stringify({
+                                lat: pos.coords.latitude,
+                                lng: pos.coords.longitude
+                                })
+                            });
+
+
+                        const data = await res.json();
+
+                        if (data.success) {
+                            localStorage.setItem('masjid_location_date', today);
+
+                            console.log("Lokasi terdeteksi:", data.city);
+
+                            // reload sekali agar jadwal ikut kota user
+                            setTimeout(()=>location.reload(), 600);
+                        }
+
+                    } catch (e) {
+                        console.log("Gagal kirim lokasi");
                     }
 
-                } catch (e) {
-                    console.log("Gagal kirim lokasi");
-                }
+                }, () => {
+                    console.log("User menolak izin lokasi");
+                });
 
-            }, () => {
-                console.log("User menolak izin lokasi");
-            });
+            }, 2500); // tunggu halaman selesai render dulu
 
-        }, 2500); // tunggu halaman selesai render dulu
-
-    })();
-</script>
+        })();
+    </script>
 @endpush

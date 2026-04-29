@@ -1,41 +1,51 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\BeritaController;
-use App\Http\Controllers\Admin\KategoriController;
 use App\Http\Controllers\Admin\AcaraController;
-use App\Http\Controllers\Admin\GaleriController;
-use App\Http\Controllers\Admin\PengumumanController;
-use App\Http\Controllers\Admin\ProfilMasjidController;
-use App\Http\Controllers\Admin\KotakInfakController;
 use App\Http\Controllers\Admin\AkunKeuanganController;
-use App\Http\Controllers\Admin\JurnalController;
-use App\Http\Controllers\Admin\PettyCashController;
-use App\Http\Controllers\Admin\SaldoAwalController;
 use App\Http\Controllers\Admin\AlokasiDanaController;
-use App\Http\Controllers\Admin\PengeluaranController;
-use App\Http\Controllers\Admin\PenerimaanPemasukanController;
-use App\Http\Controllers\Admin\ZakatController;
+use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\BeritaController;
 use App\Http\Controllers\Admin\DanaTerikatController;
 use App\Http\Controllers\Admin\DanaTerikatReferensiController;
-use App\Http\Controllers\Admin\BannerController;
-use App\Http\Controllers\Admin\LayananController;
-use App\Http\Controllers\Admin\SlideMotivasiController;
-use App\Http\Controllers\Admin\QuoteHarianController;
+use App\Http\Controllers\Admin\GaleriController;
+use App\Http\Controllers\Admin\JurnalController;
+use App\Http\Controllers\Admin\KategoriController;
 use App\Http\Controllers\Admin\KhutbahJumatController;
+use App\Http\Controllers\Admin\KotakInfakController;
+use App\Http\Controllers\Admin\LayananController;
+use App\Http\Controllers\Admin\PenerimaanPemasukanController;
+use App\Http\Controllers\Admin\PengeluaranController;
+use App\Http\Controllers\Admin\PengumumanController;
+use App\Http\Controllers\Admin\PettyCashController;
+use App\Http\Controllers\Admin\ProfilMasjidController;
+use App\Http\Controllers\Admin\QuoteHarianController;
+use App\Http\Controllers\Admin\Qurban\QurbanPaketController;
+use App\Http\Controllers\Admin\Qurban\QurbanRegistrasiController;
+use App\Http\Controllers\Admin\Qurban\QurbanSettingController;
+use App\Http\Controllers\Admin\Qurban\QurbanGalleryController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SaldoAwalController;
+use App\Http\Controllers\Admin\SlideMotivasiController;
+use App\Http\Controllers\Admin\UserController;
 
-use App\Http\Controllers\User\HomeController;
+use App\Http\Controllers\Admin\ZakatController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
-use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
 use App\Http\Controllers\User\ExcelYatimDhuafaController;
-use App\Http\Controllers\User\SaranController;
-use App\Http\Controllers\User\ProgramRamadhanGuestController;
+use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\KesehatanGuestController;
+use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
+use App\Http\Controllers\User\ProgramRamadhanGuestController;
+use App\Http\Controllers\User\QurbanGuestController;
+use App\Http\Controllers\User\SaranController;
+use Illuminate\Support\Facades\Route;
+
+
+
+
+
 
 Route::get('/pwa-splash', function () {
     return view('pwa.splash');
@@ -91,6 +101,14 @@ Route::prefix('program-ramadhan')->name('program-ramadhan.')->group(function () 
     Route::get('/', [ProgramRamadhanGuestController::class, 'index'])->name('index');
     Route::get('/{slug}', [ProgramRamadhanGuestController::class, 'show'])->name('show');
 });
+
+// ==================== ROUTE GUEST (USER) ====================
+Route::get('qurban/', [QurbanGuestController::class, 'index'])->name('qurban.index');
+Route::get('qurban/1446h', [QurbanGuestController::class, 'evaluasi'])->name('qurban.evaluasi');
+Route::post('qurban/register', [QurbanGuestController::class, 'register'])->name('qurban.register.store');
+Route::get('qurban/thankyou/{kode?}', [QurbanGuestController::class, 'thankyou'])->name('qurban.thankyou');
+Route::get('qurban/check-stock', [QurbanGuestController::class, 'checkStock'])->name('qurban.check.stock');
+Route::get('qurban/paket/{id}/detail', [QurbanGuestController::class, 'getPaketDetail'])->name('qurban.paket.detail');
 
 Route::get('acara', [AcaraGuestController::class, 'index'])->name('acara.index');
 Route::get('acara-show/{slug}', [AcaraGuestController::class, 'show'])->name('acara.show');
@@ -188,6 +206,41 @@ Route::middleware(['auth'])->group(function () {
 
     // Prefix admin
     Route::prefix('admin')->group(function () {
+
+            // ==================== MANAJEMEN QURBAN ====================
+        Route::get('/paket', [QurbanPaketController::class, 'index'])->name('admin.qurban.paket.index');
+        Route::get('/paket/data', [QurbanPaketController::class, 'data'])->name('admin.qurban.paket.data');
+        Route::post('/paket', [QurbanPaketController::class, 'store'])->name('admin.qurban.paket.store');
+        Route::get('/qurban/paket/{id}/edit', [QurbanPaketController::class, 'edit'])->name('admin.qurban.paket.edit');
+        Route::put('/qurban/paket/{id}', [QurbanPaketController::class, 'update'])->name('admin.qurban.paket.update');
+        Route::delete('/paket/{id}', [QurbanPaketController::class, 'destroy'])->name('admin.qurban.paket.destroy');
+        Route::patch('/paket/{id}/stok', [QurbanPaketController::class, 'updateStok'])->name('admin.qurban.paket.stok');
+
+        // Pengaturan Qurban
+        Route::get('/setting', [QurbanSettingController::class, 'index'])->name('admin.qurban.setting.index');
+        Route::post('/setting', [QurbanSettingController::class, 'update'])->name('admin.qurban.setting.update');
+        Route::post('/setting/reset', [QurbanSettingController::class, 'reset'])->name('admin.qurban.setting.reset');
+
+        // Registrasi Qurban
+        Route::get('/registrasi', [QurbanRegistrasiController::class, 'index'])->name('admin.qurban.registrasi.index');
+        Route::get('/registrasi/data', [QurbanRegistrasiController::class, 'data'])->name('admin.qurban.registrasi.data');
+        Route::get('/qurban/registrasi/{id}', [QurbanRegistrasiController::class, 'show'])->name('admin.qurban.registrasi.show');
+        Route::put('/qurban/registrasi/{id}/status', [QurbanRegistrasiController::class, 'updateStatus'])->name('admin.qurban.registrasi.update-status');
+        Route::delete('/qurban/registrasi/{id}', [QurbanRegistrasiController::class, 'destroy'])->name('admin.qurban.registrasi.destroy');
+        Route::get('/registrasi/export/excel', [QurbanRegistrasiController::class, 'export'])->name('admin.qurban.registrasi.export');
+        Route::post('/qurban/registrasi/{id}/upload-bukti', [QurbanRegistrasiController::class, 'uploadBukti'])->name('upload-bukti');
+        Route::delete('/qurban/registrasi/{id}/delete-bukti', [QurbanRegistrasiController::class, 'deleteBukti'])->name('delete-bukti');
+
+        // GALERI QURBAN
+        Route::get('/qurban/galeri', [QurbanGalleryController::class, 'index'])->name('admin.qurban.galeri.index');
+        Route::get('/qurban/galeri/data', [QurbanGalleryController::class, 'data'])->name('admin.qurban.galeri.data');
+        Route::get('/qurban/galeri/create', [QurbanGalleryController::class, 'create'])->name('admin.qurban.galeri.create');
+        Route::post('/qurban/galeri', [QurbanGalleryController::class, 'store'])->name('admin.qurban.galeri.store');
+        Route::get('/qurban/galeri/{id}/edit', [QurbanGalleryController::class, 'edit'])->name('admin.qurban.galeri.edit');
+        Route::put('/qurban/galeri/{id}', [QurbanGalleryController::class, 'update'])->name('admin.qurban.galeri.update');
+        Route::delete('/qurban/galeri/{id}', [QurbanGalleryController::class, 'destroy'])->name('admin.qurban.galeri.destroy');
+        Route::post('/qurban/galeri/reorder', [QurbanGalleryController::class, 'reorder'])->name('admin.qurban.galeri.reorder');
+        Route::post('/qurban/galeri/{id}/cover', [QurbanGalleryController::class, 'setCover'])->name('admin.qurban.galeri.cover');
 
         // Role
         Route::get('/role', [RoleController::class, 'index'])->name('admin.role');

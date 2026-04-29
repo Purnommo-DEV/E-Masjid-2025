@@ -13,29 +13,43 @@
             'admin.keuangan.jurnal.index*'
         ]) ? 'true' : 'false' }},
 
-        // ✅ TAMBAHKAN INI
         openRamadhan: {{ request()->routeIs([
-            'admin.ramadhan.jadwal-imam*'
+            'admin.ramadhan.jadwal-imam*',
+            'admin.ramadhan.laporan-harian*'
+        ]) ? 'true' : 'false' }},
+
+        // ✅ MANAJEMEN QURBAN
+        openQurban: {{ request()->routeIs([
+            'admin.qurban.paket*',
+            'admin.qurban.setting*',
+            'admin.qurban.registrasi*',
+            'admin.qurban.galeri*',
+            'admin.qurban.laporan*'
         ]) ? 'true' : 'false' }},
 
         sidebarOpen: window.innerWidth >= 1024,
 
         init() {
+            // Load from localStorage
             if (localStorage.getItem('openKeuangan') === 'true') {
                 this.openKeuangan = true;
             }
-
             if (localStorage.getItem('openRamadhan') === 'true') {
                 this.openRamadhan = true;
             }
+            if (localStorage.getItem('openQurban') === 'true') {
+                this.openQurban = true;
+            }
 
+            // Watch for changes
             this.$watch('openKeuangan', value => {
                 localStorage.setItem('openKeuangan', value);
             });
-
-            // ✅ TAMBAHKAN INI
             this.$watch('openRamadhan', value => {
                 localStorage.setItem('openRamadhan', value);
+            });
+            this.$watch('openQurban', value => {
+                localStorage.setItem('openQurban', value);
             });
         }
     }"
@@ -53,6 +67,7 @@
 
     <!-- Konten Sidebar -->
     <div class="h-full overflow-y-auto max-h-screen sidebar-wrap rounded-r-2xl shadow-2xl flex flex-col relative z-[10000]">
+        
         <!-- HEADER -->
         <div class="flex items-center justify-between px-6 py-5 border-b" style="background: linear-gradient(180deg,#07332e,#0f4d45);">
             <div class="flex items-center gap-3">
@@ -93,12 +108,10 @@
                         ['route' => 'admin.role', 'icon' => 'shield', 'label' => 'Role & Permission'],
                         ['route' => 'admin.user', 'icon' => 'users', 'label' => 'Kelola User'],
 
-                        // ───────────────────────────────────────────────
-                        // KONTEN INSPIRATIF & PENGINGAT (baru ditambahkan di sini)
+                        // KONTEN INSPIRATIF & PENGINGAT
                         ['route' => 'admin.slide-motivasi.index', 'icon' => 'sparkles', 'label' => 'Slider Motivasi'],
                         ['route' => 'admin.quote-harian.index', 'icon' => 'chat-quote', 'label' => 'Quote Harian'],
                         ['route' => 'admin.khutbah-jumat.index', 'icon' => 'mosque', 'label' => 'Khutbah Jumat'],
-                        // ───────────────────────────────────────────────
 
                         ['route' => 'admin.banner.index', 'icon' => 'images', 'label' => 'Banner'],
                         ['route' => 'admin.kategori.index', 'icon' => 'tag', 'label' => 'Kategori'],
@@ -135,7 +148,7 @@
                             @elseif($m['icon'] === 'mosque')
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l9 7v12a2 2 0 01-2 2H5a2 2 0 01-2-2V9l9-7zM12 2v7m-4 4h8"/></svg>
                             @elseif($m['icon'] === 'images')
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12 2 0 002 2z"/></svg>
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                             @elseif($m['icon'] === 'tag')
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M3 11l9 9 9-9-9-9-9 9z"/></svg>
                             @elseif($m['icon'] === 'newspaper')
@@ -153,6 +166,7 @@
                         </a>
                     </li>
                 @endforeach
+
                 <!-- KEUANGAN COLLAPSIBLE -->
                 <li class="mt-2">
                     <button @click="openKeuangan = !openKeuangan"
@@ -192,10 +206,7 @@
                         @endphp
 
                         @foreach($sub as $s)
-                            @php
-                                // Gunakan $s['route'] langsung, bukan $route
-                                $isActive = request()->routeIs($s['route'] . '*');
-                            @endphp
+                            @php $isActive = request()->routeIs($s['route'] . '*'); @endphp
                             <li>
                                 <a href="{{ route($s['route']) }}"
                                    @class([
@@ -217,7 +228,7 @@
                     </ul>
                 </li>
 
-                <!-- BARU: MANAJEMEN RAMADHAN COLLAPSIBLE -->
+                <!-- MANAJEMEN RAMADHAN COLLAPSIBLE -->
                 <li class="mt-2">
                     <button @click="openRamadhan = !openRamadhan"
                             :class="openRamadhan 
@@ -264,12 +275,95 @@
                                 Laporan Harian Tarawih
                             </a>
                         </li>
-                        <!-- Nanti bisa tambah sub-menu lain di sini, misal:
-                        <li><a href="...">Master Program Infaq</a></li>
-                        <li><a href="...">Santunan & Gebyar</a></li>
-                        -->
                     </ul>
                 </li>
+
+<!-- ✅ MANAJEMEN QURBAN COLLAPSIBLE -->
+<li class="mt-2">
+    <button @click="openQurban = !openQurban"
+            :class="openQurban 
+                ? 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200' 
+                : 'text-white hover:bg-white/10 hover:shadow'"
+            class="w-full flex items-center justify-between gap-4 px-5 py-3 rounded-xl transition text-sm">
+        <div class="flex items-center gap-4">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z M5 3v4M19 3v4 M12 3v18" />
+            </svg>
+            <span>Manajemen Qurban</span>
+        </div>
+        <svg class="w-5 h-5 transition-transform duration-200"
+             :class="openQurban ? 'rotate-180' : ''"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+    </button>
+
+    <ul x-show="openQurban" x-collapse class="mt-2 space-y-1 pl-6 overflow-hidden">
+        
+        <!-- Paket Qurban -->
+        <li>
+            <a href="{{ route('admin.qurban.paket.index') }}"
+               @class([
+                   'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                   'bg-amber-300/90 text-emerald-900 font-semibold shadow' => request()->routeIs('admin.qurban.paket*'),
+                   'text-white hover:bg-white/10' => !request()->routeIs('admin.qurban.paket*')
+               ])>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                Paket Qurban
+            </a>
+        </li>
+
+        {{-- ========== TAMBAHKAN MENU GALERI QURBAN DI SINI ========== --}}
+        <!-- Galeri Qurban -->
+        <li>
+            <a href="{{ route('admin.qurban.galeri.index') }}"
+               @class([
+                   'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                   'bg-amber-300/90 text-emerald-900 font-semibold shadow' => request()->routeIs('admin.qurban.galeri*'),
+                   'text-white hover:bg-white/10' => !request()->routeIs('admin.qurban.galeri*')
+               ])>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Galeri Qurban
+            </a>
+        </li>
+
+        <!-- Pengaturan Qurban -->
+        <li>
+            <a href="{{ route('admin.qurban.setting.index') }}"
+               @class([
+                   'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                   'bg-amber-300/90 text-emerald-900 font-semibold shadow' => request()->routeIs('admin.qurban.setting*'),
+                   'text-white hover:bg-white/10' => !request()->routeIs('admin.qurban.setting*')
+               ])>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Pengaturan Qurban
+            </a>
+        </li>
+
+        <!-- Daftar Pendaftar -->
+        <li>
+            <a href="{{ route('admin.qurban.registrasi.index') }}"
+               @class([
+                   'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                   'bg-amber-300/90 text-emerald-900 font-semibold shadow' => request()->routeIs('admin.qurban.registrasi*'),
+                   'text-white hover:bg-white/10' => !request()->routeIs('admin.qurban.registrasi*')
+               ])>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Daftar Pendaftar
+            </a>
+        </li>
+    </ul>
+</li>
+
             </ul>
         </nav>
 

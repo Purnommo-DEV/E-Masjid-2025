@@ -292,6 +292,70 @@ class AppServiceProvider extends ServiceProvider
             return $app->make($class);
         });
 
+        // resolve QurbanService dinamis (sesuai lokasi folder kamu)
+        $this->app->bind(\App\Interfaces\QurbanServiceInterface::class, function ($app) {
+            $masjid = masjid(); // contoh: "mrj"
+            $class  = "\\App\\Services\\{$masjid}\\QurbanService";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QurbanService untuk masjid {$masjid} tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding QurbanRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QurbanRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QurbanRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QurbanRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding QurbanSettingRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QurbanSettingRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QurbanSettingRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QurbanSettingRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding QurbanRegistrasiRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QurbanRegistrasiRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QurbanRegistrasiRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QurbanRegistrasiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding QurbanGalleryRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QurbanGalleryRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QurbanGalleryRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QurbanGalleryRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
         // Binding SlideMotivasiRepositoryInterfaceInterface dinamis sesuai masjid
         $this->app->bind(\App\Interfaces\SlideMotivasiRepositoryInterface::class, function ($app) {
             $masjidName = masjid();
