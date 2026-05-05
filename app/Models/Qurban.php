@@ -13,29 +13,7 @@ class Qurban extends Model
 
     protected $table = 'qurbans';
 
-    protected $fillable = [
-        'masjid_code',
-        'judul',
-        'slug',
-        'jenis_hewan',
-        'harga',
-        'harga_full',
-        'max_share',
-        'stok',
-        'berat_min',
-        'berat_max',
-        'deskripsi_singkat',
-        'deskripsi_lengkap',
-        'image_path',
-        'video_url',
-        'health_certificate_path',
-        'is_active',
-        'is_featured',
-        'urutan',
-        'deadline',
-        'created_by',
-        'updated_by',
-    ];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'harga' => 'integer',
