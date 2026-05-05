@@ -28,30 +28,6 @@ class Qurban extends Model
         'deadline' => 'datetime',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($qurban) {
-            if (!$qurban->masjid_code) {
-                $qurban->masjid_code = masjid();
-            }
-            if (!$qurban->slug) {
-                $qurban->slug = Str::slug($qurban->judul);
-            }
-        });
-
-        static::updating(function ($qurban) {
-            if ($qurban->isDirty('judul')) {
-                $qurban->slug = Str::slug($qurban->judul);
-            }
-        });
-
-        static::addGlobalScope('masjid', function ($query) {
-            $query->where('masjid_code', masjid());
-        });
-    }
-
     // ==================== ACCESSORS ====================
 
     // Format harga Rupiah
