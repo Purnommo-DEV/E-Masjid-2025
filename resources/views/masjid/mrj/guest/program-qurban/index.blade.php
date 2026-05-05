@@ -841,6 +841,25 @@
 $(document).ready(function() {
     let selectedPaket = null;
     
+    // Tambahkan fungsi ini di dalam $(document).ready() atau di luarnya
+    function closeGuide() {
+        const guide = document.getElementById('firstVisitGuide');
+        if (guide) {
+            guide.style.display = 'none';
+            // Simpan ke localStorage agar tidak muncul lagi di lain waktu
+            localStorage.setItem('qurbanGuideShown', 'true');
+        }
+    }
+
+    // Atau jika ingin di dalam $(document).ready() dengan cara yang berbeda:
+    window.closeGuide = function() {
+        const guide = document.getElementById('firstVisitGuide');
+        if (guide) {
+            guide.style.display = 'none';
+            localStorage.setItem('qurbanGuideShown', 'true');
+        }
+    };
+
     $('#selected-paket-indicator').hide();
     
     if (!localStorage.getItem('qurbanGuideShown')) {

@@ -176,12 +176,20 @@ class QurbanSettingRepository implements QurbanSettingRepositoryInterface
             $result = [];
             foreach ($settings as $setting) {
                 if ($setting->type === 'boolean') {
-                    $cleanValue = trim($setting->value, '"');
-                    $result[$setting->key] = filter_var($cleanValue, FILTER_VALIDATE_BOOLEAN);
+                    // Pastikan value adalah string sebelum trim
+                    $value = is_string($setting->value) ? trim($setting->value, '"') : $setting->value;
+                    $result[$setting->key] = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                 } elseif ($setting->type === 'json') {
-                    $cleanValue = trim($setting->value, '"');
-                    $decoded = json_decode($cleanValue, true);
-                    $result[$setting->key] = $decoded ?? [];
+                    // Cek tipe data sebelum trim
+                    if (is_array($setting->value)) {
+                        $result[$setting->key] = $setting->value;
+                    } elseif (is_string($setting->value)) {
+                        $cleanValue = trim($setting->value, '"');
+                        $decoded = json_decode($cleanValue, true);
+                        $result[$setting->key] = $decoded ?? [];
+                    } else {
+                        $result[$setting->key] = [];
+                    }
                 } else {
                     $result[$setting->key] = $setting->value;
                 }
