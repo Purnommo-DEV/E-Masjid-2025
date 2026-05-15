@@ -190,8 +190,22 @@ class QurbanGuestController extends Controller
                 ->with('qurban')
                 ->first();
         }
+
+        $settings = $this->settingRepo->getAllSettings();
+        $contactConfirmName = $settings['contact_confirmation_name'] ?? 'Bapak Jazuli';
+        $contactConfirmPhone = $settings['contact_confirmation_phone'] ?? '081310185948';
+        $bankName = $settings['bank_name'] ?? 'BCA';
+        $bankAccount = $settings['bank_account_number'] ?? '1010010947479';
+        $bankAccountName = $settings['bank_account_name'] ?? 'JAZULI';
         
-        return view('masjid.' . masjid() . '.guest.program-qurban.thankyou', compact('registration'));
+        return view('masjid.' . masjid() . '.guest.program-qurban.thankyou', compact(
+            'registration',
+            'contactConfirmName',
+            'contactConfirmPhone',
+            'bankName',
+            'bankAccount',
+            'bankAccountName'
+        ));
     }
 
     /**

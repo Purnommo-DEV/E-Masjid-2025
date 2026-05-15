@@ -13,6 +13,7 @@ class QurbanService implements QurbanServiceInterface
     public function getAllActive()
     {
         return Qurban::active()
+            ->forMasjid()
             ->orderBy('urutan')
             ->orderBy('created_at', 'desc')
             ->get()
@@ -27,7 +28,7 @@ class QurbanService implements QurbanServiceInterface
                     'jenis_icon' => $qurban->jenis_icon,
                     'harga' => $qurban->harga,
                     'harga_formatted' => $qurban->harga_formatted,
-                    'harga_per_share' => $qurban->harga_per_share_formatted,
+                    'harga_per_share' => $qurban->harga_formatted,
                     'max_share' => $qurban->max_share,
                     'stok' => $qurban->stok,
                     'image_url' => $qurban->image_url,
@@ -42,6 +43,7 @@ class QurbanService implements QurbanServiceInterface
     public function getFeatured()
     {
         return Qurban::active()
+            ->forMasjid()
             ->featured()
             ->orderBy('urutan')
             ->first();
@@ -50,6 +52,7 @@ class QurbanService implements QurbanServiceInterface
     public function getBySlug($slug)
     {
         return Qurban::where('slug', $slug)
+            ->forMasjid()
             ->active()
             ->firstOrFail();
     }
@@ -57,6 +60,7 @@ class QurbanService implements QurbanServiceInterface
     public function getByJenis($jenis)
     {
         return Qurban::active()
+            ->forMasjid()
             ->where('jenis_hewan', $jenis)
             ->orderBy('urutan')
             ->get();
@@ -65,11 +69,18 @@ class QurbanService implements QurbanServiceInterface
     public function register(array $data)
     {
         return DB::transaction(function () use ($data) {
-            $qurban = Qurban::findOrFail($data['qurban_id']);
-            
-            $totalHarga = $qurban->jenis_hewan === 'kambing' 
-                ? $qurban->harga 
-                : ($qurban->harga_per_share * $data['jumlah_share']);
+            $qurban = Qurban::forMasjid()->findOrFail($data['qurban_id']);
+            $jumlahShare = max(1, (int) ($data['jumlah_share'] ?? 1));
+
+            if ($jumlahShare > $qurban->max_share) {
+                throw new \Exception('Jumlah share melebihi batas maksimal (' . $qurban->max_share . ' orang)');
+            }
+
+            if ($qurban->stok < $jumlahShare) {
+                throw new \Exception('Maaf, stok paket qurban tidak mencukupi.');
+            }
+
+            $totalHarga = $qurban->harga * $jumlahShare;
             
             $registration = QurbanRegistration::create([
                 'qurban_id' => $data['qurban_id'],
@@ -77,12 +88,13 @@ class QurbanService implements QurbanServiceInterface
                 'nama_lengkap' => $data['nama_lengkap'],
                 'telepon' => $data['telepon'],
                 'alamat' => $data['alamat'] ?? null,
-                'jenis_hewan' => $qurban->jenis_hewan,
-                'jumlah_share' => $data['jumlah_share'] ?? 1,
+                'jumlah_share' => $jumlahShare,
                 'total_harga' => $totalHarga,
-                'payment_status' => 'pending',
+                'status' => 'pending',
                 'catatan' => $data['catatan'] ?? null,
             ]);
+
+            $qurban->decrement('stok', $jumlahShare);
             
             return $registration;
         });
@@ -91,6 +103,7 @@ class QurbanService implements QurbanServiceInterface
     public function getRegistrationByCode($kode)
     {
         return QurbanRegistration::with('qurban')
+            ->where('masjid_code', masjid())
             ->where('kode_registrasi', $kode)
             ->firstOrFail();
     }

@@ -4,6 +4,10 @@
 
 @section('content')
 
+@php
+    $waConfirmPhone = normalizeWaNumber($contactConfirmPhone ?? null, '081310185948');
+@endphp
+
 @push('style')
 <style>
     @keyframes float {
@@ -274,7 +278,7 @@
                             <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xl font-bold mb-3 mx-auto">2</div>
                             <h4 class="font-semibold text-center text-slate-800 mb-2">📱 Konfirmasi Pembayaran</h4>
                             <p class="text-sm text-slate-600 text-center mb-3">Kirim bukti transfer ke panitia</p>
-                            <a href="https://wa.me/62{{ $contactConfirmPhone ?? '081310185948' }}?text=Assalamu%27alaikum%2C%20saya%20mau%20konfirmasi%20pembayaran%20qurban%0A%0ANama%3A%20{{ urlencode($registration->nama_lengkap ?? '') }}%0AKode%20Registrasi%3A%20{{ urlencode($registration->kode_registrasi ?? '') }}%0AJumlah%20Transfer%3A%20{{ urlencode($registration->total_harga_formatted ?? '') }}" target="_blank" 
+                            <a href="https://wa.me/{{ $waConfirmPhone }}?text=Assalamu%27alaikum%2C%20saya%20mau%20konfirmasi%20pembayaran%20qurban%0A%0ANama%3A%20{{ urlencode($registration->nama_lengkap ?? '') }}%0AKode%20Registrasi%3A%20{{ urlencode($registration->kode_registrasi ?? '') }}%0AJumlah%20Transfer%3A%20{{ urlencode($registration->total_harga_formatted ?? '') }}" target="_blank" 
                             class="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white shadow-md hover:shadow-lg">
                                 <span class="text-xl">💚</span>
                                 <span>Konfirmasi via WhatsApp</span>
