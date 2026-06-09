@@ -19,15 +19,16 @@ use App\Http\Controllers\Admin\PengumumanController;
 use App\Http\Controllers\Admin\PettyCashController;
 use App\Http\Controllers\Admin\ProfilMasjidController;
 use App\Http\Controllers\Admin\QuoteHarianController;
+use App\Http\Controllers\Admin\Qurban\QurbanGalleryController;
 use App\Http\Controllers\Admin\Qurban\QurbanPaketController;
 use App\Http\Controllers\Admin\Qurban\QurbanRegistrasiController;
+use App\Http\Controllers\Admin\Qurban\QurbanReportController;
 use App\Http\Controllers\Admin\Qurban\QurbanSettingController;
-use App\Http\Controllers\Admin\Qurban\QurbanGalleryController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SaldoAwalController;
 use App\Http\Controllers\Admin\SlideMotivasiController;
-use App\Http\Controllers\Admin\UserController;
 
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZakatController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ProfileController;
@@ -35,12 +36,15 @@ use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
 use App\Http\Controllers\User\ExcelYatimDhuafaController;
 use App\Http\Controllers\User\HomeController;
+use App\Http\Controllers\User\JamaahGuestController;
 use App\Http\Controllers\User\KesehatanGuestController;
 use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
 use App\Http\Controllers\User\ProgramRamadhanGuestController;
 use App\Http\Controllers\User\QurbanGuestController;
 use App\Http\Controllers\User\SaranController;
 use Illuminate\Support\Facades\Route;
+
+
 
 
 
@@ -62,6 +66,12 @@ Route::get('/clear-cache', function () {
 Route::get('/run-migrate', function () {
     \Artisan::call('migrate', ['--force' => true]);
     return 'Migration berhasil dijalankan!';
+});
+
+Route::get('/run-seeder', function () {
+    Artisan::call('db:seed', ['--force' => true]);
+
+    return 'Seeder berhasil dijalankan!';
 });
 
 Route::get('/manifest.json', function () {
@@ -102,6 +112,10 @@ Route::prefix('program-ramadhan')->name('program-ramadhan.')->group(function () 
     Route::get('/{slug}', [ProgramRamadhanGuestController::class, 'show'])->name('show');
 });
 
+// Route publik - sederhana
+Route::get('/form-jamaah', [JamaahGuestController::class, 'indexPublik'])->name('jamaah.form');
+Route::post('/form-jamaah/store', [JamaahGuestController::class, 'store'])->name('jamaah.store');
+
 // ==================== ROUTE GUEST (USER) ====================
 Route::get('qurban/', [QurbanGuestController::class, 'index'])->name('qurban.index');
 Route::get('qurban/1446h', [QurbanGuestController::class, 'evaluasi'])->name('qurban.evaluasi');
@@ -109,6 +123,9 @@ Route::post('qurban/register', [QurbanGuestController::class, 'register'])->name
 Route::get('qurban/thankyou/{kode?}', [QurbanGuestController::class, 'thankyou'])->name('qurban.thankyou');
 Route::get('qurban/check-stock', [QurbanGuestController::class, 'checkStock'])->name('qurban.check.stock');
 Route::get('qurban/paket/{id}/detail', [QurbanGuestController::class, 'getPaketDetail'])->name('qurban.paket.detail');
+// Route::get('qurban/laporan', [QurbanGuestController::class, 'laporan'])->name('qurban.laporan');
+
+Route::get('qurban/laporan/{tahun?}', [QurbanGuestController::class, 'laporan'])->name('qurban.laporan');
 
 Route::get('acara', [AcaraGuestController::class, 'index'])->name('acara.index');
 Route::get('acara-show/{slug}', [AcaraGuestController::class, 'show'])->name('acara.show');
@@ -242,6 +259,19 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/qurban/galeri/reorder', [QurbanGalleryController::class, 'reorder'])->name('admin.qurban.galeri.reorder');
         Route::post('/qurban/galeri/{id}/cover', [QurbanGalleryController::class, 'setCover'])->name('admin.qurban.galeri.cover');
 
+        // ==================== LAPORAN QURBAN ====================
+        Route::resource('qurban/report', QurbanReportController::class)
+            ->names('admin.qurban.report')
+            ->except(['show']);
+        Route::post('qurban/report/{id}/clone', [QurbanReportController::class, 'clone'])
+            ->name('admin.qurban.report.clone');
+        Route::post('qurban/report/{id}/set-active', [QurbanReportController::class, 'setActive'])
+            ->name('admin.qurban.report.set-active');
+        Route::get('qurban/report/data', [QurbanReportController::class, 'data'])
+            ->name('admin.qurban.report.data');
+        
+        Route::post('qurban/report/{id}/upload-gallery', [QurbanReportController::class, 'uploadGallery'])->name('admin.qurban.report.upload-gallery');
+        Route::post('qurban/report/{id}/remove-gallery', [QurbanReportController::class, 'removeGallery'])->name('admin.qurban.report.remove-gallery');
         // Role
         Route::get('/role', [RoleController::class, 'index'])->name('admin.role');
         Route::get('/role/data', [RoleController::class, 'data'])->name('admin.role.data');

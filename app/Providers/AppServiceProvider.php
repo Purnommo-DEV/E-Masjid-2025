@@ -356,6 +356,19 @@ class AppServiceProvider extends ServiceProvider
             return $app->make($class);
         });
 
+        // Binding QurbanReportRepositoryInterfaceInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\QurbanReportRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\\App\\Repositories\\{$masjidName}\\QurbanReportRepository";
+
+            if (!class_exists($class)) {
+                throw new \Exception("QurbanReportRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
         // Binding SlideMotivasiRepositoryInterfaceInterface dinamis sesuai masjid
         $this->app->bind(\App\Interfaces\SlideMotivasiRepositoryInterface::class, function ($app) {
             $masjidName = masjid();
