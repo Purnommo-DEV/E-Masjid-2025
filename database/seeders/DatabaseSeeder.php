@@ -25,7 +25,8 @@ class DatabaseSeeder extends Seeder
             // MasjidFullDummySeeder::class,
             // QurbanReportSeeder::class,
             // QurbanSettingSeeder::class
-            QurbanReportSeeder::class,
+            // QurbanReportSeeder::class,
+            PengumumanSeeder::class
         ]);
     }
 }

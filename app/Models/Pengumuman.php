@@ -15,6 +15,18 @@ class Pengumuman extends Model
         'is_active' => 'boolean',
     ];
 
-    // Tambah kolom image_path jika belum ada
-    // migration: tambahkan image_path column
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($pengumuman) {
+            if (!$pengumuman->masjid_code) {
+                $pengumuman->masjid_code = masjid();
+            }
+        });
+
+        static::addGlobalScope('masjid', function ($query) {
+            $query->where('masjid_code', masjid());
+        });
+    }
 }

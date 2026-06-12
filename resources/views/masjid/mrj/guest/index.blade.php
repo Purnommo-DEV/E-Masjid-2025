@@ -980,7 +980,7 @@
                                             {{ $short }}
                                         </p>
                                         <div class="flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-500">
-                                            <span class="whitespace-nowrap font-medium">{{ $tanggal }}</span>
+                                            {{-- <span class="whitespace-nowrap font-medium">{{ $tanggal }}</span>
                                             <button type="button"
                                                     class="text-amber-700 hover:text-amber-800 font-medium px-3 py-1.5 rounded-md
                                                            hover:bg-amber-50 transition-colors"
@@ -990,7 +990,7 @@
                                                     data-pengumuman-url="{{ e($p['url'] ?? '#') }}"
                                                     onclick="openPengumumanPreview(this)">
                                                 Lihat →
-                                            </button>
+                                            </button> --}}
                                         </div>
                                     </div>
                                 </div>
@@ -1032,7 +1032,7 @@
 
                         {{-- FOOTER --}}
                         <footer class="px-4 sm:px-6 py-3 border-t border-slate-100 bg-white flex items-center justify-end gap-2">
-                            <a id="pengumumanModalDetail" href="#" class="btn btn-sm bg-emerald-600 text-white rounded-full px-4">Buka Halaman</a>
+                            {{-- <a id="pengumumanModalDetail" href="#" class="btn btn-sm bg-emerald-600 text-white rounded-full px-4">Buka Halaman</a> --}}
                             <button type="button" class="btn btn-sm bg-white-600 text-black border rounded-full px-4" onclick="closePengumumanPreview()">Tutup</button>
                         </footer>
                     </div>
