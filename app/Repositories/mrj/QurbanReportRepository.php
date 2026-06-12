@@ -193,9 +193,9 @@ class QurbanReportRepository implements QurbanReportRepositoryInterface
     public function setActive($id)
     {
         return DB::transaction(function () use ($id) {
-            QurbanReport::where('masjid_code', masjid())->update(['is_active' => false]);
             $report = $this->find($id);
-            $report->is_active = true;
+            // Toggle: jika aktif jadi nonaktif, jika nonaktif jadi aktif
+            $report->is_active = !$report->is_active;
             $report->save();
             return $report;
         });

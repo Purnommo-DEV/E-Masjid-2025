@@ -93,7 +93,10 @@
                                 <a href="{{ route('admin.qurban.report.edit', $report->id) }}" class="btn-action bg-amber-50 text-amber-700 hover:bg-amber-100">Edit</a>
                                 <a href="{{ route('qurban.laporan', $report->tahun_hijriah) }}" target="_blank" class="btn-action bg-blue-50 text-blue-700 hover:bg-blue-100">Lihat</a>
                                 @if(!$report->is_active)
-                                <button onclick="setActive({{ $report->id }})" class="btn-action bg-green-50 text-green-700 hover:bg-green-100">Aktifkan</button>
+                                <form action="{{ route('admin.qurban.report.set-active', $report->id) }}" method="POST" class="inline" onsubmit="return confirm('Aktifkan laporan {{ $report->tahun_hijriah }}?')">
+                                    @csrf
+                                    <button type="submit" class="btn-action bg-green-50 text-green-700 hover:bg-green-100">Aktifkan</button>
+                                </form>
                                 @endif
                                 <a href="{{ route('admin.qurban.report.clone', $report->id) }}" 
                                     class="btn-action bg-purple-50 text-purple-700 hover:bg-purple-100"
@@ -120,21 +123,6 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-function setActive(id) {
-    Swal.fire({
-        title: 'Aktifkan Laporan?',
-        text: 'Laporan ini akan menjadi laporan yang ditampilkan di halaman publik. Laporan lain akan dinonaktifkan.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, Aktifkan!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = '{{ url("admin/qurban/report") }}/' + id + '/set-active';
-        }
-    });
-}
-
 function deleteReport(id, tahun) {
     Swal.fire({
         title: 'Hapus Laporan?',
