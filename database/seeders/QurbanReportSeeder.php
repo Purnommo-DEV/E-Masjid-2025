@@ -40,8 +40,8 @@ class QurbanReportSeeder extends Seeder
                 'pelaksanaan_lokasi_sholat' => 'Lapangan Tenis TCE',
                 'pelaksanaan_lokasi_qurban' => 'Parkiran Masjid Raudhotul Jannah TCE',
                 'pelaksanaan_deskripsi' => 'Alhamdulillah, atas izin Allah Subhanahu wa Ta\'ala, seluruh rangkaian kegiatan Idul Adha 1447 H telah terlaksana dengan baik, lancar, dan penuh khidmat. Semoga ibadah qurban yang kita laksanakan menjadi wujud ketakwaan dan keikhlasan dalam mendekatkan diri kepada Allah SWT.
-
-Mulai dari pelaksanaan Shalat Idul Adha di Lapangan Tenis TCE, hingga proses penyembelihan 8 ekor sapi dan 44 ekor kambing, serta pendistribusian sekitar 1.127 paket daging qurban, semuanya dapat berjalan dengan tertib. Semua ini berkat kebersamaan, gotong royong, dan partisipasi seluruh pihak yang terlibat, baik dari panitia, relawan, shohibul qurban, maupun jamaah sekalian.',
+                
+                Mulai dari pelaksanaan Shalat Idul Adha di Lapangan Tenis TCE, hingga proses penyembelihan 8 ekor sapi dan 44 ekor kambing, serta pendistribusian sekitar 1.127 paket daging qurban, semuanya dapat berjalan dengan tertib. Semua ini berkat kebersamaan, gotong royong, dan partisipasi seluruh pihak yang terlibat, baik dari panitia, relawan, shohibul qurban, maupun jamaah sekalian.',
                 'pelaksanaan_gambar1' => null,
                 'pelaksanaan_gambar2' => null,
                 'pelaksanaan_gambar3' => null,
@@ -124,17 +124,148 @@ Mulai dari pelaksanaan Shalat Idul Adha di Lapangan Tenis TCE, hingga proses pen
                 'thankyou_title' => 'Jazakumullahu Khairan Katsiran',
                 'thankyou_message' => 'Kepada seluruh shahibul qurban, jamaah, panitia, relawan, serta semua pihak yang telah berpartisipasi dalam pelaksanaan Idul Adha 1447 H, kami mengucapkan terima kasih yang sebesar-besarnya.
 
-Semoga Allah SWT menerima amal ibadah dan qurban kita, melimpahkan keberkahan dalam kehidupan, serta menjadikan kita hamba-Nya yang senantiasa ikhlas dalam beribadah dan berbagi kepada sesama.
+                Semoga Allah SWT menerima amal ibadah dan qurban kita, melimpahkan keberkahan dalam kehidupan, serta menjadikan kita hamba-Nya yang senantiasa ikhlas dalam beribadah dan berbagi kepada sesama.
 
-Apabila terdapat kekurangan dalam pelaksanaan kegiatan ini, kami memohon maaf yang sebesar-besarnya.
+                Apabila terdapat kekurangan dalam pelaksanaan kegiatan ini, kami memohon maaf yang sebesar-besarnya.
 
-Taqabbalallahu minna wa minkum. Aamiin Ya Rabbal \'Alamiin.',
+                Taqabbalallahu minna wa minkum. Aamiin Ya Rabbal \'Alamiin.',
                 'thankyou_hadits' => '"Dan tolong-menolonglah kamu dalam kebajikan dan takwa." (QS. Al-Ma\'idah: 2)',
                 'footer_instagram' => 'https://www.instagram.com/masjidrj.tce/',
                 'footer_whatsapp' => 'https://whatsapp.com/channel/0029VbCGqiT60eBgsDDNIV2s',
                 'footer_email' => 'dkmmrjtce@gmail.com',
                 'footer_quote' => '"Sesungguhnya shalatku, ibadahku, hidupku dan matiku hanyalah untuk Allah, Tuhan semesta alam." — QS. Al-An\'am: 162',
                 'catatan_keterangan' => 'Laporan resmi Idul Adha 1447 H dengan peningkatan jumlah qurban dan jamaah.',
+            ]
+        );
+
+        QurbanReport::updateOrCreate(
+            ['masjid_code' => 'mrj', 'tahun_hijriah' => '1446 H'],
+            [
+                'masjid_code' => 'mrj',
+                'tahun_hijriah' => '1446 H',
+                'tahun_masehi' => '2025',
+                'is_active' => false,
+                'is_published' => true,
+                'hero_title' => 'Laporan Idul Adha',
+                'hero_subtitle' => '1446 H',
+                'hero_badge' => '✦ 1446 H · DZULHIJJAH 1446 ✦',
+                'hero_masjid' => 'Masjid Raudhatul Jannah TCE',
+                'hero_tagline' => '"Maka dirikanlah shalat karena Tuhanmu dan berqurbanlah" — QS. Al-Kautsar: 2',
+                
+                // Statistik
+                'stat_hewan_sapi' => 11,
+                'stat_hewan_kambing' => 41,
+                'stat_paket_daging' => 1172,
+                'stat_mustahik' => 1172,
+                'stat_daging_kg' => 0,
+                'stat_jamaah' => '0 Jamaah',
+                
+                // Pelaksanaan
+                'pelaksanaan_ketua_nama' => 'Imam Syahyudi',
+                'pelaksanaan_ketua_jabatan' => 'Ketua Panitia',
+                'pelaksanaan_masjid_nama' => 'Masjid Raudhotul Jannah',
+                'pelaksanaan_masjid_sub' => 'Panitia Idul Adha 1446 H',
+                'pelaksanaan_lokasi_sholat' => 'Lapangan Tenis TCE',
+                'pelaksanaan_lokasi_qurban' => 'Masjid',
+                'pelaksanaan_deskripsi' => 'Pada pelaksanaan tahun ini, pemotongan dilakukan pada hari Sabtu, 11 Dzulhijjah 1446 H bertepatan dengan 7 Juni 2025. Panitia menerima amanah 11 ekor sapi dan 41 ekor kambing dari para Shohibul Qurban. Seluruh hewan telah diperiksa dan dinyatakan layak sesuai syariat Islam.',
+                
+                'pelaksanaan_gambar1' => null,
+                'pelaksanaan_gambar2' => null,
+                'pelaksanaan_gambar3' => null,
+                'pelaksanaan_gambar4' => null,
+                'pelaksanaan_caption1' => 'Sholat Idul Adha 1446 H',
+                'pelaksanaan_caption2' => 'Khotib Khatibah',
+                'pelaksanaan_caption3' => 'Penyembelihan Hewan Qurban',
+                'pelaksanaan_caption4' => 'Distribusi Daging Qurban',
+                
+                // Dramatis
+                'dramatis1_title' => 'Kebersamaan Idul Adha 1446 H',
+                'dramatis1_quote' => 'Suasana khusyuk dan penuh kebersamaan mewarnai pelaksanaan Idul Adha 1446 H di lingkungan TCE.',
+                'dramatis1_stat' => null,
+                'dramatis1_image' => null,
+                'dramatis2_title' => 'Pelaksanaan Qurban',
+                'dramatis2_quote' => '11 ekor sapi dan 41 ekor kambing disembelih dengan penuh ketulusan.',
+                'dramatis2_stat' => null,
+                'dramatis2_image' => null,
+                'dramatis3_title' => 'Distribusi Daging Qurban',
+                'dramatis3_quote' => 'Alhamdulillah, ribuan paket daging qurban berhasil disalurkan kepada keluarga penerima manfaat.',
+                'dramatis3_stat' => null,
+                'dramatis3_image' => null,
+                
+                // Pemotongan
+                'pemotongan_sapi_berat_kg' => '350',
+                'pemotongan_kambing_berat_kg' => '35',
+                
+                // Keuangan berdasarkan gambar
+                'keuangan_penerimaan_peserta' => [
+                    ['label' => 'Uang qurban untuk 8 ekor sapi', 'amount' => 280000000],
+                    ['label' => 'Uang qurban untuk 31 ekor kambing', 'amount' => 62000000],
+                    ['label' => 'Uang pemotongan 3 ekor sapi (beli sendiri)', 'amount' => 1500000],
+                    ['label' => 'Uang pemotongan 9 ekor kambing (beli sendiri)', 'amount' => 900000],
+                ],
+                'keuangan_penerimaan_infaq' => [
+                    ['label' => 'Infaq sholat Ied', 'amount' => 18750000],
+                ],
+                'keuangan_pengeluaran' => [
+                    ['label' => 'Pembayaran ke penjual sapi (8 ekor ~2.804 kg)', 'amount' => 280000000],
+                    ['label' => 'Pembayaran ke penjual kambing (31 ekor)', 'amount' => 62000000],
+                    ['label' => 'Biaya pemotongan hewan qurban', 'amount' => 4500000],
+                    ['label' => 'Penyewaan sound system sholat Ied', 'amount' => 3500000],
+                    ['label' => 'Biaya penyelenggaraan sholat Ied (honor, khotib, imam, keamanan)', 'amount' => 5500000],
+                    ['label' => 'Biaya survei pengadaan hewan qurban', 'amount' => 1200000],
+                    ['label' => 'Biaya spanduk, flyer, banner pengadaan hewan qurban', 'amount' => 1850000],
+                    ['label' => 'Biaya spanduk kegiatan sholat Ied', 'amount' => 800000],
+                    ['label' => 'Biaya konsumsi (pemotongan, distribusi, makan bersama)', 'amount' => 3200000],
+                ],
+                'keuangan_catatan' => null,
+                
+                // Rings
+                'rings' => [
+                    [
+                        'icon' => 'fa-building',
+                        'color' => 'emerald',
+                        'title' => 'RING I — Warga TCE & Perangkat',
+                        'total' => '170+ penerima',
+                        'items' => [
+                            ['label' => 'Satpam & Tukang Taman TCE', 'value' => '10 orang'],
+                            ['label' => 'Guru TPA, SD & SMP Al Madinah', 'value' => '23 orang'],
+                            ['label' => 'Perangkat Masjid dan Panitia & Relawan', 'value' => '40 orang'],
+                            ['label' => 'Tukang jagal & pemotongan (Jurus Berkah)', 'value' => '57 orang'],
+                            ['label' => 'RT-RT Wilayah Taman Cipulir Estate (TCE)', 'value' => '40 orang'],
+                        ],
+                    ],
+                    [
+                        'icon' => 'fa-globe',
+                        'color' => 'teal',
+                        'title' => 'RING II — Luar TCE & Umum',
+                        'total' => '1.142+ penerima',
+                        'items' => [
+                            ['label' => 'RT-RT diluar Perumahan TCE', 'value' => '792 orang'],
+                            ['label' => 'Pesanggrahan (Bu Hadi)', 'value' => '40 orang'],
+                            ['label' => 'Titipan', 'value' => '46 orang'],
+                            ['label' => 'Panti Asuhan', 'value' => '20 orang'],
+                            ['label' => 'Masyarakat Umum (tanpa kupon)', 'value' => '244 orang'],
+                        ],
+                    ],
+                ],
+                
+                'distribusi' => null,
+                'gallery_images' => [],
+                'additional_images' => [],
+                'qr_image' => null,
+                'qr_link' => null,
+                
+                // Thank You
+                'thankyou_title' => 'Jazakallah Khairan',
+                'thankyou_message' => 'Semoga Allah menerima amal ibadah kita semua, melipatgandakan pahala, dan menjadikan qurban ini sebagai penebus dosa-dosa kita. Aamiin Ya Rabbal Alamin.',
+                'thankyou_hadits' => '"Dan tolong-menolonglah kamu dalam kebajikan dan takwa." (QS. Al-Ma\'idah: 2)',
+                
+                // Footer
+                'footer_instagram' => 'https://www.instagram.com/masjidrj.tce/',
+                'footer_whatsapp' => 'https://whatsapp.com/channel/0029VbCGqiT60eBgsDDNIV2s',
+                'footer_email' => 'dkmmrjtce@gmail.com',
+                'footer_quote' => '"Sesungguhnya shalatku, ibadahku, hidupku dan matiku hanyalah untuk Allah, Tuhan semesta alam." — QS. Al-An\'am: 162',
+                'catatan_keterangan' => 'Laporan resmi Idul Adha 1446 H',
             ]
         );
     }
