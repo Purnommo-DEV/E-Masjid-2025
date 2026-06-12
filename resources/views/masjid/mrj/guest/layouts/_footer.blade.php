@@ -96,23 +96,23 @@
                     </p>
 
                     <div class="flex flex-wrap items-center gap-4">
-                        <a href="https://whatsapp.com/channel/ISI_LINK_CHANNEL"
+                        <a href="https://whatsapp.com/channel/0029VbCGqiT60eBgsDDNIV2s"
                            target="_blank"
                            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-800/40 hover:bg-emerald-700/60 text-emerald-100 hover:text-white transition-all duration-300 hover:scale-105 text-xs group">
                             <span class="text-base group-hover:animate-pulse">🟢</span>
                             Channel WhatsApp
                         </a>
-                        <a href="https://youtube.com/ISI_LINK_YOUTUBE"
+                        <a href="https://www.youtube.com/@masjidraudhotuljannahtce9793"
                            target="_blank"
                            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-800/40 hover:bg-emerald-700/60 text-emerald-100 hover:text-white transition-all duration-300 hover:scale-105 text-xs group">
                             <span class="text-base group-hover:animate-pulse">▶️</span>
-                            Kajian & Dokumentasi
+                            Youtube
                         </a>
-                        <a href="https://instagram.com/ISI_LINK_INSTAGRAM"
+                        <a href="https://www.instagram.com/masjidrj.tce/"
                            target="_blank"
                            class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-800/40 hover:bg-emerald-700/60 text-emerald-100 hover:text-white transition-all duration-300 hover:scale-105 text-xs group">
                             <span class="text-base group-hover:animate-pulse">📷</span>
-                            Kegiatan Jamaah
+                            Instagram
                         </a>
                     </div>
                 </div>
