@@ -886,7 +886,7 @@
                     <span class="inline-block w-5 h-5 rounded-full bg-amber-100 text-amber-500 text-center leading-5">
                         📋
                     </span>
-                    <span>Pilih tahun untuk melihat laporan qurban</span>
+                    <span>Pilih tahun untuk melihat laporan Idul Adha</span>
                 </div>
             </div>
         @endif
@@ -921,13 +921,13 @@
                     </div>
                 </div>
 
-                <div class="mt-8">
+                {{-- <div class="mt-8">
                     <button onclick="window.print()" class="btn-pdf inline-flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all">
                         <i class="fas fa-file-pdf"></i>
                         <span>Cetak/Simpan PDF</span>
                         <i class="fas fa-arrow-down text-xs"></i>
                     </button>
-                </div>
+                </div> --}}
             </div>
         </div>
 
