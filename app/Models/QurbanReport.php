@@ -36,9 +36,15 @@ class QurbanReport extends Model
         'pelaksanaan_masjid_sub',
         'pelaksanaan_lokasi_sholat',
         'pelaksanaan_lokasi_qurban',
+        // Pelaksanaan - Gambar
         'pelaksanaan_gambar1',
+        'pelaksanaan_caption1',  // TAMBAH
         'pelaksanaan_gambar2',
+        'pelaksanaan_caption2',  // TAMBAH
         'pelaksanaan_gambar3',
+        'pelaksanaan_caption3',  // TAMBAH
+        'pelaksanaan_gambar4',   // TAMBAH
+        'pelaksanaan_caption4',  // TAMBAH
         'dramatis1_title',
         'dramatis1_quote',
         'dramatis1_stat',
@@ -317,5 +323,132 @@ class QurbanReport extends Model
     public function scopeTahun($query, $tahun)
     {
         return $query->where('tahun_hijriah', $tahun);
+    }
+
+// app/Models/QurbanReport.php
+
+// Tambahkan di bagian ACCESSORS (setelah method yang sudah ada)
+
+    // ========== PEMOTONGAN RANGE HELPERS ==========
+    
+    /**
+     * Check if weight value is a range (contains '-')
+     */
+    public function isSapiBeratRange()
+    {
+        return str_contains($this->pemotongan_sapi_berat_kg, '-');
+    }
+    
+    public function isKambingBeratRange()
+    {
+        return str_contains($this->pemotongan_kambing_berat_kg, '-');
+    }
+    
+    /**
+     * Get min weight for sapi (if range) or single value
+     */
+    public function getSapiBeratMinAttribute()
+    {
+        if ($this->isSapiBeratRange()) {
+            return (int) explode('-', $this->pemotongan_sapi_berat_kg)[0];
+        }
+        return (int) $this->pemotongan_sapi_berat_kg;
+    }
+    
+    /**
+     * Get max weight for sapi (if range) or single value
+     */
+    public function getSapiBeratMaxAttribute()
+    {
+        if ($this->isSapiBeratRange()) {
+            return (int) explode('-', $this->pemotongan_sapi_berat_kg)[1];
+        }
+        return (int) $this->pemotongan_sapi_berat_kg;
+    }
+    
+    /**
+     * Get average weight for sapi (midpoint if range)
+     */
+    public function getSapiBeratRataAttribute()
+    {
+        if ($this->isSapiBeratRange()) {
+            $range = explode('-', $this->pemotongan_sapi_berat_kg);
+            return round(($range[0] + $range[1]) / 2);
+        }
+        return (int) $this->pemotongan_sapi_berat_kg;
+    }
+    
+    /**
+     * Get formatted sapi weight display
+     */
+    public function getSapiBeratDisplayAttribute()
+    {
+        if ($this->isSapiBeratRange()) {
+            return $this->pemotongan_sapi_berat_kg . ' kg/ekor (rata-rata ' . $this->sapi_berat_rata . ' kg)';
+        }
+        return '± ' . number_format($this->pemotongan_sapi_berat_kg) . ' kg/ekor';
+    }
+    
+    /**
+     * Get min weight for kambing (if range) or single value
+     */
+    public function getKambingBeratMinAttribute()
+    {
+        if ($this->isKambingBeratRange()) {
+            return (int) explode('-', $this->pemotongan_kambing_berat_kg)[0];
+        }
+        return (int) $this->pemotongan_kambing_berat_kg;
+    }
+    
+    /**
+     * Get max weight for kambing (if range) or single value
+     */
+    public function getKambingBeratMaxAttribute()
+    {
+        if ($this->isKambingBeratRange()) {
+            return (int) explode('-', $this->pemotongan_kambing_berat_kg)[1];
+        }
+        return (int) $this->pemotongan_kambing_berat_kg;
+    }
+    
+    /**
+     * Get average weight for kambing (midpoint if range)
+     */
+    public function getKambingBeratRataAttribute()
+    {
+        if ($this->isKambingBeratRange()) {
+            $range = explode('-', $this->pemotongan_kambing_berat_kg);
+            return round(($range[0] + $range[1]) / 2);
+        }
+        return (int) $this->pemotongan_kambing_berat_kg;
+    }
+    
+    /**
+     * Get formatted kambing weight display
+     */
+    public function getKambingBeratDisplayAttribute()
+    {
+        if ($this->isKambingBeratRange()) {
+            return $this->pemotongan_kambing_berat_kg . ' kg/ekor (rata-rata ' . $this->kambing_berat_rata . ' kg)';
+        }
+        return '± ' . number_format($this->pemotongan_kambing_berat_kg) . ' kg/ekor';
+    }
+    
+    /**
+     * Calculate total meat weight (sapi_total * avg_sapi_weight + kambing_total * avg_kambing_weight)
+     */
+    public function getTotalDagingPerkiraanAttribute()
+    {
+        $totalSapiWeight = $this->stat_hewan_sapi * $this->sapi_berat_rata;
+        $totalKambingWeight = $this->stat_hewan_kambing * $this->kambing_berat_rata;
+        return $totalSapiWeight + $totalKambingWeight;
+    }
+    
+    /**
+     * Get formatted total meat weight
+     */
+    public function getTotalDagingPerkiraanFormattedAttribute()
+    {
+        return number_format($this->total_daging_perkiraan) . ' kg';
     }
 }

@@ -260,18 +260,41 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/qurban/galeri/{id}/cover', [QurbanGalleryController::class, 'setCover'])->name('admin.qurban.galeri.cover');
 
         // ==================== LAPORAN QURBAN ====================
-        Route::resource('qurban/report', QurbanReportController::class)
-            ->names('admin.qurban.report')
-            ->except(['show']);
-        Route::post('qurban/report/{id}/clone', [QurbanReportController::class, 'clone'])
-            ->name('admin.qurban.report.clone');
-        Route::post('qurban/report/{id}/set-active', [QurbanReportController::class, 'setActive'])
-            ->name('admin.qurban.report.set-active');
-        Route::get('qurban/report/data', [QurbanReportController::class, 'data'])
-            ->name('admin.qurban.report.data');
-        
+
+        // INDEX (tampil semua data)
+        Route::get('qurban/report', [QurbanReportController::class, 'index'])->name('admin.qurban.report.index');
+
+        // CREATE (form tambah baru)
+        Route::get('qurban/report/create', [QurbanReportController::class, 'create'])->name('admin.qurban.report.create');
+
+        // STORE (simpan data baru)
+        Route::post('qurban/report', [QurbanReportController::class, 'store'])->name('admin.qurban.report.store');
+
+        // EDIT (form edit)
+        Route::get('qurban/report/{id}/edit', [QurbanReportController::class, 'edit'])->name('admin.qurban.report.edit');
+
+        // UPDATE (simpan perubahan)
+        Route::put('qurban/report/{id}', [QurbanReportController::class, 'update'])->name('admin.qurban.report.update');
+
+        // DESTROY (hapus)
+        Route::delete('qurban/report/{id}', [QurbanReportController::class, 'destroy'])->name('admin.qurban.report.destroy');
+
+        // CLONE
+        Route::get('qurban/report/{id}/clone', [QurbanReportController::class, 'clone'])->name('admin.qurban.report.clone');
+
+        // SET ACTIVE
+        Route::post('qurban/report/{id}/set-active', [QurbanReportController::class, 'setActive'])->name('admin.qurban.report.set-active');
+
+        // DATA (untuk datatable)
+        Route::get('qurban/report/data', [QurbanReportController::class, 'data'])->name('admin.qurban.report.data');
+
+        // GALLERY
         Route::post('qurban/report/{id}/upload-gallery', [QurbanReportController::class, 'uploadGallery'])->name('admin.qurban.report.upload-gallery');
         Route::post('qurban/report/{id}/remove-gallery', [QurbanReportController::class, 'removeGallery'])->name('admin.qurban.report.remove-gallery');
+
+        // REMOVE FIELD IMAGE
+        Route::post('qurban/report/{id}/remove-field-image', [QurbanReportController::class, 'removeFieldImage'])->name('admin.qurban.report.remove-field-image');
+        
         // Role
         Route::get('/role', [RoleController::class, 'index'])->name('admin.role');
         Route::get('/role/data', [RoleController::class, 'data'])->name('admin.role.data');

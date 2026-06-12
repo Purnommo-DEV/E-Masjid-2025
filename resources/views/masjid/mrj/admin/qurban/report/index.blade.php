@@ -95,7 +95,11 @@
                                 @if(!$report->is_active)
                                 <button onclick="setActive({{ $report->id }})" class="btn-action bg-green-50 text-green-700 hover:bg-green-100">Aktifkan</button>
                                 @endif
-                                <button onclick="cloneReport({{ $report->id }})" class="btn-action bg-purple-50 text-purple-700 hover:bg-purple-100">Clone</button>
+                                <a href="{{ route('admin.qurban.report.clone', $report->id) }}" 
+                                    class="btn-action bg-purple-50 text-purple-700 hover:bg-purple-100"
+                                    onclick="return confirm('Clone laporan {{ $report->tahun_hijriah }} ke tahun berikutnya?')">
+                                    <i class="fas fa-copy mr-1"></i> Clone
+                                </a>
                                 <button onclick="deleteReport({{ $report->id }}, '{{ $report->tahun_hijriah }}')" class="btn-action bg-red-50 text-red-700 hover:bg-red-100">Hapus</button>
                             </div>
                         </td>
@@ -116,21 +120,6 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-function cloneReport(id) {
-    Swal.fire({
-        title: 'Clone Laporan?',
-        text: 'Akan membuat laporan untuk tahun berikutnya dengan data yang sama (statistik akan direset).',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, Clone!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = '{{ url("admin/qurban/report") }}/' + id + '/clone';
-        }
-    });
-}
-
 function setActive(id) {
     Swal.fire({
         title: 'Aktifkan Laporan?',
@@ -149,26 +138,50 @@ function setActive(id) {
 function deleteReport(id, tahun) {
     Swal.fire({
         title: 'Hapus Laporan?',
-        html: `Apakah Anda yakin ingin menghapus laporan <strong>${tahun}</strong>?<br>Data yang dihapus tidak dapat dikembalikan!`,
-        icon: 'error',
+        html: `Apakah Anda yakin ingin menghapus laporan <strong>${tahun}</strong>?<br><br>Data yang dihapus tidak dapat dikembalikan!`,
+        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Ya, Hapus!',
         cancelButtonText: 'Batal',
         confirmButtonColor: '#dc2626'
     }).then((result) => {
         if (result.isConfirmed) {
-            $.ajax({
-                url: '{{ url("admin/qurban/report") }}/' + id,
-                type: 'DELETE',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function() {
-                    Swal.fire('Berhasil!', 'Laporan dihapus.', 'success').then(() => {
+            Swal.fire({
+                title: 'Menghapus...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Gunakan route helper yang benar
+            const url = `{{ url("admin/qurban/report") }}/${id}`;
+            
+            fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire('Berhasil!', 'Laporan berhasil dihapus.', 'success').then(() => {
                         location.reload();
                     });
-                },
-                error: function() {
-                    Swal.fire('Gagal!', 'Terjadi kesalahan.', 'error');
+                } else {
+                    Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error');
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire('Gagal!', 'Terjadi kesalahan: ' + error.message, 'error');
             });
         }
     });

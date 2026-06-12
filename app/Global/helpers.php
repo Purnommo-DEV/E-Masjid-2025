@@ -197,56 +197,110 @@ if (!function_exists('convert_to_webp')) {
         $sourcePath = $file->getPathname();
         $mimeType = $file->getMimeType();
         $fileSize = $file->getSize();
+        $extension = $file->getClientOriginalExtension();
+        
+        // Handle HEIC/HEIF format
+        if (strtolower($extension) === 'heic' || $mimeType === 'image/heic' || $mimeType === 'image/heif') {
+            // Cek apakah ImageMagick tersedia
+            if (extension_loaded('imagick')) {
+                try {
+                    $imagick = new \Imagick($sourcePath);
+                    $imagick->setImageFormat('webp');
+                    
+                    // Auto quality
+                    if ($quality === null) {
+                        if ($fileSize > 1.5 * 1024 * 1024) {
+                            $quality = 65;
+                        } elseif ($fileSize > 1 * 1024 * 1024) {
+                            $quality = 75;
+                        } else {
+                            $quality = 85;
+                        }
+                    }
+                    
+                    $imagick->setImageCompressionQuality($quality);
+                    $webpContent = $imagick->getImageBlob();
+                    $imagick->destroy();
+                    
+                    Log::info("Converted HEIC to WebP - Quality: {$quality}");
+                    return $webpContent;
+                    
+                } catch (\Exception $e) {
+                    Log::error("Imagick HEIC conversion failed: " . $e->getMessage());
+                    throw new \Exception("Gagal mengkonversi file HEIC. Pastikan ImageMagick support HEIC.");
+                }
+            } else {
+                throw new \Exception("Format HEIC tidak didukung. Silakan install Imagick atau konversi file ke JPG/PNG terlebih dahulu.");
+            }
+        }
         
         // Auto adjust quality untuk file < 2MB
         if ($quality === null) {
-            if ($fileSize > 1.5 * 1024 * 1024) {  // > 1.5MB
+            if ($fileSize > 1.5 * 1024 * 1024) {
                 $quality = 65;
-            } elseif ($fileSize > 1 * 1024 * 1024) { // > 1MB
+            } elseif ($fileSize > 1 * 1024 * 1024) {
                 $quality = 75;
-            } elseif ($fileSize > 500 * 1024) {     // > 500KB
+            } elseif ($fileSize > 500 * 1024) {
                 $quality = 80;
-            } else {                                 // <= 500KB
+            } else {
                 $quality = 85;
             }
         }
 
-        Log::info("Convert to WebP - Size: " . round($fileSize / 1024, 2) . "KB, Quality: {$quality}");
+        Log::info("Convert to WebP - Size: " . round($fileSize / 1024, 2) . "KB, Quality: {$quality}, Type: {$mimeType}");
 
-        switch ($mimeType) {
-            case 'image/jpeg':
-            case 'image/jpg':
-                $image = imagecreatefromjpeg($sourcePath);
-                break;
-            case 'image/png':
-                $image = imagecreatefrompng($sourcePath);
-                imagepalettetotruecolor($image);
-                imagealphablending($image, true);
-                imagesavealpha($image, true);
-                break;
-            case 'image/gif':
-                $image = imagecreatefromgif($sourcePath);
-                break;
-            case 'image/webp':
-                return file_get_contents($sourcePath);
-            default:
-                return file_get_contents($sourcePath);
-        }
+        // Proses file non-HEIC
+        $image = null;
+        
+        try {
+            switch ($mimeType) {
+                case 'image/jpeg':
+                case 'image/jpg':
+                    $image = imagecreatefromjpeg($sourcePath);
+                    break;
+                case 'image/png':
+                    $image = imagecreatefrompng($sourcePath);
+                    if ($image) {
+                        imagepalettetotruecolor($image);
+                        imagealphablending($image, true);
+                        imagesavealpha($image, true);
+                    }
+                    break;
+                case 'image/gif':
+                    $image = imagecreatefromgif($sourcePath);
+                    break;
+                case 'image/webp':
+                    $image = imagecreatefromwebp($sourcePath);
+                    break;
+                default:
+                    // Coba dengan Imagick sebagai fallback
+                    if (extension_loaded('imagick')) {
+                        $imagick = new \Imagick($sourcePath);
+                        $imagick->setImageFormat('webp');
+                        $webpContent = $imagick->getImageBlob();
+                        $imagick->destroy();
+                        return $webpContent;
+                    }
+                    return file_get_contents($sourcePath);
+            }
 
-        if (!$image) {
+            if (!$image) {
+                return file_get_contents($sourcePath);
+            }
+
+            ob_start();
+            imagewebp($image, null, $quality);
+            $webpContent = ob_get_clean();
+            imagedestroy($image);
+
+            return $webpContent;
+            
+        } catch (\Exception $e) {
+            Log::error("Image conversion failed: " . $e->getMessage());
             return file_get_contents($sourcePath);
         }
-
-        ob_start();
-        imagewebp($image, null, $quality);
-        $webpContent = ob_get_clean();
-        imagedestroy($image);
-
-        return $webpContent;
     }
 }
-
-// app/helpers.php
 
 if (!function_exists('upload_image')) {
     function upload_image($file, string $type, ?string $oldPath = null, bool $convertToWebp = true, ?int $quality = null): string
@@ -385,10 +439,36 @@ if (!function_exists('upload_image_optimized')) {
 if (!function_exists('delete_image')) {
     function delete_image(?string $path): bool
     {
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if (empty($path)) {
+            return false;
+        }
+        
+        // Bersihkan path dari prefix /storage/ atau storage/
+        $cleanPath = $path;
+        
+        // Hapus prefix /storage/ jika ada
+        $cleanPath = preg_replace('#^/storage/#', '', $cleanPath);
+        $cleanPath = preg_replace('#^storage/#', '', $cleanPath);
+        
+        // Hapus domain jika ada (misal http://localhost/storage/...)
+        if (filter_var($cleanPath, FILTER_VALIDATE_URL)) {
+            $parsed = parse_url($cleanPath);
+            $cleanPath = $parsed['path'] ?? '';
+            $cleanPath = preg_replace('#^/storage/#', '', $cleanPath);
+        }
+        
+        if (empty($cleanPath)) {
+            return false;
+        }
+        
+        // Cek dan hapus file
+        if (Storage::disk('public')->exists($cleanPath)) {
+            Storage::disk('public')->delete($cleanPath);
+            \Illuminate\Support\Facades\Log::info('Image deleted: ' . $cleanPath);
             return true;
         }
+        
+        \Illuminate\Support\Facades\Log::warning('Image not found: ' . $cleanPath);
         return false;
     }
 }

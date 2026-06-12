@@ -104,9 +104,13 @@ class QurbanReportController extends Controller
     
     public function destroy($id)
     {
-        $this->repo->delete($id);
-        return redirect()->route('admin.qurban.report.index')
-            ->with('success', 'Laporan berhasil dihapus!');
+        try {
+            $this->repo->delete($id);
+            // Kembalikan response JSON untuk AJAX
+            return response()->json(['success' => true, 'message' => 'Laporan berhasil dihapus!']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
     
     public function clone($id)
@@ -203,6 +207,38 @@ class QurbanReportController extends Controller
             $report->save();
             
             return response()->json(['success' => true, 'message' => 'Foto berhasil dihapus']);
+            
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    public function removeFieldImage(Request $request, $id)
+    {
+        try {
+            $report = $this->repo->find($id);
+            $field = $request->input('field');
+            
+            // Validasi field yang diizinkan
+            $allowedFields = [
+                'pelaksanaan_gambar1', 'pelaksanaan_gambar2', 'pelaksanaan_gambar3', 'pelaksanaan_gambar4',
+                'dramatis1_image', 'dramatis2_image', 'dramatis3_image', 'qr_image'
+            ];
+            
+            if (!in_array($field, $allowedFields)) {
+                return response()->json(['success' => false, 'message' => 'Field tidak valid']);
+            }
+            
+            // Hapus file fisik
+            if ($report->$field) {
+                delete_image($report->$field);
+            }
+            
+            // Set field ke null
+            $report->$field = null;
+            $report->save();
+            
+            return response()->json(['success' => true, 'message' => 'Gambar berhasil dihapus']);
             
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()]);

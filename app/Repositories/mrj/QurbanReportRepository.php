@@ -59,7 +59,7 @@ class QurbanReportRepository implements QurbanReportRepositoryInterface
             
             // Handle file uploads
             $imageFields = [
-                'pelaksanaan_gambar1', 'pelaksanaan_gambar2', 'pelaksanaan_gambar3',
+                'pelaksanaan_gambar1', 'pelaksanaan_gambar2', 'pelaksanaan_gambar3', 'pelaksanaan_gambar4',  // tambah gambar4
                 'dramatis1_image', 'dramatis2_image', 'dramatis3_image', 'qr_image'
             ];
             
@@ -112,7 +112,7 @@ class QurbanReportRepository implements QurbanReportRepositoryInterface
             
             // Delete all images
             $imageFields = [
-                'pelaksanaan_gambar1', 'pelaksanaan_gambar2', 'pelaksanaan_gambar3',
+                'pelaksanaan_gambar1', 'pelaksanaan_gambar2', 'pelaksanaan_gambar3', 'pelaksanaan_gambar4',  // tambah gambar4
                 'dramatis1_image', 'dramatis2_image', 'dramatis3_image', 'qr_image'
             ];
             
@@ -147,7 +147,7 @@ class QurbanReportRepository implements QurbanReportRepositoryInterface
             $oldReport = $this->find($id);
             
             $year = (int) filter_var($oldReport->tahun_hijriah, FILTER_SANITIZE_NUMBER_INT);
-            $newYear = ($year + 1) . ' H';
+            $newYear = ($year + 1) . 'H';
             $newMasehi = (intval($oldReport->tahun_masehi) + 1) . '';
             
             $newReport = $oldReport->replicate();
@@ -164,6 +164,25 @@ class QurbanReportRepository implements QurbanReportRepositoryInterface
             $newReport->stat_paket_daging = 0;
             $newReport->stat_mustahik = 0;
             $newReport->stat_daging_kg = 0;
+            
+            // Reset semua kolom gambar (gunakan array untuk memudahkan)
+            $imageFields = [
+                'pelaksanaan_gambar1', 'pelaksanaan_gambar2', 'pelaksanaan_gambar3', 'pelaksanaan_gambar4',
+                'pelaksanaan_caption1', 'pelaksanaan_caption2', 'pelaksanaan_caption3', 'pelaksanaan_caption4',
+                'dramatis1_image', 'dramatis2_image', 'dramatis3_image',
+                'qr_image', 'qr_link',
+                'gallery_images', 'additional_images',
+                'keuangan_penerimaan_peserta', 'keuangan_penerimaan_infaq', 'keuangan_pengeluaran',
+                'rings', 'distribusi'
+            ];
+            
+            foreach ($imageFields as $field) {
+                $newReport->$field = null;
+            }
+            
+            // Gallery dan additional_images harus array kosong
+            $newReport->gallery_images = [];
+            $newReport->additional_images = [];
             
             $newReport->save();
             
