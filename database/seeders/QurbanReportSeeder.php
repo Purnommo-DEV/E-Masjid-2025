@@ -138,7 +138,7 @@ class QurbanReportSeeder extends Seeder
         //     ]
         // );
 
-        // ========== LAPORAN TAHUN 1446H (AKTIF) ==========
+        // ========== LAPORAN TAHUN 1446 H ==========
         QurbanReport::updateOrCreate(
             ['masjid_code' => 'mrj', 'tahun_hijriah' => '1446 H'],
             [
@@ -197,28 +197,30 @@ class QurbanReportSeeder extends Seeder
                 'pemotongan_sapi_berat_kg' => '350',
                 'pemotongan_kambing_berat_kg' => '35',
                 
-                // Keuangan berdasarkan gambar
+                // Keuangan berdasarkan data yang Anda berikan
                 'keuangan_penerimaan_peserta' => [
-                    ['label' => 'Uang qurban untuk 8 ekor sapi', 'amount' => 280000000],
-                    ['label' => 'Uang qurban untuk 31 ekor kambing', 'amount' => 62000000],
-                    ['label' => 'Uang pemotongan 3 ekor sapi (beli sendiri)', 'amount' => 1500000],
-                    ['label' => 'Uang pemotongan 9 ekor kambing (beli sendiri)', 'amount' => 900000],
+                    ['label' => 'Uang qurban dari peserta qurban untuk 8 ekor sapi', 'amount' => 196680000],
+                    ['label' => 'Uang qurban dari peserta qurban untuk 31 ekor kambing', 'amount' => 113200000],
+                    ['label' => 'Uang pemotongan hewan qurban untuk 3 ekor sapi yang dibeli sendiri oleh peserta', 'amount' => 5400000],
+                    ['label' => 'Uang pemotongan hewan qurban untuk 9 ekor kambing yang dibeli sendiri oleh peserta', 'amount' => 2700000],
                 ],
                 'keuangan_penerimaan_infaq' => [
-                    ['label' => 'Infaq sholat Ied', 'amount' => 18750000],
+                    ['label' => 'Penerimaan uang infaq Sholat Ied', 'amount' => 24219000],
                 ],
                 'keuangan_pengeluaran' => [
-                    ['label' => 'Pembayaran ke penjual sapi (8 ekor ~2.804 kg)', 'amount' => 280000000],
-                    ['label' => 'Pembayaran ke penjual kambing (31 ekor)', 'amount' => 62000000],
-                    ['label' => 'Biaya pemotongan hewan qurban', 'amount' => 4500000],
-                    ['label' => 'Penyewaan sound system sholat Ied', 'amount' => 3500000],
-                    ['label' => 'Biaya penyelenggaraan sholat Ied (honor, khotib, imam, keamanan)', 'amount' => 5500000],
-                    ['label' => 'Biaya survei pengadaan hewan qurban', 'amount' => 1200000],
-                    ['label' => 'Biaya spanduk, flyer, banner pengadaan hewan qurban', 'amount' => 1850000],
-                    ['label' => 'Biaya spanduk kegiatan sholat Ied', 'amount' => 800000],
-                    ['label' => 'Biaya konsumsi (pemotongan, distribusi, makan bersama)', 'amount' => 3200000],
+                    ['label' => 'Pembayaran ke penjual sapi (8 ekor sapi dengan berat total ± 2.804 kg)', 'amount' => 176652000],
+                    ['label' => 'Pembayaran ke penjual kambing (31 ekor dengan berat rata-rata 35 kg per ekor)', 'amount' => 106950000],
+                    ['label' => 'Biaya pemotongan hewan qurban', 'amount' => 16963000],
+                    ['label' => 'Penyewaan sound system untuk Sholat Ied', 'amount' => 3500000],
+                    ['label' => 'Biaya penyelenggaraan Sholat Ied (honor petugas penyiapan tempat sholat dan keamanan, khotib dan imam)', 'amount' => 3700000],
+                    ['label' => 'Pembelian perlengkapan pencacahan dan pendistribusian daging hewan qurban', 'amount' => 1708228],
+                    ['label' => 'Biaya survei pengadaan hewan qurban', 'amount' => 625000],
+                    ['label' => 'Biaya pembuatan spanduk, flyer dan banner untuk pengadaan hewan qurban', 'amount' => 523000],
+                    ['label' => 'Biaya pembuatan spanduk untuk kegiatan Sholat Idul Adha', 'amount' => 355000],
+                    ['label' => 'Biaya konsumsi untuk pemotongan dan pendistribusian hewan qurban serta makan bersama jamaah', 'amount' => 4266000],
+                    ['label' => 'Biaya konsumsi untuk kegiatan Sholat Idul Adha', 'amount' => 1321000],
                 ],
-                'keuangan_catatan' => null,
+                'keuangan_catatan' => 'Saldo kas dimasukkan ke kas DKM sebesar Rp 25.635.772',
                 
                 // Rings
                 'rings' => [
@@ -266,7 +268,7 @@ class QurbanReportSeeder extends Seeder
                 'footer_whatsapp' => 'https://whatsapp.com/channel/0029VbCGqiT60eBgsDDNIV2s',
                 'footer_email' => 'dkmmrjtce@gmail.com',
                 'footer_quote' => '"Sesungguhnya shalatku, ibadahku, hidupku dan matiku hanyalah untuk Allah, Tuhan semesta alam." — QS. Al-An\'am: 162',
-                'catatan_keterangan' => 'Laporan resmi Idul Adha 1446 H',
+                'catatan_keterangan' => 'Laporan resmi Idul Adha 1446 H. Saldo kas dimasukkan ke kas DKM sebesar Rp 25.635.772',
             ]
         );
     }
