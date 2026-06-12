@@ -710,7 +710,7 @@ class QurbanGuestController extends Controller
         
         // Hero Data dengan null coalescing
         $heroData = [
-            'title' => $report->hero_title ?? 'Laporan Qurban',
+            'title' => $report->hero_title ?? 'Laporan Idul Adha',
             'subtitle' => $report->hero_subtitle ?? ($report->tahun_hijriah ?? '1447 H'),
             'badge' => isset($report->hero_badge) ? str_replace('{TAHUN}', $report->tahun_hijriah ?? '1447 H', $report->hero_badge) : '✦ Qurban ✦',
             'masjid' => $report->hero_masjid ?? 'Masjid',

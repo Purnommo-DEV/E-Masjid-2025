@@ -11,7 +11,7 @@
     {{-- TITLE --}}
     <title>
         @hasSection('title')
-            @yield('title') | Masjid Raudhotul Jannah
+            @yield('title') | Masjid Raudhotul Jannah TCE
         @else
             Masjid Raudhotul Jannah Taman Cipulir Estate
         @endif
