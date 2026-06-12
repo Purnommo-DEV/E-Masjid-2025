@@ -28,10 +28,8 @@
     {{-- FAVICON --}}
     <link rel="icon" type="image/png" href="{{ asset('/pwa/mrj-logo.png') }}">
 
-    {{-- VITE --}}
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
     @include('sweetalert::alert')
+    @include(guest_layout('_head'))
     @stack('head')
 
     <!-- GLOBAL SCROLL FIX -->

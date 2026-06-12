@@ -844,7 +844,7 @@
         </section>
 
         {{-- SECTION QUOTE HARI INI - AUTO ROTATE DENGAN ANIMASI --}}
-        <section class="py-10">
+        {{-- <section class="py-10">
             <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 <div class="rounded-3xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 text-white px-5 sm:px-6 py-6 sm:py-8 shadow-xl relative overflow-hidden">
                     <p class="text-xs uppercase tracking-widest text-emerald-100/90 mb-3">Pengingat Harian</p>
@@ -878,7 +878,7 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </section> --}}
 
         {{-- === BERITA & PENGUMUMAN === --}}
         <section id="berita" class="py-16 bg-gradient-to-br from-emerald-50 via-white to-sky-50">
@@ -1279,7 +1279,7 @@
                                             onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 20px 30px -10px rgba(0, 0, 0, 0.15)'"
                                             onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 25px -5px rgba(0, 0, 0, 0.1)'"
                                             onclick="document.getElementById('qris-modal').showModal()">
-                                            @if($profil->qris_url)
+                                            @if(!empty($profil?->qris_url))
                                                 <img src="{{ $profil->qris_url }}" 
                                                     loading="lazy" 
                                                     alt="QRIS Donasi" 
@@ -1296,7 +1296,7 @@
                                 </div>
                                 
                                 <div class="text-center mt-4">
-                                    @if($profil->qris_url)
+                                    @if(!empty($profil?->qris_url))
                                         <a href="{{ $profil->qris_url }}" 
                                         download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
                                         class="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 transition-all hover:gap-2">
@@ -1345,36 +1345,6 @@
                     </div>
                 </div>
 
-                <!-- Quote Infaq - lebih elegan -->
-                <div class="w-full mt-10">
-                    <div class="relative group">
-                        <div class="absolute inset-0 bg-gradient-to-r from-emerald-400/20 to-teal-400/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                        <div class="relative bg-gradient-to-r from-emerald-600/5 to-teal-600/5 backdrop-blur-sm rounded-2xl p-6 text-center border border-emerald-200/30">
-                            <div class="absolute top-3 left-3 text-emerald-300/50 text-4xl">“</div>
-                            <div class="absolute bottom-3 right-3 text-emerald-300/50 text-4xl">”</div>
-                            @php
-                                $infaqQuotes = [
-                                    ['text' => '“Perumpamaan orang-orang yang menafkahkan hartanya di jalan Allah adalah seperti sebutir benih yang menumbuhkan tujuh tangkai, pada tiap-tiap tangkai seratus biji...”', 'sumber' => 'QS. Al-Baqarah: 261'],
-                                    ['text' => '“Sedekah itu tidak mengurangi harta.”', 'sumber' => 'HR. Muslim'],
-                                    ['text' => '“Janganlah kalian takut miskin karena bersedekah.”', 'sumber' => 'HR. Tirmidzi'],
-                                    ['text' => '“Infakkanlah (hartamu) di jalan Allah, dan janganlah kamu jatuhkan dirimu sendiri ke dalam kebinasaan...”', 'sumber' => 'QS. Al-Baqarah: 195'],
-                                ];
-                                $randomInfaq = $infaqQuotes[array_rand($infaqQuotes)];
-                            @endphp
-                            <p class="text-sm sm:text-base italic text-emerald-800 mb-3 leading-relaxed">
-                                {{ $randomInfaq['text'] }}
-                            </p>
-                            <div class="flex items-center justify-center gap-2">
-                                <div class="h-px w-8 bg-emerald-300"></div>
-                                <p class="text-xs text-slate-500 font-medium tracking-wide">
-                                    — {{ $randomInfaq['sumber'] }}
-                                </p>
-                                <div class="h-px w-8 bg-emerald-300"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Doa Penutup -->
                 <div class="w-full mt-6">
                     <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center backdrop-blur-sm">
@@ -1401,7 +1371,7 @@
                     </p>
                 </div>
                 <div class="p-6 bg-white">
-                    @if($profil->qris_url)
+                    @if(!empty($profil?->qris_url))
                         <img src="{{ $profil->qris_url }}" 
                             alt="QRIS Donasi" 
                             class="w-full h-auto max-h-[400px] object-contain mx-auto rounded-xl"
@@ -1414,7 +1384,7 @@
                     <form method="dialog">
                         <button class="btn btn-outline text-emerald-700 px-6 py-2 rounded-full text-sm">Tutup</button>
                     </form>
-                    @if($profil->qris_url)
+                    @if(!empty($profil?->qris_url))
                         <a href="{{ $profil->qris_url }}" 
                         download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
                         class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full text-sm">

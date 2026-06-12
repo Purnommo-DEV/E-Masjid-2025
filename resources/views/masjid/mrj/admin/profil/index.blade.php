@@ -113,11 +113,13 @@
                                         <div class="px-3 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700 text-sm">Pilih logo</div>
                                     </label>
                                     <div id="logoPreview" class="w-20 h-20 rounded-xl overflow-hidden border bg-white shadow-sm">
-                                        @if($profil->logo_url)
-                                            <img src="{{ $profil->logo_url }}" alt="logo" class="w-full h-full object-cover">
+                                        @isset($profil->logo_url)
+                                            <img src="{{ $profil->logo_url }}" alt="Logo" class="w-full h-full object-cover">
                                         @else
-                                            <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada</div>
-                                        @endif
+                                            <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                                                Belum ada
+                                            </div>
+                                        @endisset
                                     </div>
                                 </div>
                                 <p class="mt-1 text-xs text-gray-500">Format: JPG/PNG/WEBP - Max 2MB</p>
@@ -132,10 +134,12 @@
                                         <div class="px-3 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700 text-sm">Pilih file</div>
                                     </label>
                                     <div id="strukturPreview" class="w-32 rounded-xl overflow-hidden border bg-white shadow-sm">
-                                        @if($profil->struktur_url)
-                                            <img src="{{ $profil->struktur_url }}" alt="struktur" class="w-full h-full object-cover">
+                                        @if(!empty($profil->struktur_url))
+                                            <img src="{{ Storage::url($profil->struktur_url) }}" alt="Struktur Organisasi" class="w-full h-full object-cover">
                                         @else
-                                            <div class="w-full h-full flex items-center justify-center text-xs text-gray-400 px-2">Belum ada</div>
+                                            <div class="w-full h-full flex items-center justify-center text-xs text-gray-400 px-2">
+                                                Belum ada
+                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -177,10 +181,16 @@
                                             <div class="px-4 py-2 border border-dashed rounded-lg bg-emerald-50 text-emerald-700">Pilih QRIS</div>
                                         </label>
                                         <div id="qrisPreview" class="w-40 h-40 rounded-xl overflow-hidden border bg-white shadow-sm">
-                                            @if($profil->qris_url)
-                                                <img src="{{ $profil->qris_url }}" alt="QRIS" class="w-full h-full object-contain">
+                                            @if(!empty($profil->qris_url))
+                                                <img
+                                                    src="{{ $profil->qris_url }}"
+                                                    alt="QRIS"
+                                                    class="w-full h-full object-contain"
+                                                >
                                             @else
-                                                <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">Belum ada QRIS</div>
+                                                <div class="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                                                    Belum ada QRIS
+                                                </div>
                                             @endif
                                         </div>
                                     </div>
@@ -196,7 +206,7 @@
                         </div>
 
                         <div class="flex items-center justify-between mt-2">
-                            <div class="text-sm text-gray-500">Terakhir diperbarui: <span class="font-medium text-emerald-700">{{ optional($profil->updated_at)->diffForHumans() ?? '-' }}</span></div>
+                            <div class="text-sm text-gray-500">Terakhir diperbarui: <span class="font-medium text-emerald-700">{{ optional(optional($profil)->updated_at)->diffForHumans() ?? '-' }}</span></div>
                             <div class="flex gap-2">
                                 <button type="button" id="resetBtn" class="px-4 py-2 rounded-md border border-gray-200 text-sm">Reset</button>
                                 <button type="submit" id="saveBtn" class="px-6 py-2 rounded-md bg-emerald-700 hover:bg-emerald-1000 text-white font-semibold shadow">
