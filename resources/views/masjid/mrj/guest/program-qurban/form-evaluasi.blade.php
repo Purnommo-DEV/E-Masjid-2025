@@ -5,7 +5,36 @@
 @push('head')
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Evaluasi Qurban {{ $tahun ?? '1447 H' }} - Masjid Raudhatul Jannah</title>
+
+    <!-- SEO Meta Tags -->
+    <title>Kritik, Saran, dan Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah</title>
+    <meta name="description" content="Berikan kritik, saran, dan evaluasi untuk pelaksanaan qurban {{ $data['subtitle'] ?? '1447 H' }} di Masjid Raudhatul Jannah Taman Cipulir Estate. Partisipasi Anda untuk perbaikan layanan qurban ke depan.">
+    <meta name="keywords" content="evaluasi qurban, kritik qurban, saran qurban, masjid raudhatul jannah, qurban 1447 H, idul adha, shohibul qurban, TCE">
+    <meta name="author" content="Masjid Raudhatul Jannah TCE">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Indonesian">
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah">
+    <meta property="og:description" content="Berikan saran dan masukan untuk pelaksanaan qurban di Masjid Raudhatul Jannah TCE. Survei hanya 5 menit!">
+    <meta property="og:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="id_ID">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah">
+    <meta name="twitter:description" content="Berikan saran dan masukan untuk pelaksanaan qurban di Masjid Raudhatul Jannah TCE.">
+    <meta name="twitter:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ url()->current() }}">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
 
@@ -385,11 +414,17 @@
             
             <!-- Header -->
             <div class="bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 px-5 py-6 sm:py-8 text-center relative overflow-hidden">
+                @if($profil->logo_url ?? false)
+                <div class="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none">
+                    <img src="{{ $profil->logo_url }}" alt="Logo Masjid" class="w-32 h-32 sm:w-48 sm:h-48 object-contain opacity-30">
+                </div>
+                @else
                 <div class="absolute inset-0 opacity-5">
                     <svg class="w-full h-full" xmlns="http://www.w3.org/2000/svg" patternUnits="userSpaceOnUse" width="40" height="40">
                         <circle cx="20" cy="20" r="2" fill="white"/>
                     </svg>
                 </div>
+                @endif
                 <div class="relative">
                     <div class="inline-flex items-center justify-center bg-white/20 rounded-full p-3 mb-3 backdrop-blur-sm">
                         <span class="text-3xl sm:text-4xl">🕌</span>
