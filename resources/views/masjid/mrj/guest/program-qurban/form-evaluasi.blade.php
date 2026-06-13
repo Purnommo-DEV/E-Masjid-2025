@@ -263,6 +263,13 @@
             background: white;
         }
         
+        .textarea-informasi {
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 90px;
+            background: white;
+        }
+        
         /* Error border */
         .is-invalid {
             border-color: #ef4444 !important;
@@ -518,7 +525,7 @@
                             Masukan untuk penyebaran informasi qurban
                         </label>
                         <textarea name="masukan_penyebaran_informasi" rows="3" 
-                            class="input-modern w-full px-4 py-2.5 rounded-lg bg-white text-black shadow-sm" 
+                            class="input-modern w-full px-3 py-3 rounded-lg bg-white text-black shadow-sm textarea-informasi" 
                             placeholder="Contoh: Apakah informasi sudah mudah diakses? Media apa yang perlu ditambahkan? Apakah jadwal sosialisasi sudah tepat?..."></textarea>
                     </div>
                 </div>
