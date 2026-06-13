@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BeritaController;
 use App\Http\Controllers\Admin\DanaTerikatController;
 use App\Http\Controllers\Admin\DanaTerikatReferensiController;
+use App\Http\Controllers\Admin\EvaluasiQurbanController;
 use App\Http\Controllers\Admin\GaleriController;
 use App\Http\Controllers\Admin\JurnalController;
 use App\Http\Controllers\Admin\KategoriController;
@@ -26,14 +27,15 @@ use App\Http\Controllers\Admin\Qurban\QurbanReportController;
 use App\Http\Controllers\Admin\Qurban\QurbanSettingController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SaldoAwalController;
-use App\Http\Controllers\Admin\SlideMotivasiController;
 
+use App\Http\Controllers\Admin\SlideMotivasiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZakatController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
+use App\Http\Controllers\User\EvaluasiQurbanGuestController;
 use App\Http\Controllers\User\ExcelYatimDhuafaController;
 use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\JamaahGuestController;
@@ -43,6 +45,8 @@ use App\Http\Controllers\User\ProgramRamadhanGuestController;
 use App\Http\Controllers\User\QurbanGuestController;
 use App\Http\Controllers\User\SaranController;
 use Illuminate\Support\Facades\Route;
+
+
 
 
 
@@ -126,6 +130,9 @@ Route::get('qurban/paket/{id}/detail', [QurbanGuestController::class, 'getPaketD
 // Route::get('qurban/laporan', [QurbanGuestController::class, 'laporan'])->name('qurban.laporan');
 
 Route::get('qurban/laporan/{tahun?}', [QurbanGuestController::class, 'laporan'])->name('qurban.laporan');
+
+Route::get('/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'index'])->name('evaluasi-qurban.guest.index');
+Route::post('/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'store'])->name('evaluasi-qurban.guest.store');
 
 Route::get('acara', [AcaraGuestController::class, 'index'])->name('acara.index');
 Route::get('acara-show/{slug}', [AcaraGuestController::class, 'show'])->name('acara.show');
@@ -295,6 +302,22 @@ Route::middleware(['auth'])->group(function () {
         // REMOVE FIELD IMAGE
         Route::post('qurban/report/{id}/remove-field-image', [QurbanReportController::class, 'removeFieldImage'])->name('admin.qurban.report.remove-field-image');
         
+
+        // EVALUASI QURBAN
+        // DataTables endpoint
+        Route::get('/evaluasi-qurban/data', [EvaluasiQurbanController::class, 'data'])->name('admin.evaluasi-qurban.data');
+        
+        // Statistik
+        Route::get('/evaluasi-qurban/statistik', [EvaluasiQurbanController::class, 'statistik'])->name('admin.evaluasi-qurban.statistik');
+        
+        // CRUD
+        Route::get('/evaluasi-qurban', [EvaluasiQurbanController::class, 'index'])->name('admin.evaluasi-qurban.index');
+        Route::get('/evaluasi-qurban/{id}', [EvaluasiQurbanController::class, 'show'])->name('admin.evaluasi-qurban.show');
+        Route::delete('/evaluasi-qurban/{id}', [EvaluasiQurbanController::class, 'destroy'])->name('admin.evaluasi-qurban.destroy');
+        
+        // Export (opsional)
+        Route::get('/evaluasi-qurban/export/excel', [EvaluasiQurbanController::class, 'export'])->name('admin.evaluasi-qurban.export');
+
         // Role
         Route::get('/role', [RoleController::class, 'index'])->name('admin.role');
         Route::get('/role/data', [RoleController::class, 'data'])->name('admin.role.data');
