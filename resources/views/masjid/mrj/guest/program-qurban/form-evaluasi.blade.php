@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
 
     <!-- SEO Meta Tags -->
-    <title>Kritik, Saran, dan Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah</title>
+    <title>Kritik, Saran, dan Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah TCE</title>
     <meta name="description" content="Berikan kritik, saran, dan evaluasi untuk pelaksanaan qurban {{ $data['subtitle'] ?? '1447 H' }} di Masjid Raudhatul Jannah Taman Cipulir Estate. Partisipasi Anda untuk perbaikan layanan qurban ke depan.">
     <meta name="keywords" content="evaluasi qurban, kritik qurban, saran qurban, masjid raudhatul jannah, qurban 1447 H, idul adha, shohibul qurban, TCE">
     <meta name="author" content="Masjid Raudhatul Jannah TCE">
@@ -17,7 +17,7 @@
     <!-- Open Graph / Facebook / WhatsApp -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:title" content="Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah">
+    <meta property="og:title" content="Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah TCE">
     <meta property="og:description" content="Berikan saran dan masukan untuk pelaksanaan qurban di Masjid Raudhatul Jannah TCE. Survei hanya 5 menit!">
     <meta property="og:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
     <meta property="og:image:width" content="1200">
@@ -26,7 +26,7 @@
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah">
+    <meta name="twitter:title" content="Evaluasi Qurban {{ $data['subtitle'] ?? '1447 H' }} - Masjid Raudhatul Jannah TCE">
     <meta name="twitter:description" content="Berikan saran dan masukan untuk pelaksanaan qurban di Masjid Raudhatul Jannah TCE.">
     <meta name="twitter:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
 
