@@ -3,6 +3,34 @@
 @section('title', 'Laporan Idul Adha ' . $heroData['subtitle'])
 
 @push('head')
+    <!-- Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Laporan resmi pelaksanaan Idul Adha {{ $heroData['subtitle'] }} di {{ $heroData['masjid'] }}. Total {{ $stats['hewan']['total'] }} hewan qurban, {{ number_format($stats['paket']) }} paket daging, dan {{ number_format($stats['mustahik']) }} penerima manfaat.">
+    <meta name="keywords" content="Laporan Qurban, Idul Adha {{ $heroData['subtitle'] }}, Qurban {{ $heroData['subtitle'] }}, Masjid Raudhatul Jannah, Hewan Qurban, Distribusi Daging Qurban">
+    <meta name="author" content="{{ $heroData['masjid'] }}">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="Laporan Idul Adha {{ $heroData['subtitle'] }} | {{ $heroData['masjid'] }}">
+    <meta property="og:description" content="Laporan resmi pelaksanaan Idul Adha {{ $heroData['subtitle'] }}. Total {{ $stats['hewan']['total'] }} hewan qurban, {{ number_format($stats['paket']) }} paket daging, dan {{ number_format($stats['mustahik']) }} penerima manfaat.">
+    <meta property="og:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
+    <meta property="og:image:alt" content="Laporan Qurban {{ $heroData['subtitle'] }} {{ $heroData['masjid'] }}">
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:site_name" content="{{ $heroData['masjid'] }}">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url()->current() }}">
+    <meta name="twitter:title" content="Laporan Idul Adha {{ $heroData['subtitle'] }} | {{ $heroData['masjid'] }}">
+    <meta name="twitter:description" content="Laporan resmi pelaksanaan Idul Adha {{ $heroData['subtitle'] }}. Total {{ $stats['hewan']['total'] }} hewan qurban, {{ number_format($stats['paket']) }} paket daging, dan {{ number_format($stats['mustahik']) }} penerima manfaat.">
+    <meta name="twitter:image" content="{{ $profil->logo_url ?? asset('assets/logo-masjid.png') }}">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ url()->current() }}">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
