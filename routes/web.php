@@ -35,6 +35,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
+use App\Http\Controllers\User\DokumentasiEvaluasiController;
 use App\Http\Controllers\User\EvaluasiQurbanGuestController;
 use App\Http\Controllers\User\ExcelYatimDhuafaController;
 use App\Http\Controllers\User\HomeController;
@@ -45,6 +46,7 @@ use App\Http\Controllers\User\ProgramRamadhanGuestController;
 use App\Http\Controllers\User\QurbanGuestController;
 use App\Http\Controllers\User\SaranController;
 use Illuminate\Support\Facades\Route;
+
 
 
 
@@ -127,12 +129,88 @@ Route::post('qurban/register', [QurbanGuestController::class, 'register'])->name
 Route::get('qurban/thankyou/{kode?}', [QurbanGuestController::class, 'thankyou'])->name('qurban.thankyou');
 Route::get('qurban/check-stock', [QurbanGuestController::class, 'checkStock'])->name('qurban.check.stock');
 Route::get('qurban/paket/{id}/detail', [QurbanGuestController::class, 'getPaketDetail'])->name('qurban.paket.detail');
-// Route::get('qurban/laporan', [QurbanGuestController::class, 'laporan'])->name('qurban.laporan');
 
 Route::get('qurban/laporan/{tahun?}', [QurbanGuestController::class, 'laporan'])->name('qurban.laporan');
 
 Route::get('/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'index'])->name('evaluasi-qurban.guest.index');
 Route::post('/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'store'])->name('evaluasi-qurban.guest.store');
+
+Route::get('/dokumentasi-evaluasi/{tahun?}', [DokumentasiEvaluasiController::class, 'index'])->name('guest.dokumentasi-evaluasi');
+
+// ==================== ROUTE PUBLIK (LIHAT DATA) ====================
+Route::prefix('guest')->group(function () {
+    Route::get('/data/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'evaluasi'])->name('guest.evaluasi-qurban.index');
+    Route::get('/evaluasi-qurban/data', [EvaluasiQurbanGuestController::class, 'data'])->name('guest.evaluasi-qurban.data');
+    Route::get('/evaluasi-qurban/{id}', [EvaluasiQurbanGuestController::class, 'show'])->name('guest.evaluasi-qurban.show');
+});
+
+Route::get('/test-gemini', function () {
+    $apiKey = env('GEMINI_API_KEY');
+    $model = env('GEMINI_DEFAULT_MODEL', 'models/gemini-2.0-flash');
+    $url = "https://generativelanguage.googleapis.com/v1beta/{$model}:generateContent?key={$apiKey}";
+    
+    $data = [
+        'contents' => [
+            [
+                'parts' => [
+                    ['text' => 'Sebutkan 3 keutamaan ibadah qurban dalam bahasa Indonesia!']
+                ]
+            ]
+        ]
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    return response()->json([
+        'model' => $model,
+        'http_code' => $httpCode,
+        'response' => json_decode($response, true)
+    ]);
+});
+
+Route::get('/test-deepseek', function () {
+    $apiKey = env('DEEPSEEK_API_KEY');
+    
+    $data = [
+        'model' => 'deepseek-chat',
+        'messages' => [
+            ['role' => 'user', 'content' => 'Sebutkan 3 keutamaan ibadah qurban dalam bahasa Indonesia!']
+        ]
+    ];
+    
+    $ch = curl_init('https://api.deepseek.com/v1/chat/completions');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    return response()->json([
+        'http_code' => $httpCode,
+        'response' => json_decode($response, true)
+    ]);
+});
+
+Route::get('/test-groq', function () {
+    $service = new \App\Services\mrj\GroqAIService();
+    $result = $service->testConnection();
+    
+    return response()->json($result);
+});
 
 Route::get('acara', [AcaraGuestController::class, 'index'])->name('acara.index');
 Route::get('acara-show/{slug}', [AcaraGuestController::class, 'show'])->name('acara.show');
@@ -304,20 +382,24 @@ Route::middleware(['auth'])->group(function () {
         
 
         // EVALUASI QURBAN
-        // DataTables endpoint
+        // STATIC ROUTES (harus di atas)
         Route::get('/evaluasi-qurban/data', [EvaluasiQurbanController::class, 'data'])->name('admin.evaluasi-qurban.data');
-        
-        // Statistik
         Route::get('/evaluasi-qurban/statistik', [EvaluasiQurbanController::class, 'statistik'])->name('admin.evaluasi-qurban.statistik');
+        Route::get('/evaluasi-qurban/statistik-data', [EvaluasiQurbanController::class, 'statistikData'])->name('admin.evaluasi-qurban.statistik-data');
+        Route::get('/evaluasi-qurban/generate-summary', [EvaluasiQurbanController::class, 'generateSummary'])->name('admin.evaluasi-qurban.generate-summary');
         
-        // CRUD
+        // WISH GENERATION ROUTES
+        Route::post('/evaluasi-qurban/generate-wish/{id}', [EvaluasiQurbanController::class, 'generateWish'])->name('admin.evaluasi-qurban.generate-wish');
+        Route::post('/evaluasi-qurban/generate-all-wish', [EvaluasiQurbanController::class, 'generateAllWish'])->name('admin.evaluasi-qurban.generate-all-wish');
+        
+        // ✅ CEK STATUS AI (TAMBAHKAN INI)
+        Route::get('/evaluasi-qurban/check-ai-status', [EvaluasiQurbanController::class, 'checkAIStatus'])->name('admin.evaluasi-qurban.check-ai-status');
+        
+        // DYNAMIC ROUTES (dengan parameter)
         Route::get('/evaluasi-qurban', [EvaluasiQurbanController::class, 'index'])->name('admin.evaluasi-qurban.index');
         Route::get('/evaluasi-qurban/{id}', [EvaluasiQurbanController::class, 'show'])->name('admin.evaluasi-qurban.show');
         Route::delete('/evaluasi-qurban/{id}', [EvaluasiQurbanController::class, 'destroy'])->name('admin.evaluasi-qurban.destroy');
         
-        // Export (opsional)
-        Route::get('/evaluasi-qurban/export/excel', [EvaluasiQurbanController::class, 'export'])->name('admin.evaluasi-qurban.export');
-
         // Role
         Route::get('/role', [RoleController::class, 'index'])->name('admin.role');
         Route::get('/role/data', [RoleController::class, 'data'])->name('admin.role.data');

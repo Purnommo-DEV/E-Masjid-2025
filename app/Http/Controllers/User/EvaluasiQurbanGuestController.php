@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\EvaluasiQurban;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class EvaluasiQurbanGuestController extends Controller
 {
@@ -72,5 +73,60 @@ class EvaluasiQurbanGuestController extends Controller
             'message' => 'Terima kasih atas partisipasi dan masukannya! Semoga ibadah qurban kita diterima Allah SWT.',
             'data' => $evaluasi
         ]);
+    }
+
+    public function evaluasi()
+    {
+        $tahunList = EvaluasiQurban::select('tahun_hijriah')
+            ->distinct()
+            ->orderBy('tahun_hijriah', 'desc')
+            ->pluck('tahun_hijriah')
+            ->toArray();
+        
+        // Optional: tambahkan data statistik untuk hero section
+        $totalData = EvaluasiQurban::count();
+        $totalTahun = count($tahunList);
+        
+        return view('masjid.' . masjid() . '.guest.program-qurban.evaluasi', compact('tahunList', 'totalData', 'totalTahun'));
+    }
+
+    public function data(Request $request)
+    {
+        $evaluasi = EvaluasiQurban::latest();
+
+        if ($request->tahun) {
+            $evaluasi->where('tahun_hijriah', $request->tahun);
+        }
+
+        return DataTables::of($evaluasi)
+            ->addColumn('rating_pendaftaran_star', fn($row) => $row->rating_pendaftaran_bintang)
+            ->addColumn('rating_pelaksanaan_star', fn($row) => $row->rating_pelaksanaan_bintang)
+            ->addColumn('rating_distribusi_star', fn($row) => $row->rating_distribusi_bintang)
+            ->addColumn('rating_kualitas_star', fn($row) => $row->rating_kualitas_bintang)
+            ->addColumn('sumber_info_text', fn($row) => $row->sumber_info_text ?? '-')
+            ->addColumn('rencana_qurban_text', function($row) {
+                $text = [
+                    'ya' => 'Ya',
+                    'mungkin' => 'Mungkin',
+                    'tidak' => 'Tidak'
+                ];
+                return $text[$row->rencana_qurban] ?? '-';
+            })
+            ->addColumn('wish_pelaksanaan_text', fn($row) => $row->wish_pelaksanaan ?? '-')
+            ->addColumn('wish_distribusi_text', fn($row) => $row->wish_distribusi ?? '-')
+            ->addColumn('aksi', function($row) {
+                return '<button class="btn-detail" onclick="detailEvaluasi(' . $row->id . ')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+            })
+            ->rawColumns(['rating_pendaftaran_star', 'rating_pelaksanaan_star', 'rating_distribusi_star', 'rating_kualitas_star', 'aksi'])
+            ->make(true);
+    }
+
+    /**
+     * Detail evaluasi publik
+     */
+    public function show($id)
+    {
+        $evaluasi = EvaluasiQurban::findOrFail($id);
+        return response()->json($evaluasi);
     }
 }
