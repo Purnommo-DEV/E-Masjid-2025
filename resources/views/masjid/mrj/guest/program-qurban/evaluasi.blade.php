@@ -303,87 +303,88 @@
             margin-bottom: 0.75rem;
         }
     }
-/* ================= BATAS/BORDER PADA CARD ================= */
 
-/* Stat Cards */
-.stat-card {
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s ease;
-}
-.stat-card:hover {
-    border-color: #10b981;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
+        /* ================= BATAS/BORDER PADA CARD ================= */
 
-/* Chart Container */
-.chart-container {
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s ease;
-}
-.chart-container:hover {
-    border-color: #10b981;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-}
+    /* Stat Cards */
+    .stat-card {
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        border-color: #10b981;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
 
-/* Detail Rating Container (di dalam chart-container) */
-#detailRatingContainer .space-y-4 > div {
-    border: 1px solid #f1f5f9;
-    border-radius: 0.75rem;
-    padding: 0.75rem;
-    background: #fafafa;
-    transition: all 0.2s ease;
-}
-#detailRatingContainer .space-y-4 > div:hover {
-    border-color: #cbd5e1;
-    background: white;
-}
+    /* Chart Container */
+    .chart-container {
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+    }
+    .chart-container:hover {
+        border-color: #10b981;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
 
-/* Insight Box Cards */
-#insightContainer > div {
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
-}
-#insightContainer > div:hover {
-    border-color: #10b981;
-    transform: translateY(-2px);
-}
+    /* Detail Rating Container (di dalam chart-container) */
+    #detailRatingContainer .space-y-4 > div {
+        border: 1px solid #f1f5f9;
+        border-radius: 0.75rem;
+        padding: 0.75rem;
+        background: #fafafa;
+        transition: all 0.2s ease;
+    }
+    #detailRatingContainer .space-y-4 > div:hover {
+        border-color: #cbd5e1;
+        background: white;
+    }
 
-/* Sumber Info Item */
-.sumber-info-item {
-    border-bottom: 1px dashed #e2e8f0;
-    padding-bottom: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-.sumber-info-item:last-child {
-    border-bottom: none;
-}
+    /* Insight Box Cards */
+    #insightContainer > div {
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+    }
+    #insightContainer > div:hover {
+        border-color: #10b981;
+        transform: translateY(-2px);
+    }
 
-/* Sumber Info Card (wrapper) */
-.sumber-info-chart canvas {
-    border: 1px solid #f1f5f9;
-    border-radius: 1rem;
-    padding: 0.5rem;
-    background: #fafafa;
-}
+    /* Sumber Info Item */
+    .sumber-info-item {
+        border-bottom: 1px dashed #e2e8f0;
+        padding-bottom: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .sumber-info-item:last-child {
+        border-bottom: none;
+    }
 
-/* Progress Bar container (already has border via .sumber-info-progress) */
-.sumber-info-progress {
-    border: 1px solid #e2e8f0;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
-}
+    /* Sumber Info Card (wrapper) */
+    .sumber-info-chart canvas {
+        border: 1px solid #f1f5f9;
+        border-radius: 1rem;
+        padding: 0.5rem;
+        background: #fafafa;
+    }
 
-/* Card Wrapper (already exists, just add border) */
-.card-wrapper {
-    border: 1px solid #e2e8f0;
-}
-.card-wrapper:hover {
-    border-color: #cbd5e1;
-}
+    /* Progress Bar container (already has border via .sumber-info-progress) */
+    .sumber-info-progress {
+        border: 1px solid #e2e8f0;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    }
 
-/* Modal (optional) */
-.modal-custom {
-    border: 1px solid #e2e8f0;
-}
+    /* Card Wrapper (already exists, just add border) */
+    .card-wrapper {
+        border: 1px solid #e2e8f0;
+    }
+    .card-wrapper:hover {
+        border-color: #cbd5e1;
+    }
+
+    /* Modal (optional) */
+    .modal-custom {
+        border: 1px solid #e2e8f0;
+    }
 </style>
 
 <section class="evaluasi-hero relative overflow-hidden pt-6 md:pt-20">
@@ -533,242 +534,242 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-let table, ratingChart, jenisHewanChart, rencanaChart, sumberInfoChart;
+    let table, ratingChart, jenisHewanChart, rencanaChart, sumberInfoChart;
 
-function escapeHtml(str) { if (!str) return str; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
-function updateStars(rating) { let full = Math.floor(rating), half = rating - full >= 0.5, stars = ''; for (let i = 0; i < full; i++) stars += '★'; if (half) stars += '½'; for (let i = stars.length; i < 5; i++) stars += '☆'; return stars; }
+    function escapeHtml(str) { if (!str) return str; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+    function updateStars(rating) { let full = Math.floor(rating), half = rating - full >= 0.5, stars = ''; for (let i = 0; i < full; i++) stars += '★'; if (half) stars += '½'; for (let i = stars.length; i < 5; i++) stars += '☆'; return stars; }
 
-function loadCharts(tahun) {
-    $.ajax({ 
-        url: '{{ route("guest.evaluasi-qurban.resumen-data") }}', 
-        type: 'GET', 
-        data: { tahun: tahun }, 
-        success: function(res) {
-            if (!res.success) return;
-            
-            // Stat Cards
-            $('#totalResponden').text(res.totalResponden);
-            $('#rataRata').text(res.rataRataKeseluruhan + ' / 5');
-            $('#jumlahSapi').text(res.jenisHewan.sapi);
-            $('#minatKembali').text(res.rencanaQurban.ya + res.rencanaQurban.mungkin);
-            
-            // Rating Progress
-            $('#ratingPendaftaran').text(res.ratingData.pendaftaran + ' / 5');
-            $('#ratingPelaksanaan').text(res.ratingData.pelaksanaan + ' / 5');
-            $('#ratingDistribusi').text(res.ratingData.distribusi + ' / 5');
-            $('#ratingKualitas').text(res.ratingData.kualitas + ' / 5');
-            $('#progressPendaftaran').css('width', (res.ratingData.pendaftaran / 5) * 100 + '%');
-            $('#progressPelaksanaan').css('width', (res.ratingData.pelaksanaan / 5) * 100 + '%');
-            $('#progressDistribusi').css('width', (res.ratingData.distribusi / 5) * 100 + '%');
-            $('#progressKualitas').css('width', (res.ratingData.kualitas / 5) * 100 + '%');
-            
-            // Bar Chart
-            if (ratingChart) ratingChart.destroy();
-            ratingChart = new Chart(document.getElementById('ratingChart'), { 
-                type: 'bar', 
-                data: { 
-                    labels: ['Pendaftaran', 'Penyembelihan', 'Distribusi', 'Kualitas'], 
-                    datasets: [{ 
-                        label: 'Rating (1-5)', 
-                        data: [res.ratingData.pendaftaran, res.ratingData.pelaksanaan, res.ratingData.distribusi, res.ratingData.kualitas], 
-                        backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#059669'], 
-                        borderRadius: 8 
-                    }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    scales: { y: { min: 0, max: 5 } } 
-                } 
-            });
-            
-            // Pie Chart Jenis Hewan
-            if (jenisHewanChart) jenisHewanChart.destroy();
-            jenisHewanChart = new Chart(document.getElementById('jenisHewanChart'), { 
-                type: 'pie', 
-                data: { 
-                    labels: ['Sapi', 'Kambing'], 
-                    datasets: [{ 
-                        data: [res.jenisHewan.sapi, res.jenisHewan.kambing], 
-                        backgroundColor: ['#f59e0b', '#10b981'] 
-                    }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    plugins: { legend: { position: 'bottom' } } 
-                } 
-            });
-            
-            // Donut Chart Rencana
-            if (rencanaChart) rencanaChart.destroy();
-            rencanaChart = new Chart(document.getElementById('rencanaChart'), { 
-                type: 'doughnut', 
-                data: { 
-                    labels: ['Ya', 'Mungkin', 'Tidak'], 
-                    datasets: [{ 
-                        data: [res.rencanaQurban.ya, res.rencanaQurban.mungkin, res.rencanaQurban.tidak], 
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'] 
-                    }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    plugins: { legend: { position: 'bottom' } } 
-                } 
-            });
-            
-            // Sumber Info - Chart & List dengan Progress Bar
-            if (sumberInfoChart) sumberInfoChart.destroy();
-            let sumberLabels = Object.keys(res.sumberInfo);
-            let sumberData = Object.values(res.sumberInfo);
-            let totalSumber = sumberData.reduce((a, b) => a + b, 0);
-
-            if (sumberLabels.length) {
-                sumberInfoChart = new Chart(document.getElementById('sumberInfoChart'), {
-                    type: 'pie',
-                    data: {
-                        labels: sumberLabels,
-                        datasets: [{
-                            data: sumberData,
-                            backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#3b82f6', '#ec4899'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } }
-                        }
-                    }
+    function loadCharts(tahun) {
+        $.ajax({ 
+            url: '{{ route("guest.evaluasi-qurban.resumen-data") }}', 
+            type: 'GET', 
+            data: { tahun: tahun }, 
+            success: function(res) {
+                if (!res.success) return;
+                
+                // Stat Cards
+                $('#totalResponden').text(res.totalResponden);
+                $('#rataRata').text(res.rataRataKeseluruhan + ' / 5');
+                $('#jumlahSapi').text(res.jenisHewan.sapi);
+                $('#minatKembali').text(res.rencanaQurban.ya + res.rencanaQurban.mungkin);
+                
+                // Rating Progress
+                $('#ratingPendaftaran').text(res.ratingData.pendaftaran + ' / 5');
+                $('#ratingPelaksanaan').text(res.ratingData.pelaksanaan + ' / 5');
+                $('#ratingDistribusi').text(res.ratingData.distribusi + ' / 5');
+                $('#ratingKualitas').text(res.ratingData.kualitas + ' / 5');
+                $('#progressPendaftaran').css('width', (res.ratingData.pendaftaran / 5) * 100 + '%');
+                $('#progressPelaksanaan').css('width', (res.ratingData.pelaksanaan / 5) * 100 + '%');
+                $('#progressDistribusi').css('width', (res.ratingData.distribusi / 5) * 100 + '%');
+                $('#progressKualitas').css('width', (res.ratingData.kualitas / 5) * 100 + '%');
+                
+                // Bar Chart
+                if (ratingChart) ratingChart.destroy();
+                ratingChart = new Chart(document.getElementById('ratingChart'), { 
+                    type: 'bar', 
+                    data: { 
+                        labels: ['Pendaftaran', 'Penyembelihan', 'Distribusi', 'Kualitas'], 
+                        datasets: [{ 
+                            label: 'Rating (1-5)', 
+                            data: [res.ratingData.pendaftaran, res.ratingData.pelaksanaan, res.ratingData.distribusi, res.ratingData.kualitas], 
+                            backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#059669'], 
+                            borderRadius: 8 
+                        }] 
+                    }, 
+                    options: { 
+                        responsive: true, 
+                        scales: { y: { min: 0, max: 5 } } 
+                    } 
                 });
                 
-                let listHtml = '<div class="space-y-3">';
-                const colors = ['#10b981', '#f59e0b', '#14b8a6', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#3b82f6', '#ec4899'];
-                for (let i = 0; i < sumberLabels.length; i++) {
-                    let percent = totalSumber > 0 ? Math.round((sumberData[i] / totalSumber) * 100) : 0;
-                    listHtml += `
-                        <div class="sumber-info-item">
-                            <div class="sumber-info-label">
-                                <span class="sumber-info-name" title="${escapeHtml(sumberLabels[i])}">${escapeHtml(sumberLabels[i])}</span>
-                                <span class="sumber-info-count">${sumberData[i]} (${percent}%)</span>
+                // Pie Chart Jenis Hewan
+                if (jenisHewanChart) jenisHewanChart.destroy();
+                jenisHewanChart = new Chart(document.getElementById('jenisHewanChart'), { 
+                    type: 'pie', 
+                    data: { 
+                        labels: ['Sapi', 'Kambing'], 
+                        datasets: [{ 
+                            data: [res.jenisHewan.sapi, res.jenisHewan.kambing], 
+                            backgroundColor: ['#f59e0b', '#10b981'] 
+                        }] 
+                    }, 
+                    options: { 
+                        responsive: true, 
+                        plugins: { legend: { position: 'bottom' } } 
+                    } 
+                });
+                
+                // Donut Chart Rencana
+                if (rencanaChart) rencanaChart.destroy();
+                rencanaChart = new Chart(document.getElementById('rencanaChart'), { 
+                    type: 'doughnut', 
+                    data: { 
+                        labels: ['Ya', 'Mungkin', 'Tidak'], 
+                        datasets: [{ 
+                            data: [res.rencanaQurban.ya, res.rencanaQurban.mungkin, res.rencanaQurban.tidak], 
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'] 
+                        }] 
+                    }, 
+                    options: { 
+                        responsive: true, 
+                        plugins: { legend: { position: 'bottom' } } 
+                    } 
+                });
+                
+                // Sumber Info - Chart & List dengan Progress Bar
+                if (sumberInfoChart) sumberInfoChart.destroy();
+                let sumberLabels = Object.keys(res.sumberInfo);
+                let sumberData = Object.values(res.sumberInfo);
+                let totalSumber = sumberData.reduce((a, b) => a + b, 0);
+
+                if (sumberLabels.length) {
+                    sumberInfoChart = new Chart(document.getElementById('sumberInfoChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: sumberLabels,
+                            datasets: [{
+                                data: sumberData,
+                                backgroundColor: ['#10b981', '#f59e0b', '#14b8a6', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#3b82f6', '#ec4899'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } }
+                            }
+                        }
+                    });
+                    
+                    let listHtml = '<div class="space-y-3">';
+                    const colors = ['#10b981', '#f59e0b', '#14b8a6', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#3b82f6', '#ec4899'];
+                    for (let i = 0; i < sumberLabels.length; i++) {
+                        let percent = totalSumber > 0 ? Math.round((sumberData[i] / totalSumber) * 100) : 0;
+                        listHtml += `
+                            <div class="sumber-info-item">
+                                <div class="sumber-info-label">
+                                    <span class="sumber-info-name" title="${escapeHtml(sumberLabels[i])}">${escapeHtml(sumberLabels[i])}</span>
+                                    <span class="sumber-info-count">${sumberData[i]} (${percent}%)</span>
+                                </div>
+                                <div class="sumber-info-progress">
+                                    <div class="sumber-info-fill" style="width: ${percent}%; background-color: ${colors[i % colors.length]}"></div>
+                                </div>
                             </div>
-                            <div class="sumber-info-progress">
-                                <div class="sumber-info-fill" style="width: ${percent}%; background-color: ${colors[i % colors.length]}"></div>
-                            </div>
-                        </div>
-                    `;
+                        `;
+                    }
+                    listHtml += '</div>';
+                    $('#sumberInfoList').html(listHtml);
+                } else {
+                    const ctx = document.getElementById('sumberInfoChart').getContext('2d');
+                    if (ctx) ctx.clearRect(0, 0, 400, 250);
+                    $('#sumberInfoList').html('<p class="text-gray-500 text-center py-6">Belum ada data sumber informasi</p>');
                 }
-                listHtml += '</div>';
-                $('#sumberInfoList').html(listHtml);
-            } else {
-                const ctx = document.getElementById('sumberInfoChart').getContext('2d');
-                if (ctx) ctx.clearRect(0, 0, 400, 250);
-                $('#sumberInfoList').html('<p class="text-gray-500 text-center py-6">Belum ada data sumber informasi</p>');
+                
+                // ========== INSIGHT BOX - TAMBAHKAN INI! ==========
+                let aspekNames = { 
+                    pendaftaran: 'Pendaftaran', 
+                    pelaksanaan: 'Penyembelihan', 
+                    distribusi: 'Distribusi', 
+                    kualitas: 'Kualitas Hewan' 
+                };
+                
+                let ratingValues = Object.values(res.ratingData);
+                let minRating = Math.min(...ratingValues);
+                let maxRating = Math.max(...ratingValues);
+                let minAspek = Object.keys(res.ratingData).find(k => res.ratingData[k] === minRating);
+                let maxAspek = Object.keys(res.ratingData).find(k => res.ratingData[k] === maxRating);
+                let loyalitas = res.totalResponden > 0 ? Math.round((res.rencanaQurban.ya / res.totalResponden) * 100) : 0;
+                
+                let insightHtml = `
+                    <div class="bg-emerald-50 p-3 rounded-lg">
+                        <p class="font-semibold text-emerald-800">📊 Rata-rata Kepuasan</p>
+                        <p class="text-sm text-black">Dari skala 1-5, rata-rata keseluruhan <strong>${res.rataRataKeseluruhan}</strong> dari 5.</p>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-lg">
+                        <p class="font-semibold text-amber-800">⚠️ Aspek Terendah</p>
+                        <p class="text-sm text-black"><strong>${aspekNames[minAspek]}</strong> dengan rating <strong>${minRating}/5</strong>. Perlu perhatian khusus.</p>
+                    </div>
+                    <div class="bg-teal-50 p-3 rounded-lg">
+                        <p class="font-semibold text-teal-800">🏆 Aspek Tertinggi</p>
+                        <p class="text-sm text-black"><strong>${aspekNames[maxAspek]}</strong> dengan rating <strong>${maxRating}/5</strong>. Pertahankan!</p>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-lg">
+                        <p class="font-semibold text-blue-800">🤝 Loyalitas Pequrban</p>
+                        <p class="text-sm text-black">${res.rencanaQurban.ya} responden (${loyalitas}%) akan qurban kembali di MRJ.</p>
+                    </div>
+                `;
+                $('#insightContainer').html(insightHtml);
+            },
+            error: function(xhr) {
+                console.error('Error loading charts:', xhr);
             }
-            
-            // ========== INSIGHT BOX - TAMBAHKAN INI! ==========
-            let aspekNames = { 
-                pendaftaran: 'Pendaftaran', 
-                pelaksanaan: 'Penyembelihan', 
-                distribusi: 'Distribusi', 
-                kualitas: 'Kualitas Hewan' 
-            };
-            
-            let ratingValues = Object.values(res.ratingData);
-            let minRating = Math.min(...ratingValues);
-            let maxRating = Math.max(...ratingValues);
-            let minAspek = Object.keys(res.ratingData).find(k => res.ratingData[k] === minRating);
-            let maxAspek = Object.keys(res.ratingData).find(k => res.ratingData[k] === maxRating);
-            let loyalitas = res.totalResponden > 0 ? Math.round((res.rencanaQurban.ya / res.totalResponden) * 100) : 0;
-            
-            let insightHtml = `
-                <div class="bg-emerald-50 p-3 rounded-lg">
-                    <p class="font-semibold text-emerald-800">📊 Rata-rata Kepuasan</p>
-                    <p class="text-sm text-black">Dari skala 1-5, rata-rata keseluruhan <strong>${res.rataRataKeseluruhan}</strong> dari 5.</p>
-                </div>
-                <div class="bg-amber-50 p-3 rounded-lg">
-                    <p class="font-semibold text-amber-800">⚠️ Aspek Terendah</p>
-                    <p class="text-sm text-black"><strong>${aspekNames[minAspek]}</strong> dengan rating <strong>${minRating}/5</strong>. Perlu perhatian khusus.</p>
-                </div>
-                <div class="bg-teal-50 p-3 rounded-lg">
-                    <p class="font-semibold text-teal-800">🏆 Aspek Tertinggi</p>
-                    <p class="text-sm text-black"><strong>${aspekNames[maxAspek]}</strong> dengan rating <strong>${maxRating}/5</strong>. Pertahankan!</p>
-                </div>
-                <div class="bg-blue-50 p-3 rounded-lg">
-                    <p class="font-semibold text-blue-800">🤝 Loyalitas Pequrban</p>
-                    <p class="text-sm text-black">${res.rencanaQurban.ya} responden (${loyalitas}%) akan qurban kembali di MRJ.</p>
-                </div>
-            `;
-            $('#insightContainer').html(insightHtml);
-        },
-        error: function(xhr) {
-            console.error('Error loading charts:', xhr);
-        }
-    });
-}
+        });
+    }
 
-$(function() {
-    // DataTable
-    table = $('#evaluasiTable').DataTable({
-        processing: true, serverSide: true,
-        ajax: { url: '{{ route("guest.evaluasi-qurban.data") }}', data: function(d) { d.tahun = $('#filterTahun').val(); } },
-        columns: [
-            { data: null, orderable: false, searchable: false, render: (data, type, row, meta) => meta.row + 1 },
-            { data: 'nama_shohibul', name: 'nama_shohibul' },
-            { data: 'tahun_hijriah', name: 'tahun_hijriah' },
-            { data: 'jenis_hewan', name: 'jenis_hewan', render: (data) => data == 'sapi' ? '🐃 Sapi' : '🐐 Kambing' },
-            { data: 'rating_pendaftaran_star', name: 'rating_pendaftaran', orderable: false },
-            { data: 'rating_pelaksanaan_star', name: 'rating_pelaksanaan', orderable: false },
-            { data: 'rating_distribusi_star', name: 'rating_distribusi', orderable: false },
-            { data: 'rating_kualitas_star', name: 'rating_kualitas_hewan', orderable: false },
-            { data: 'sumber_info_text', name: 'sumber_info', orderable: false },
-            { data: 'rencana_qurban_text', name: 'rencana_qurban', orderable: false, render: (data) => `<span class="badge-rencana badge-${data === 'Ya' ? 'ya' : (data === 'Mungkin' ? 'mungkin' : 'tidak')}">${data}</span>` },
-            { data: 'wish_pelaksanaan_text', name: 'wish_pelaksanaan', orderable: false, render: (data) => `<div class="wish-cell">${escapeHtml(data) || '-'}</div>` },
-            { data: 'wish_distribusi_text', name: 'wish_distribusi', orderable: false, render: (data) => `<div class="wish-cell">${escapeHtml(data) || '-'}</div>` },
-            { data: 'aksi', name: 'aksi', orderable: false, searchable: false }
-        ],
-        language: { processing: "Memuat data...", emptyTable: "Belum ada data evaluasi", zeroRecords: "Tidak ditemukan data", paginate: { first: "Pertama", last: "Terakhir", next: "→", previous: "←" } },
-        order: [[2, 'desc']], scrollX: true
+    $(function() {
+        // DataTable
+        table = $('#evaluasiTable').DataTable({
+            processing: true, serverSide: true,
+            ajax: { url: '{{ route("guest.evaluasi-qurban.data") }}', data: function(d) { d.tahun = $('#filterTahun').val(); } },
+            columns: [
+                { data: null, orderable: false, searchable: false, render: (data, type, row, meta) => meta.row + 1 },
+                { data: 'nama_shohibul', name: 'nama_shohibul' },
+                { data: 'tahun_hijriah', name: 'tahun_hijriah' },
+                { data: 'jenis_hewan', name: 'jenis_hewan', render: (data) => data == 'sapi' ? '🐃 Sapi' : '🐐 Kambing' },
+                { data: 'rating_pendaftaran_star', name: 'rating_pendaftaran', orderable: false },
+                { data: 'rating_pelaksanaan_star', name: 'rating_pelaksanaan', orderable: false },
+                { data: 'rating_distribusi_star', name: 'rating_distribusi', orderable: false },
+                { data: 'rating_kualitas_star', name: 'rating_kualitas_hewan', orderable: false },
+                { data: 'sumber_info_text', name: 'sumber_info', orderable: false },
+                { data: 'rencana_qurban_text', name: 'rencana_qurban', orderable: false, render: (data) => `<span class="badge-rencana badge-${data === 'Ya' ? 'ya' : (data === 'Mungkin' ? 'mungkin' : 'tidak')}">${data}</span>` },
+                { data: 'wish_pelaksanaan_text', name: 'wish_pelaksanaan', orderable: false, render: (data) => `<div class="wish-cell">${escapeHtml(data) || '-'}</div>` },
+                { data: 'wish_distribusi_text', name: 'wish_distribusi', orderable: false, render: (data) => `<div class="wish-cell">${escapeHtml(data) || '-'}</div>` },
+                { data: 'aksi', name: 'aksi', orderable: false, searchable: false }
+            ],
+            language: { processing: "Memuat data...", emptyTable: "Belum ada data evaluasi", zeroRecords: "Tidak ditemukan data", paginate: { first: "Pertama", last: "Terakhir", next: "→", previous: "←" } },
+            order: [[2, 'desc']], scrollX: true
+        });
+        
+        // Filter change
+        $('#filterTahun').on('change', function() { let tahun = $(this).val(); table.ajax.reload(); loadCharts(tahun); });
+        $('#btnResetFilter').on('click', function() { $('#filterTahun').val(''); table.ajax.reload(); loadCharts(''); });
+        
+        // Initial load
+        let initialTahun = $('#filterTahun').val();
+        loadCharts(initialTahun);
+        
+        $('#mainBadge').on('click', () => Swal.fire({ title: '✨ DATA EVALUASI QURBAN ✨', html: '📊 Seluruh data ditampilkan secara transparan', icon: 'success', confirmButtonColor: '#10b981', timer: 3000 }));
     });
-    
-    // Filter change
-    $('#filterTahun').on('change', function() { let tahun = $(this).val(); table.ajax.reload(); loadCharts(tahun); });
-    $('#btnResetFilter').on('click', function() { $('#filterTahun').val(''); table.ajax.reload(); loadCharts(''); });
-    
-    // Initial load
-    let initialTahun = $('#filterTahun').val();
-    loadCharts(initialTahun);
-    
-    $('#mainBadge').on('click', () => Swal.fire({ title: '✨ DATA EVALUASI QURBAN ✨', html: '📊 Seluruh data ditampilkan secara transparan', icon: 'success', confirmButtonColor: '#10b981', timer: 3000 }));
-});
 
-function detailEvaluasi(id) {
-    $('#detailContent').html('<div class="text-center py-4">Memuat data...</div>');
-    detailModal.showModal();
-    $.get('{{ url("guest/evaluasi-qurban") }}/' + id).done(function(data) {
-        let html = `<div class="space-y-4"><div class="font-bold text-emerald-700 border-b pb-2">DATA RESPONDEN</div>
-            <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Nama:</span><span>${escapeHtml(data.nama_shohibul)}</span></div>
-            <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Tahun:</span><span>${escapeHtml(data.tahun_hijriah)}</span></div>
-            <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Jenis Hewan:</span><span>${data.jenis_hewan == 'sapi' ? '🐃 Sapi' : '🐐 Kambing'}</span></div>
-            <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Sumber Info:</span><span>${escapeHtml(data.sumber_info_text) || '-'}</span></div>
-            <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Rencana Qurban:</span><span>${data.rencana_qurban == 'ya' ? '✅ Ya' : (data.rencana_qurban == 'mungkin' ? '🤔 Mungkin' : '❌ Tidak')}</span></div>
-            <div class="font-bold text-emerald-700 border-b pb-2 mt-2">MASUKAN PENYEBARAN INFORMASI</div>
-            <div class="bg-gray-50 p-2 rounded">${escapeHtml(data.masukan_penyebaran_informasi) || '-'}</div>
-            <div class="font-bold text-emerald-700 border-b pb-2">RATING PELAYANAN</div>
-            <div class="grid grid-cols-2 gap-2"><span>📝 Pendaftaran:</span><span>${updateStars(data.rating_pendaftaran)} (${data.rating_pendaftaran}/5)</span></div>
-            <div class="grid grid-cols-2 gap-2"><span>🔪 Pelaksanaan:</span><span>${updateStars(data.rating_pelaksanaan)} (${data.rating_pelaksanaan}/5)</span></div>
-            <div class="grid grid-cols-2 gap-2"><span>🚚 Distribusi:</span><span>${updateStars(data.rating_distribusi)} (${data.rating_distribusi}/5)</span></div>
-            <div class="grid grid-cols-2 gap-2"><span>🥩 Kualitas:</span><span>${updateStars(data.rating_kualitas_hewan)} (${data.rating_kualitas_hewan}/5)</span></div>
-            <div class="font-bold text-emerald-700 border-b pb-2">KEINGINAN (WISH)</div>
-            <div><span class="font-semibold">🔪 Penyembelihan:</span><div class="bg-gray-50 p-2 rounded mt-1">${escapeHtml(data.wish_pelaksanaan) || '-'}</div></div>
-            <div class="mt-2"><span class="font-semibold">🚚 Distribusi:</span><div class="bg-gray-50 p-2 rounded mt-1">${escapeHtml(data.wish_distribusi) || '-'}</div></div>
-            <div class="font-bold text-emerald-700 border-b pb-2">EVALUASI</div>
-            <div><span class="font-semibold">✅ Hal yang sudah baik:</span><div class="bg-green-50 p-2 rounded mt-1">${escapeHtml(data.hal_baik) || '-'}</div></div>
-            <div class="mt-2"><span class="font-semibold">🔧 Hal perlu diperbaiki:</span><div class="bg-red-50 p-2 rounded mt-1">${escapeHtml(data.hal_perbaikan) || '-'}</div></div>
-            <div class="mt-2"><span class="font-semibold">💡 Saran Tambahan:</span><div class="bg-gray-50 p-2 rounded mt-1">${escapeHtml(data.saran_tambahan) || '-'}</div></div>
-        </div>`;
-        $('#detailContent').html(html);
-    }).fail(() => $('#detailContent').html('<div class="text-center text-red-500">❌ Gagal memuat detail</div>'));
-}
-function closeDetailModal() { detailModal.close(); }
+    function detailEvaluasi(id) {
+        $('#detailContent').html('<div class="text-center py-4">Memuat data...</div>');
+        detailModal.showModal();
+        $.get('{{ url("guest/evaluasi-qurban") }}/' + id).done(function(data) {
+            let html = `<div class="space-y-4"><div class="font-bold text-emerald-700 border-b pb-2">DATA RESPONDEN</div>
+                <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Nama:</span><span>${escapeHtml(data.nama_shohibul)}</span></div>
+                <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Tahun:</span><span>${escapeHtml(data.tahun_hijriah)}</span></div>
+                <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Jenis Hewan:</span><span>${data.jenis_hewan == 'sapi' ? '🐃 Sapi' : '🐐 Kambing'}</span></div>
+                <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Sumber Info:</span><span>${escapeHtml(data.sumber_info_text) || '-'}</span></div>
+                <div class="grid grid-cols-2 gap-2"><span class="font-semibold">Rencana Qurban:</span><span>${data.rencana_qurban == 'ya' ? '✅ Ya' : (data.rencana_qurban == 'mungkin' ? '🤔 Mungkin' : '❌ Tidak')}</span></div>
+                <div class="font-bold text-emerald-700 border-b pb-2 mt-2">MASUKAN PENYEBARAN INFORMASI</div>
+                <div class="bg-gray-50 p-2 rounded">${escapeHtml(data.masukan_penyebaran_informasi) || '-'}</div>
+                <div class="font-bold text-emerald-700 border-b pb-2">RATING PELAYANAN</div>
+                <div class="grid grid-cols-2 gap-2"><span>📝 Pendaftaran:</span><span>${updateStars(data.rating_pendaftaran)} (${data.rating_pendaftaran}/5)</span></div>
+                <div class="grid grid-cols-2 gap-2"><span>🔪 Pelaksanaan:</span><span>${updateStars(data.rating_pelaksanaan)} (${data.rating_pelaksanaan}/5)</span></div>
+                <div class="grid grid-cols-2 gap-2"><span>🚚 Distribusi:</span><span>${updateStars(data.rating_distribusi)} (${data.rating_distribusi}/5)</span></div>
+                <div class="grid grid-cols-2 gap-2"><span>🥩 Kualitas:</span><span>${updateStars(data.rating_kualitas_hewan)} (${data.rating_kualitas_hewan}/5)</span></div>
+                <div class="font-bold text-emerald-700 border-b pb-2">KEINGINAN (WISH)</div>
+                <div><span class="font-semibold">🔪 Penyembelihan:</span><div class="bg-gray-50 p-2 rounded mt-1">${escapeHtml(data.wish_pelaksanaan) || '-'}</div></div>
+                <div class="mt-2"><span class="font-semibold">🚚 Distribusi:</span><div class="bg-gray-50 p-2 rounded mt-1">${escapeHtml(data.wish_distribusi) || '-'}</div></div>
+                <div class="font-bold text-emerald-700 border-b pb-2">EVALUASI</div>
+                <div><span class="font-semibold">✅ Hal yang sudah baik:</span><div class="bg-green-50 p-2 rounded mt-1">${escapeHtml(data.hal_baik) || '-'}</div></div>
+                <div class="mt-2"><span class="font-semibold">🔧 Hal perlu diperbaiki:</span><div class="bg-red-50 p-2 rounded mt-1">${escapeHtml(data.hal_perbaikan) || '-'}</div></div>
+                <div class="mt-2"><span class="font-semibold">💡 Saran Tambahan:</span><div class="bg-gray-50 p-2 rounded mt-1">${escapeHtml(data.saran_tambahan) || '-'}</div></div>
+            </div>`;
+            $('#detailContent').html(html);
+        }).fail(() => $('#detailContent').html('<div class="text-center text-red-500">❌ Gagal memuat detail</div>'));
+    }
+    function closeDetailModal() { detailModal.close(); }
 </script>
 @endpush
