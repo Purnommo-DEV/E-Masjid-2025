@@ -139,8 +139,9 @@ Route::get('/dokumentasi-evaluasi/{tahun?}', [DokumentasiEvaluasiController::cla
 
 // ==================== ROUTE PUBLIK (LIHAT DATA) ====================
 Route::prefix('guest')->group(function () {
-    Route::get('/data/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'evaluasi'])->name('guest.evaluasi-qurban.index');
+    Route::get('/evaluasi-qurban', [EvaluasiQurbanGuestController::class, 'evaluasi'])->name('guest.evaluasi-qurban.index');
     Route::get('/evaluasi-qurban/data', [EvaluasiQurbanGuestController::class, 'data'])->name('guest.evaluasi-qurban.data');
+    Route::get('/evaluasi-qurban/resumen-data', [EvaluasiQurbanGuestController::class, 'resumenData'])->name('guest.evaluasi-qurban.resumen-data');
     Route::get('/evaluasi-qurban/{id}', [EvaluasiQurbanGuestController::class, 'show'])->name('guest.evaluasi-qurban.show');
 });
 

@@ -75,7 +75,7 @@ class EvaluasiQurbanGuestController extends Controller
         ]);
     }
 
-    public function evaluasi()
+    public function evaluasi(Request $request)
     {
         $tahunList = EvaluasiQurban::select('tahun_hijriah')
             ->distinct()
@@ -83,13 +83,14 @@ class EvaluasiQurbanGuestController extends Controller
             ->pluck('tahun_hijriah')
             ->toArray();
         
-        // Optional: tambahkan data statistik untuk hero section
-        $totalData = EvaluasiQurban::count();
-        $totalTahun = count($tahunList);
+        $selectedTahun = $request->tahun;
         
-        return view('masjid.' . masjid() . '.guest.program-qurban.evaluasi', compact('tahunList', 'totalData', 'totalTahun'));
+        return view('masjid.' . masjid() . '.guest.program-qurban.evaluasi', compact('tahunList', 'selectedTahun'));
     }
 
+    /**
+     * DataTables untuk halaman publik (DENGAN FILTER TAHUN)
+     */
     public function data(Request $request)
     {
         $evaluasi = EvaluasiQurban::latest();
@@ -105,17 +106,18 @@ class EvaluasiQurbanGuestController extends Controller
             ->addColumn('rating_kualitas_star', fn($row) => $row->rating_kualitas_bintang)
             ->addColumn('sumber_info_text', fn($row) => $row->sumber_info_text ?? '-')
             ->addColumn('rencana_qurban_text', function($row) {
-                $text = [
-                    'ya' => 'Ya',
-                    'mungkin' => 'Mungkin',
-                    'tidak' => 'Tidak'
-                ];
+                $text = ['ya' => 'Ya', 'mungkin' => 'Mungkin', 'tidak' => 'Tidak'];
                 return $text[$row->rencana_qurban] ?? '-';
             })
             ->addColumn('wish_pelaksanaan_text', fn($row) => $row->wish_pelaksanaan ?? '-')
             ->addColumn('wish_distribusi_text', fn($row) => $row->wish_distribusi ?? '-')
             ->addColumn('aksi', function($row) {
-                return '<button class="btn-detail" onclick="detailEvaluasi(' . $row->id . ')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+                return '<button class="btn-detail" onclick="detailEvaluasi(' . $row->id . ')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                        </button>';
             })
             ->rawColumns(['rating_pendaftaran_star', 'rating_pelaksanaan_star', 'rating_distribusi_star', 'rating_kualitas_star', 'aksi'])
             ->make(true);
@@ -128,5 +130,166 @@ class EvaluasiQurbanGuestController extends Controller
     {
         $evaluasi = EvaluasiQurban::findOrFail($id);
         return response()->json($evaluasi);
+    }
+
+    /**
+     * Halaman resumen / matriks evaluasi qurban (DENGAN FILTER TAHUN)
+     */
+    public function resumen(Request $request)
+    {
+        $tahunFilter = $request->tahun;
+        
+        // Query dengan filter tahun
+        $query = EvaluasiQurban::query();
+        if ($tahunFilter) {
+            $query->where('tahun_hijriah', $tahunFilter);
+        }
+        
+        // Data rating
+        $ratingData = [
+            'pendaftaran' => round($query->clone()->avg('rating_pendaftaran'), 1),
+            'pelaksanaan' => round($query->clone()->avg('rating_pelaksanaan'), 1),
+            'distribusi' => round($query->clone()->avg('rating_distribusi'), 1),
+            'kualitas' => round($query->clone()->avg('rating_kualitas_hewan'), 1),
+        ];
+        
+        // Jenis hewan
+        $jenisHewan = [
+            'sapi' => $query->clone()->where('jenis_hewan', 'sapi')->count(),
+            'kambing' => $query->clone()->where('jenis_hewan', 'kambing')->count(),
+        ];
+        
+        // Rencana qurban
+        $rencanaQurban = [
+            'ya' => $query->clone()->where('rencana_qurban', 'ya')->count(),
+            'mungkin' => $query->clone()->where('rencana_qurban', 'mungkin')->count(),
+            'tidak' => $query->clone()->where('rencana_qurban', 'tidak')->count(),
+        ];
+        
+        // Data rating per tahun (untuk line chart - TANPA FILTER)
+        $tahunList = EvaluasiQurban::select('tahun_hijriah')
+            ->distinct()
+            ->orderBy('tahun_hijriah', 'asc')
+            ->pluck('tahun_hijriah')
+            ->toArray();
+        
+        $ratingPerTahun = [];
+        foreach ($tahunList as $tahun) {
+            $ratingPerTahun[$tahun] = [
+                'pendaftaran' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_pendaftaran'), 1),
+                'pelaksanaan' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_pelaksanaan'), 1),
+                'distribusi' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_distribusi'), 1),
+                'kualitas' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_kualitas_hewan'), 1),
+            ];
+        }
+        
+        // Sumber informasi (dengan filter)
+        $sumberInfo = $query->clone()
+            ->select('sumber_info')
+            ->selectRaw('count(*) as total')
+            ->whereNotNull('sumber_info')
+            ->groupBy('sumber_info')
+            ->pluck('total', 'sumber_info')
+            ->toArray();
+        
+        // Total data (dengan filter)
+        $totalResponden = $query->clone()->count();
+        $rataRataKeseluruhan = $totalResponden > 0 ? round(($ratingData['pendaftaran'] + $ratingData['pelaksanaan'] + $ratingData['distribusi'] + $ratingData['kualitas']) / 4, 1) : 0;
+        
+        // Daftar tahun untuk dropdown filter
+        $tahunDropdown = EvaluasiQurban::select('tahun_hijriah')
+            ->distinct()
+            ->orderBy('tahun_hijriah', 'desc')
+            ->pluck('tahun_hijriah')
+            ->toArray();
+        
+        return view('masjid.' . masjid() . '.guest.program-qurban.resumen', compact(
+            'ratingData', 'jenisHewan', 'rencanaQurban', 
+            'tahunList', 'ratingPerTahun', 'sumberInfo',
+            'totalResponden', 'rataRataKeseluruhan', 'tahunFilter',
+            'tahunDropdown'
+        ));
+    }
+
+    /**
+     * Get data resumen via AJAX (untuk filter)
+     */
+    public function resumenData(Request $request)
+    {
+        $tahunFilter = $request->tahun;
+        
+        $query = EvaluasiQurban::query();
+        if ($tahunFilter) {
+            $query->where('tahun_hijriah', $tahunFilter);
+        }
+        
+        // Rating data
+        $ratingData = [
+            'pendaftaran' => round($query->clone()->avg('rating_pendaftaran'), 1),
+            'pelaksanaan' => round($query->clone()->avg('rating_pelaksanaan'), 1),
+            'distribusi' => round($query->clone()->avg('rating_distribusi'), 1),
+            'kualitas' => round($query->clone()->avg('rating_kualitas_hewan'), 1),
+        ];
+        
+        // Jenis hewan
+        $jenisHewan = [
+            'sapi' => $query->clone()->where('jenis_hewan', 'sapi')->count(),
+            'kambing' => $query->clone()->where('jenis_hewan', 'kambing')->count(),
+        ];
+        
+        // Rencana qurban
+        $rencanaQurban = [
+            'ya' => $query->clone()->where('rencana_qurban', 'ya')->count(),
+            'mungkin' => $query->clone()->where('rencana_qurban', 'mungkin')->count(),
+            'tidak' => $query->clone()->where('rencana_qurban', 'tidak')->count(),
+        ];
+        
+        // Rating per tahun (TANPA filter, untuk line chart semua tahun)
+        $tahunList = EvaluasiQurban::select('tahun_hijriah')
+            ->distinct()
+            ->orderBy('tahun_hijriah', 'asc')
+            ->pluck('tahun_hijriah')
+            ->toArray();
+        
+        $ratingPerTahun = [];
+        foreach ($tahunList as $tahun) {
+            $ratingPerTahun[$tahun] = [
+                'pendaftaran' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_pendaftaran'), 1),
+                'pelaksanaan' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_pelaksanaan'), 1),
+                'distribusi' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_distribusi'), 1),
+                'kualitas' => round(EvaluasiQurban::where('tahun_hijriah', $tahun)->avg('rating_kualitas_hewan'), 1),
+            ];
+        }
+        
+        // Sumber informasi (dengan filter)
+        $sumberInfo = $query->clone()
+            ->select('sumber_info')
+            ->selectRaw('count(*) as total')
+            ->whereNotNull('sumber_info')
+            ->groupBy('sumber_info')
+            ->pluck('total', 'sumber_info')
+            ->toArray();
+        
+        $totalResponden = $query->clone()->count();
+        $rataRataKeseluruhan = $totalResponden > 0 ? round(($ratingData['pendaftaran'] + $ratingData['pelaksanaan'] + $ratingData['distribusi'] + $ratingData['kualitas']) / 4, 1) : 0;
+        
+        // Render partial views
+        $detailRatingHtml = view('masjid.' . masjid() . '.guest.program-qurban.partials.detail-rating', compact('ratingData'))->render();
+        $insightHtml = view('masjid.' . masjid() . '.guest.program-qurban.partials.insight', compact('ratingData', 'rencanaQurban', 'totalResponden', 'rataRataKeseluruhan'))->render();
+        $sumberInfoHtml = view('masjid.' . masjid() . '.guest.program-qurban.partials.sumber-info', compact('sumberInfo', 'totalResponden'))->render();
+        
+        return response()->json([
+            'success' => true,
+            'totalResponden' => $totalResponden,
+            'rataRataKeseluruhan' => $rataRataKeseluruhan,
+            'ratingData' => $ratingData,
+            'jenisHewan' => $jenisHewan,
+            'rencanaQurban' => $rencanaQurban,
+            'ratingPerTahun' => $ratingPerTahun,
+            'sumberInfo' => $sumberInfo,
+            'detailRatingHtml' => $detailRatingHtml,
+            'insightHtml' => $insightHtml,
+            'sumberInfoHtml' => $sumberInfoHtml,
+        ]);
     }
 }
