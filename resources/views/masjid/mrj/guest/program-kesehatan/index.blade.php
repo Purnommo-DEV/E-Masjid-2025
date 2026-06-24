@@ -45,7 +45,7 @@
             </div>
             <div class="stats shadow-xl bg-white border border-emerald-200 rounded-3xl">
                 <div class="stat text-center px-10 py-2">
-                    <div class="stat-title text-emerald-600 font-medium">Total Pendaftar Hari Ini</div>
+                    <div class="stat-title text-emerald-600 font-medium">Total Pendaftar</div>
                     <div class="stat-value text-6xl font-bold text-emerald-700">{{ $totalPendaftar }}</div>
                 </div>
             </div>
