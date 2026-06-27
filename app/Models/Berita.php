@@ -133,8 +133,11 @@ class Berita extends Model
             description: $description,
             author: $this->author?->name ?? 'Tim Masjid',
             image: $coverImage,
+            url: route('berita.show', $this->slug),
             published_time: $this->published_at,
             modified_time: $this->updated_at,
+            type: 'article',
+            canonical_url: route('berita.show', $this->slug),
             schema: SchemaCollection::make()->addArticle(),
         );
     }

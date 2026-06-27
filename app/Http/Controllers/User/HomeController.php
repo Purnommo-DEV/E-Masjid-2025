@@ -16,12 +16,15 @@ use App\Models\KhutbahJumat;
 use App\Models\Layanan;
 use App\Models\PesanJamaah;
 use App\Models\ProfilMasjid;
+use App\Models\Pengumuman;
 use App\Services\JadwalSholatService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use RalphJSmit\Laravel\SEO\Support\SEOData;
 
 class HomeController extends Controller
@@ -178,11 +181,97 @@ class HomeController extends Controller
 
     public function beritaShow() {}
 
-    public function pengumumanIndex() {}
+    public function pengumumanIndex()
+    {
+        Carbon::setLocale('id');
+        app()->setLocale('id');
 
-    public function pengumumanShow() {}
+        $pengumumans = Pengumuman::query()
+            ->active()
+            ->latest()
+            ->paginate(12);
 
-    public function galeriIndex() {}
+        $seoData = new SEOData(
+            title: 'Pengumuman Masjid | ' . masjid_name(),
+            description: 'Pengumuman resmi, informasi penting, dan kabar terbaru dari ' . masjid_name() . '.',
+            image: secure_asset('images/default-share.jpg'),
+            url: route('pengumuman.index'),
+            canonical_url: route('pengumuman.index'),
+        );
+
+        return view('masjid.'.masjid().'.guest.pengumuman.index', compact('pengumumans'))
+            ->with('seoData', $seoData);
+    }
+
+    public function pengumumanShow($slug)
+    {
+        Carbon::setLocale('id');
+        app()->setLocale('id');
+
+        $hasSlug = Schema::hasColumn('pengumumans', 'slug');
+
+        $pengumuman = Pengumuman::query()
+            ->active()
+            ->when($hasSlug, function ($query) use ($slug) {
+                $query->where(function ($q) use ($slug) {
+                    $q->where('slug', $slug);
+
+                    if (ctype_digit((string) $slug)) {
+                        $q->orWhere('id', $slug);
+                    }
+                });
+            }, fn ($query) => $query->whereKey($slug))
+            ->firstOrFail();
+
+        $related = Pengumuman::query()
+            ->active()
+            ->whereKeyNot($pengumuman->id)
+            ->latest()
+            ->limit(4)
+            ->get();
+
+        $identifier = $hasSlug && $pengumuman->slug ? $pengumuman->slug : $pengumuman->id;
+        $detailUrl = route('pengumuman.show', $identifier);
+        $description = Str::limit(strip_tags($pengumuman->isi ?? ''), 155);
+
+        $seoData = new SEOData(
+            title: $pengumuman->judul . ' | ' . masjid_name(),
+            description: $description,
+            author: 'Tim Masjid',
+            image: secure_asset('images/default-share.jpg'),
+            url: $detailUrl,
+            published_time: $pengumuman->created_at,
+            modified_time: $pengumuman->updated_at,
+            type: 'article',
+            canonical_url: $detailUrl,
+        );
+
+        return view('masjid.'.masjid().'.guest.pengumuman.show', compact('pengumuman', 'related'))
+            ->with('seoData', $seoData);
+    }
+
+    public function galeriIndex()
+    {
+        Carbon::setLocale('id');
+        app()->setLocale('id');
+
+        $galeris = Galeri::query()
+            ->with(['media', 'kategoris'])
+            ->published()
+            ->latest('published_at')
+            ->paginate(12);
+
+        $seoData = new SEOData(
+            title: 'Galeri Kegiatan | ' . masjid_name(),
+            description: 'Dokumentasi foto dan video kegiatan, kajian, program sosial, Ramadhan, dan qurban di ' . masjid_name() . '.',
+            image: secure_asset('images/default-share.jpg'),
+            url: route('galeri.index'),
+            canonical_url: route('galeri.index'),
+        );
+
+        return view('masjid.'.masjid().'.guest.galeri.index', compact('galeris'))
+            ->with('seoData', $seoData);
+    }
 
     public function kirimPesan(Request $request)
     {

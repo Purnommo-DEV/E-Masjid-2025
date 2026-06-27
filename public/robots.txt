@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin
+Disallow: /login
+Disallow: /logout
+Disallow: /register
+Disallow: /profile
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /test-gemini
+Disallow: /test-deepseek
+Disallow: /test-groq
+
+Sitemap: https://raudhotuljannah.org/sitemap.xml

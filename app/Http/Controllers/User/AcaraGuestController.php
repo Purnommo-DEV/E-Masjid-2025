@@ -39,7 +39,7 @@ class AcaraGuestController extends Controller
 
         $related = $this->acaraService->upcoming(3, $acara->id);
 
-        // SEO otomatis dari model Acara via trait HasSEO
-        return view('masjid.' . masjid() . '.guest.acara.show', compact('acara', 'related'));
+        return view('masjid.' . masjid() . '.guest.acara.show', compact('acara', 'related'))
+            ->with('seoData', $acara);
     }
 }

@@ -34,7 +34,7 @@ class BeritaGuestController extends Controller
     {
         $berita = Berita::where('slug', $slug)
             ->where('is_published', true)
-            ->with(['kategoris', 'media'])
+            ->with(['kategoris', 'media', 'author'])
             ->firstOrFail();
 
         $related = $this->beritaService->related(3, $berita->id);
@@ -51,6 +51,7 @@ class BeritaGuestController extends Controller
             return !empty($item['url']);
         })->values()->toArray();
 
-        return view('masjid.' . masjid() . '.guest.berita.show', compact('berita', 'related', 'galleryImages'));
+        return view('masjid.' . masjid() . '.guest.berita.show', compact('berita', 'related', 'galleryImages'))
+            ->with('seoData', $berita);
     }
 }

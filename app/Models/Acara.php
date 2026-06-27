@@ -116,7 +116,7 @@ class Acara extends Model
     // SEO
     public function getDynamicSEOData(): SEOData
     {
-        $coverImage = $this->image_path ?? secure_asset('images/default-share.jpg');
+        $coverImage = get_image_url($this->image_path) ?: secure_asset('images/default-share.jpg');
 
         $description = $this->deskripsi
             ? Str::limit(strip_tags($this->deskripsi), 158)
@@ -153,8 +153,11 @@ class Acara extends Model
             description: $description,
             author: $this->author?->name ?? 'Tim Masjid',
             image: $coverImage,
+            url: route('acara.show', $this->slug),
             published_time: $this->published_at,
             modified_time: $this->updated_at,
+            type: 'article',
+            canonical_url: route('acara.show', $this->slug),
             schema: SchemaCollection::make()
                 ->addArticle()
                 ->add($eventSchema),

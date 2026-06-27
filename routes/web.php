@@ -61,24 +61,9 @@ Route::get('/pwa-splash', function () {
     return view('pwa.splash');
 })->name('pwa.splash');
 
-Route::get('/clear-cache', function () {
-    Artisan::call('view:clear');
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-
-    return 'Cache cleared!';
-});
-
-Route::get('/run-migrate', function () {
-    \Artisan::call('migrate', ['--force' => true]);
-    return 'Migration berhasil dijalankan!';
-});
-
-Route::get('/run-seeder', function () {
-    Artisan::call('db:seed', ['--force' => true]);
-
-    return 'Seeder berhasil dijalankan!';
-});
+// ⚠️  SECURITY: Route /clear-cache, /run-migrate, /run-seeder telah dihapus dari akses publik.
+// Gunakan Artisan CLI: php artisan cache:clear | migrate --force | db:seed --force
+// Jika harus via web, lihat group "SuperAdmin Operations" di bawah (dilindungi auth + signed + role).
 
 Route::get('/manifest.json', function () {
     $kode = masjid(); // dari helper kamu
@@ -306,6 +291,42 @@ Route::middleware(['auth'])->group(function () {
 
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // ==================== SUPERADMIN OPERATIONS ====================
+    // 🔒 Diproteksi: auth + verified + role:SuperAdmin + signed URL + POST only
+    // Generate signed URL dari controller/view: URL::signedRoute('admin.ops.clear-cache')
+    Route::middleware(['verified', 'role:SuperAdmin'])
+        ->withoutMiddleware([])
+        ->group(function () {
+
+        Route::post('/admin/ops/clear-cache', function () {
+            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+
+            \Artisan::call('view:clear');
+            \Artisan::call('cache:clear');
+            \Artisan::call('config:clear');
+
+            return response()->json(['message' => 'Cache berhasil dibersihkan.']);
+        })->name('admin.ops.clear-cache');
+
+        Route::post('/admin/ops/run-migrate', function () {
+            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+
+            \Artisan::call('migrate', ['--force' => true]);
+
+            return response()->json(['message' => 'Migration berhasil dijalankan.']);
+        })->name('admin.ops.run-migrate');
+
+        Route::post('/admin/ops/run-seeder', function () {
+            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+
+            \Artisan::call('db:seed', ['--force' => true]);
+
+            return response()->json(['message' => 'Seeder berhasil dijalankan.']);
+        })->name('admin.ops.run-seeder');
+
+    });
+    // =====================================================================
 
     // Prefix admin
     Route::prefix('admin')->group(function () {
