@@ -31,6 +31,8 @@
     @include('sweetalert::alert')
     @include(guest_layout('_head'))
     @stack('head')
+    @stack('style')
+    @stack('styles')
 
     <!-- GLOBAL SCROLL FIX -->
     <style>
