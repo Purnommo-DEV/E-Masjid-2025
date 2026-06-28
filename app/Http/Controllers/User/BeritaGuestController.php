@@ -20,11 +20,13 @@ class BeritaGuestController extends Controller
     {
         $beritas = $this->beritaService->paginate(9);
 
-        $seoData = new SEOData(
+        $seoData = seo_page('berita.index', new SEOData(
             title: 'Berita Terkini',
             description: 'Kumpulan berita kegiatan, kajian, pengumuman dan informasi terbaru Masjid Raudhotul Jannah Taman Cipulir Estate.',
             image: secure_asset('images/default-share.jpg'),
-        );
+            url: route('berita.index'),
+            canonical_url: route('berita.index'),
+        ));
 
         return view('masjid.' . masjid() . '.guest.berita.index', compact('beritas'))
             ->with('seoData', $seoData);

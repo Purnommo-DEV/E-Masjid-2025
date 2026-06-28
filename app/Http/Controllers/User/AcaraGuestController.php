@@ -20,12 +20,13 @@ class AcaraGuestController extends Controller
     {
         $acaras = $this->acaraService->paginate(9);
 
-        // SEO khusus halaman list agenda
-        $seoData = new SEOData(
+        $seoData = seo_page('acara.index', new SEOData(
             title: 'Agenda Kegiatan & Kajian',
             description: 'Jadwal kajian, pengajian, ceramah, dan kegiatan Masjid Raudhotul Jannah Taman Cipulir Estate. Lihat agenda terbaru dan jangan sampai terlewat.',
             image: secure_asset('images/default-share.jpg'),
-        );
+            url: route('acara.index'),
+            canonical_url: route('acara.index'),
+        ));
 
         return view('masjid.' . masjid() . '.guest.acara.index', compact('acaras'))
             ->with('seoData', $seoData);

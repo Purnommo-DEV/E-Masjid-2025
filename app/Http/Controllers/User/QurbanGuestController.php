@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\QurbanReport;
+use RalphJSmit\Laravel\SEO\SchemaCollection;
+use RalphJSmit\Laravel\SEO\Support\SEOData;
 
 class QurbanGuestController extends Controller
 {
@@ -83,6 +85,38 @@ class QurbanGuestController extends Controller
                 ['question' => 'Apa yang terjadi jika patungan sapi tidak sampai 7 orang?', 'answer' => 'Akan dialihkan ke qurban kambing dengan biaya tambahan potong Rp150.000.'],
             ];
         }
+
+        $faqEntities = collect($faqItems)
+            ->filter(fn ($item) => filled($item['question'] ?? null) && filled($item['answer'] ?? null))
+            ->take(10)
+            ->map(fn ($item) => [
+                '@type' => 'Question',
+                'name' => $item['question'],
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text' => strip_tags($item['answer']),
+                ],
+            ])
+            ->values()
+            ->all();
+
+        $schema = SchemaCollection::make();
+        if ($faqEntities) {
+            $schema->add([
+                '@context' => 'https://schema.org',
+                '@type' => 'FAQPage',
+                'mainEntity' => $faqEntities,
+            ]);
+        }
+
+        $seoData = seo_page('qurban.index', new SEOData(
+            title: $heroTitle . ' | Program Qurban ' . masjid_name(),
+            description: 'Informasi pendaftaran, paket, pembayaran, dan konfirmasi program qurban ' . masjid_name() . '.',
+            image: $qurbans->first()?->cover_image_url ?: secure_asset('images/default-share.jpg'),
+            url: route('qurban.index'),
+            canonical_url: route('qurban.index'),
+            schema: $schema,
+        ));
         
         return view('masjid.' . masjid() . '.guest.program-qurban.index', compact(
             'qurbans',
@@ -104,7 +138,7 @@ class QurbanGuestController extends Controller
             'potongKambing',
             'importantNotes',
             'faqItems'
-        ));
+        ))->with('seoData', $seoData);
     }
 
     public function evaluasi()
@@ -877,12 +911,29 @@ class QurbanGuestController extends Controller
             'image' => $report->qr_image ?? null,
             'link' => $report->qr_link ?? '',
         ];
+
+        $laporanUrl = $tahun ? route('qurban.laporan', $tahun) : route('qurban.laporan');
+        $seoImage = $report->pelaksanaan_gambar1
+            ? asset($report->pelaksanaan_gambar1)
+            : secure_asset('images/default-share.jpg');
+
+        $seoData = seo_page('qurban.laporan', new SEOData(
+            title: 'Laporan Qurban ' . ($report->tahun_hijriah ?? $heroData['subtitle']) . ' | ' . masjid_name(),
+            description: 'Laporan pelaksanaan, distribusi, galeri, dan keuangan qurban ' . ($report->tahun_hijriah ?? $heroData['subtitle']) . ' di ' . masjid_name() . '.',
+            image: $seoImage,
+            url: $laporanUrl,
+            published_time: $report->created_at ?? null,
+            modified_time: $report->updated_at ?? null,
+            type: 'article',
+            canonical_url: $laporanUrl,
+            schema: SchemaCollection::make()->addArticle(),
+        ));
         
         return view('masjid.' . masjid() . '.guest.program-qurban.laporan', compact(
             'report', 'availableYears', 'heroData', 'stats', 'pelaksanaan',
             'dramatis', 'pemotongan', 'keuangan', 'penerima', 'distribusi',
             'galleryImages', 'additionalImages', 'footer', 'thankyou', 'qr', 'grandTotalPenerima'
-        ));
+        ))->with('seoData', $seoData);
     }
 
     /**

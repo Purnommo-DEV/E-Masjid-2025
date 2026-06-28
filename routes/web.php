@@ -27,6 +27,7 @@ use App\Http\Controllers\Admin\Qurban\QurbanReportController;
 use App\Http\Controllers\Admin\Qurban\QurbanSettingController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SaldoAwalController;
+use App\Http\Controllers\Admin\SeoPageController;
 
 use App\Http\Controllers\Admin\SlideMotivasiController;
 use App\Http\Controllers\Admin\UserController;
@@ -503,6 +504,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('pengumuman/{id}', [PengumumanController::class, 'edit'])->name('admin.pengumuman.edit');
         Route::put('pengumuman/{id}', [PengumumanController::class, 'update'])->name('admin.pengumuman.update');
         Route::delete('pengumuman/{id}', [PengumumanController::class, 'destroy'])->name('admin.pengumuman.destroy');
+
+        // SEO Halaman
+        Route::get('seo-pages', [SeoPageController::class, 'index'])->name('admin.seo-pages.index');
+        Route::put('seo-pages', [SeoPageController::class, 'update'])->name('admin.seo-pages.update');
 
         // Keuangan
         Route::get('/kotak-infak', [KotakInfakController::class, 'index'])->name('admin.keuangan.kotak-infak');

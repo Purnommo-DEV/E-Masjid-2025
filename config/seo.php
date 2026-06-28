@@ -9,7 +9,7 @@ return [
     ],
 
     'description' => [
-        'fallback' => 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kegiatan, kajian, pengumuman, jadwal sholat, dan layanan jamaah di Bandung.',
+        'fallback' => 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kegiatan, kajian, pengumuman, jadwal sholat, dan layanan jamaah.',
     ],
 
     'image' => [

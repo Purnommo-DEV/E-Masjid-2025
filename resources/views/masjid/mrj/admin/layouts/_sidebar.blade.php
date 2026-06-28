@@ -120,6 +120,7 @@
                         ['route' => 'admin.layanan.index', 'icon' => 'heart-handshake', 'label' => 'Layanan'],
                         ['route' => 'admin.galeri.index', 'icon' => 'photo', 'label' => 'Galeri'],
                         ['route' => 'admin.pengumuman.index', 'icon' => 'megaphone', 'label' => 'Pengumuman'],
+                        ['route' => 'admin.seo-pages.index', 'icon' => 'tag', 'label' => 'SEO Halaman'],
                     ];
                 @endphp
 

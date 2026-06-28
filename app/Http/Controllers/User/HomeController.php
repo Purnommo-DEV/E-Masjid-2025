@@ -112,11 +112,13 @@ class HomeController extends Controller
             ->limit(20)
             ->get();
 
-        $seoData = new SEOData(
+        $seoData = seo_page('home', new SEOData(
             title: 'Masjid Raudhotul Jannah Taman Cipulir Estate',
             description: 'Website resmi Masjid Raudhotul Jannah Taman Cipulir Estate. Informasi kajian, agenda kegiatan, berita jamaah, serta program Ramadhan dan pelayanan umat.',
             image: secure_asset('images/default-share.jpg'),
-        );
+            url: route('home'),
+            canonical_url: route('home'),
+        ));
 
         return view('masjid.'.masjid().'.guest.index', compact(
             'profil',
@@ -191,13 +193,13 @@ class HomeController extends Controller
             ->latest()
             ->paginate(12);
 
-        $seoData = new SEOData(
+        $seoData = seo_page('pengumuman.index', new SEOData(
             title: 'Pengumuman Masjid | ' . masjid_name(),
             description: 'Pengumuman resmi, informasi penting, dan kabar terbaru dari ' . masjid_name() . '.',
             image: secure_asset('images/default-share.jpg'),
             url: route('pengumuman.index'),
             canonical_url: route('pengumuman.index'),
-        );
+        ));
 
         return view('masjid.'.masjid().'.guest.pengumuman.index', compact('pengumumans'))
             ->with('seoData', $seoData);
@@ -261,13 +263,13 @@ class HomeController extends Controller
             ->latest('published_at')
             ->paginate(12);
 
-        $seoData = new SEOData(
+        $seoData = seo_page('galeri.index', new SEOData(
             title: 'Galeri Kegiatan | ' . masjid_name(),
             description: 'Dokumentasi foto dan video kegiatan, kajian, program sosial, Ramadhan, dan qurban di ' . masjid_name() . '.',
             image: secure_asset('images/default-share.jpg'),
             url: route('galeri.index'),
             canonical_url: route('galeri.index'),
-        );
+        ));
 
         return view('masjid.'.masjid().'.guest.galeri.index', compact('galeris'))
             ->with('seoData', $seoData);
