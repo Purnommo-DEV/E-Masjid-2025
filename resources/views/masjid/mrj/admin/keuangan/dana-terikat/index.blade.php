@@ -502,7 +502,7 @@
                                     <button type="button" id="btnTambahReferensi" class="btn btn-sm btn-square btn-outline">+</button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
                                     <label class="label label-text text-xs">Tgl Lahir</label>
                                     <input type="date" name="tanggal_lahir" class="input input-bordered input-sm w-full">
@@ -684,7 +684,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="space-y-1">
                         <label class="text-sm font-medium">Bulan</label>
                         <select
@@ -765,7 +765,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="space-y-1">
                             <label class="text-sm font-medium">Bulan</label>
                             <select

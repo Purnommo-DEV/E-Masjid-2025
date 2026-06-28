@@ -191,7 +191,7 @@
         <div class="section-card">
             <div class="section-header">📊 Statistik Utama</div>
             <div class="section-body">
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                     <div class="form-group">
                         <label class="form-label">Jumlah Sapi</label>
                         <input type="number" name="stat_hewan_sapi" value="{{ old('stat_hewan_sapi', $report->stat_hewan_sapi) }}" class="form-control">
@@ -618,7 +618,7 @@
                             <h4 class="font-bold">Ring {{ $ringIndex + 1 }}</h4>
                             <button type="button" class="remove-ring bg-red-500 text-white px-3 py-1 rounded text-sm">Hapus Ring</button>
                         </div>
-                        <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                             <input type="text" name="rings[{{ $ringIndex }}][title]" value="{{ $ring['title'] }}" class="form-control" placeholder="Judul Ring (contoh: RING I — Warga TCE)">
                             <div class="flex gap-2">
                                 <select name="rings[{{ $ringIndex }}][icon]" class="form-control">
@@ -975,7 +975,7 @@ if (addRingBtn) {
                 <h4 class="font-bold">Ring ${ringIndex + 1}</h4>
                 <button type="button" class="remove-ring bg-red-500 text-white px-3 py-1 rounded text-sm">Hapus Ring</button>
             </div>
-            <div class="grid grid-cols-2 gap-3 mb-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 <input type="text" name="rings[${ringIndex}][title]" class="form-control" placeholder="Judul Ring (contoh: RING I — Warga TCE)">
                 <div class="flex gap-2">
                     <select name="rings[${ringIndex}][icon]" class="form-control">

@@ -172,7 +172,7 @@
         </div>
 
         <!-- Statistics Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6" id="statCards">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-6" id="statCards">
             <div class="stat-card text-center">
                 <div class="text-2xl font-bold text-gray-800" id="statTotal">0</div>
                 <div class="text-sm text-gray-500">Total Pendaftar</div>

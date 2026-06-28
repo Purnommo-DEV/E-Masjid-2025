@@ -97,7 +97,7 @@
 
             <div class="mb-6">
                 <p class="text-sm font-medium text-emerald-800 mb-2">Pilih Jenis Zakat / Dana (satu saja)</p>
-                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     @foreach(['zakat_fitrah','zakat_maal','fidyah','infaq','shodaqoh','wakaf','donasi_khusus'] as $j)
                         <label class="radio-label flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl cursor-pointer hover:bg-emerald-100 transition">
                             <input class="radio radio-sm radio-success" type="radio" name="jenis_zakat" value="{{ $j }}">

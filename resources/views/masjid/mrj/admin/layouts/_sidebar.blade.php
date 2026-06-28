@@ -27,8 +27,6 @@
             'admin.qurban.laporan*'
         ]) ? 'true' : 'false' }},
 
-        sidebarOpen: window.innerWidth >= 1024,
-
         init() {
             // Load from localStorage
             if (localStorage.getItem('openKeuangan') === 'true') {
@@ -53,20 +51,13 @@
             });
         }
     }"
-    x-bind:class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-    class="fixed inset-y-0 left-0 z-[9999] w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:w-64 lg:shadow-2xl"
+    id="admin-sidebar"
+    x-bind:class="sidebarOpen ? '!translate-x-0 shadow-2xl' : ''"
+    class="fixed inset-y-0 left-0 z-50 w-[min(80vw,20rem)] max-w-[20rem] -translate-x-full transform transition-transform duration-300 ease-in-out lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-2xl"
     aria-label="Sidebar"
 >
-    <!-- Overlay gelap untuk mobile -->
-    <div
-        x-show="sidebarOpen && window.innerWidth < 1024"
-        @click="sidebarOpen = false"
-        class="fixed inset-0 bg-black/70 z-[9998] lg:hidden transition-opacity duration-300 pointer-events-none"
-        :class="{ 'opacity-0 pointer-events-none': !sidebarOpen, 'opacity-100 pointer-events-auto': sidebarOpen }"
-    ></div>
-
     <!-- Konten Sidebar -->
-    <div class="h-full overflow-y-auto max-h-screen sidebar-wrap rounded-r-2xl shadow-2xl flex flex-col relative z-[10000]">
+    <div class="h-dvh max-h-dvh overflow-y-auto overscroll-contain sidebar-wrap rounded-r-2xl shadow-2xl flex flex-col relative">
         
         <!-- HEADER -->
         <div class="flex items-center justify-between px-6 py-5 border-b" style="background: linear-gradient(180deg,#07332e,#0f4d45);">
@@ -90,7 +81,7 @@
                 <span>Waktu Sholat</span>
                 <a href="#" class="text-emerald-200 text-xs">refresh</a>
             </div>
-            <div class="grid grid-cols-4 gap-2 text-[11px] md:grid-cols-2 md:text-[12px]">
+            <div class="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4 lg:grid-cols-2 lg:text-[12px]">
                 <div class="p-2 rounded-md text-center bg-[rgba(255,255,255,0.02)]">Subuh<br><span class="font-semibold">04:25</span></div>
                 <div class="p-2 rounded-md text-center bg-[rgba(255,255,255,0.02)]">Dzuhur<br><span class="font-semibold">12:10</span></div>
                 <div class="p-2 rounded-md text-center bg-[rgba(255,255,255,0.02)]">Ashar<br><span class="font-semibold">15:20</span></div>
@@ -99,7 +90,7 @@
         </div>
 
         <!-- NAV ITEMS -->
-        <nav class="px-3 py-4 flex-1">
+        <nav class="px-3 py-4 flex-1" @click="if ($event.target.closest('a') && window.innerWidth < 1024) sidebarOpen = false">
             <ul class="space-y-2">
                 @php
                     $menuItems = [

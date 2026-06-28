@@ -210,7 +210,7 @@
                                 <small class="error-text" data-error="catatan_singkat"></small>
                             </div>
 
-                            <div class="grid grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)] gap-3">
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,.8fr)]">
                                 <div>
                                     <label class="block text-xs font-semibold mb-1">Label Tombol</label>
                                     <input type="text" name="button_label" class="input-plain" placeholder="Lihat Detail">

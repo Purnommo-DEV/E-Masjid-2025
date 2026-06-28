@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+  display: none !important;
+}
+
 /* ===========================
    Custom utilities & overrides
    =========================== */
@@ -21,4 +25,80 @@
 .dataTables_wrapper select,
 .dataTables_wrapper .dataTables_filter input {
   @apply form-input;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.main-content,
+.admin-content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.admin-content .card-wrapper,
+.admin-content .card,
+.admin-content .modal-box,
+.admin-content form,
+.admin-content fieldset {
+  max-width: 100%;
+}
+
+.admin-content img,
+.admin-content video,
+.admin-content canvas,
+.admin-content svg {
+  max-width: 100%;
+}
+
+.admin-content .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-content table {
+  width: 100%;
+}
+
+.admin-content .btn,
+.admin-content button,
+.admin-content a {
+  max-width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .admin-content table:not(.no-responsive-table) {
+    min-width: max-content;
+  }
+
+  .admin-content .dataTables_wrapper,
+  .admin-content .dt-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-content .dataTables_wrapper .dataTables_length,
+  .admin-content .dataTables_wrapper .dataTables_filter,
+  .admin-content .dt-container .dt-length,
+  .admin-content .dt-container .dt-search {
+    float: none !important;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    text-align: left !important;
+  }
+
+  .admin-content .dataTables_wrapper .dataTables_filter input,
+  .admin-content .dt-container .dt-search input {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0 !important;
+  }
 }

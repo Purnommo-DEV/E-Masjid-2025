@@ -1,29 +1,36 @@
-<nav class="bg-white shadow px-4 py-3 sticky top-0 z-30">
-  <div class="max-w-7xl mx-auto flex items-center justify-between">
-    <div class="flex items-center gap-4">
+<nav class="bg-white shadow px-3 py-3 sticky top-0 z-30 sm:px-4">
+  <div class="max-w-full mx-auto flex min-w-0 items-center justify-between gap-3">
+    <div class="flex min-w-0 items-center gap-3 sm:gap-4">
       <!-- Tombol hamburger - PASTI muncul di < lg -->
-      <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-md hover:bg-gray-100 text-gray-700 z-50">
+      <button
+        type="button"
+        @click="sidebarOpen = !sidebarOpen"
+        :aria-expanded="sidebarOpen.toString()"
+        aria-controls="admin-sidebar"
+        aria-label="Toggle sidebar navigation"
+        class="lg:hidden shrink-0 p-2 rounded-md hover:bg-gray-100 text-gray-700 z-50"
+      >
         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
       </button>
 
       <!-- Search tetap -->
-      <div class="hidden sm:block">
+      <div class="hidden min-w-0 sm:block">
         <form action="#" method="GET">
           <div class="relative">
-            <input type="text" name="q" placeholder="Type here..." class="form-input pl-10 pr-4" />
+            <input type="text" name="q" placeholder="Type here..." class="form-input w-full max-w-xs pl-10 pr-4" />
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fas fa-search"></i></span>
           </div>
         </form>
       </div>
     </div>
 
-    <div class="flex items-center gap-4">
-      <div class="hidden sm:flex items-center gap-3">
-        <a href="#" class="text-sm text-gray-600 flex items-center gap-2">
+    <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div class="hidden min-w-0 sm:flex items-center gap-3">
+        <a href="#" class="text-sm text-gray-600 flex min-w-0 items-center gap-2">
           <i class="fa fa-user"></i>
-          <span>{{ Auth::user()->name ?? 'User' }}</span>
+          <span class="truncate">{{ Auth::user()->name ?? 'User' }}</span>
         </a>
       </div>
       <div class="sm:hidden">

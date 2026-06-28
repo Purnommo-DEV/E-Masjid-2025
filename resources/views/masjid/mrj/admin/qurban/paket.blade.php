@@ -245,7 +245,7 @@
                         <p class="text-xs text-gray-400 mt-1">Semakin kecil angka, semakin atas tampilannya</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                             <label class="block text-sm font-medium mb-1">Berat Min (kg)</label>
                             <input type="number" name="berat_min" id="berat_min" class="input-plain" min="0">

@@ -127,7 +127,7 @@
                     <textarea name="isi" id="isi" rows="5" class="w-full rounded-lg border px-3 py-2"></textarea>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Mulai</label>
                         <input type="datetime-local" name="mulai" id="mulai" class="w-full rounded-lg border px-3 py-2">
@@ -144,7 +144,7 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 mt-6">
+            <div class="flex flex-col-reverse gap-2 mt-6 sm:flex-row sm:justify-end">
                 <button type="button" id="cancelBtn" class="px-4 py-2 rounded-lg border hover:bg-gray-50">Batal</button>
                 <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white">Simpan</button>
             </div>
