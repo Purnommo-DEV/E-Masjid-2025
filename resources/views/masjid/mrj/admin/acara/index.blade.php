@@ -317,6 +317,48 @@
                         <input type="checkbox" name="is_published" class="checkbox checkbox-success" id="isPublishedCheck">
                         <label for="isPublishedCheck" class="text-sm">Publikasikan sekarang</label>
                     </div>
+
+                    <div class="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 space-y-4">
+                        <div>
+                            <h4 class="font-bold text-emerald-900">SEO Override</h4>
+                            <p class="text-xs text-slate-500 mt-1">Kosongkan jika ingin memakai SEO otomatis dari judul, deskripsi, jadwal, dan poster.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">SEO Title</label>
+                            <input type="text" name="seo[title]" maxlength="70" class="form-control" placeholder="Maksimal 70 karakter">
+                            <div class="invalid-feedback" data-error="seo.title"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">SEO Description</label>
+                            <textarea name="seo[description]" maxlength="170" rows="3" class="form-control" placeholder="Ideal 140-160 karakter"></textarea>
+                            <div class="invalid-feedback" data-error="seo.description"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Social Image URL</label>
+                            <input type="text" name="seo[image]" class="form-control" placeholder="https://... atau /storage/...">
+                            <div class="invalid-feedback" data-error="seo.image"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Canonical URL</label>
+                            <input type="url" name="seo[canonical_url]" class="form-control" placeholder="Kosongkan untuk URL acara">
+                            <div class="invalid-feedback" data-error="seo.canonical_url"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Robots</label>
+                            <select name="seo[robots]" class="form-control">
+                                <option value="">Default: index, follow</option>
+                                <option value="index, follow">index, follow</option>
+                                <option value="noindex, follow">noindex, follow</option>
+                                <option value="noindex, nofollow">noindex, nofollow</option>
+                            </select>
+                            <div class="invalid-feedback" data-error="seo.robots"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Kolom kanan: Poster -->
@@ -596,6 +638,11 @@
             $('[name=penyelenggara]').val(data.penyelenggara);
             $('[name=pemateri]').val(data.pemateri);
             $('[name=waktu_teks]').val(data.waktu_teks);
+            $('[name="seo[title]"]').val(data.seo?.title || '');
+            $('[name="seo[description]"]').val(data.seo?.description || '');
+            $('[name="seo[image]"]').val(data.seo?.image || '');
+            $('[name="seo[canonical_url]"]').val(data.seo?.canonical_url || '');
+            $('[name="seo[robots]"]').val(data.seo?.robots || '');
 
             if($.fn.select2){ 
                 $('.select2').val(data.kategori_ids || []).trigger('change'); 

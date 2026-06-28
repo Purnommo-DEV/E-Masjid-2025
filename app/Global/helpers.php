@@ -108,6 +108,30 @@ if (!function_exists('masjid_name')) {
     }
 }
 
+if (!function_exists('seo_page')) {
+    function seo_page(string $pageKey, \RalphJSmit\Laravel\SEO\Support\SEOData $fallback): \RalphJSmit\Laravel\SEO\Support\SEOData
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('seo_pages')) {
+            return $fallback;
+        }
+
+        $seoPage = \App\Models\SeoPage::where('page_key', $pageKey)->first();
+
+        if (!$seoPage) {
+            return $fallback;
+        }
+
+        $seoData = clone $fallback;
+        $seoData->title = $seoPage->title ?: $fallback->title;
+        $seoData->description = $seoPage->description ?: $fallback->description;
+        $seoData->image = $seoPage->image ?: $fallback->image;
+        $seoData->canonical_url = $seoPage->canonical_url ?: $fallback->canonical_url;
+        $seoData->robots = $seoPage->robots ?: $fallback->robots;
+
+        return $seoData;
+    }
+}
+
 if (!function_exists('masjid_address')) {
     function masjid_address(): string
     {

@@ -33,9 +33,14 @@ class AcaraController extends Controller
             'waktu_teks' => 'nullable|string',
             'poster' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5024',
             'kategori_id' => 'array',
+            'seo.title' => 'nullable|string|max:70',
+            'seo.description' => 'nullable|string|max:170',
+            'seo.image' => 'nullable|string|max:2048',
+            'seo.canonical_url' => 'nullable|url|max:2048',
+            'seo.robots' => 'nullable|string|max:50',
         ]);
 
-        $this->repo->create([
+        $acara = $this->repo->create([
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
             'mulai' => $request->mulai,
@@ -48,6 +53,8 @@ class AcaraController extends Controller
             'is_published' => $request->has('is_published'),
             'kategori_ids' => $request->kategori_id ?? [],
         ]);
+
+        $this->syncSeo($acara, $request);
 
         return response()->json(['success' => true, 'message' => 'Acara berhasil disimpan!']);
     }
@@ -69,6 +76,13 @@ class AcaraController extends Controller
             'poster_url' => $acara->poster_url, // Kirim URL poster (string, bukan array)
             'kategori_ids' => $acara->kategoris->pluck('id')->toArray(),
             'is_published' => $acara->is_published,
+            'seo' => [
+                'title' => $acara->seo?->title,
+                'description' => $acara->seo?->description,
+                'image' => $acara->seo?->image,
+                'canonical_url' => $acara->seo?->canonical_url,
+                'robots' => $acara->seo?->robots,
+            ],
         ]);
     }
 
@@ -85,9 +99,14 @@ class AcaraController extends Controller
             'waktu_teks' => 'nullable|string',
             'poster' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5024',
             'kategori_id' => 'array',
+            'seo.title' => 'nullable|string|max:70',
+            'seo.description' => 'nullable|string|max:170',
+            'seo.image' => 'nullable|string|max:2048',
+            'seo.canonical_url' => 'nullable|url|max:2048',
+            'seo.robots' => 'nullable|string|max:50',
         ]);
 
-        $this->repo->update($id, [
+        $acara = $this->repo->update($id, [
             'judul' => $request->judul,
             'deskripsi' => $request->deskripsi,
             'mulai' => $request->mulai,
@@ -101,6 +120,8 @@ class AcaraController extends Controller
             'kategori_ids' => $request->kategori_id ?? [],
         ]);
 
+        $this->syncSeo($acara, $request);
+
         return response()->json(['success' => true, 'message' => 'Acara berhasil diperbarui!']);
     }
 
@@ -108,5 +129,15 @@ class AcaraController extends Controller
     {
         $this->repo->delete($id);
         return response()->json(['success' => true, 'message' => 'Acara berhasil dihapus!']);
+    }
+
+    private function syncSeo($model, Request $request): void
+    {
+        $seo = collect($request->input('seo', []))
+            ->only(['title', 'description', 'image', 'canonical_url', 'robots'])
+            ->map(fn ($value) => is_string($value) && trim($value) === '' ? null : $value)
+            ->all();
+
+        $model->seo()->updateOrCreate([], $seo);
     }
 }

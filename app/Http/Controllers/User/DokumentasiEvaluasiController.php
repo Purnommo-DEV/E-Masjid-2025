@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Guest;
+namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\EvaluasiQurban;
@@ -72,7 +72,7 @@ class DokumentasiEvaluasiController extends Controller
         
         $totalMasukan = $data->count();
         
-        return view('guest.dokumentasi-evaluasi', compact('data', 'tahun', 'tahunList', 'kategori', 'aiSummary', 'totalMasukan'));
+        return view('masjid.' . masjid() . '.guest.program-qurban.dokumentasi-evaluasi', compact('data', 'tahun', 'tahunList', 'kategori', 'aiSummary', 'totalMasukan'));
     }
     
     private function isPositive($text)

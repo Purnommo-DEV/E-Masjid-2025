@@ -20,11 +20,13 @@ class BeritaGuestController extends Controller
     {
         $beritas = $this->beritaService->paginate(9);
 
-        $seoData = new SEOData(
+        $seoData = seo_page('berita.index', new SEOData(
             title: 'Berita Terkini',
             description: 'Kumpulan berita kegiatan, kajian, pengumuman dan informasi terbaru Masjid Raudhotul Jannah Taman Cipulir Estate.',
             image: secure_asset('images/default-share.jpg'),
-        );
+            url: route('berita.index'),
+            canonical_url: route('berita.index'),
+        ));
 
         return view('masjid.' . masjid() . '.guest.berita.index', compact('beritas'))
             ->with('seoData', $seoData);
@@ -34,7 +36,7 @@ class BeritaGuestController extends Controller
     {
         $berita = Berita::where('slug', $slug)
             ->where('is_published', true)
-            ->with(['kategoris', 'media'])
+            ->with(['kategoris', 'media', 'author'])
             ->firstOrFail();
 
         $related = $this->beritaService->related(3, $berita->id);
@@ -51,6 +53,7 @@ class BeritaGuestController extends Controller
             return !empty($item['url']);
         })->values()->toArray();
 
-        return view('masjid.' . masjid() . '.guest.berita.show', compact('berita', 'related', 'galleryImages'));
+        return view('masjid.' . masjid() . '.guest.berita.show', compact('berita', 'related', 'galleryImages'))
+            ->with('seoData', $berita);
     }
 }

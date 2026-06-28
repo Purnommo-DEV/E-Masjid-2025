@@ -124,17 +124,22 @@ class Berita extends Model
     // SEO
     public function getDynamicSEOData(): SEOData
     {
+        $seo = $this->seo;
         $coverImage = $this->cover_url ?? secure_asset('images/default-share.jpg');
-
         $description = $this->excerpt ?: Str::limit(strip_tags($this->isi ?? ''), 158);
+        $canonicalUrl = route('berita.show', $this->slug);
 
         return new SEOData(
-            title: $this->judul . ' | ' . masjid_name(),
-            description: $description,
-            author: $this->author?->name ?? 'Tim Masjid',
-            image: $coverImage,
+            title: $seo?->title ?: $this->judul . ' | ' . masjid_name(),
+            description: $seo?->description ?: $description,
+            author: $seo?->author ?: ($this->author?->name ?? 'Tim Masjid'),
+            image: $seo?->image ?: $coverImage,
+            url: $canonicalUrl,
             published_time: $this->published_at,
             modified_time: $this->updated_at,
+            type: 'article',
+            robots: $seo?->robots,
+            canonical_url: $seo?->canonical_url ?: $canonicalUrl,
             schema: SchemaCollection::make()->addArticle(),
         );
     }

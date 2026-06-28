@@ -33,25 +33,6 @@
         ];
     @endphp
 
-    <meta name="description" content="{{ $seoDescription }}">
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <meta name="keywords" content="{{ $siteName }}, masjid, jadwal sholat, kajian Islam, agenda masjid, infaq, donasi masjid, layanan jamaah, Taman Cipulir Estate">
-    <meta name="author" content="{{ $siteName }}">
-
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="id_ID">
-    <meta property="og:site_name" content="{{ $siteName }}">
-    <meta property="og:title" content="{{ $siteName }} - Jadwal Sholat, Agenda & Layanan Jamaah">
-    <meta property="og:description" content="{{ $seoDescription }}">
-    <meta property="og:url" content="{{ $canonicalUrl }}">
-    <meta property="og:image" content="{{ $shareImage }}">
-    <meta property="og:image:alt" content="Logo dan informasi {{ $siteName }}">
-
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{ $siteName }} - Portal Informasi Umat">
-    <meta name="twitter:description" content="{{ $seoDescription }}">
-    <meta name="twitter:image" content="{{ $shareImage }}">
-
     <link rel="preconnect" href="https://www.google.com">
     <link rel="dns-prefetch" href="//www.google.com">
 

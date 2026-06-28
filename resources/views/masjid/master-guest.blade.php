@@ -6,19 +6,20 @@
     
     @if(isset($seoData))
         {!! seo($seoData) !!}
+    @else
+        {{-- TITLE --}}
+        <title>
+            @hasSection('title')
+                @yield('title') | Masjid Raudhotul Jannah TCE
+            @else
+                Masjid Raudhotul Jannah Taman Cipulir Estate
+            @endif
+        </title>
+
+        <link rel="canonical" href="{{ url()->current() }}">
     @endif
 
-    {{-- TITLE --}}
-    <title>
-        @hasSection('title')
-            @yield('title') | Masjid Raudhotul Jannah TCE
-        @else
-            Masjid Raudhotul Jannah Taman Cipulir Estate
-        @endif
-    </title>
-
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="canonical" href="{{ url()->current() }}">
 
     {{-- PWA --}}
     <link rel="manifest" href="{{ route('pwa.manifest') }}">

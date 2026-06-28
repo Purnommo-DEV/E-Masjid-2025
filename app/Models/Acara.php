@@ -116,19 +116,23 @@ class Acara extends Model
     // SEO
     public function getDynamicSEOData(): SEOData
     {
-        $coverImage = $this->image_path ?? secure_asset('images/default-share.jpg');
+        $seo = $this->seo;
+        $coverImage = get_image_url($this->image_path) ?: secure_asset('images/default-share.jpg');
 
         $description = $this->deskripsi
             ? Str::limit(strip_tags($this->deskripsi), 158)
             : ($this->judul . ' di ' . ($this->lokasi ?? 'Masjid') . ' pada ' . $this->tanggal_label);
+        $seoDescription = $seo?->description ?: $description;
+        $seoImage = $seo?->image ?: $coverImage;
+        $canonicalUrl = $seo?->canonical_url ?: route('acara.show', $this->slug);
 
         $eventSchema = [
             '@context' => 'https://schema.org',
             '@type' => 'Event',
             'name' => $this->judul,
-            'description' => $description,
-            'image' => $coverImage,
-            'url' => route('acara.show', $this->slug),
+            'description' => $seoDescription,
+            'image' => $seoImage,
+            'url' => $canonicalUrl,
             'startDate' => $this->mulai?->toIso8601String(),
             'endDate' => $this->selesai?->toIso8601String(),
             'location' => [
@@ -149,12 +153,16 @@ class Acara extends Model
         $eventSchema = array_filter($eventSchema, fn($value) => !is_null($value));
 
         return new SEOData(
-            title: $this->judul . ' | ' . masjid_name(),
-            description: $description,
-            author: $this->author?->name ?? 'Tim Masjid',
-            image: $coverImage,
+            title: $seo?->title ?: $this->judul . ' | ' . masjid_name(),
+            description: $seoDescription,
+            author: $seo?->author ?: ($this->author?->name ?? 'Tim Masjid'),
+            image: $seoImage,
+            url: route('acara.show', $this->slug),
             published_time: $this->published_at,
             modified_time: $this->updated_at,
+            type: 'article',
+            robots: $seo?->robots,
+            canonical_url: $canonicalUrl,
             schema: SchemaCollection::make()
                 ->addArticle()
                 ->add($eventSchema),
