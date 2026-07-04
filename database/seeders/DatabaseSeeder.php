@@ -26,10 +26,10 @@ class DatabaseSeeder extends Seeder
             // QurbanReportSeeder::class,
             // QurbanSettingSeeder::class
             // QurbanReportSeeder::class,
-            // PengumumanSeeder::class,
+            PengumumanSeeder::class,
             // EvaluasiQurban1446Seeder::class,
-            KhutbahJumatSeeder::class,
-            QuoteSeeder::class,
+            // KhutbahJumatSeeder::class,
+            // QuoteSeeder::class,
         ]);
     }
 }

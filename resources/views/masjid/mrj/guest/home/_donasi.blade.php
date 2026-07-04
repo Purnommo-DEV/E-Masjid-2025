@@ -67,7 +67,7 @@
                                                 <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl mb-2 shadow-lg">
                                                     💝
                                                 </div>
-                                                <h3 class="text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight">
+                                                <h3 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-tight">
                                                     {!! $slide->title !!}
                                                 </h3>
                                                 <p class="text-base sm:text-lg lg:text-xl font-semibold">
