@@ -300,6 +300,10 @@ Route::middleware(['auth'])->group(function () {
         ->withoutMiddleware([])
         ->group(function () {
 
+        Route::get('/admin/ops', function () {
+            return view('masjid.' . masjid() . '.admin.ops.index');
+        })->name('admin.ops.index');
+
         Route::post('/admin/ops/clear-cache', function () {
             abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
 
@@ -307,7 +311,11 @@ Route::middleware(['auth'])->group(function () {
             \Artisan::call('cache:clear');
             \Artisan::call('config:clear');
 
-            return response()->json(['message' => 'Cache berhasil dibersihkan.']);
+            $message = 'Cache berhasil dibersihkan.';
+
+            return request()->expectsJson()
+                ? response()->json(['message' => $message])
+                : back()->with('success', $message);
         })->name('admin.ops.clear-cache');
 
         Route::post('/admin/ops/run-migrate', function () {
@@ -315,7 +323,11 @@ Route::middleware(['auth'])->group(function () {
 
             \Artisan::call('migrate', ['--force' => true]);
 
-            return response()->json(['message' => 'Migration berhasil dijalankan.']);
+            $message = 'Migration berhasil dijalankan.';
+
+            return request()->expectsJson()
+                ? response()->json(['message' => $message])
+                : back()->with('success', $message);
         })->name('admin.ops.run-migrate');
 
         Route::post('/admin/ops/run-seeder', function () {
@@ -323,7 +335,11 @@ Route::middleware(['auth'])->group(function () {
 
             \Artisan::call('db:seed', ['--force' => true]);
 
-            return response()->json(['message' => 'Seeder berhasil dijalankan.']);
+            $message = 'Seeder berhasil dijalankan.';
+
+            return request()->expectsJson()
+                ? response()->json(['message' => $message])
+                : back()->with('success', $message);
         })->name('admin.ops.run-seeder');
 
     });

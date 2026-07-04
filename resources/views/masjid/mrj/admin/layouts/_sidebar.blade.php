@@ -113,6 +113,10 @@
                         ['route' => 'admin.pengumuman.index', 'icon' => 'megaphone', 'label' => 'Pengumuman'],
                         ['route' => 'admin.seo-pages.index', 'icon' => 'tag', 'label' => 'SEO Halaman'],
                     ];
+
+                    if (auth()->user()?->hasRole('SuperAdmin')) {
+                        $menuItems[] = ['route' => 'admin.ops.index', 'icon' => 'shield', 'label' => 'Operasi Sistem'];
+                    }
                 @endphp
 
                 @foreach($menuItems as $m)
