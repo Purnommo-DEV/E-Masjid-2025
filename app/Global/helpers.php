@@ -61,18 +61,18 @@ if (!function_exists('waNumberFormatted')) {
     function waNumberFormatted($default = '62895704043814')
     {
         $noWa = profil('telepon');
-        
+
         if (!$noWa) {
             $noWa = $default;
         }
-        
+
         $clean = preg_replace('/[^0-9]/', '', $noWa);
-        
+
         // Format lokal Indonesia (awalan 0)
         if (substr($clean, 0, 2) === '62') {
             $clean = '0' . substr($clean, 2);
         }
-        
+
         // Format dengan strip: 0812-3456-7890
         if (strlen($clean) >= 11) {
             if (strlen($clean) === 11) {
@@ -81,8 +81,48 @@ if (!function_exists('waNumberFormatted')) {
                 return substr($clean, 0, 4) . '-' . substr($clean, 4, 4) . '-' . substr($clean, 8);
             }
         }
-        
+
         return $clean;
+    }
+}
+
+// Helper nomor WA untuk link wa.me
+if (!function_exists('waNumberForLink')) {
+    function waNumberForLink($default = '62895704043814')
+    {
+        $noWa = profil('no_wa') ?? profil('telepon') ?? $default;
+
+        $clean = preg_replace('/[^0-9]/', '', $noWa);
+
+        // Kalau 08xxxx ubah jadi 628xxxx
+        if (substr($clean, 0, 1) === '0') {
+            $clean = '62' . substr($clean, 1);
+        }
+
+        // Kalau 8xxxx ubah jadi 628xxxx
+        if (substr($clean, 0, 1) === '8') {
+            $clean = '62' . $clean;
+        }
+
+        return $clean;
+    }
+}
+
+// Pesan default WA
+if (!function_exists('waDefaultMessage')) {
+    function waDefaultMessage()
+    {
+        return "Assalamu'alaikum, saya ingin bertanya terkait layanan jamaah Masjid. Mohon informasinya.";
+    }
+}
+
+// Link WA lengkap
+if (!function_exists('waLink')) {
+    function waLink($message = null)
+    {
+        $message = $message ?: waDefaultMessage();
+
+        return 'https://wa.me/' . waNumberForLink() . '?text=' . rawurlencode($message);
     }
 }
 
@@ -222,7 +262,7 @@ if (!function_exists('convert_to_webp')) {
         $mimeType = $file->getMimeType();
         $fileSize = $file->getSize();
         $extension = $file->getClientOriginalExtension();
-        
+
         // Handle HEIC/HEIF format
         if (strtolower($extension) === 'heic' || $mimeType === 'image/heic' || $mimeType === 'image/heif') {
             // Cek apakah ImageMagick tersedia
@@ -230,7 +270,7 @@ if (!function_exists('convert_to_webp')) {
                 try {
                     $imagick = new \Imagick($sourcePath);
                     $imagick->setImageFormat('webp');
-                    
+
                     // Auto quality
                     if ($quality === null) {
                         if ($fileSize > 1.5 * 1024 * 1024) {
@@ -241,14 +281,13 @@ if (!function_exists('convert_to_webp')) {
                             $quality = 85;
                         }
                     }
-                    
+
                     $imagick->setImageCompressionQuality($quality);
                     $webpContent = $imagick->getImageBlob();
                     $imagick->destroy();
-                    
+
                     Log::info("Converted HEIC to WebP - Quality: {$quality}");
                     return $webpContent;
-                    
                 } catch (\Exception $e) {
                     Log::error("Imagick HEIC conversion failed: " . $e->getMessage());
                     throw new \Exception("Gagal mengkonversi file HEIC. Pastikan ImageMagick support HEIC.");
@@ -257,7 +296,7 @@ if (!function_exists('convert_to_webp')) {
                 throw new \Exception("Format HEIC tidak didukung. Silakan install Imagick atau konversi file ke JPG/PNG terlebih dahulu.");
             }
         }
-        
+
         // Auto adjust quality untuk file < 2MB
         if ($quality === null) {
             if ($fileSize > 1.5 * 1024 * 1024) {
@@ -275,7 +314,7 @@ if (!function_exists('convert_to_webp')) {
 
         // Proses file non-HEIC
         $image = null;
-        
+
         try {
             switch ($mimeType) {
                 case 'image/jpeg':
@@ -318,7 +357,6 @@ if (!function_exists('convert_to_webp')) {
             imagedestroy($image);
 
             return $webpContent;
-            
         } catch (\Exception $e) {
             Log::error("Image conversion failed: " . $e->getMessage());
             return file_get_contents($sourcePath);
@@ -333,11 +371,11 @@ if (!function_exists('upload_image')) {
         $fileSize = $file->getSize();
         $fileSizeMB = round($fileSize / 1024 / 1024, 2);
         $maxSizeMB = 2;
-        
+
         if ($fileSize > $maxSizeMB * 1024 * 1024) {
             throw new \Exception("File {$file->getClientOriginalName()} berukuran {$fileSizeMB}MB melebihi batas maksimal {$maxSizeMB}MB. Silakan kompres file terlebih dahulu.");
         }
-        
+
         // Hapus file lama
         if ($oldPath && Storage::disk('public')->exists($oldPath)) {
             Storage::disk('public')->delete($oldPath);
@@ -466,32 +504,32 @@ if (!function_exists('delete_image')) {
         if (empty($path)) {
             return false;
         }
-        
+
         // Bersihkan path dari prefix /storage/ atau storage/
         $cleanPath = $path;
-        
+
         // Hapus prefix /storage/ jika ada
         $cleanPath = preg_replace('#^/storage/#', '', $cleanPath);
         $cleanPath = preg_replace('#^storage/#', '', $cleanPath);
-        
+
         // Hapus domain jika ada (misal http://localhost/storage/...)
         if (filter_var($cleanPath, FILTER_VALIDATE_URL)) {
             $parsed = parse_url($cleanPath);
             $cleanPath = $parsed['path'] ?? '';
             $cleanPath = preg_replace('#^/storage/#', '', $cleanPath);
         }
-        
+
         if (empty($cleanPath)) {
             return false;
         }
-        
+
         // Cek dan hapus file
         if (Storage::disk('public')->exists($cleanPath)) {
             Storage::disk('public')->delete($cleanPath);
             \Illuminate\Support\Facades\Log::info('Image deleted: ' . $cleanPath);
             return true;
         }
-        
+
         \Illuminate\Support\Facades\Log::warning('Image not found: ' . $cleanPath);
         return false;
     }

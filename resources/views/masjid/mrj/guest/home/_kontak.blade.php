@@ -25,12 +25,14 @@
                 <div class="relative z-10">
                     <div class="mb-6">
                         <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-emerald-700 ring-1 ring-emerald-100">
-                            <span class="text-sm">🕌</span>
-                            <span class="text-xs font-black uppercase tracking-[0.16em]">Kontak</span>
+                            <span class="text-sm">📍</span>
+                            <span class="text-xs font-black uppercase tracking-[0.16em]">
+                                Lokasi Masjid
+                            </span>
                         </div>
 
                         <h2 class="font-serif text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
-                            Hubungi Kami
+                            Alamat Masjid
                         </h2>
 
                         <div class="mt-4 flex items-center gap-2">
@@ -40,19 +42,22 @@
                         </div>
 
                         <p class="mt-5 text-sm leading-7 text-slate-600 sm:text-base">
-                            {{ $profil->alamat ?? 'Alamat belum tersedia. Hubungi kami untuk info lebih lanjut.' }}
+                            {{ profil('alamat') ?? 'Alamat belum tersedia. Hubungi kami untuk info lebih lanjut.' }}
                         </p>
                     </div>
 
-                    {{-- Map Box --}}
-                    <div class="overflow-hidden rounded-[1.5rem] border border-emerald-100 bg-emerald-50/60 shadow-xl shadow-emerald-900/5">
-                        @if(!empty($profil->latitude) && !empty($profil->longitude))
+                {{-- Map Placeholder --}}
+                <div class="overflow-hidden rounded-[2rem] border border-emerald-100 bg-white shadow-xl shadow-emerald-900/5">
+                    {{-- Info Mini --}}
+                    <div class="border-t border-emerald-100/80 bg-white/90 p-4 sm:p-5">
+
+                        @if(!empty(profil('latitude')) && !empty(profil('longitude')))
                             <iframe
                                 class="h-[320px] w-full sm:h-[380px] lg:h-[420px]"
                                 loading="lazy"
                                 allowfullscreen
                                 referrerpolicy="no-referrer-when-downgrade"
-                                src="https://www.google.com/maps?q={{ $profil->latitude }},{{ $profil->longitude }}&z=20&output=embed">
+                                src="https://www.google.com/maps?q={{ profil('latitude') }},{{ profil('longitude') }}&z=20&output=embed">
                             </iframe>
                         @else
                             <div class="relative flex h-[320px] w-full items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-cyan-50 sm:h-[380px] lg:h-[420px]">
@@ -73,46 +78,48 @@
                                 </div>
                             </div>
                         @endif
+                        <div class="grid gap-3">
+                            
+                            {{-- Jam Operasional --}}
+                            <div class="group relative overflow-hidden rounded-2xl border border-emerald-100/70 bg-gradient-to-br from-white to-emerald-50/70 p-4 shadow-lg shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-200/40">
+                                <div class="relative z-10 flex items-center gap-4">
+                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-xl shadow-md shadow-emerald-900/5 ring-1 ring-emerald-100">
+                                        🕘
+                                    </div>
 
-                        {{-- Info Mini --}}
-                        <div class="grid border-t border-emerald-100 bg-white/85 sm:grid-cols-3">
-                            <div class="flex gap-3 p-4 sm:border-r sm:border-emerald-100">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                                    📍
-                                </div>
-                                <div>
-                                    <p class="text-xs font-black text-emerald-800">Alamat</p>
-                                    <p class="mt-1 text-xs leading-5 text-slate-500">
-                                        Informasi alamat masjid
-                                    </p>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                                            Jam Operasional
+                                        </p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-500">
+                                            Terbuka dan melayani jamaah setiap hari.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="flex gap-3 border-t border-emerald-100 p-4 sm:border-r sm:border-t-0 sm:border-emerald-100">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-100 text-teal-700">
-                                    🕘
-                                </div>
-                                <div>
-                                    <p class="text-xs font-black text-emerald-800">Jam Operasional</p>
-                                    <p class="mt-1 text-xs leading-5 text-slate-500">
-                                        Setiap hari
-                                    </p>
+                            {{-- Layanan Jamaah --}}
+                            <div class="group relative overflow-hidden rounded-2xl border border-cyan-100/70 bg-gradient-to-br from-white to-cyan-50/70 p-4 shadow-lg shadow-emerald-900/5 transition-all duration-500 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-cyan-200/40">
+                                <div class="relative z-10 flex items-center gap-4">
+                                    <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-xl shadow-md shadow-emerald-900/5 ring-1 ring-cyan-100">
+                                        👥
+                                    </div>
+
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                                            Layanan Jamaah
+                                        </p>
+                                        <p class="mt-1 text-sm leading-6 text-slate-500">
+                                            Kami siap membantu kebutuhan informasi jamaah.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="flex gap-3 border-t border-emerald-100 p-4 sm:border-t-0">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700">
-                                    👥
-                                </div>
-                                <div>
-                                    <p class="text-xs font-black text-emerald-800">Layanan Jamaah</p>
-                                    <p class="mt-1 text-xs leading-5 text-slate-500">
-                                        Kami siap membantu
-                                    </p>
-                                </div>
-                            </div>
                         </div>
                     </div>
+                </div>
+
                 </div>
             </div>
 
@@ -143,22 +150,31 @@
 
                     {{-- Contact Quick Cards --}}
                     <div class="mb-7 grid gap-3 sm:grid-cols-2">
-                        <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $profil->telepon ?? ($profil->no_wa ?? '')) }}"
-                           target="_blank"
-                           class="group/item flex items-center gap-4 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-100">
-                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-2xl text-white shadow-lg shadow-emerald-500/20">
-                                ☎
+                        <a href="{{ waLink() }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="group/item flex items-center gap-4 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-100">
+                            
+                            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-2xl text-white shadow-lg shadow-emerald-500/20 transition group-hover/item:scale-110">
+                                💬
                             </div>
-                            <div class="min-w-0">
-                                <p class="text-sm font-black text-slate-900">WhatsApp</p>
-                                <p class="mt-1 truncate text-xs text-slate-500">Hubungi kami langsung</p>
+
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-black text-slate-900">
+                                    WhatsApp
+                                </p>
+
+                                <p class="mt-1 truncate text-xs text-slate-500">
+                                    Hubungi kami langsung
+                                </p>
+
                                 <p class="mt-1 truncate text-sm font-black text-emerald-700">
-                                    {{ $profil->telepon ?? ($profil->no_wa ?? '-') }}
+                                    {{ waNumberFormatted() }}
                                 </p>
                             </div>
                         </a>
 
-                        <a href="mailto:{{ $profil->email ?? '' }}"
+                        <a href="mailto:{{ profil('email') ?? 'dkmmrjtce@gmail.com' }}"
                            class="group/item flex items-center gap-4 rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50 to-white p-4 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-cyan-100">
                             <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-500 text-2xl text-white shadow-lg shadow-cyan-500/20">
                                 ✉
@@ -167,7 +183,7 @@
                                 <p class="text-sm font-black text-slate-900">Email</p>
                                 <p class="mt-1 truncate text-xs text-slate-500">Kirim email kepada kami</p>
                                 <p class="mt-1 truncate text-sm font-black text-cyan-700">
-                                    {{ $profil->email ?? '-' }}
+                                    {{ profil('email') ?? 'dkmmrjtce@gmail.com' }}
                                 </p>
                             </div>
                         </a>

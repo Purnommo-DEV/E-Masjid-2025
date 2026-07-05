@@ -216,8 +216,8 @@
                                     <span class="absolute bottom-9 left-3 h-6 w-6 border-b-2 border-l-2 border-emerald-600 sm:h-7 sm:w-7"></span>
                                     <span class="absolute bottom-9 right-3 h-6 w-6 border-b-2 border-r-2 border-emerald-600 sm:h-7 sm:w-7"></span>
 
-                                    @if(!empty($profil?->qris_url))
-                                        <img src="{{ $profil->qris_url }}"
+                                    @if(!empty(profil('qris_url')))
+                                        <img src="{{ profil('qris_url') }}"
                                              loading="lazy"
                                              alt="QRIS Infaq"
                                              class="h-48 w-full rounded-xl object-contain sm:h-56"
@@ -343,13 +343,13 @@
             </div>
             <h3 class="text-lg font-black text-slate-900">QRIS Infaq</h3>
             <p class="mt-1 text-xs text-slate-500">
-                Scan untuk berinfaq ke {{ $profil->nama ?? 'Masjid' }}
+                Scan untuk berinfaq ke {{ profil('nama') ?? 'Masjid' }}
             </p>
         </div>
 
         <div class="flex justify-center bg-white p-6">
-            @if(!empty($profil?->qris_url))
-                <img src="{{ $profil->qris_url }}"
+            @if(!empty(profil('qris_url')))
+                <img src="{{ profil('qris_url') }}"
                      alt="QRIS Infaq"
                      class="w-full max-w-[240px] rounded-2xl object-contain shadow-lg"
                      onerror="this.src='{{ asset('storage/404.png') }}'">
@@ -368,9 +368,9 @@
                 </button>
             </form>
 
-            @if(!empty($profil?->qris_url))
-                <a href="{{ $profil->qris_url }}"
-                   download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
+            @if(!empty(profil('qris_url')))
+                <a href="{{ profil('qris_url') }}"
+                   download="QRIS_{{ Str::slug(profil('nama')) }}.png"
                    class="rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/30">
                     Simpan QR
                 </a>
@@ -444,7 +444,10 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const track = document.querySelector('.infaq-slider-track');
-        const slides = track ? track.querySelectorAll('.w-full') : [];
+
+        // Penting: ambil hanya anak langsung dari track, bukan semua .w-full di dalamnya
+        const slides = track ? Array.from(track.children) : [];
+
         const dots = document.querySelectorAll('.infaq-slider-dot');
         const prevBtn = document.getElementById('infaqSliderPrev');
         const nextBtn = document.getElementById('infaqSliderNext');
@@ -452,66 +455,85 @@
 
         let currentIndex = 0;
         let totalSlides = slides.length;
-        let interval;
+        let interval = null;
 
-        if (totalSlides > 0) {
-            function goToSlide(index) {
-                if (index < 0) index = totalSlides - 1;
-                if (index >= totalSlides) index = 0;
+        if (!track || totalSlides === 0) return;
 
-                currentIndex = index;
-                track.style.transform = `translateX(-${currentIndex * 100}%)`;
+        function goToSlide(index) {
+            if (index < 0) index = totalSlides - 1;
+            if (index >= totalSlides) index = 0;
 
-                dots.forEach((dot, i) => {
-                    dot.classList.toggle('active', i === currentIndex);
-                    dot.style.width = i === currentIndex ? '20px' : '6px';
-                });
-            }
+            currentIndex = index;
+            track.style.transform = `translateX(-${currentIndex * 100}%)`;
 
-            function nextSlide() {
-                goToSlide(currentIndex + 1);
-            }
+            dots.forEach((dot, i) => {
+                const isActive = i === currentIndex;
 
-            function prevSlide() {
-                goToSlide(currentIndex - 1);
-            }
+                dot.classList.toggle('active', isActive);
+                dot.style.width = isActive ? '20px' : '6px';
 
-            if (prevBtn) prevBtn.addEventListener('click', prevSlide);
-            if (nextBtn) nextBtn.addEventListener('click', nextSlide);
-
-            dots.forEach((dot, index) => {
-                dot.addEventListener('click', () => goToSlide(index));
+                dot.classList.toggle('bg-emerald-500', isActive);
+                dot.classList.toggle('bg-emerald-300/50', !isActive);
             });
-
-            function startAutoPlay() {
-                interval = setInterval(nextSlide, 5000);
-            }
-
-            function stopAutoPlay() {
-                clearInterval(interval);
-            }
-
-            startAutoPlay();
-
-            if (sliderContainer) {
-                sliderContainer.addEventListener('mouseenter', stopAutoPlay);
-                sliderContainer.addEventListener('mouseleave', startAutoPlay);
-
-                let touchStartX = 0;
-
-                sliderContainer.addEventListener('touchstart', (e) => {
-                    touchStartX = e.changedTouches[0].screenX;
-                });
-
-                sliderContainer.addEventListener('touchend', (e) => {
-                    const diff = touchStartX - e.changedTouches[0].screenX;
-                    if (diff > 50) nextSlide();
-                    if (diff < -50) prevSlide();
-                });
-            }
-
-            goToSlide(0);
         }
+
+        function nextSlide() {
+            goToSlide(currentIndex + 1);
+        }
+
+        function prevSlide() {
+            goToSlide(currentIndex - 1);
+        }
+
+        if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+        if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => goToSlide(index));
+        });
+
+        function startAutoPlay() {
+            if (totalSlides <= 1) return;
+            stopAutoPlay();
+            interval = setInterval(nextSlide, 5000);
+        }
+
+        function stopAutoPlay() {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        }
+
+        startAutoPlay();
+
+        if (sliderContainer) {
+            sliderContainer.addEventListener('mouseenter', stopAutoPlay);
+            sliderContainer.addEventListener('mouseleave', startAutoPlay);
+
+            let touchStartX = 0;
+
+            sliderContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            sliderContainer.addEventListener('touchend', (e) => {
+                const diff = touchStartX - e.changedTouches[0].screenX;
+
+                if (Math.abs(diff) < 50) return;
+
+                if (diff > 50) nextSlide();
+                if (diff < -50) prevSlide();
+            }, { passive: true });
+        }
+
+        if (totalSlides <= 1) {
+            if (prevBtn) prevBtn.classList.add('hidden');
+            if (nextBtn) nextBtn.classList.add('hidden');
+            dots.forEach(dot => dot.classList.add('hidden'));
+        }
+
+        goToSlide(0);
     });
 
     function copyInfaqRekening(text) {
