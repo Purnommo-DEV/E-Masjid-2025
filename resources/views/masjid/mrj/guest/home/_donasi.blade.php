@@ -1,285 +1,559 @@
-        {{-- === DONASI === --}}
-        <section id="donasi" class="home-section home-section-donasi py-16 relative overflow-hidden">
+{{-- === INFAQ ONLINE - MIRIP REFERENSI RESPONSIVE FIX === --}}
+<section id="donasi" class="home-section relative overflow-hidden bg-gradient-to-br from-white via-emerald-50/40 to-cyan-50/60 py-12 sm:py-16 lg:py-20">
+    
+    {{-- Background Soft Decoration --}}
+    <div class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 top-0 h-72 w-72 rounded-full bg-emerald-100/60 blur-3xl sm:h-96 sm:w-96"></div>
+        <div class="absolute -right-32 top-10 h-72 w-72 rounded-full bg-cyan-100/70 blur-3xl sm:h-96 sm:w-96"></div>
+        <div class="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-yellow-100/50 blur-3xl sm:h-80 sm:w-80"></div>
+
+        <div class="absolute left-0 top-10 hidden h-72 w-72 opacity-30 sm:block">
+            <div class="h-full w-full rounded-full border border-yellow-200/60"></div>
+        </div>
+
+        <div class="absolute right-0 top-20 hidden h-72 w-72 opacity-30 sm:block">
+            <div class="h-full w-full rounded-full border border-emerald-200/60"></div>
+        </div>
+
+        <div class="absolute bottom-24 right-0 hidden w-[360px] opacity-[0.08] lg:block">
+            <svg viewBox="0 0 700 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 360H700V308H0V360Z" fill="#047857"/>
+                <path d="M292 308V205C292 160 328 124 373 124C418 124 454 160 454 205V308H292Z" fill="#047857"/>
+                <path d="M329 127C337 75 373 42 373 42C373 42 409 75 417 127H329Z" fill="#047857"/>
+                <path d="M120 308V226C120 190 149 161 185 161C221 161 250 190 250 226V308H120Z" fill="#047857"/>
+                <path d="M505 308V226C505 190 534 161 570 161C606 161 635 190 635 226V308H505Z" fill="#047857"/>
+                <path d="M55 308V147H95V308H55Z" fill="#047857"/>
+                <path d="M640 308V147H680V308H640Z" fill="#047857"/>
+            </svg>
+        </div>
+
+        <div class="absolute left-4 bottom-10 hidden opacity-40 lg:block">
+            <div class="relative h-44 w-44">
+                <span class="absolute bottom-10 left-0 h-24 w-10 rotate-[28deg] rounded-full bg-emerald-300/60"></span>
+                <span class="absolute bottom-20 left-12 h-20 w-9 rotate-[55deg] rounded-full bg-teal-300/50"></span>
+                <span class="absolute bottom-5 left-24 h-16 w-8 rotate-[75deg] rounded-full bg-emerald-200/70"></span>
+                <span class="absolute bottom-2 left-0 h-px w-40 rotate-[-12deg] bg-emerald-300/50"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+        {{-- Header --}}
+        <div class="mx-auto mb-8 max-w-4xl text-center sm:mb-10">
+            @include('masjid.mrj.guest.components.section-heading', [
+                'badgeIcon' => '🤲',
+                'badge' => 'Infaq Online',
+                'title' => 'Berinfaq Jadi',
+                'highlight' => 'Lebih Mudah',
+                'description' => "Salurkan infaq terbaik Anda melalui transfer bank atau scan QRIS.<br class='hidden sm:block'>Setiap kebaikan yang Anda berikan akan menjadi <span class='font-black text-emerald-600'>amal jariyah</span> yang terus mengalir."
+            ])
+        </div>
+
+        {{-- Optional Slider - Jangan Dihapus --}}
+        @if($sliders->isNotEmpty())
+            <div class="mb-10 lg:mb-20">
+                <div id="infaqMotivasiSlider" class="relative overflow-hidden rounded-[1.5rem] border border-emerald-100/70 bg-white/80 p-2 shadow-xl shadow-emerald-900/5 backdrop-blur-xl sm:rounded-[2rem] sm:p-3">
+                    <div class="infaq-slider-track flex transition-all duration-700 ease-in-out">
+                        @foreach($sliders as $index => $slide)
+                            <div class="w-full shrink-0">
+                                <div class="flex flex-col items-start justify-between gap-4 rounded-[1.25rem] bg-gradient-to-r from-emerald-50 via-white to-cyan-50 p-4 sm:rounded-[1.5rem] sm:p-5 md:flex-row md:items-center">
+                                    <div class="flex min-w-0 items-start gap-3 sm:gap-4">
+                                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-100 to-emerald-100 text-xl sm:h-14 sm:w-14 sm:text-2xl">
+                                            💝
+                                        </div>
+                                        <div class="min-w-0">
+                                            <h3 class="line-clamp-2 text-sm font-black leading-snug text-slate-900 sm:text-base md:text-lg">
+                                                {!! $slide->title !!}
+                                            </h3>
+                                            <p class="mt-1 line-clamp-2 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">
+                                                {!! $slide->subtitle !!}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <a href="{{ $slide->button_link ?? '#rekening' }}"
+                                       class="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 md:w-auto">
+                                        <span>{{ $slide->button_text ?? 'Infaq Sekarang' }}</span>
+                                        <span>→</span>
+                                    </a>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <button id="infaqSliderPrev" type="button" class="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-100 bg-white/90 text-slate-600 shadow-md backdrop-blur transition hover:bg-emerald-50 sm:left-3 sm:h-9 sm:w-9">
+                        ‹
+                    </button>
+
+                    <button id="infaqSliderNext" type="button" class="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-100 bg-white/90 text-slate-600 shadow-md backdrop-blur transition hover:bg-emerald-50 sm:right-3 sm:h-9 sm:w-9">
+                        ›
+                    </button>
+
+                    <div class="mt-3 flex justify-center gap-2">
+                        @foreach($sliders as $index => $slide)
+                            <button type="button"
+                                    class="infaq-slider-dot h-1.5 w-1.5 rounded-full bg-emerald-300/50 transition-all duration-300 {{ $index === 0 ? '!w-5 bg-emerald-500' : '' }}"
+                                    data-index="{{ $index }}"></button>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        {{-- Main Payment Panel --}}
+        <div id="rekening" class="relative rounded-[1.5rem] border border-emerald-100/80 bg-white/85 shadow-2xl shadow-emerald-900/10 backdrop-blur-xl sm:rounded-[2rem] lg:rounded-[2.3rem]">
             
-            {{-- Background decorative elements --}}
-            <div class="absolute inset-0 pointer-events-none">
-                <div class="absolute -top-40 -right-40 w-80 h-80 bg-emerald-200/30 rounded-full blur-3xl"></div>
-                <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-teal-200/30 rounded-full blur-3xl"></div>
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-100/20 rounded-full blur-3xl"></div>
+            {{-- Floating Labels Desktop --}}
+            <div class="pointer-events-none absolute left-10 top-0 hidden -translate-y-1/2 lg:block">
+                <div class="inline-flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-7 py-4 text-white shadow-xl shadow-emerald-700/25">
+                    <span class="text-xl">🏦</span>
+                    <span class="text-lg font-black uppercase tracking-wide">Transfer Bank</span>
+                </div>
             </div>
 
-            <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
+            <div class="pointer-events-none absolute left-1/2 top-0 hidden -translate-y-1/2 lg:block">
+                <div class="inline-flex items-center gap-3 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-7 py-4 text-white shadow-xl shadow-emerald-700/25">
+                    <span class="text-xl">▦</span>
+                    <span class="text-lg font-black uppercase tracking-wide">Scan QRIS</span>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-2">
                 
-                <!-- Header Donasi - DIPERINDAH -->
-                <div class="text-center mb-12 relative">
-                    <!-- Decorative line atas -->
-                    <div class="flex justify-center items-center gap-3 mb-4">
-                        <div class="h-px w-12 bg-gradient-to-r from-transparent to-emerald-400"></div>
-                        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 backdrop-blur-sm border border-emerald-200/50 shadow-sm">
-                            <span class="relative flex h-2 w-2">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                            </span>
-                            <span class="text-xs font-semibold uppercase tracking-wider text-emerald-700">DONASI & INFAQ</span>
+                {{-- Transfer Bank --}}
+                <div class="relative p-4 pt-5 sm:p-8 lg:p-14 lg:pt-16">
+                    <div class="mb-5 lg:hidden">
+                        <div class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-4 py-2.5 text-white shadow-xl shadow-emerald-700/20 sm:gap-3 sm:px-5 sm:py-3">
+                            <span class="text-base sm:text-lg">🏦</span>
+                            <span class="text-sm font-black uppercase tracking-wide sm:text-base">Transfer Bank</span>
                         </div>
-                        <div class="h-px w-12 bg-gradient-to-l from-transparent to-emerald-400"></div>
                     </div>
 
-                    <!-- Title dengan gradient & shadow -->
-                    <h2 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-4 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-500 bg-clip-text text-transparent drop-shadow-sm">
-                        Jadikan Harta Lebih Berkah
-                    </h2>
-                    <!-- Deskripsi dengan border elegant -->
-                    <div class="max-w-2xl mx-auto relative">
-                        <div class="absolute left-0 top-0 w-8 h-8 border-l-2 border-t-2 border-emerald-300/50 rounded-tl-2xl"></div>
-                        <div class="absolute right-0 top-0 w-8 h-8 border-r-2 border-t-2 border-emerald-300/50 rounded-tr-2xl"></div>
-                        <div class="absolute left-0 bottom-0 w-8 h-8 border-l-2 border-b-2 border-emerald-300/50 rounded-bl-2xl"></div>
-                        <div class="absolute right-0 bottom-0 w-8 h-8 border-r-2 border-b-2 border-emerald-300/50 rounded-br-2xl"></div>
-                        
-                        <p class="text-base sm:text-lg text-slate-600 leading-relaxed px-6 py-3">
-                            Setiap rupiah yang Anda titipkan akan menjadi bagian dari adzan yang berkumandang,
-                            shalat berjamaah, kajian ilmu, serta kegiatan sosial umat.
-                        </p>
-                    </div>
-                    
-                    <p class="mt-3 text-slate-500 text-sm text-center flex items-center justify-center gap-3">
-                        <span class="hidden sm:block flex-1 h-px bg-emerald-300"></span>
-                        <span>InsyaAllah menjadi <span class="font-semibold text-emerald-600">amal jariyah</span> yang pahalanya terus mengalir</span>
-                        <span class="hidden sm:block flex-1 h-px bg-emerald-300"></span>
+                    <p class="mb-5 text-sm leading-6 text-slate-600 sm:mb-6 sm:leading-7">
+                        Salurkan infaq Anda melalui rekening resmi berikut:
                     </p>
+
+                    <div class="rounded-[1.35rem] border border-slate-100 bg-white p-4 shadow-xl shadow-slate-900/5 sm:rounded-[1.7rem] sm:p-6">
+                        <div class="flex flex-col gap-4 rounded-2xl bg-gradient-to-r from-white to-emerald-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+                                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white text-lg font-black text-blue-700 shadow-md ring-1 ring-slate-100 sm:h-16 sm:w-16 sm:text-xl">BSI
+                                </div>
+                                <div class="min-w-0">
+                                    <h3 class="break-words text-base font-black leading-snug text-slate-900 sm:text-lg">
+                                        {{ profil('bank_name') ?? 'Bank Syariah Indonesia (BSI)' }}
+                                    </h3>
+                                    <p class="mt-1 text-xs text-slate-500 sm:text-sm">
+                                        Rekening Infaq
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 sm:mt-7">
+                            <p class="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700 sm:text-xs sm:tracking-[0.18em]">
+                                Nomor Rekening
+                            </p>
+
+                            <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                <p id="rekeningNum" class="infaq-account-number min-w-0 break-words font-mono font-black leading-tight text-slate-950">
+                                    {{ trim(chunk_split(preg_replace('/\D/','', profil('rekening') ?? '7025516952'), 4, ' ')) }}
+                                </p>
+
+                                <button onclick="copyInfaqRekening('{{ profil('rekening') ?? '' }}')"
+                                        type="button"
+                                        class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-50 px-5 py-3 text-sm font-black text-slate-900 ring-1 ring-emerald-100 transition hover:bg-emerald-100 sm:w-fit">
+                                    <span>Salin</span>
+                                    <svg class="h-4 w-4 text-emerald-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 sm:mt-7">
+                            <p class="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-700 sm:text-xs sm:tracking-[0.18em]">
+                                Atas Nama
+                            </p>
+                            <p class="mt-2 break-words text-sm font-black uppercase leading-6 text-slate-900 sm:text-lg">
+                                {{ profil('atas_nama') ?? 'Masjid Raudhotul Jannah' }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-start gap-3 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-4 text-xs leading-6 text-yellow-900 sm:mt-5 sm:px-5 sm:text-sm">
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-100 text-lg sm:h-10 sm:w-10 sm:text-xl">
+                            🛡
+                        </span>
+                        <span>
+                            Pastikan nominal sudah benar. Setelah transfer, lakukan konfirmasi melalui WhatsApp agar infaq Anda dapat kami catat.
+                        </span>
+                    </div>
                 </div>
 
-                <!-- Slider Motivasi (jika ada) -->
-                @if($sliders->isNotEmpty())
-                    <div id="motivasiCarousel" class="relative mb-12">
-                        <div class="overflow-hidden rounded-3xl shadow-2xl">
-                            <div class="motivasi-track flex transition-transform duration-400 ease-[cubic-bezier(0.25,0.1,0.25,1)] snap-x snap-mandatory">
-                                @foreach($sliders as $slide)
-                                    <div class="w-full shrink-0 snap-start relative group">
-                                        <div class="bg-gradient-to-br {{ $slide->gradient ?? 'from-emerald-700 via-teal-700 to-cyan-700' }} text-white rounded-3xl p-6 sm:p-8 lg:p-12 text-center min-h-[380px] sm:min-h-[360px] flex flex-col justify-between items-center shadow-2xl overflow-hidden group-hover:scale-[1.02] transition-transform duration-400">
-                                            <!-- Decorative pattern -->
-                                            <div class="absolute inset-0 opacity-10 pointer-events-none">
-                                                <div class="absolute -top-20 -right-20 w-60 h-60 bg-white rounded-full blur-2xl"></div>
-                                                <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-white rounded-full blur-2xl"></div>
-                                            </div>
-                                            
-                                            <div class="flex flex-col items-center justify-center flex-grow space-y-4 px-4 sm:px-8 relative z-10">
-                                                <div class="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-4xl mb-2 shadow-lg">
-                                                    💝
-                                                </div>
-                                                <h3 class="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white leading-tight">
-                                                    {!! $slide->title !!}
-                                                </h3>
-                                                <p class="text-base sm:text-lg lg:text-xl font-semibold">
-                                                    {!! $slide->subtitle !!}
-                                                </p>
-                                            </div>
-                                            <a href="{{ $slide->button_link ?? '#rekening' }}"
-                                            class="btn btn-lg bg-white text-emerald-800 hover:bg-amber-100 hover:text-emerald-900 font-bold px-6 sm:px-10 py-3 sm:py-4 rounded-full shadow-xl text-base sm:text-lg mt-4 w-full sm:w-auto max-w-xs transition-all relative z-10">
-                                                {{ $slide->button_text ?? 'Yuk Sedekah Sekarang' }}
-                                            </a>
+                {{-- QRIS --}}
+                <div class="relative border-t border-emerald-100 p-4 pt-5 sm:p-8 lg:border-l lg:border-t-0 lg:p-14 lg:pt-16">
+                    <div class="mb-5 lg:hidden">
+                        <div class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-4 py-2.5 text-white shadow-xl shadow-emerald-700/20 sm:gap-3 sm:px-5 sm:py-3">
+                            <span class="text-base sm:text-lg">▦</span>
+                            <span class="text-sm font-black uppercase tracking-wide sm:text-base">Scan QRIS</span>
+                        </div>
+                    </div>
+
+                    <p class="mb-5 text-sm leading-6 text-slate-600 sm:mb-6 sm:leading-7">
+                        Scan QRIS berikut menggunakan aplikasi e-wallet atau mobile banking:
+                    </p>
+
+                    <div class="rounded-[1.35rem] border border-slate-100 bg-white p-4 shadow-xl shadow-slate-900/5 sm:rounded-[1.7rem] sm:p-5">
+                        <div class="grid gap-6 md:grid-cols-[220px_1fr]">
+                            <div class="mx-auto w-full max-w-[260px] md:max-w-none">
+                                <button type="button"
+                                        onclick="document.getElementById('qris-modal').showModal()"
+                                        class="group relative block w-full overflow-hidden rounded-2xl border border-emerald-200 bg-white p-3 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-100">
+                                    
+                                    <span class="absolute left-3 top-3 h-6 w-6 border-l-2 border-t-2 border-emerald-600 sm:h-7 sm:w-7"></span>
+                                    <span class="absolute right-3 top-3 h-6 w-6 border-r-2 border-t-2 border-emerald-600 sm:h-7 sm:w-7"></span>
+                                    <span class="absolute bottom-9 left-3 h-6 w-6 border-b-2 border-l-2 border-emerald-600 sm:h-7 sm:w-7"></span>
+                                    <span class="absolute bottom-9 right-3 h-6 w-6 border-b-2 border-r-2 border-emerald-600 sm:h-7 sm:w-7"></span>
+
+                                    @if(!empty($profil?->qris_url))
+                                        <img src="{{ $profil->qris_url }}"
+                                             loading="lazy"
+                                             alt="QRIS Infaq"
+                                             class="h-48 w-full rounded-xl object-contain sm:h-56"
+                                             onerror="this.src='{{ asset('storage/404.png') }}'">
+                                    @else
+                                        <div class="flex h-48 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-emerald-100 bg-emerald-50/70 text-slate-400 sm:h-56">
+                                            <span class="text-3xl sm:text-4xl">📷</span>
+                                            <span class="mt-2 text-xs font-black">QRIS belum tersedia</span>
                                         </div>
+                                    @endif
+
+                                    <div class="mt-2 flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 sm:justify-start">
+                                        <span class="text-emerald-700">🔍</span>
+                                        <span>Klik untuk memperbesar</span>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div class="space-y-3 sm:space-y-4">
+                                @foreach ([
+                                    'Buka aplikasi e-wallet atau mobile banking',
+                                    'Pilih menu Scan QRIS',
+                                    'Scan kode QR di samping',
+                                    'Masukkan nominal infaq',
+                                    'Konfirmasi pembayaran'
+                                ] as $index => $step)
+                                    <div class="flex items-start gap-3 sm:gap-4">
+                                        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-black text-white shadow-md shadow-emerald-600/20 sm:text-sm">
+                                            {{ $index + 1 }}
+                                        </div>
+                                        <p class="pt-1 text-sm font-semibold leading-6 text-slate-700">
+                                            {{ $step }}
+                                        </p>
                                     </div>
                                 @endforeach
                             </div>
                         </div>
-                        <div class="flex justify-center gap-3 mt-4">
-                            @foreach($sliders as $index => $slide)
-                                <button class="motivasi-dot w-2.5 h-2.5 rounded-full bg-emerald-300 hover:bg-emerald-600 transition" data-index="{{ $index }}"></button>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Card Donasi Utama - dengan efek glassmorphism lebih elegan -->
-                <div class="w-full bg-white/80 backdrop-blur-md rounded-3xl border border-white/50 shadow-2xl overflow-hidden transition-all duration-300 hover:shadow-emerald-200/40">
-                    
-                    <!-- Header Card dengan Gradien + Ikon -->
-                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-center relative overflow-hidden">
-                        <div class="absolute inset-0 opacity-20">
-                            <div class="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full blur-2xl"></div>
-                            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-white rounded-full blur-2xl"></div>
-                        </div>
-                        <div class="relative z-10">
-                            <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm mb-3 shadow-lg">
-                                <span class="text-3xl">💚</span>
-                            </div>
-                            <h3 class="text-xl sm:text-2xl font-bold text-white">Salurkan Donasi & Infaq</h3>
-                            <p class="text-emerald-100 text-sm mt-1">Donasi Anda akan menjadi amal jariyah yang terus mengalir</p>
-                        </div>
                     </div>
 
-                    <div class="p-6 sm:p-8 lg:p-10">
-                        
-                        <!-- 2 Kolom: Rekening Bank + QRIS dengan efek hover -->
-                        <div class="grid md:grid-cols-2 gap-6 mb-8">
-                            
-                            <!-- Kolom Kiri: Rekening Bank -->
-                            <div class="bg-gradient-to-br from-emerald-50/80 to-white rounded-2xl p-5 flex flex-col h-full border border-emerald-100/50 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                                <div class="text-center">
-                                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 mb-3 shadow-md">
-                                        <span class="text-xl text-white">🏦</span>
-                                    </div>
-                                    <h4 class="text-lg font-bold text-emerald-800 mb-1">Transfer Bank</h4>
-                                    <p class="text-xs text-slate-500 mb-3">Donasi via rekening berikut</p>
-                                </div>
-                                
-                                <div class="bg-white rounded-xl p-4 shadow-sm flex-1 border border-emerald-100">
-                                    <div class="text-center mb-2">
-                                        <span class="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                                            {{ profil('bank_name') ?? 'BANK BCA' }}
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center justify-center gap-2 my-2 bg-slate-50 rounded-lg p-2">
-                                        <p id="rekeningNum" class="text-base sm:text-lg font-mono font-bold text-slate-800 tracking-wider break-all text-center">
-                                            {{ trim(chunk_split(preg_replace('/\D/','', profil('rekening') ?? '1234567890'), 4, ' ')) }}
-                                        </p>
-                                        <button onclick="copyToClipboard('{{ profil('rekening') ?? '' }}')"
-                                                class="btn btn-xs btn-circle bg-emerald-600 hover:bg-emerald-700 text-white w-7 h-7 min-h-0 text-sm shadow-md transition-all hover:scale-110"
-                                                title="Salin nomor rekening">
-                                            📋
-                                        </button>
-                                    </div>
-                                    <p class="text-xs text-slate-600 text-center font-medium">a/n {{ profil('atas_nama') ?? 'TAKMIR MASJID' }}</p>
-                                </div>
-                                <p class="text-xs text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
-                                    <span>💡</span> Klik 📋 untuk menyalin nomor rekening
-                                </p>
-                            </div>
-
-                            <!-- Kolom Kanan: QRIS -->
-                            <div class="bg-gradient-to-br from-emerald-50/80 to-white rounded-2xl p-5 flex flex-col h-full border border-emerald-100/50 shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-                                <div class="text-center">
-                                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 mb-3 shadow-md">
-                                        <span class="text-xl text-white">📱</span>
-                                    </div>
-                                    <h4 class="text-lg font-bold text-emerald-800 mb-1">Scan QRIS</h4>
-                                    <p class="text-xs text-slate-500 mb-3">Donasi lebih mudah & cepat</p>
-                                </div>
-                                
-                                <!-- QRIS Box -->
-                                <div class="flex justify-center items-center flex-1">
-                                    <div class="relative group/qris">
-                                        <div class="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-25 group-hover/qris:opacity-75 transition duration-300"></div>
-                                        <div style="width: 190px; height: 190px; background: white; padding: 14px; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); cursor: pointer; transition: all 0.3s ease; position: relative;"
-                                            onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 20px 30px -10px rgba(0, 0, 0, 0.15)'"
-                                            onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 10px 25px -5px rgba(0, 0, 0, 0.1)'"
-                                            onclick="document.getElementById('qris-modal').showModal()">
-                                            @if(!empty($profil?->qris_url))
-                                                <img src="{{ $profil->qris_url }}" 
-                                                    loading="lazy" 
-                                                    alt="QRIS Donasi" 
-                                                    style="width: 100%; height: 100%; object-fit: contain;"
-                                                    onerror="this.src='{{ asset('storage/404.png') }}'">
-                                            @else
-                                                <div class="flex flex-col items-center justify-center h-full text-center">
-                                                    <span class="text-3xl mb-2">📷</span>
-                                                    <span class="text-[10px] text-gray-400">QRIS belum tersedia</span>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="text-center mt-4">
-                                    @if(!empty($profil?->qris_url))
-                                        <a href="{{ $profil->qris_url }}" 
-                                        download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
-                                        class="inline-flex items-center gap-1 text-xs text-emerald-600 hover:text-emerald-700 transition-all hover:gap-2">
-                                            📥 Download QRIS
-                                        </a>
-                                    @else
-                                        <p class="text-xs text-slate-400">QRIS akan segera tersedia</p>
-                                    @endif
-                                </div>
-                            </div>
+                    <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-emerald-600/40 bg-emerald-50/70 px-4 py-4 text-sm leading-6 text-slate-700 sm:mt-5 sm:flex-row sm:items-center sm:px-5">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-emerald-300 bg-white text-sm font-black text-emerald-700 sm:h-10 sm:w-10">
+                            i
                         </div>
-
-                        <!-- Informasi Donasi - Responsif Mobile -->
-                        <div class="bg-gradient-to-r from-emerald-50/80 to-teal-50/80 rounded-xl p-4 text-center border border-emerald-100">
-                            <!-- Grid 1 kolom di mobile, flex row di desktop -->
-                            <div class="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 text-xs text-slate-600">
-                                <div class="flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-full shadow-sm">
-                                    <span class="text-emerald-600 text-sm">✓</span>
-                                    <span class="font-medium text-xs sm:text-sm">100% untuk kegiatan masjid</span>
-                                </div>
-                                <div class="flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-full shadow-sm">
-                                    <span class="text-emerald-600 text-sm">✓</span>
-                                    <span class="font-medium text-xs sm:text-sm">Laporan transparan berkala</span>
-                                </div>
-                                <div class="flex items-center justify-center gap-2 px-3 py-2 bg-white rounded-full shadow-sm">
-                                    <span class="text-emerald-600 text-sm">✓</span>
-                                    <span class="font-medium text-xs sm:text-sm">Amal jariyah</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Tombol Konfirmasi WA - lebih menonjol -->
-                        <div class="text-center mt-8">
-                            <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', profil('wa_konfirmasi') ?? profil('telepon') ?? '628121073583') }}?text=Assalamu%27alaikum%20saya%20ingin%20konfirmasi%20donasi"
-                            target="_blank"
-                            class="group relative inline-flex items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 text-sm overflow-hidden">
-                                <span class="absolute inset-0 w-0 bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 group-hover:w-full"></span>
-                                <span class="relative z-10 text-xl">💬</span>
-                                <span class="relative z-10">Konfirmasi Donasi via WhatsApp</span>
-                            </a>
-                            <p class="text-xs text-slate-500 mt-3">
-                                Konfirmasi donasi untuk mendapatkan bukti & laporan penyaluran
-                            </p>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- Doa Penutup -->
-                <div class="w-full mt-6">
-                    <div class="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-5 text-center backdrop-blur-sm">
-                        <div class="flex justify-center mb-2">
-                            <span class="text-2xl animate-pulse">🤲</span>
-                        </div>
-                        <p class="text-emerald-800 italic text-sm leading-relaxed">
-                            “Ya Allah, terimalah sedekah dari para dermawan kami, lapangkan rezekinya, sehatkan badannya, dan jadikan sebagai pemberat amal kebaikan di akhirat.”
+                        <p class="break-words">
+                            QRIS atas nama:
+                            <span class="font-black uppercase text-slate-900">
+                                {{ profil('atas_nama') ?? 'Masjid Raudhotul Jannah' }}
+                            </span>
                         </p>
-                        <p class="text-emerald-600 text-xs font-medium mt-2">Aamiin Ya Rabbal Alamin</p>
                     </div>
                 </div>
-
             </div>
-        </section>
+        </div>
 
-        <!-- Modal QRIS Preview -->
-        <dialog id="qris-modal" class="modal">
-            <div class="modal-box bg-white rounded-3xl shadow-2xl max-w-md sm:max-w-lg p-0 overflow-hidden">
-                <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-center">
-                    <h3 class="text-xl font-bold text-white">Preview QRIS Donasi</h3>
-                    <p class="text-emerald-100/90 text-xs mt-1">
-                        Scan untuk donasi ke {{ $profil->nama ?? 'Masjid' }}
-                    </p>
+        {{-- Trust Cards --}}
+        <div class="mt-6 grid overflow-hidden rounded-[1.5rem] border border-emerald-100/80 bg-white/80 shadow-xl shadow-emerald-900/5 backdrop-blur-xl sm:mt-8 sm:grid-cols-2 sm:rounded-[1.8rem] lg:grid-cols-4">
+            <div class="flex gap-3 p-4 sm:gap-4 sm:p-6 lg:border-r lg:border-emerald-100">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
+                    🛡
                 </div>
-                <div class="p-6 bg-white">
-                    @if(!empty($profil?->qris_url))
-                        <img src="{{ $profil->qris_url }}" 
-                            alt="QRIS Donasi" 
-                            class="w-full h-auto max-h-[400px] object-contain mx-auto rounded-xl"
-                            onerror="this.src='{{ asset('storage/404.png') }}'">
-                    @else
-                        <div class="w-full h-48 flex items-center justify-center text-gray-400">QRIS belum tersedia</div>
-                    @endif
-                </div>
-                <div class="modal-action p-5 border-t border-emerald-100 flex justify-center gap-3">
-                    <form method="dialog">
-                        <button class="btn btn-outline text-emerald-700 px-6 py-2 rounded-full text-sm">Tutup</button>
-                    </form>
-                    @if(!empty($profil?->qris_url))
-                        <a href="{{ $profil->qris_url }}" 
-                        download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
-                        class="btn bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-full text-sm">
-                            Simpan Gambar
-                        </a>
-                    @endif
+                <div>
+                    <h4 class="text-sm font-black text-emerald-800 sm:text-base">Aman & Terpercaya</h4>
+                    <p class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">Dana dikelola secara amanah dan transparan.</p>
                 </div>
             </div>
-            <form method="dialog" class="modal-backdrop">
-                <button>close</button>
+
+            <div class="flex gap-3 border-t border-emerald-100 p-4 sm:gap-4 sm:border-t-0 sm:p-6 lg:border-r">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-yellow-100 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
+                    🕘
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-emerald-800 sm:text-base">Praktis</h4>
+                    <p class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">Infaq kapan saja dan di mana saja.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 border-t border-emerald-100 p-4 sm:gap-4 sm:p-6 lg:border-r lg:border-t-0">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-100 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
+                    📄
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-emerald-800 sm:text-base">Transparan</h4>
+                    <p class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">Laporan keuangan dapat diakses secara terbuka.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-3 border-t border-emerald-100 p-4 sm:gap-4 sm:p-6 lg:border-t-0">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-2xl sm:h-16 sm:w-16 sm:text-3xl">
+                    💜
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-emerald-800 sm:text-base">Pahala Mengalir</h4>
+                    <p class="mt-1 text-xs leading-5 text-slate-500 sm:text-sm sm:leading-6">Setiap infaq menjadi amal jariyah yang tak terputus.</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Quote Strip --}}
+        <div class="mt-6 flex flex-col gap-4 rounded-[1.25rem] border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-4 py-5 shadow-lg shadow-emerald-900/5 sm:mt-8 sm:rounded-[1.5rem] sm:px-6 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3 sm:gap-4">
+                <div class="text-4xl font-black leading-none text-emerald-400 sm:text-5xl">
+                    “
+                </div>
+                <p class="max-w-4xl text-xs font-medium leading-6 text-slate-700 sm:text-sm sm:leading-7">
+                    Perumpamaan nafkah yang dikeluarkan oleh orang-orang yang menafkahkan hartanya di jalan Allah adalah serupa dengan sebutir benih yang menumbuhkan tujuh bulir, pada tiap-tiap bulir seratus biji. Allah melipatgandakan pahala bagi siapa yang Dia kehendaki.
+                </p>
+            </div>
+
+            <div class="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-5 py-3 text-xs font-black text-white shadow-lg shadow-emerald-700/20 sm:w-auto sm:text-sm">
+                <span>📖</span>
+                <span>QS. Al-Baqarah: 261</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- ================= MODAL QRIS ================= --}}
+<dialog id="qris-modal" class="modal">
+    <div class="modal-box max-w-sm overflow-hidden rounded-[2rem] border border-emerald-100 bg-white p-0 shadow-2xl shadow-emerald-900/20">
+        <div class="border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-cyan-50 p-5 text-center">
+            <div class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-2xl">
+                📱
+            </div>
+            <h3 class="text-lg font-black text-slate-900">QRIS Infaq</h3>
+            <p class="mt-1 text-xs text-slate-500">
+                Scan untuk berinfaq ke {{ $profil->nama ?? 'Masjid' }}
+            </p>
+        </div>
+
+        <div class="flex justify-center bg-white p-6">
+            @if(!empty($profil?->qris_url))
+                <img src="{{ $profil->qris_url }}"
+                     alt="QRIS Infaq"
+                     class="w-full max-w-[240px] rounded-2xl object-contain shadow-lg"
+                     onerror="this.src='{{ asset('storage/404.png') }}'">
+            @else
+                <div class="flex h-60 w-60 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400">
+                    <span class="text-4xl">📷</span>
+                    <span class="mt-2 text-xs">QRIS belum tersedia</span>
+                </div>
+            @endif
+        </div>
+
+        <div class="modal-action m-0 flex justify-center gap-2 border-t border-emerald-100 bg-emerald-50/40 p-4">
+            <form method="dialog">
+                <button class="rounded-full border border-emerald-200 bg-white px-6 py-2 text-xs font-bold text-slate-600 transition hover:bg-emerald-50">
+                    Tutup
+                </button>
             </form>
-        </dialog>
+
+            @if(!empty($profil?->qris_url))
+                <a href="{{ $profil->qris_url }}"
+                   download="QRIS_{{ Str::slug($profil->nama ?? 'masjid') }}.png"
+                   class="rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:shadow-emerald-500/30">
+                    Simpan QR
+                </a>
+            @endif
+        </div>
+    </div>
+
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
+
+<style>
+    .infaq-slider-track {
+        display: flex;
+        transition: transform 0.7s cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+
+    .infaq-slider-dot.active {
+        background-color: #10b981 !important;
+        width: 20px !important;
+    }
+
+    .infaq-account-number {
+        font-size: clamp(1.35rem, 7vw, 2.35rem);
+        letter-spacing: 0.045em;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    @media (min-width: 640px) {
+        .infaq-account-number {
+            font-size: 2.25rem;
+            letter-spacing: 0.1em;
+        }
+    }
+
+    @media (max-width: 360px) {
+        .infaq-account-number {
+            font-size: 1.2rem;
+            letter-spacing: 0.025em;
+        }
+    }
+
+    .toast-copy {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 20px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(14px);
+        color: #047857;
+        font-size: 13px;
+        font-weight: 700;
+        border-radius: 999px;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.15);
+        z-index: 9999;
+        transition: all 0.35s ease;
+        border: 1px solid rgba(16, 185, 129, 0.18);
+        max-width: calc(100vw - 32px);
+        text-align: center;
+    }
+
+    .toast-copy.hide {
+        opacity: 0;
+        transform: translateX(-50%) translateY(16px) scale(0.95);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const track = document.querySelector('.infaq-slider-track');
+        const slides = track ? track.querySelectorAll('.w-full') : [];
+        const dots = document.querySelectorAll('.infaq-slider-dot');
+        const prevBtn = document.getElementById('infaqSliderPrev');
+        const nextBtn = document.getElementById('infaqSliderNext');
+        const sliderContainer = document.getElementById('infaqMotivasiSlider');
+
+        let currentIndex = 0;
+        let totalSlides = slides.length;
+        let interval;
+
+        if (totalSlides > 0) {
+            function goToSlide(index) {
+                if (index < 0) index = totalSlides - 1;
+                if (index >= totalSlides) index = 0;
+
+                currentIndex = index;
+                track.style.transform = `translateX(-${currentIndex * 100}%)`;
+
+                dots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentIndex);
+                    dot.style.width = i === currentIndex ? '20px' : '6px';
+                });
+            }
+
+            function nextSlide() {
+                goToSlide(currentIndex + 1);
+            }
+
+            function prevSlide() {
+                goToSlide(currentIndex - 1);
+            }
+
+            if (prevBtn) prevBtn.addEventListener('click', prevSlide);
+            if (nextBtn) nextBtn.addEventListener('click', nextSlide);
+
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => goToSlide(index));
+            });
+
+            function startAutoPlay() {
+                interval = setInterval(nextSlide, 5000);
+            }
+
+            function stopAutoPlay() {
+                clearInterval(interval);
+            }
+
+            startAutoPlay();
+
+            if (sliderContainer) {
+                sliderContainer.addEventListener('mouseenter', stopAutoPlay);
+                sliderContainer.addEventListener('mouseleave', startAutoPlay);
+
+                let touchStartX = 0;
+
+                sliderContainer.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                });
+
+                sliderContainer.addEventListener('touchend', (e) => {
+                    const diff = touchStartX - e.changedTouches[0].screenX;
+                    if (diff > 50) nextSlide();
+                    if (diff < -50) prevSlide();
+                });
+            }
+
+            goToSlide(0);
+        }
+    });
+
+    function copyInfaqRekening(text) {
+        if (!text) return;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                showInfaqToast('✅ Nomor rekening berhasil disalin!');
+            }).catch(() => fallbackCopyInfaq(text));
+        } else {
+            fallbackCopyInfaq(text);
+        }
+    }
+
+    function fallbackCopyInfaq(text) {
+        const input = document.createElement('input');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+
+        try {
+            document.execCommand('copy');
+            showInfaqToast('✅ Nomor rekening berhasil disalin!');
+        } catch (err) {
+            showInfaqToast('❌ Gagal menyalin, silakan salin manual.');
+        }
+
+        document.body.removeChild(input);
+    }
+
+    function showInfaqToast(message) {
+        const existing = document.querySelector('.toast-copy');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-copy';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 400);
+        }, 2600);
+    }
+</script>

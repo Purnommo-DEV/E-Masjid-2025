@@ -80,7 +80,7 @@ class HomeController extends Controller
         $acaras = $this->acaraService->upcoming(6);
         $acaraSelesai = $this->acaraService->latestCompleted(3);
         $beritas = $this->beritaService->latestForHome(4);
-        $pengumuman = $this->pengumumanService->latestForHome(4);
+        $pengumuman = $this->pengumumanService->latestForHome(5);
 
         $layanans = Layanan::where('is_active', true)
             ->orderBy('urutan')
@@ -120,7 +120,7 @@ class HomeController extends Controller
             canonical_url: route('home'),
         ));
 
-        return view('masjid.'.masjid().'.guest.index', compact(
+        return view('masjid.' . masjid() . '.guest.index', compact(
             'profil',
             'banner',
             'acaras',
@@ -143,7 +143,7 @@ class HomeController extends Controller
         $currentDay = $now->dayOfWeek;
 
         // Buat cache key berdasarkan hari ini
-        $cacheKey = 'jadwal_jumat_'.$today;
+        $cacheKey = 'jadwal_jumat_' . $today;
 
         return Cache::remember($cacheKey, now()->addHours(12), function () use ($today, $currentDay) {
             // Jika hari ini Jumat
@@ -201,7 +201,7 @@ class HomeController extends Controller
             canonical_url: route('pengumuman.index'),
         ));
 
-        return view('masjid.'.masjid().'.guest.pengumuman.index', compact('pengumumans'))
+        return view('masjid.' . masjid() . '.guest.pengumuman.index', compact('pengumumans'))
             ->with('seoData', $seoData);
     }
 
@@ -222,7 +222,7 @@ class HomeController extends Controller
                         $q->orWhere('id', $slug);
                     }
                 });
-            }, fn ($query) => $query->whereKey($slug))
+            }, fn($query) => $query->whereKey($slug))
             ->firstOrFail();
 
         $related = Pengumuman::query()
@@ -248,7 +248,7 @@ class HomeController extends Controller
             canonical_url: $detailUrl,
         );
 
-        return view('masjid.'.masjid().'.guest.pengumuman.show', compact('pengumuman', 'related'))
+        return view('masjid.' . masjid() . '.guest.pengumuman.show', compact('pengumuman', 'related'))
             ->with('seoData', $seoData);
     }
 
@@ -271,7 +271,7 @@ class HomeController extends Controller
             canonical_url: route('galeri.index'),
         ));
 
-        return view('masjid.'.masjid().'.guest.galeri.index', compact('galeris'))
+        return view('masjid.' . masjid() . '.guest.galeri.index', compact('galeris'))
             ->with('seoData', $seoData);
     }
 
@@ -341,7 +341,7 @@ class HomeController extends Controller
                     'img' => $thumbnailUrl,
                 ];
             })
-            ->filter(fn ($g) => $g['img'] !== null)
+            ->filter(fn($g) => $g['img'] !== null)
             ->values();
 
         return response()->json([
@@ -373,8 +373,8 @@ class HomeController extends Controller
         $lng = $request->lng;
 
         $url = 'https://nominatim.openstreetmap.org/reverse?format=json'
-             ."&lat={$lat}&lon={$lng}"
-             .'&zoom=10&addressdetails=1';
+            . "&lat={$lat}&lon={$lng}"
+            . '&zoom=10&addressdetails=1';
 
         try {
             $response = Http::withHeaders([
@@ -393,16 +393,16 @@ class HomeController extends Controller
             $address = $data['address'] ?? [];
 
             $city = $address['city']
-                 ?? $address['town']
-                 ?? $address['village']
-                 ?? $address['county']
-                 ?? $address['state_district']
-                 ?? $address['municipality']
-                 ?? $address['state']
-                 ?? null;
+                ?? $address['town']
+                ?? $address['village']
+                ?? $address['county']
+                ?? $address['state_district']
+                ?? $address['municipality']
+                ?? $address['state']
+                ?? null;
 
             if (! $city) {
-                \Log::warning('Nominatim tidak menemukan kota | Response: '.json_encode($data));
+                \Log::warning('Nominatim tidak menemukan kota | Response: ' . json_encode($data));
 
                 return response()->json(['success' => false, 'message' => 'Lokasi tidak dikenali']);
             }
@@ -420,7 +420,7 @@ class HomeController extends Controller
                 'city' => ucwords($city),
             ]);
         } catch (\Throwable $e) {
-            \Log::error('Exception reverse geocode: '.$e->getMessage()." | Lat/Lng: {$lat},{$lng}");
+            \Log::error('Exception reverse geocode: ' . $e->getMessage() . " | Lat/Lng: {$lat},{$lng}");
 
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan server']);
         }

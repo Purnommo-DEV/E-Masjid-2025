@@ -5,68 +5,139 @@
 
             <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
                 
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 sm:mb-10 gap-4">
-                    <div>
-                        <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">AGENDA TERDEKAT</p>
-                        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 flex items-center gap-3">
-                            Kegiatan Mendatang
-                            <span class="hidden sm:block h-1.5 w-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"></span>
-                        </h2>
-                        <p class="text-sm text-slate-500 mt-1">Kegiatan & kajian yang akan segera dilaksanakan</p>
-                    </div>
-                    @if(count($acaras) > 0)
-                        <a href="{{ route('acara.index') }}" 
-                        class="text-sm sm:text-base text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-2 hover:underline transition">
-                            Lihat Semua Agenda →
+            <div class="mx-auto mb-8 max-w-4xl text-center sm:mb-10">
+                @include('masjid.mrj.guest.components.section-heading', [
+                    'badgeIcon' => '📅',
+                    'badge' => 'Agenda Terdekat',
+                    'title' => 'Kegiatan',
+                    'highlight' => 'Mendatang',
+                    'description' => "Kegiatan, kajian, dan agenda masjid yang akan segera dilaksanakan.<br class='hidden sm:block'>Mari hadir dan ikut meramaikan kegiatan kebaikan bersama jamaah."
+                ])
+
+                @if(count($acaras) > 0)
+                    <div class="mt-6 flex justify-center">
+                        <a href="{{ route('acara.index') }}"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-emerald-700 shadow-lg shadow-emerald-900/5 ring-1 ring-emerald-100 transition hover:-translate-y-0.5 hover:bg-emerald-50 sm:w-auto sm:px-6">
+                            <span>Lihat Semua Agenda</span>
+                            <span>→</span>
                         </a>
-                    @endif
-                </div>
+                    </div>
+                @endif
+            </div>
 
                 @if(count($acaras) > 0)
                     {{-- ADA AGENDA --}}
                     <div class="grid lg:grid-cols-[3fr_1fr] gap-6 xl:gap-8">
-                        <!-- List Acara Utama -->
-                        <div class="space-y-5 sm:space-y-6">
-                            @foreach(array_slice($acaras, 0, 3) as $acara)
-                                <div class="group bg-white rounded-2xl sm:rounded-3xl border border-emerald-100/60 shadow-md hover:shadow-xl hover:border-emerald-300/70 transition-all duration-300 overflow-hidden hover:-translate-y-1.5">
-                                    <div class="p-5 sm:p-6 lg:p-7">
-                                        <!-- Badge & Tanggal -->
-                                        <div class="flex flex-wrap items-center justify-between mb-4 gap-3">
-                                            <span class="inline-flex items-center px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border border-emerald-200/80 text-xs sm:text-sm font-medium shadow-sm">
-                                                {{ $acara['kategori'] ?? 'Kajian' }}
+                    <!-- List Acara Utama - Emerald Themed -->
+                    <div class="space-y-4">
+                        @foreach(array_slice($acaras, 0, 3) as $index => $acara)
+                            @php
+                                // SEMUA WARNA EMERALD - Konsisten
+                                $palettes = [
+                                    [
+                                        'from' => 'from-emerald-500', 
+                                        'to' => 'to-teal-500', 
+                                        'color' => 'emerald',
+                                        'light' => 'bg-emerald-50',
+                                        'lightHover' => 'group-hover:bg-emerald-50/90',
+                                        'border' => 'border-emerald-200',
+                                        'borderHover' => 'hover:border-emerald-400',
+                                        'text' => 'text-emerald-700',
+                                        'badge' => 'bg-emerald-100 text-emerald-800',
+                                        'shadow' => 'shadow-emerald-500/30',
+                                        'hover' => 'hover:shadow-emerald-200/50',
+                                    ],
+                                    [
+                                        'from' => 'from-emerald-500', 
+                                        'to' => 'to-teal-500', 
+                                        'color' => 'emerald',
+                                        'light' => 'bg-emerald-50',
+                                        'lightHover' => 'group-hover:bg-emerald-50/90',
+                                        'border' => 'border-emerald-200',
+                                        'borderHover' => 'hover:border-emerald-400',
+                                        'text' => 'text-emerald-700',
+                                        'badge' => 'bg-emerald-100 text-emerald-800',
+                                        'shadow' => 'shadow-emerald-500/30',
+                                        'hover' => 'hover:shadow-emerald-200/50',
+                                    ],
+                                    [
+                                        'from' => 'from-emerald-500', 
+                                        'to' => 'to-teal-500', 
+                                        'color' => 'emerald',
+                                        'light' => 'bg-emerald-50',
+                                        'lightHover' => 'group-hover:bg-emerald-50/90',
+                                        'border' => 'border-emerald-200',
+                                        'borderHover' => 'hover:border-emerald-400',
+                                        'text' => 'text-emerald-700',
+                                        'badge' => 'bg-emerald-100 text-emerald-800',
+                                        'shadow' => 'shadow-emerald-500/30',
+                                        'hover' => 'hover:shadow-emerald-200/50',
+                                    ],
+                                ];
+                                $p = $palettes[$index % 3];
+                            @endphp
+
+                            <div class="group relative bg-white rounded-2xl border-2 {{ $p['border'] }} {{ $p['borderHover'] }} shadow-md hover:shadow-xl {{ $p['hover'] }} transition-all duration-400 overflow-hidden hover:-translate-y-1">
+                                
+                                <!-- Background color on hover -->
+                                <div class="absolute inset-0 {{ $p['light'] }}/0 {{ $p['lightHover'] }} transition-all duration-500"></div>
+                                
+                                <!-- Glow Orbs -->
+                                <div class="absolute -top-20 -right-20 w-56 h-56 bg-{{ $p['color'] }}-400/0 rounded-full blur-3xl group-hover:bg-{{ $p['color'] }}-400/15 transition-all duration-700 pointer-events-none"></div>
+                                <div class="absolute -bottom-20 -left-20 w-56 h-56 bg-{{ $p['color'] }}-500/0 rounded-full blur-3xl group-hover:bg-{{ $p['color'] }}-500/15 transition-all duration-700 pointer-events-none"></div>
+
+                                <!-- Shimmer -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 translate-x-[-150%] group-hover:translate-x-[300%] transition-transform duration-1000 pointer-events-none"></div>
+
+                                <!-- Content -->
+                                <div class="p-4 sm:p-5 relative z-10">
+                                    
+                                    <!-- Badge & Date -->
+                                    <div class="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full {{ $p['badge'] }} text-[9px] sm:text-[10px] font-semibold border {{ $p['border'] }} flex-shrink-0 group-hover:border-{{ $p['color'] }}-300 transition-colors duration-300">
+                                            <span class="w-1 h-1 rounded-full bg-{{ $p['color'] }}-500 animate-pulse flex-shrink-0"></span>
+                                            <span class="truncate max-w-[100px] sm:max-w-none">{{ $acara['kategori'] ?? 'Kajian' }}</span>
+                                        </span>
+                                        <span class="text-[9px] sm:text-[10px] font-medium text-slate-600 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full border border-slate-200 shadow-sm flex-shrink-0 group-hover:border-{{ $p['color'] }}-200 group-hover:bg-{{ $p['color'] }}-50/50 transition-colors duration-300">
+                                            {{ $acara['tanggal_label'] ?? $acara['tanggal'] ?? 'Segera' }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Title -->
+                                    <h3 class="text-sm sm:text-base lg:text-lg font-bold text-slate-800 mb-1.5 leading-tight group-hover:{{ $p['text'] }} transition-colors duration-300 line-clamp-2">
+                                        {{ $acara['title'] ?? $acara['judul'] ?? 'Judul Acara' }}
+                                    </h3>
+
+                                    <!-- Description -->
+                                    <p class="text-xs sm:text-sm text-slate-600 leading-relaxed line-clamp-2 mb-2.5 group-hover:text-slate-700 transition-colors duration-300">
+                                        {{ Str::limit(strip_tags($acara['excerpt'] ?? $acara['deskripsi'] ?? ''), 100) }}
+                                    </p>
+
+                                    <!-- Info & Button -->
+                                    <div class="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-slate-100 group-hover:border-{{ $p['color'] }}-200 transition-colors duration-300">
+                                        <div class="flex flex-wrap items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] text-slate-600">
+                                            <span class="flex items-center gap-1 group-hover:text-{{ $p['color'] }}-700 transition-colors duration-300">
+                                                <span class="text-{{ $p['color'] }}-500 flex-shrink-0 text-[10px] sm:text-xs">⏰</span>
+                                                <span class="truncate max-w-[60px] sm:max-w-none">{{ $acara['waktu_label'] ?? $acara['waktu'] ?? '-' }}</span>
                                             </span>
-                                            <span class="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
-                                                {{ $acara['tanggal_label'] ?? $acara['tanggal'] ?? 'Segera' }}
+                                            <span class="flex items-center gap-1 group-hover:text-{{ $p['color'] }}-700 transition-colors duration-300">
+                                                <span class="text-{{ $p['color'] }}-500 flex-shrink-0 text-[10px] sm:text-xs">📍</span>
+                                                <span class="truncate max-w-[60px] sm:max-w-none">{{ $acara['lokasi'] ?? 'Masjid' }}</span>
                                             </span>
                                         </div>
-
-                                        <h3 class="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-tight">
-                                            {{ $acara['title'] ?? $acara['judul'] ?? 'Judul Acara' }}
-                                        </h3>
-
-                                        <p class="text-sm sm:text-base text-slate-600 mb-5 line-clamp-3 leading-relaxed">
-                                            {{ Str::limit(strip_tags($acara['excerpt'] ?? $acara['deskripsi'] ?? ''), 140) }}
-                                        </p>
-
-                                        <div class="flex flex-wrap gap-6 mb-6 text-sm text-slate-700">
-                                            <div class="flex items-center gap-2.5">
-                                                <span class="text-xl text-emerald-600">⏰</span>
-                                                <span class="font-medium">{{ $acara['waktu_label'] ?? $acara['waktu'] ?? '-' }}</span>
-                                            </div>
-                                            <div class="flex items-center gap-2.5">
-                                                <span class="text-xl text-rose-600">📍</span>
-                                                <span class="font-medium">{{ $acara['lokasi'] ?? 'Masjid' }}</span>
-                                            </div>
-                                        </div>
-
+                                        
                                         <a href="{{ $acara['url'] ?? route('acara.show', $acara['slug'] ?? '#') }}"
-                                        class="inline-flex items-center px-6 py-2.5 border-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 font-medium rounded-full transition-all duration-300 text-sm shadow-sm hover:shadow">
-                                            Detail Acara →
+                                        class="inline-flex items-center justify-center gap-1 px-3 sm:px-4 py-1 sm:py-1.5 bg-gradient-to-r {{ $p['from'] }} {{ $p['to'] }} text-white text-[9px] sm:text-[10px] font-semibold rounded-full shadow-md {{ $p['shadow'] }} hover:shadow-lg hover:{{ $p['shadow'] }} transition-all duration-300 hover:scale-105 flex-shrink-0">
+                                            <span>Detail</span>
+                                            <svg class="w-2.5 sm:w-3 h-2.5 sm:h-3 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                                            </svg>
                                         </a>
                                     </div>
                                 </div>
-                            @endforeach
-                        </div>
+                            </div>
+                        @endforeach
+                    </div>
 
                         <!-- Sidebar -->
                         <aside class="space-y-6 lg:space-y-8 h-fit">
@@ -120,7 +191,7 @@
                         <!-- Mini Kalender -->
                         <div class="rounded-2xl sm:rounded-3xl bg-white border border-emerald-100/60 shadow-md p-6">
                             <div class="flex items-center justify-between mb-5">
-                                <h3 class="text-lg font-semibold text-slate-900">Kalender Minggu Ini</h3>
+                                <h3 class="text-sm font-semibold text-slate-900">Kalender Pekan Ini</h3>
                                 <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-medium rounded-full border border-emerald-200 whitespace-nowrap">
                                     {{ now('Asia/Jakarta')->translatedFormat('F Y') }}
                                 </span>

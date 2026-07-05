@@ -1,5 +1,5 @@
         {{-- === SLIDER BANNER 3 KARTU (DB + SERVICE) === --}}
-        <section class="pb-12 -mt-6">
+        {{-- <section class="pb-12 -mt-6">
             <div class="container mx-auto px-6 lg:px-16 xl:px-24 relative">
 
                 @php
@@ -70,7 +70,6 @@
                             </div>
                         </div>
 
-                        {{-- indikator titik per halaman --}}
                         <div class="flex justify-center gap-2 mt-4">
                             @foreach($pages as $i => $page)
                                 <button
@@ -83,5 +82,4 @@
                     </div>
                 @endif
             </div>
-        </section>
-
+        </section> --}}

@@ -423,7 +423,7 @@
             }
         }
 
-        .home-reveal {
+        /* .home-reveal {
             opacity: 0;
             transform: translate3d(0, 38px, 0) scale(0.985);
             transition:
@@ -436,7 +436,7 @@
         .home-reveal.is-visible {
             opacity: 1;
             transform: translate3d(0, 0, 0) scale(1);
-        }
+        } */
 
         .home-stagger-item {
             opacity: 0;
