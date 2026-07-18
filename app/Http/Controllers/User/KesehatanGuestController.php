@@ -33,9 +33,14 @@ class KesehatanGuestController extends Controller
             description: 'Daftar peserta Program Kesehatan Masjid Raudhotul Jannah TCE',
         );
 
-        return view('masjid.'.masjid().'.guest.program-kesehatan.index', compact(
-            'allRegistrations', 'totalPendaftar', 'donorDarah',
-            'cekKesehatan', 'cekKatarak', 'eventDate', 'seoData'
+        return view('masjid.' . masjid() . '.guest.program-kesehatan.index', compact(
+            'allRegistrations',
+            'totalPendaftar',
+            'donorDarah',
+            'cekKesehatan',
+            'cekKatarak',
+            'eventDate',
+            'seoData'
         ));
     }
 
@@ -45,9 +50,9 @@ class KesehatanGuestController extends Controller
 
         $jumlahGulaDarah = KesehatanRegistration::whereJsonContains('cek_kesehatan', 'gula_darah')->count();
 
-        $kuotaGulaDarah = 40;
+        $kuotaGulaDarah = 100;
 
-        return view('masjid.'.masjid().'.guest.program-kesehatan.daftar', compact(
+        return view('masjid.' . masjid() . '.guest.program-kesehatan.daftar', compact(
             'eventDate',
             'jumlahGulaDarah',
             'kuotaGulaDarah'
@@ -57,7 +62,7 @@ class KesehatanGuestController extends Controller
     // ===================== FEEDBACK =====================
     public function feedback()
     {
-        return view('masjid.'.masjid().'.guest.program-kesehatan.feedback');
+        return view('masjid.' . masjid() . '.guest.program-kesehatan.feedback');
     }
 
     public function storeFeedback(Request $request)
@@ -132,188 +137,597 @@ class KesehatanGuestController extends Controller
             'redirect' => route('donor-darah.success', ['name' => $request->nama_lengkap]),
         ]);
     }
-    // ===================== EXPORT =====================
 
+    // ===================== EXPORT =====================
+    // Ambil data donor darah
     public function exportDonorDarah(Request $request)
     {
-        // Ambil data donor darah
+        // Ambil data donor darah dan urutkan berdasarkan nama A-Z
         $data = KesehatanRegistration::where('donor_darah', true)
+            ->orderBy('nama_lengkap', 'asc')
             ->get();
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Donor Darah');
 
-        // ====================== PAGE SETUP ======================
+        // ====================== PAGE SETUP + MARGIN ======================
         $sheet->getPageSetup()
-            ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT)
-            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
+            ->setOrientation(
+                \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT
+            )
+            ->setPaperSize(
+                \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4
+            )
+            ->setFitToWidth(1)
+            ->setFitToHeight(0)
+            ->setHorizontalCentered(true);
 
-        $sheet->getPageSetup()->setHorizontalCentered(true);
+        $sheet->getPageMargins()
+            ->setTop(0.8)
+            ->setRight(0.8)
+            ->setLeft(0.8)
+            ->setBottom(0.8);
 
         // ====================== JUDUL ======================
-        $sheet->mergeCells('A1:E1');
+        $sheet->mergeCells('A1:C1');
         $sheet->setCellValue('A1', 'PENDAFTARAN DONOR DARAH');
+
         $sheet->getStyle('A1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 16],
+            'font' => [
+                'bold' => true,
+                'size' => 16,
+            ],
             'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ]);
 
-        $sheet->mergeCells('A2:E2');
-        $sheet->setCellValue('A2', 'Tanggal: 18 April 2026');
+        $sheet->mergeCells('A2:C2');
+        $sheet->setCellValue('A2', 'Masjid Raudhotul Jannah TCE');
+
         $sheet->getStyle('A2')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+            ],
             'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ]);
 
-        $sheet->mergeCells('A3:E3');
-        $sheet->setCellValue('A3', 'MASJID RAUDHOTUL JANNAH TCE');
+        $sheet->mergeCells('A3:C3');
+        $sheet->setCellValue(
+            'A3',
+            'Tanggal: ' . now()->translatedFormat('d F Y')
+        );
+
         $sheet->getStyle('A3')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11],
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+            ],
             'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ]);
+
+        // Baris kosong sebagai jarak antara judul dan tabel
+        $sheet->getRowDimension(4)->setRowHeight(10);
 
         // ====================== HEADER TABEL ======================
-        $header = ['NO', 'NAMA', 'ALAMAT', 'NO HP', 'PARAF'];
+        $header = [
+            'NO',
+            'NAMA',
+            'NO HP',
+        ];
+
         $col = 'A';
+
         foreach ($header as $h) {
-            $sheet->setCellValue($col.'6', $h);
+            $sheet->setCellValue($col . '5', $h);
             $col++;
         }
 
-        // Styling Header
-        $sheet->getStyle('A6:E6')->applyFromArray([
+        // Styling header
+        $sheet->getStyle('A5:C5')->applyFromArray([
             'font' => [
                 'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
+                'color' => [
+                    'rgb' => 'FFFFFF',
+                ],
             ],
             'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '059669'],
+                'fillType' =>
+                \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => [
+                    'rgb' => '059669',
+                ],
             ],
             'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
             ],
         ]);
 
         // ====================== ISI DATA ======================
-        $row = 7;
+        $row = 6;
 
         foreach ($data as $index => $item) {
-            $sheet->setCellValue('A'.$row, $index + 1);
-            $sheet->setCellValue('B'.$row, $item->nama_lengkap ?? '');
-            $sheet->setCellValue('C'.$row, $item->alamat ?? '-');
-            $sheet->setCellValue('D'.$row, $item->no_hp ? "'".$item->no_hp : '');
-            $sheet->setCellValue('E'.$row, '');
+            // Nomor
+            $sheet->setCellValue(
+                'A' . $row,
+                $index + 1
+            );
+
+            // Nama
+            $sheet->setCellValue(
+                'B' . $row,
+                $item->nama_lengkap ?? ''
+            );
+
+            // Nomor HP disimpan sebagai teks agar angka 0 tidak hilang
+            $sheet->setCellValueExplicit(
+                'C' . $row,
+                $item->no_hp ?? '',
+                \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+            );
+
+            // Semua kolom rata tengah terlebih dahulu
+            $sheet->getStyle('A' . $row . ':C' . $row)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            // Nama rata kiri dan tengah vertikal
+            $sheet->getStyle('B' . $row)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            // Tinggi baris yang sudah berisi data
+            $sheet->getRowDimension($row)->setRowHeight(27);
 
             $row++;
         }
 
-        // Lanjutkan sampai baris 156 (150 data)
-        for ($i = $row; $i <= 156; $i++) {
-            $nomor = $i - 6;
-            $sheet->setCellValue('A'.$i, $nomor);
-            $sheet->setCellValue('B'.$i, '');
-            $sheet->setCellValue('C'.$i, '');
-            $sheet->setCellValue('D'.$i, '');
-            $sheet->setCellValue('E'.$i, '');
+        /*
+        * Header ada di baris 5.
+        * Data dimulai dari baris 6.
+        * Baris 6 sampai 155 menghasilkan nomor 1 sampai 150.
+        */
+        $minimumLastRow = 155;
+
+        // ====================== BARIS KOSONG SAMPAI NOMOR 150 ======================
+        for ($i = $row; $i <= $minimumLastRow; $i++) {
+            $sheet->setCellValue('A' . $i, $i - 5);
+            $sheet->setCellValue('B' . $i, '');
+            $sheet->setCellValue('C' . $i, '');
+
+            // Semua kolom rata tengah terlebih dahulu
+            $sheet->getStyle('A' . $i . ':C' . $i)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            // Kolom nama tetap rata kiri
+            $sheet->getStyle('B' . $i)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            // Tinggi baris kosong
+            $sheet->getRowDimension($i)->setRowHeight(35);
         }
 
-        // ====================== STYLING TABEL (INI YANG PENTING) ======================
+        /*
+        * Jika jumlah data lebih dari 150,
+        * border dan format tetap mengikuti seluruh data.
+        */
+        $lastRow = max($minimumLastRow, $row - 1);
 
-        // 1. Wrap Text + Alignment untuk kolom ALAMAT
-        $sheet->getStyle('C7:C156')->applyFromArray([
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                'wrapText' => true,
-            ],
-        ]);
-
-        // 2. Alignment untuk kolom lain
-        $sheet->getStyle('A7:A156')->applyFromArray([
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->getStyle('B7:B156')->applyFromArray([
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->getStyle('D7:D156')->applyFromArray([
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->getStyle('E7:E156')->applyFromArray([
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // Border untuk semua baris data
-        $sheet->getStyle('A7:E156')->applyFromArray([
+        // ====================== BORDER TABEL ======================
+        $sheet->getStyle('A5:C' . $lastRow)->applyFromArray([
             'borders' => [
                 'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'borderStyle' =>
+                    \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
                 ],
             ],
         ]);
 
         // ====================== LEBAR KOLOM ======================
-        $sheet->getColumnDimension('A')->setWidth(6);      // NO
-        $sheet->getColumnDimension('B')->setWidth(25);     // NAMA
-        $sheet->getColumnDimension('C')->setWidth(40);     // ALAMAT (lebih lebar karena wrap text)
-        $sheet->getColumnDimension('D')->setWidth(18);     // NO HP
-        $sheet->getColumnDimension('E')->setWidth(10);     // PARAF
+        $sheet->getColumnDimension('A')->setWidth(6);  // NO
+        $sheet->getColumnDimension('B')->setWidth(35); // NAMA
+        $sheet->getColumnDimension('C')->setWidth(25); // NO HP
 
-        // Freeze pane
-        $sheet->freezePane('A7');
+        // Tinggi header
+        $sheet->getRowDimension(5)->setRowHeight(25);
+
+        // Freeze header tabel
+        $sheet->freezePane('A6');
 
         // ====================== DOWNLOAD ======================
-        $filename = 'Pendaftaran_Donor_Darah_'.now()->format('d_F_Y').'.xlsx';
+        $filename = 'Pendaftaran_Donor_Darah_'
+            . now()->format('d_F_Y')
+            . '.xlsx';
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="'.$filename.'"');
+        header(
+            'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+
+        header(
+            'Content-Disposition: attachment; filename="' . $filename . '"'
+        );
+
         header('Cache-Control: max-age=0');
 
         $writer->save('php://output');
         exit;
     }
 
-    // public function exportCekKesehatan(Request $request)
-    // {
-    //     $eventDate = $request->get('event_date', now()->format('Y-m-d'));
+    public function exportCekKesehatanNew(Request $request)
+    {
+        /*
+        * Ambil pendaftar yang:
+        * 1. Memilih salah satu cek kesehatan, atau
+        * 2. Memilih cek kesehatan mata/katarak
+        */
+        $data = KesehatanRegistration::where(function ($query) {
+            $query->where(function ($q) {
+                $q->whereNotNull('cek_kesehatan')
+                    ->whereJsonLength('cek_kesehatan', '>', 0);
+            })
+                ->orWhere('cek_mata_katarak', true);
+        })
+            ->orderBy('nama_lengkap', 'asc')
+            ->get();
 
-    //     // Ambil data cek kesehatan
-    //     $data = KesehatanRegistration::where('event_date', $eventDate)
-    //         ->whereNotNull('cek_kesehatan')
-    //         ->whereJsonLength('cek_kesehatan', '>', 0)
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Cek Kesehatan');
+
+        // ====================== PAGE SETUP + MARGIN ======================
+        $sheet->getPageSetup()
+            ->setOrientation(
+                \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT
+            )
+            ->setPaperSize(
+                \PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4
+            )
+            ->setFitToWidth(1)
+            ->setFitToHeight(0)
+            ->setHorizontalCentered(true);
+
+        $sheet->getPageMargins()
+            ->setTop(0.8)
+            ->setRight(0.8)
+            ->setLeft(0.8)
+            ->setBottom(0.8);
+
+        // ====================== JUDUL ======================
+        $sheet->mergeCells('A1:H1');
+        $sheet->setCellValue('A1', 'PENDAFTARAN CEK KESEHATAN');
+
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 16,
+            ],
+            'alignment' => [
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        $sheet->mergeCells('A2:H2');
+        $sheet->setCellValue('A2', 'Masjid Raudhotul Jannah TCE');
+
+        $sheet->getStyle('A2')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+            ],
+            'alignment' => [
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        $sheet->mergeCells('A3:H3');
+        $sheet->setCellValue(
+            'A3',
+            'Tanggal: ' . now()->translatedFormat('d F Y')
+        );
+
+        $sheet->getStyle('A3')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+            ],
+            'alignment' => [
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        // ====================== KETERANGAN SINGKATAN ======================
+        $sheet->mergeCells('A4:H4');
+
+        $sheet->setCellValue(
+            'A4',
+            'Keterangan: GD = Gula Darah | K = Kolesterol | AU = Asam Urat | TD = Tensi Darah | KM = Kesehatan Mata'
+        );
+
+        $sheet->getStyle('A4')->applyFromArray([
+            'font' => [
+                'italic' => true,
+                'size' => 10,
+                'color' => [
+                    'rgb' => '374151',
+                ],
+            ],
+            'fill' => [
+                'fillType' =>
+                \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => [
+                    'rgb' => 'F3F4F6',
+                ],
+            ],
+            'alignment' => [
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'wrapText' => false,
+                'shrinkToFit' => true,
+            ],
+        ]);
+
+        $sheet->getRowDimension(4)->setRowHeight(22);
+
+        // ====================== HEADER TABEL ======================
+        $header = [
+            'NO',
+            'NAMA',
+            'NO HP',
+            'GD',
+            'K',
+            'AU',
+            'TD',
+            'KM',
+        ];
+
+        $col = 'A';
+
+        foreach ($header as $h) {
+            $sheet->setCellValue($col . '5', $h);
+            $col++;
+        }
+
+        // Styling header
+        $sheet->getStyle('A5:H5')->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => [
+                    'rgb' => 'FFFFFF',
+                ],
+            ],
+            'fill' => [
+                'fillType' =>
+                \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => [
+                    'rgb' => '059669',
+                ],
+            ],
+            'alignment' => [
+                'horizontal' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' =>
+                \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+
+        // ====================== ISI DATA ======================
+        $row = 6;
+
+        foreach ($data as $index => $item) {
+            $cek = $item->cek_kesehatan ?? [];
+
+            // Antisipasi jika cek_kesehatan masih berupa JSON string
+            if (is_string($cek)) {
+                $cek = json_decode($cek, true) ?? [];
+            }
+
+            if (!is_array($cek)) {
+                $cek = [];
+            }
+
+            $sheet->setCellValue('A' . $row, $index + 1);
+            $sheet->setCellValue('B' . $row, $item->nama_lengkap ?? '');
+
+            // Nomor HP sebagai teks agar angka 0 di depan tidak hilang
+            $sheet->setCellValueExplicit(
+                'C' . $row,
+                $item->no_hp ?? '',
+                \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+            );
+
+            // GD = Gula Darah
+            $sheet->setCellValue(
+                'D' . $row,
+                in_array('gula_darah', $cek, true) ? '✓' : ''
+            );
+
+            // K = Kolesterol
+            $sheet->setCellValue(
+                'E' . $row,
+                in_array('kolesterol', $cek, true) ? '✓' : ''
+            );
+
+            // AU = Asam Urat
+            $sheet->setCellValue(
+                'F' . $row,
+                in_array('asam_urat', $cek, true) ? '✓' : ''
+            );
+
+            // TD = Tensi Darah
+            $sheet->setCellValue(
+                'G' . $row,
+                in_array('tensi_darah', $cek, true) ? '✓' : ''
+            );
+
+            // KM = Kesehatan Mata/Katarak
+            $sheet->setCellValue(
+                'H' . $row,
+                $item->cek_mata_katarak ? '✓' : ''
+            );
+
+            // Posisi semua data di tengah
+            $sheet->getStyle('A' . $row . ':H' . $row)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            // Nama rata kiri dan tengah vertikal
+            $sheet->getStyle('B' . $row)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            $sheet->getRowDimension($row)->setRowHeight(27);
+
+            $row++;
+        }
+
+        // ====================== BARIS KOSONG SAMPAI 150 ======================
+        for ($i = $row; $i <= 150; $i++) {
+            $sheet->setCellValue('A' . $i, $i - 5);
+            $sheet->setCellValue('B' . $i, '');
+            $sheet->setCellValue('C' . $i, '');
+            $sheet->setCellValue('D' . $i, '');
+            $sheet->setCellValue('E' . $i, '');
+            $sheet->setCellValue('F' . $i, '');
+            $sheet->setCellValue('G' . $i, '');
+            $sheet->setCellValue('H' . $i, '');
+
+            $sheet->getStyle('A' . $i . ':H' . $i)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            // Kolom nama tetap rata kiri
+            $sheet->getStyle('B' . $i)
+                ->getAlignment()
+                ->setHorizontal(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT
+                )
+                ->setVertical(
+                    \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
+                );
+
+            $sheet->getRowDimension($i)->setRowHeight(35);
+        }
+
+        // ====================== BORDER TABEL ======================
+        $sheet->getStyle('A5:H150')->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' =>
+                    \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                ],
+            ],
+        ]);
+
+        // ====================== LEBAR KOLOM ======================
+        $sheet->getColumnDimension('A')->setWidth(6);  // NO
+        $sheet->getColumnDimension('B')->setWidth(32); // NAMA
+        $sheet->getColumnDimension('C')->setWidth(18); // NO HP
+        $sheet->getColumnDimension('D')->setWidth(8);  // GD
+        $sheet->getColumnDimension('E')->setWidth(8);  // K
+        $sheet->getColumnDimension('F')->setWidth(8);  // AU
+        $sheet->getColumnDimension('G')->setWidth(8);  // TD
+        $sheet->getColumnDimension('H')->setWidth(8);  // KM
+
+        // Tinggi header
+        $sheet->getRowDimension(5)->setRowHeight(25);
+
+        // Freeze header tabel
+        $sheet->freezePane('A6');
+
+        // ====================== DOWNLOAD ======================
+        $filename = 'Cek_Kesehatan_' . now()->format('d_F_Y') . '.xlsx';
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        header(
+            'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        header(
+            'Content-Disposition: attachment; filename="' . $filename . '"'
+        );
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
+    // public function exportCekKatarak(Request $request)
+    // {
+    //     // Ambil data cek katarak
+    //     $data = KesehatanRegistration::where('cek_mata_katarak', true)
     //         ->get();
 
-    //     $spreadsheet = new Spreadsheet();
+    //     $spreadsheet = new Spreadsheet;
     //     $sheet = $spreadsheet->getActiveSheet();
-    //     $sheet->setTitle('Cek Kesehatan');
+    //     $sheet->setTitle('Cek Katarak');
 
     //     // ====================== PAGE SETUP - A4 Portrait ======================
     //     $sheet->getPageSetup()
@@ -322,123 +736,105 @@ class KesehatanGuestController extends Controller
 
     //     $sheet->getPageSetup()->setHorizontalCentered(true);
 
-    //     // ====================== JUDUL ======================
-    //     $sheet->mergeCells('A1:G1');
-    //     $sheet->setCellValue('A1', 'PENDAFTARAN PEMERIKSAAN DARAH');
+    //     // ====================== JUDUL (Urutan sama persis dengan Donor Darah) ======================
+    //     $sheet->mergeCells('A1:E1');
+    //     $sheet->setCellValue('A1', 'PENDAFTARAN CEK KATARAK');
     //     $sheet->getStyle('A1')->applyFromArray([
     //         'font' => ['bold' => true, 'size' => 16],
     //         'alignment' => [
     //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-    //         ]
+    //             'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+    //         ],
     //     ]);
 
-    //     $sheet->mergeCells('A2:G2');
-    //     $sheet->setCellValue('A2', '(Gula Darah, Kolesterol dan Asam Urat)');
+    //     $sheet->mergeCells('A2:E2');
+    //     $sheet->setCellValue('A2', 'Tanggal: 18 April 2026');
     //     $sheet->getStyle('A2')->applyFromArray([
     //         'font' => ['bold' => true, 'size' => 12],
     //         'alignment' => [
     //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-    //         ]
+    //             'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+    //         ],
     //     ]);
 
-    //     $sheet->mergeCells('A3:G3');
-    //     $sheet->setCellValue('A3', 'Tanggal: 18 April 2026');
+    //     $sheet->mergeCells('A3:E3');
+    //     $sheet->setCellValue('A3', 'MASJID RAUDHOTUL JANNAH TCE');
     //     $sheet->getStyle('A3')->applyFromArray([
-    //         'font' => ['bold' => true, 'size' => 12],
-    //         'alignment' => [
-    //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-    //         ]
-    //     ]);
-
-    //     $sheet->mergeCells('A4:G4');
-    //     $sheet->setCellValue('A4', 'MASJID RAUDHOTUL JANNAH TCE');
-    //     $sheet->getStyle('A4')->applyFromArray([
     //         'font' => ['bold' => true, 'size' => 11],
     //         'alignment' => [
     //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-    //         ]
+    //             'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+    //         ],
     //     ]);
 
-    //     // ====================== HEADER TABEL ======================
-    //     $header = ['NO', 'NAMA', 'ALAMAT', 'GD', 'K', 'AU', 'NO HP'];
+    //     // ====================== HEADER TABEL (Urutan sama seperti Donor Darah) ======================
+    //     $header = ['NO', 'NAMA', 'ALAMAT', 'NO HP', 'PARAF'];
     //     $col = 'A';
     //     foreach ($header as $h) {
     //         $sheet->setCellValue($col . '6', $h);
     //         $col++;
     //     }
 
-    //     // Styling Header (hijau)
-    //     $sheet->getStyle('A6:G6')->applyFromArray([
+    //     // Styling Header (hijau sama persis)
+    //     $sheet->getStyle('A6:E6')->applyFromArray([
     //         'font' => [
     //             'bold' => true,
-    //             'color' => ['rgb' => 'FFFFFF']
+    //             'color' => ['rgb' => 'FFFFFF'],
     //         ],
     //         'fill' => [
     //             'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-    //             'startColor' => ['rgb' => '059669']
+    //             'startColor' => ['rgb' => '059669'],
     //         ],
     //         'alignment' => [
     //             'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-    //             'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER
-    //         ]
+    //             'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+    //         ],
     //     ]);
 
     //     // ====================== ISI DATA ======================
     //     $row = 7;
 
     //     foreach ($data as $index => $item) {
-    //         $cek = $item->cek_kesehatan ?? [];
-
     //         $sheet->setCellValue('A' . $row, $index + 1);
     //         $sheet->setCellValue('B' . $row, $item->nama_lengkap ?? '');
     //         $sheet->setCellValue('C' . $row, $item->alamat ?? '-');
-    //         $sheet->setCellValue('D' . $row, in_array('gula_darah', $cek) ? '✓' : '');
-    //         $sheet->setCellValue('E' . $row, in_array('kolesterol', $cek) ? '✓' : '');
-    //         $sheet->setCellValue('F' . $row, in_array('asam_urat', $cek) ? '✓' : '');
-    //         $sheet->setCellValue('G' . $row, $item->no_hp ? "'" . $item->no_hp : '');
+    //         $sheet->setCellValue('D' . $row, $item->no_hp ? "'" . $item->no_hp : '');
+    //         $sheet->setCellValue('E' . $row, '');   // PARAF kosong
 
     //         $row++;
     //     }
 
-    //     // Lanjutkan nomor urut sampai 150 (baris kosong)
-    //     for ($i = $row; $i <= 156; $i++) {
+    //     // Lanjutkan nomor urut sampai 100
+    //     for ($i = $row; $i <= 106; $i++) {
     //         $nomor = $i - 6;
     //         $sheet->setCellValue('A' . $i, $nomor);
     //         $sheet->setCellValue('B' . $i, '');
     //         $sheet->setCellValue('C' . $i, '');
     //         $sheet->setCellValue('D' . $i, '');
     //         $sheet->setCellValue('E' . $i, '');
-    //         $sheet->setCellValue('F' . $i, '');
-    //         $sheet->setCellValue('G' . $i, '');
     //     }
 
     //     // Border untuk semua baris data
-    //     $sheet->getStyle('A7:G156')->applyFromArray([
+    //     $sheet->getStyle('A7:E106')->applyFromArray([
     //         'borders' => [
     //             'allBorders' => [
     //                 'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-    //             ]
-    //         ]
+    //             ],
+    //         ],
     //     ]);
 
-    //     // ====================== PENGATURAN LEBAR KOLOM (SESUAI PERMINTAAN) ======================
+    //     // ====================== PENGATURAN LEBAR KOLOM (PERSIS SEPERTI PERMINTAAN TERAKHIR) ======================
     //     $sheet->getColumnDimension('A')->setWidth(6);      // NO
     //     $sheet->getColumnDimension('B')->setWidth(25);     // NAMA
-    //     $sheet->getColumnDimension('C')->setWidth(20);     // ALAMAT
-    //     $sheet->getColumnDimension('D')->setWidth(5);      // Gula Darah
-    //     $sheet->getColumnDimension('E')->setWidth(5);      // Kolesterol
-    //     $sheet->getColumnDimension('F')->setWidth(5);      // Asam Urat
-    //     $sheet->getColumnDimension('G')->setWidth(18);     // NO HP
+    //     $sheet->getColumnDimension('C')->setWidth(25);     // ALAMAT
+    //     $sheet->getColumnDimension('D')->setWidth(18);     // NO HP
+    //     $sheet->getColumnDimension('E')->setWidth(10);     // PARAF
 
     //     // Freeze pane
     //     $sheet->freezePane('A7');
 
     //     // ====================== DOWNLOAD ======================
-    //     $filename = "Pemeriksaan_Darah_" . now()->parse($eventDate)->format('d_F_Y') . ".xlsx";
+    //     $filename = 'Cek_Katarak_' . now()->format('d_F_Y') . '.xlsx';
 
     //     $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
 
@@ -449,286 +845,6 @@ class KesehatanGuestController extends Controller
     //     $writer->save('php://output');
     //     exit;
     // }
-
-    public function exportCekKesehatanNew(Request $request)
-    {
-        // Ambil data pendaftar yang memilih cek kesehatan
-        $data = KesehatanRegistration::whereNotNull('cek_kesehatan')
-            ->whereJsonLength('cek_kesehatan', '>', 0)
-            ->get();
-
-        $spreadsheet = new Spreadsheet;
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Cek Kesehatan');
-
-        // ====================== PAGE SETUP + MARGIN ======================
-        $sheet->getPageSetup()
-            ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT)
-            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
-            ->setHorizontalCentered(true);
-
-        $sheet->getPageMargins()
-            ->setTop(0.8)
-            ->setRight(0.8)
-            ->setLeft(0.8)
-            ->setBottom(0.8);
-
-        // ====================== JUDUL ======================
-        $sheet->mergeCells('A1:F1');
-        $sheet->setCellValue('A1', 'PENDAFTARAN CEK KESEHATAN');
-        $sheet->getStyle('A1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 16],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->mergeCells('A2:F2');
-        $sheet->setCellValue('A2', 'Masjid Raudhotul Jannah TCE');
-        $sheet->getStyle('A2')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->mergeCells('A3:F3');
-        $sheet->setCellValue('A3', 'Tanggal: '.now()->translatedFormat('d F Y'));
-        $sheet->getStyle('A3')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // ====================== HEADER TABEL ======================
-        $header = ['NO', 'NAMA LENGKAP', 'ALAMAT', 'CEK GULA DARAH', 'CEK TENSI DARAH', 'NO HP'];
-
-        $col = 'A';
-        foreach ($header as $h) {
-            $sheet->setCellValue($col.'5', $h);
-            $col++;
-        }
-
-        // Styling Header (hijau)
-        $sheet->getStyle('A5:F5')->applyFromArray([
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
-            ],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '059669'],
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // ====================== ISI DATA ======================
-        $row = 6;
-        foreach ($data as $index => $item) {
-            $cek = $item->cek_kesehatan ?? [];
-
-            $sheet->setCellValue('A'.$row, $index + 1);
-            $sheet->setCellValue('B'.$row, $item->nama_lengkap ?? '');
-            $sheet->setCellValue('C'.$row, $item->alamat ?? '-');
-            $sheet->setCellValue('D'.$row, in_array('gula_darah', $cek) ? '✓' : '');
-            $sheet->setCellValue('E'.$row, in_array('tensi_darah', $cek) ? '✓' : '');
-            $sheet->setCellValue('F'.$row, $item->no_hp ? "'".$item->no_hp : '');
-
-            $sheet->getStyle('D'.$row)->getAlignment()
-                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
-                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-
-            $sheet->getStyle('E'.$row)->getAlignment()
-                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
-                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-
-            $row++;
-        }
-
-        // Tambahkan baris kosong sampai baris ke-150
-        for ($i = $row; $i <= 150; $i++) {
-            $sheet->setCellValue('A'.$i, $i - 5);
-            $sheet->setCellValue('B'.$i, '');
-            $sheet->setCellValue('C'.$i, '');
-            $sheet->setCellValue('D'.$i, '');
-            $sheet->setCellValue('E'.$i, '');
-            $sheet->setCellValue('F'.$i, '');
-
-            $sheet->getStyle('D'.$i)->getAlignment()
-                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
-                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-
-            $sheet->getStyle('E'.$i)->getAlignment()
-                ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER)
-                ->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
-        }
-
-        // Border semua tabel
-        $sheet->getStyle('A5:F150')->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                ],
-            ],
-        ]);
-
-        // ====================== LEBAR KOLOM ======================
-        $sheet->getColumnDimension('A')->setWidth(6);      // NO
-        $sheet->getColumnDimension('B')->setWidth(30);     // NAMA LENGKAP
-        $sheet->getColumnDimension('C')->setWidth(28);     // ALAMAT
-        $sheet->getColumnDimension('D')->setWidth(18);     // CEK GULA DARAH
-        $sheet->getColumnDimension('E')->setWidth(18);     // CEK TENSI DARAH
-        $sheet->getColumnDimension('F')->setWidth(18);     // NO HP
-
-        // Freeze pane
-        $sheet->freezePane('A6');
-
-        // ====================== DOWNLOAD ======================
-        $filename = 'Cek_Kesehatan_'.now()->format('d_F_Y').'.xlsx';
-
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="'.$filename.'"');
-        header('Cache-Control: max-age=0');
-
-        $writer->save('php://output');
-        exit;
-    }
-
-    public function exportCekKatarak(Request $request)
-    {
-        // Ambil data cek katarak
-        $data = KesehatanRegistration::where('cek_mata_katarak', true)
-            ->get();
-
-        $spreadsheet = new Spreadsheet;
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Cek Katarak');
-
-        // ====================== PAGE SETUP - A4 Portrait ======================
-        $sheet->getPageSetup()
-            ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_PORTRAIT)
-            ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4);
-
-        $sheet->getPageSetup()->setHorizontalCentered(true);
-
-        // ====================== JUDUL (Urutan sama persis dengan Donor Darah) ======================
-        $sheet->mergeCells('A1:E1');
-        $sheet->setCellValue('A1', 'PENDAFTARAN CEK KATARAK');
-        $sheet->getStyle('A1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 16],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->mergeCells('A2:E2');
-        $sheet->setCellValue('A2', 'Tanggal: 18 April 2026');
-        $sheet->getStyle('A2')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 12],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        $sheet->mergeCells('A3:E3');
-        $sheet->setCellValue('A3', 'MASJID RAUDHOTUL JANNAH TCE');
-        $sheet->getStyle('A3')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // ====================== HEADER TABEL (Urutan sama seperti Donor Darah) ======================
-        $header = ['NO', 'NAMA', 'ALAMAT', 'NO HP', 'PARAF'];
-        $col = 'A';
-        foreach ($header as $h) {
-            $sheet->setCellValue($col.'6', $h);
-            $col++;
-        }
-
-        // Styling Header (hijau sama persis)
-        $sheet->getStyle('A6:E6')->applyFromArray([
-            'font' => [
-                'bold' => true,
-                'color' => ['rgb' => 'FFFFFF'],
-            ],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '059669'],
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // ====================== ISI DATA ======================
-        $row = 7;
-
-        foreach ($data as $index => $item) {
-            $sheet->setCellValue('A'.$row, $index + 1);
-            $sheet->setCellValue('B'.$row, $item->nama_lengkap ?? '');
-            $sheet->setCellValue('C'.$row, $item->alamat ?? '-');
-            $sheet->setCellValue('D'.$row, $item->no_hp ? "'".$item->no_hp : '');
-            $sheet->setCellValue('E'.$row, '');   // PARAF kosong
-
-            $row++;
-        }
-
-        // Lanjutkan nomor urut sampai 100
-        for ($i = $row; $i <= 106; $i++) {
-            $nomor = $i - 6;
-            $sheet->setCellValue('A'.$i, $nomor);
-            $sheet->setCellValue('B'.$i, '');
-            $sheet->setCellValue('C'.$i, '');
-            $sheet->setCellValue('D'.$i, '');
-            $sheet->setCellValue('E'.$i, '');
-        }
-
-        // Border untuk semua baris data
-        $sheet->getStyle('A7:E106')->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                ],
-            ],
-        ]);
-
-        // ====================== PENGATURAN LEBAR KOLOM (PERSIS SEPERTI PERMINTAAN TERAKHIR) ======================
-        $sheet->getColumnDimension('A')->setWidth(6);      // NO
-        $sheet->getColumnDimension('B')->setWidth(25);     // NAMA
-        $sheet->getColumnDimension('C')->setWidth(25);     // ALAMAT
-        $sheet->getColumnDimension('D')->setWidth(18);     // NO HP
-        $sheet->getColumnDimension('E')->setWidth(10);     // PARAF
-
-        // Freeze pane
-        $sheet->freezePane('A7');
-
-        // ====================== DOWNLOAD ======================
-        $filename = 'Cek_Katarak_'.now()->format('d_F_Y').'.xlsx';
-
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="'.$filename.'"');
-        header('Cache-Control: max-age=0');
-
-        $writer->save('php://output');
-        exit;
-    }
 
     // ===================== HELPER =====================
     private function styleHeader($sheet, $range)
@@ -759,7 +875,7 @@ class KesehatanGuestController extends Controller
             $writer->save('php://output');
         }, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             'Cache-Control' => 'max-age=0',
         ]);
     }
