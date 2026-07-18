@@ -114,27 +114,125 @@ class KesehatanGuestController extends Controller
 
     public function storeNew(Request $request)
     {
-        $request->validate([
-            'nama_lengkap' => 'required|string|max:255',
-            'no_hp' => 'required|string|max:20',
-            'alamat' => 'nullable|string|max:500',
-        ]);
-
-        KesehatanRegistration::create([
-            'nama_lengkap' => $request->nama_lengkap,
-            'no_hp' => $request->no_hp,
-            'alamat' => $request->alamat,
-            'event_date' => $request->event_date ?? now()->format('Y-m-d'),
+        /*
+     * Normalisasi nilai checkbox menjadi boolean.
+     * Ini juga menangani checkbox yang mengirim value "on".
+     */
+        $request->merge([
             'donor_darah' => $request->boolean('donor_darah'),
-            'cek_kesehatan' => $request->cek_kesehatan ?? [],
             'cek_mata_katarak' => $request->boolean('cek_mata_katarak'),
         ]);
 
-        // Kirim nama melalui query string
+        $validator = \Illuminate\Support\Facades\Validator::make(
+            $request->all(),
+            [
+                'nama_lengkap' => [
+                    'required',
+                    'string',
+                    'max:255',
+                ],
+
+                'no_hp' => [
+                    'required',
+                    'string',
+                    'max:20',
+                ],
+
+                'alamat' => [
+                    'nullable',
+                    'string',
+                    'max:500',
+                ],
+
+                'event_date' => [
+                    'nullable',
+                    'date',
+                ],
+
+                'donor_darah' => [
+                    'boolean',
+                ],
+
+                'cek_mata_katarak' => [
+                    'boolean',
+                ],
+
+                'cek_kesehatan' => [
+                    'nullable',
+                    'array',
+                ],
+
+                'cek_kesehatan.*' => [
+                    'string',
+                    'distinct',
+                    'in:gula_darah,kolesterol,asam_urat,tensi_darah',
+                ],
+            ],
+            [
+                'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
+                'no_hp.required' => 'Nomor HP wajib diisi.',
+                'cek_kesehatan.array' => 'Pilihan cek kesehatan tidak valid.',
+                'cek_kesehatan.*.in' => 'Pilihan cek kesehatan tidak valid.',
+            ]
+        );
+
+        /*
+     * Validasi minimal satu layanan harus dipilih.
+     */
+        $validator->after(function ($validator) use ($request) {
+            $cekKesehatan = $request->input('cek_kesehatan', []);
+
+            $memilihCekKesehatan =
+                is_array($cekKesehatan) &&
+                count(array_filter($cekKesehatan)) > 0;
+
+            $memilihDonorDarah = $request->boolean('donor_darah');
+            $memilihKesehatanMata = $request->boolean('cek_mata_katarak');
+
+            if (
+                ! $memilihDonorDarah &&
+                ! $memilihCekKesehatan &&
+                ! $memilihKesehatanMata
+            ) {
+                $validator->errors()->add(
+                    'layanan',
+                    'Pilih minimal satu layanan: Donor Darah dan/atau Pemeriksaan Kesehatan.'
+                );
+            }
+        });
+
+        $validated = $validator->validate();
+
+        /*
+     * Pastikan cek_kesehatan selalu tersimpan sebagai array.
+     */
+        $cekKesehatan = $validated['cek_kesehatan'] ?? [];
+
+        $registration = KesehatanRegistration::create([
+            'nama_lengkap' => trim($validated['nama_lengkap']),
+            'no_hp' => trim($validated['no_hp']),
+            'alamat' => ! empty($validated['alamat'])
+                ? trim($validated['alamat'])
+                : null,
+
+            'event_date' => $validated['event_date']
+                ?? now()->format('Y-m-d'),
+
+            'donor_darah' => $request->boolean('donor_darah'),
+
+            'cek_kesehatan' => array_values($cekKesehatan),
+
+            'cek_mata_katarak' =>
+            $request->boolean('cek_mata_katarak'),
+        ]);
+
         return response()->json([
             'success' => true,
-            'nama_lengkap' => $request->nama_lengkap,
-            'redirect' => route('donor-darah.success', ['name' => $request->nama_lengkap]),
+            'message' => 'Pendaftaran berhasil disimpan.',
+            'nama_lengkap' => $registration->nama_lengkap,
+            'redirect' => route('donor-darah.success', [
+                'name' => $registration->nama_lengkap,
+            ]),
         ]);
     }
 
