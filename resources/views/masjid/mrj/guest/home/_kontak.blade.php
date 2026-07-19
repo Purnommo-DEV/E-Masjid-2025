@@ -1,5 +1,5 @@
 {{-- === KONTAK PREMIUM === --}}
-<section id="layanan_jamaah" class="relative overflow-hidden bg-gradient-to-br from-white via-emerald-50/50 to-cyan-50/60 py-14 sm:py-16 lg:py-20">
+<section class="relative overflow-hidden bg-gradient-to-br from-white via-emerald-50/50 to-cyan-50/60 py-14 sm:py-16 lg:py-20">
     
     {{-- Background Decoration --}}
     <div class="pointer-events-none absolute inset-0">
@@ -124,7 +124,7 @@
             </div>
 
             {{-- Kolom Kanan: Kontak + Form --}}
-            <div class="group relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-2xl shadow-emerald-900/5 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:shadow-emerald-200/40 sm:p-7 lg:p-9">
+            <div id="layanan_jamaah" class="group relative overflow-hidden rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-2xl shadow-emerald-900/5 backdrop-blur-xl transition-all duration-500 hover:-translate-y-1 hover:shadow-emerald-200/40 sm:p-7 lg:p-9">
                 
                 {{-- Card Decoration --}}
                 <div class="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-cyan-100/70 blur-3xl"></div>
@@ -134,13 +134,15 @@
                     <div class="mb-6">
                         <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-emerald-700 ring-1 ring-emerald-100">
                             <span class="text-sm">🕌</span>
-                            <span class="text-xs font-black uppercase tracking-[0.16em]">Kontak</span>
+                            <span class="text-xs font-black uppercase tracking-[0.16em]">Hubungi Kami</span>
                         </div>
 
                         <h2 class="font-serif text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
-                            Kontak & Pesan Jamaah
+                            Kontak & Aspirasi Jamaah
                         </h2>
-
+                        <p class="mt-4 text-sm leading-7 text-slate-600 sm:text-base">
+                            Hubungi pengurus melalui WhatsApp atau email, atau sampaikan saran, masukan, pertanyaan, maupun usulan terkait pelayanan, fasilitas, dan berbagai kegiatan Masjid Raudhotul Jannah melalui formulir berikut.
+                        </p>
                         <div class="mt-4 flex items-center gap-2">
                             <span class="h-px w-12 bg-yellow-300"></span>
                             <span class="text-yellow-400">✦</span>
@@ -253,7 +255,7 @@
                                     rows="5"
                                     required
                                     class="w-full resize-none rounded-2xl border border-slate-200 bg-white px-12 py-4 text-sm leading-7 text-slate-900 outline-none transition-all duration-300 placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                    placeholder="Silakan sampaikan pertanyaan, saran, atau keperluan terkait kegiatan masjid."></textarea>
+                                    placeholder="Sampaikan saran, masukan, pertanyaan, atau usulan Anda untuk membantu kami meningkatkan pelayanan dan berbagai kegiatan Masjid Raudhotul Jannah.."></textarea>
                                 <span class="pointer-events-none absolute left-4 top-4 text-lg text-slate-400">
                                     💬
                                 </span>
