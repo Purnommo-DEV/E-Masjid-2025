@@ -361,20 +361,20 @@
             }
         }
         /* Kontak - Form Lebih Berwarna */
-        #layanan_jamaah input,
-        #layanan_jamaah textarea {
+        #aspirasi_jamaah input,
+        #aspirasi_jamaah textarea {
             border-color: #cbd5e1;
             color: #0f172a;
             background: white;
         }
 
-        #layanan_jamaah input:focus,
-        #layanan_jamaah textarea:focus {
+        #aspirasi_jamaah input:focus,
+        #aspirasi_jamaah textarea:focus {
             border-color: #059669;
             box-shadow: 0 0 0 4px rgba(5,150,105,0.18);
         }
 
-        #layanan_jamaah form {
+        #aspirasi_jamaah form {
             background: transparent;
             border: none;
             box-shadow: none;

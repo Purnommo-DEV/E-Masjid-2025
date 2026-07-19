@@ -134,7 +134,7 @@
                     </li>
                 @endif
                 
-                <li><a href="{{ route('home') }}#layanan_jamaah" class="relative px-4 py-2 rounded-full text-emerald-100/90 hover:text-white hover:bg-white/10 transition-all duration-300">Layanan Jamaah</a></li>
+                <li><a href="{{ route('home') }}#aspirasi_jamaah" class="relative px-4 py-2 rounded-full text-emerald-100/90 hover:text-white hover:bg-white/10 transition-all duration-300">Layanan Jamaah</a></li>
             
             </ul>
 
@@ -228,7 +228,7 @@
             @endif
             
             <li><hr class="my-2 border-emerald-800/30 mx-4"></li>
-            <li><a href="{{ route('home') }}#layanan_jamaah" class="flex items-center gap-3 mx-2 my-1 px-4 py-3 rounded-xl text-white hover:bg-emerald-600/30 hover:translate-x-1 transition-all duration-200 mobile-menu-link">💬 Layanan Jamaah</a></li>
+            <li><a href="{{ route('home') }}#aspirasi_jamaah" class="flex items-center gap-3 mx-2 my-1 px-4 py-3 rounded-xl text-white hover:bg-emerald-600/30 hover:translate-x-1 transition-all duration-200 mobile-menu-link">💬 Layanan Jamaah</a></li>
         </ul>
     </div>
 
