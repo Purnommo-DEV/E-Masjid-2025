@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Interfaces\JurnalRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
 
 class SaldoAwalDetail extends Model
@@ -10,6 +11,7 @@ class SaldoAwalDetail extends Model
 
     public function periode() { return $this->belongsTo(SaldoAwalPeriode::class, 'saldo_awal_periode_id'); }
     public function akun()    { return $this->belongsTo(AkunKeuangan::class); }
+    public function lawanAkun() { return $this->belongsTo(AkunKeuangan::class, 'lawan_akun_id'); }
 
     protected static function booted()
     {
@@ -18,10 +20,7 @@ class SaldoAwalDetail extends Model
                 app(JurnalRepositoryInterface::class)->buatJurnal(
                     $detail->periode->periode,
                     'Jurnal Pembuka – Saldo Awal ' . $detail->akun->nama,
-                    [
-                        ['akun_id' => $detail->akun_id, 'debit'  => $detail->jumlah],
-                        ['akun_id' => 50001,          'kredit' => $detail->jumlah], // 50001 = Surplus/Defisit atau Modal Awal
-                    ],
+                    \createSaldoAwalOpeningEntries($detail),
                     $detail
                 );
             }

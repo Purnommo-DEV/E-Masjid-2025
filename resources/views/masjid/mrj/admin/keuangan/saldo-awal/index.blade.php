@@ -119,6 +119,87 @@
             </button>
           @endif
 
+          @if($periodeTerakhir?->status !== 'locked')
+              <button class="btn btn-warning gap-2 min-w-[160px]" onclick="bukaModalEditSaldo()">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit & Pisahkan Dana
+              </button>
+          @endif
+          
+        {{-- ====================== MODAL EDIT SALDO AWAL ====================== --}}
+        <div id="modalEditSaldo" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div class="w-full max-w-2xl mx-4 max-h-[90vh]">
+                <div class="bg-base-100 rounded-3xl shadow-2xl border border-base-300 overflow-hidden flex flex-col">
+                    
+                    <!-- Header -->
+                    <div class="px-6 py-4 bg-warning text-warning-content flex items-center justify-between rounded-t-3xl flex-shrink-0">
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Edit & Pisahkan Saldo Awal
+                        </h3>
+                        <button type="button" class="btn btn-sm btn-circle btn-ghost" onclick="tutupModalEditSaldo()">✕</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-6 overflow-y-auto flex-1" style="max-height: calc(90vh - 140px);">
+                        <form id="formEditSaldo">
+                            @csrf
+                            
+                            <div class="bg-info/10 rounded-xl p-4 mb-4 text-sm">
+                                <p class="font-semibold text-info">💡 Panduan:</p>
+                                <ul class="list-disc list-inside text-base-content/80 mt-1 space-y-1">
+                                    <li>Saldo awal <strong>Bank BNI</strong> adalah total keseluruhan (<strong>Rp 151.411.818</strong>)</li>
+                                    <li>Pisahkan dana ke akun masing-masing sesuai jenisnya</li>
+                                    <li>Total semua akun harus sama dengan saldo Bank BNI</li>
+                                    <li>Akun <strong>20099 Dana Titipan</strong> akan otomatis kosong setelah dipindah</li>
+                                </ul>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="table table-sm table-zebra">
+                                    <thead class="bg-base-200 sticky top-0">
+                                        <tr>
+                                            <th class="w-20">Kode</th>
+                                            <th>Nama Akun</th>
+                                            <th class="text-right w-48">Saldo (Rp)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="saldoAwalList">
+                                        <tr>
+                                            <td colspan="3" class="text-center py-8 text-base-content/60">
+                                                <span class="loading loading-spinner loading-md"></span>
+                                                Memuat data...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="totalSaldoInfo" class="mt-4 p-3 bg-base-200 rounded-xl text-center hidden">
+                                <span class="text-sm text-base-content/70">Total Saldo:</span>
+                                <span id="totalSaldoDisplay" class="font-bold text-lg text-primary">Rp 0</span>
+                                <span id="totalSaldoStatus" class="ml-2"></span>
+                            </div>
+
+                            <div class="mt-4 flex justify-end gap-3">
+                                <button type="button" class="btn btn-ghost" onclick="tutupModalEditSaldo()">Batal</button>
+                                <button type="submit" class="btn btn-warning" id="btnSaveSaldo">
+                                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
           <button class="btn btn-outline gap-2 min-w-[100px]" onclick="location.reload()">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -223,73 +304,96 @@
         </div>
 
         {{-- ================= ACCOUNT LIST ================= --}}
-<div class="space-y-2 max-h-[62vh] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
-    @foreach($akuns as $akun)
-    <div class="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-3.5
-                bg-base-100/50 hover:bg-base-200/50 rounded-xl border border-base-300/40
-                transition-all duration-200 hover:shadow-sm
-                {{ !$loop->last ? 'border-b border-base-300/30 pb-5' : '' }}">  <!-- border-b di item kecuali terakhir -->
+        <div class="space-y-2 max-h-[62vh] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
+            @foreach($akuns as $akun)
+            <div class="group relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-3.5
+                        bg-base-100/50 hover:bg-base-200/50 rounded-xl border border-base-300/40
+                        transition-all duration-200 hover:shadow-sm
+                        {{ !$loop->last ? 'border-b border-base-300/30 pb-5' : '' }}">  <!-- border-b di item kecuali terakhir -->
 
-        <!-- Kode + Nama Akun -->
-        <div class="flex items-center gap-3.5 flex-1 min-w-0">
-            <div class="font-mono font-semibold text-base lg:text-lg tracking-tight text-base-content/90 whitespace-nowrap min-w-[90px] sm:min-w-[110px]">
-                {{ $akun->kode }}
+                <!-- Kode + Nama Akun -->
+                <div class="flex items-center gap-3.5 flex-1 min-w-0">
+                    <div class="font-mono font-semibold text-base lg:text-lg tracking-tight text-base-content/90 whitespace-nowrap min-w-[90px] sm:min-w-[110px]">
+                        {{ $akun->kode }}
+                    </div>
+                    <div class="text-sm opacity-80 line-clamp-1 flex-1">
+                        {{ $akun->nama }}
+                    </div>
+                </div>
+
+                <!-- Input Saldo -->
+                <div class="w-full sm:w-auto sm:min-w-[200px] lg:min-w-[220px] shrink-0">
+                    <div class="join w-full">
+                        <span class="join-item btn btn-sm lg:btn-md px-4 min-w-[50px] flex items-center justify-center text-base-content/80 font-medium">
+                            Rp
+                        </span>
+                        <input
+                            type="text"
+                            name="saldo[{{ $akun->id }}]"
+                            class="join-item input currency-input input-bordered input-md lg:input-md font-medium text-right flex-1
+                                  max-w-[160px] md:max-w-[170px] lg:max-w-[190px]
+                                  focus:border-primary group-hover:border-primary/40 transition-colors"
+                            value="{{ number_format($saldoAwal[$akun->id] ?? 0, 0, ',', '.') }}"
+                            data-id="{{ $akun->id }}"
+                            data-tipe="{{ $akun->tipe }}"
+                            {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
+                        >
+                    </div>
+                </div>
+
+                      <!-- Pilihan akun lawan (ekuitas) -->
+                      <div class="w-full sm:w-auto sm:min-w-[200px] lg:min-w-[260px] shrink-0">
+                        <label class="label mb-1 hidden sm:block">
+                          <span class="label-text text-xs opacity-70">Sumber Dana (Opsional)</span>
+                        </label>
+                        <select name="lawan[{{ $akun->id }}]" class="select select-bordered w-full" {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}>
+                          <option value="">Default (Saldo Awal)</option>
+                          @foreach($ekuitas as $eq)
+                            <option value="{{ $eq->id }}" @if(isset($lawanMap[$akun->id]) && $lawanMap[$akun->id] == $eq->id) selected @endif>
+                              {{ $eq->kode }} - {{ $eq->nama }}
+                            </option>
+                          @endforeach
+                        </select>
+                      </div>
+
+                <!-- Garis tipis di dalam box (opsional, jika ingin lebih presisi) -->
+                @if(!$loop->last)
+                <div class="absolute bottom-0 left-4 right-4 h-px bg-base-300/30 pointer-events-none"></div>
+                @endif
             </div>
-            <div class="text-sm opacity-80 line-clamp-1 flex-1">
-                {{ $akun->nama }}
-            </div>
+            @endforeach
         </div>
-
-        <!-- Input Saldo -->
-        <div class="w-full sm:w-auto sm:min-w-[200px] lg:min-w-[220px] shrink-0">
-            <div class="join w-full">
-                <span class="join-item btn btn-sm lg:btn-md px-4 min-w-[50px] flex items-center justify-center text-base-content/80 font-medium">
-                    Rp
-                </span>
-                <input
-                    type="text"
-                    name="saldo[{{ $akun->id }}]"
-                    class="join-item input currency-input input-bordered input-md lg:input-md font-medium text-right flex-1
-                           max-w-[160px] md:max-w-[170px] lg:max-w-[190px]
-                           focus:border-primary group-hover:border-primary/40 transition-colors"
-                    value="{{ number_format($saldoAwal[$akun->id] ?? 0, 0, ',', '.') }}"
-                    data-id="{{ $akun->id }}"
-                    {{ $periodeTerakhir?->status === 'locked' ? 'disabled' : '' }}
-                >
-            </div>
-        </div>
-
-        <!-- Garis tipis di dalam box (opsional, jika ingin lebih presisi) -->
-        @if(!$loop->last)
-        <div class="absolute bottom-0 left-4 right-4 h-px bg-base-300/30 pointer-events-none"></div>
-        @endif
-    </div>
-    @endforeach
-</div>
 
         {{-- ================= TOTAL ================= --}}
         <div
           class="stat bg-gradient-to-br from-base-100 to-base-200/60
                  border border-base-300 rounded-2xl shadow-md mt-8"
           >
-          <div class="stat-figure text-success opacity-90">
-            <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2
-                   3 .895 3 2-1.343 2-3 2m0-8
-                   c1.11 0 2.08.402 2.599 1M12 8V7
-                   m0 1v8m0 0v1m0-1
-                   c-1.11 0-2.08-.402-2.599-1
-                   M21 12a9 9 0 11-18 0
-                   9 9 0 0118 0z" />
-            </svg>
-          </div>
 
-          <div class="stat-title text-base-content/70">
-            Total Saldo Awal Periode
-          </div>
-          <div id="totalAmount" class="stat-value text-success">
-            Rp 0
+          <div class="space-y-2">
+              <div class="flex justify-between">
+                  <span>Total Aset</span>
+                  <span id="totalAset" class="font-semibold">Rp 0</span>
+              </div>
+
+              <div class="flex justify-between">
+                  <span>Total Liabilitas</span>
+                  <span id="totalLiabilitas" class="font-semibold">Rp 0</span>
+              </div>
+
+              <div class="flex justify-between">
+                  <span>Total Ekuitas</span>
+                  <span id="totalEkuitas" class="font-semibold">Rp 0</span>
+              </div>
+
+              <div class="divider my-2"></div>
+
+              <div class="flex justify-between items-center">
+                  <span class="font-semibold">Status</span>
+                  <span id="statusBalance" class="badge badge-success">
+                      BALANCE ✅
+                  </span>
+              </div>
           </div>
         </div>
 
@@ -332,11 +436,49 @@ function initCurrencyInputs() {
 }
 
 function calculateTotal() {
-  let total = 0;
-  document.querySelectorAll('.currency-input').forEach(el => {
-    total += parseRupiah(el.value);
-  });
-  document.getElementById('totalAmount').textContent = 'Rp ' + formatRupiah(total);
+    let aset = 0;
+    let liabilitas = 0;
+    let ekuitas = 0;
+
+    document.querySelectorAll('.currency-input').forEach(el => {
+        const nilai = parseRupiah(el.value);
+        const tipe = el.dataset.tipe;
+
+        switch (tipe) {
+            case 'aset':
+                aset += nilai;
+                break;
+
+            case 'liabilitas':
+                liabilitas += nilai;
+                break;
+
+            case 'ekuitas':
+                ekuitas += nilai;
+                break;
+        }
+    });
+
+    document.getElementById('totalAset').textContent =
+        'Rp ' + formatRupiah(aset);
+
+    document.getElementById('totalLiabilitas').textContent =
+        'Rp ' + formatRupiah(liabilitas);
+
+    document.getElementById('totalEkuitas').textContent =
+        'Rp ' + formatRupiah(ekuitas);
+
+    const isBalance = aset === (liabilitas + ekuitas);
+
+    const statusEl = document.getElementById('statusBalance');
+
+    if (isBalance) {
+        statusEl.className = 'badge badge-success';
+        statusEl.textContent = 'BALANCE ✅';
+    } else {
+        statusEl.className = 'badge badge-error';
+        statusEl.textContent = 'TIDAK BALANCE ❌';
+    }
 }
 
 function cleanInputsForSubmit() {
@@ -402,11 +544,25 @@ function submitSaldo(isLock = false) {
         }
       },
       error: function(xhr) {
-        let msg = xhr.responseJSON?.message || 'Terjadi kesalahan saat menyimpan.';
-        if (xhr.responseJSON?.errors) {
-          msg = Object.values(xhr.responseJSON.errors)[0][0] || msg;
+        console.error('AJAX error (store):', xhr);
+        let msg = 'Terjadi kesalahan saat menyimpan.';
+        try {
+          if (xhr.responseJSON) {
+            if (xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            else if (xhr.responseJSON.errors) msg = Object.values(xhr.responseJSON.errors)[0][0] || msg;
+          } else if (xhr.responseText) {
+            // kadang responseText berisi HTML/stacktrace
+            msg = xhr.responseText;
+          }
+        } catch (e) {
+          console.error('Error parsing response:', e);
         }
-        Swal.fire('Gagal', msg, 'error');
+        Swal.fire({
+          title: 'Gagal',
+          html: msg.replace(/\n/g, '<br>'),
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
 
         // Kembalikan tombol
         btn.html(originalText).prop('disabled', false);
@@ -414,6 +570,207 @@ function submitSaldo(isLock = false) {
     });
   });
 }
+
+
+// =============================================
+// ===== EDIT SALDO AWAL - UI =====
+// =============================================
+
+function bukaModalEditSaldo() {
+    document.getElementById('modalEditSaldo').classList.remove('hidden');
+    document.getElementById('modalEditSaldo').classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+    loadSaldoAwal();
+}
+
+function tutupModalEditSaldo() {
+    document.getElementById('modalEditSaldo').classList.add('hidden');
+    document.getElementById('modalEditSaldo').classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+}
+
+function loadSaldoAwal() {
+    $('#saldoAwalList').html(`
+        <tr>
+            <td colspan="3" class="text-center py-8 text-base-content/60">
+                <span class="loading loading-spinner loading-md"></span>
+                Memuat data...
+            </td>
+        </tr>
+    `);
+    $('#totalSaldoInfo').addClass('hidden');
+
+    $.get('{{ route("admin.keuangan.saldo-awal.data") }}', function(data) {
+        if (!data || data.length === 0) {
+            $('#saldoAwalList').html(`
+                <tr>
+                    <td colspan="3" class="text-center py-8 text-base-content/60">
+                        Tidak ada data saldo awal. Silakan input saldo awal terlebih dahulu.
+                    </td>
+                </tr>
+            `);
+            return;
+        }
+
+        let html = '';
+        let total = 0;
+        const targetSaldo = 151411818; // Total saldo Bank BNI
+        
+        data.forEach(function(item) {
+            // Skip akun Bank BNI (10003) dan Opening Balance (50001)
+            if (item.kode == '10003' || item.kode == '50001') return;
+            
+            const nominal = Number(item.jumlah || 0);
+            total += nominal;
+            
+            // Tandai akun 20099 dengan highlight
+            const isTitipan = item.kode == '20099';
+            const rowClass = isTitipan ? 'bg-warning/20' : '';
+            const labelTitipan = isTitipan ? ' <span class="badge badge-warning badge-sm">📦 Titipan</span>' : '';
+            
+            html += `
+                <tr class="${rowClass}">
+                    <td class="font-mono">${item.kode}</td>
+                    <td>${item.nama} ${labelTitipan}</td>
+                    <td>
+                        <input type="text" 
+                               name="saldo[${item.akun_id}]" 
+                               class="input input-bordered input-sm w-full text-right font-mono ribuan saldo-input" 
+                               value="${nominal.toLocaleString('id-ID')}"
+                               data-kode="${item.kode}"
+                               placeholder="0">
+                    </td>
+                </tr>
+            `;
+        });
+
+        // Tambahkan baris total
+        html += `
+            <tr class="bg-primary/10 font-bold border-t-2 border-primary">
+                <td colspan="2" class="text-right">TOTAL SALDO</td>
+                <td class="text-right text-primary text-lg" id="totalSaldoDisplay">
+                    Rp ${total.toLocaleString('id-ID')}
+                </td>
+            </tr>
+        `;
+
+        $('#saldoAwalList').html(html);
+        
+        // Tampilkan info total
+        $('#totalSaldoInfo').removeClass('hidden');
+        $('#totalSaldoDisplay').text('Rp ' + total.toLocaleString('id-ID'));
+        updateTotalSaldoStatus(total);
+
+        // Inisialisasi format ribuan
+        $('.ribuan').off('input').on('input', function() {
+            let v = this.value.replace(/[^\d]/g, '');
+            if (!v) {
+                this.value = '';
+                return;
+            }
+            this.value = parseInt(v, 10).toLocaleString('id-ID');
+            hitungTotalSaldo();
+        });
+
+    }).fail(function() {
+        $('#saldoAwalList').html(`
+            <tr>
+                <td colspan="3" class="text-center py-8 text-error">
+                    ❌ Gagal memuat data. Silakan refresh halaman.
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function hitungTotalSaldo() {
+    let total = 0;
+    $('.saldo-input').each(function() {
+        const val = $(this).val().replace(/[^\d]/g, '');
+        if (val) {
+            total += parseInt(val);
+        }
+    });
+    
+    $('#totalSaldoDisplay').text('Rp ' + total.toLocaleString('id-ID'));
+    updateTotalSaldoStatus(total);
+}
+
+function updateTotalSaldoStatus(total) {
+    const target = 151411818; // Total saldo Bank BNI
+    const selisih = total - target;
+    
+    let statusHtml = '';
+    if (selisih === 0) {
+        statusHtml = '<span class="badge badge-success ml-2">✅ Balance! (' + target.toLocaleString('id-ID') + ')</span>';
+    } else if (selisih > 0) {
+        statusHtml = '<span class="badge badge-error ml-2">⚠️ Kelebihan Rp ' + selisih.toLocaleString('id-ID') + '</span>';
+    } else {
+        statusHtml = '<span class="badge badge-warning ml-2">⚠️ Kurang Rp ' + Math.abs(selisih).toLocaleString('id-ID') + '</span>';
+    }
+    
+    $('#totalSaldoStatus').html(statusHtml);
+}
+
+// Submit form edit saldo
+$('#formEditSaldo').on('submit', function(e) {
+    e.preventDefault();
+    
+    // Validasi total
+    let total = 0;
+    $('.saldo-input').each(function() {
+        const val = $(this).val().replace(/[^\d]/g, '');
+        if (val) {
+            total += parseInt(val);
+        }
+    });
+    
+    const target = 151411818;
+    if (total !== target) {
+        const selisih = total - target;
+        let msg = `Total saldo (Rp ${total.toLocaleString('id-ID')}) tidak sama dengan saldo Bank BNI (Rp ${target.toLocaleString('id-ID')})`;
+        if (selisih > 0) {
+            msg += `\nKelebihan: Rp ${selisih.toLocaleString('id-ID')}`;
+        } else {
+            msg += `\nKekurangan: Rp ${Math.abs(selisih).toLocaleString('id-ID')}`;
+        }
+        Swal.fire('Perhatian!', msg, 'warning');
+        return;
+    }
+    
+    const $btn = $('#btnSaveSaldo');
+    const originalText = $btn.html();
+    $btn.html('<span class="loading loading-spinner loading-sm"></span> Menyimpan...').prop('disabled', true);
+    
+    $.ajax({
+        url: '{{ route("admin.keuangan.saldo-awal.update") }}',
+        method: 'POST',
+        data: $(this).serialize(),
+        success: function(res) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sukses!',
+                text: res.message || 'Saldo awal berhasil diupdate',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            tutupModalEditSaldo();
+            setTimeout(() => location.reload(), 1500);
+        },
+        error: function(xhr) {
+            let msg = xhr.responseJSON?.message || 'Terjadi kesalahan';
+            Swal.fire('Gagal!', msg, 'error');
+        },
+        complete: function() {
+            $btn.html(originalText).prop('disabled', false);
+        }
+    });
+});
+
+// Tutup modal klik backdrop
+document.getElementById('modalEditSaldo').addEventListener('click', function(e) {
+    if (e.target === this) tutupModalEditSaldo();
+});
 
 $(function() {
   initCurrencyInputs();
@@ -453,13 +810,20 @@ $(function() {
           }
         },
         error: function(xhr) {
+          console.error('AJAX error (create-new):', xhr);
           let errorMessage = 'Terjadi kesalahan tidak diketahui';
-          if (xhr.responseJSON && xhr.responseJSON.message) {
-            errorMessage = xhr.responseJSON.message;
-          } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-            errorMessage = Object.values(xhr.responseJSON.errors)[0][0] || 'Validasi gagal';
-          } else {
-            errorMessage = xhr.statusText || 'Gagal terhubung ke server';
+          try {
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+              errorMessage = xhr.responseJSON.message;
+            } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+              errorMessage = Object.values(xhr.responseJSON.errors)[0][0] || 'Validasi gagal';
+            } else if (xhr.responseText) {
+              errorMessage = xhr.responseText;
+            } else {
+              errorMessage = xhr.statusText || 'Gagal terhubung ke server';
+            }
+          } catch (e) {
+            console.error('Error parsing response:', e);
           }
           Swal.fire({
             title: 'Gagal',

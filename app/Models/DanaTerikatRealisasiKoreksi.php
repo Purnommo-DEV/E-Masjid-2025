@@ -2,12 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\DanaTerikatPenerima;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class DanaTerikatRealisasiKoreksi extends Model
 {
     protected $table = 'dana_terikat_realisasi_koreksi';
     protected $guarded = ['id'];
+    protected $casts = [
+        'jumlah_koreksi' => 'integer',
+        'tahun' => 'integer',
+        'bulan' => 'integer',
+    ];
 
     public function program()
     { 
@@ -17,6 +24,12 @@ class DanaTerikatRealisasiKoreksi extends Model
     public function user()
     { 
         return $this->belongsTo(User::class, 'created_by'); 
+    }
+
+    // 🔥 TAMBAHKAN RELASI INI (optional, jika memang ada field penerima_id)
+    public function penerima(): BelongsTo
+    {
+        return $this->belongsTo(DanaTerikatPenerima::class, 'penerima_id');
     }
 
     public function getJumlahFormattedAttribute()

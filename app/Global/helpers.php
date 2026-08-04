@@ -160,6 +160,27 @@ if (!function_exists('akunIdByKode')) {
     }
 }
 
+if (!function_exists('createSaldoAwalOpeningEntries')) {
+    function createSaldoAwalOpeningEntries(\App\Models\SaldoAwalDetail $detail): array
+    {
+        // Jika user memilih lawan akun per baris, gunakan itu. Kalau tidak, fallback ke 50001
+        $offsetAkunId = $detail->lawan_akun_id ?? akunIdByKode(50001);
+        $saldoNormal = $detail->akun->saldo_normal ?? 'debit';
+
+        if ($saldoNormal === 'kredit') {
+            return [
+                ['akun_id' => $offsetAkunId,      'debit'  => $detail->jumlah],
+                ['akun_id' => $detail->akun_id,    'kredit' => $detail->jumlah],
+            ];
+        }
+
+        return [
+            ['akun_id' => $detail->akun_id,    'debit'  => $detail->jumlah],
+            ['akun_id' => $offsetAkunId,      'kredit' => $detail->jumlah],
+        ];
+    }
+}
+
 if (!function_exists('terbilang')) {
     function terbilang($x)
     {

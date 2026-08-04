@@ -47,10 +47,16 @@ protected $jurnalRepo;
 
             foreach ($data['saldo'] as $akun_id => $jumlah) {
                 if ($jumlah > 0) {
+                    $lawanId = null;
+                    if (isset($data['lawan']) && array_key_exists($akun_id, $data['lawan']) && $data['lawan'][$akun_id]) {
+                        $lawanId = $data['lawan'][$akun_id];
+                    }
+
                     SaldoAwalDetail::create([
                         'saldo_awal_periode_id' => $periode->id,
                         'akun_id'               => $akun_id,
-                        'jumlah'                => $jumlah
+                        'jumlah'                => $jumlah,
+                        'lawan_akun_id'         => $lawanId,
                     ]);
                 }
             }
@@ -71,13 +77,11 @@ protected $jurnalRepo;
 
         foreach ($periode->details as $detail) {
             if ($detail->jumlah > 0) {
+                $entries = \createSaldoAwalOpeningEntries($detail);
                 $this->jurnalRepo->buatJurnal(
                     $periode->periode,
                     'Jurnal Pembuka – Saldo Awal ' . $detail->akun->nama,
-                    [
-                        ['akun_id' => $detail->akun_id, 'debit'  => $detail->jumlah],
-                        ['akun_id' => akunIdByKode(50001),            'kredit' => $detail->jumlah], // Modal Awal
-                    ],
+                    $entries,
                     $detail
                 );
             }

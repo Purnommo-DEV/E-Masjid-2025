@@ -1,12 +1,11 @@
 <?php
+
 namespace App\Repositories\mrj;
 
-use App\Models\Jurnal;
-use App\Models\AkunKeuangan;
 use App\Interfaces\JurnalRepositoryInterface;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use App\Models\Jurnal;
 use App\Models\SaldoAwalPeriode;
+use Carbon\Carbon;
 
 class JurnalRepository implements JurnalRepositoryInterface
 {
@@ -16,22 +15,22 @@ class JurnalRepository implements JurnalRepositoryInterface
             $tanggal = Carbon::parse($tanggal);
         }
 
-        $no = 'JNL-' . $tanggal->format('Ym') . '-' . str_pad(
+        $no = 'JNL-'.$tanggal->format('Ym').'-'.str_pad(
             Jurnal::whereYear('tanggal', $tanggal->year)
-                  ->whereMonth('tanggal', $tanggal->month)
-                  ->count() + 1, 5, '0', STR_PAD_LEFT
+                ->whereMonth('tanggal', $tanggal->month)
+                ->count() + 1, 5, '0', STR_PAD_LEFT
         );
         foreach ($entries as $e) {
             Jurnal::create([
-                'tanggal'         => $tanggal,
-                'no_jurnal'       => $no,
-                'keterangan'      => $keterangan,
-                'akun_id'         => $e['akun_id'],
-                'debit'           => $e['debit'] ?? 0,
-                'kredit'          => $e['kredit'] ?? 0,
-                'jurnalable_id'   => $reference?->id,
+                'tanggal' => $tanggal,
+                'no_jurnal' => $no,
+                'keterangan' => $keterangan,
+                'akun_id' => $e['akun_id'],
+                'debit' => $e['debit'] ?? 0,
+                'kredit' => $e['kredit'] ?? 0,
+                'jurnalable_id' => $reference?->id,
                 'jurnalable_type' => $reference ? get_class($reference) : null,
-                'created_by'      => auth()->id(),
+                'created_by' => auth()->id(),
             ]);
         }
     }
@@ -43,10 +42,8 @@ class JurnalRepository implements JurnalRepositoryInterface
 
         foreach ($periode->details as $detail) {
             if ($detail->jumlah > 0) {
-                $this->buatJurnal($periode->periode, 'Saldo Awal – ' . $detail->akun->nama, [
-                    ['akun_id' => $detail->akun_id, 'debit'  => $detail->jumlah],
-                    ['akun_id' => akunIdByKode(50001), 'kredit' => $detail->jumlah],
-                ], $detail);
+                $entries = \createSaldoAwalOpeningEntries($detail);
+                $this->buatJurnal($periode->periode, 'Saldo Awal – '.$detail->akun->nama, $entries, $detail);
             }
         }
     }
@@ -54,7 +51,7 @@ class JurnalRepository implements JurnalRepositoryInterface
     public function isiUlangPettyCash($tanggal, $jumlah, $keterangan, $reference = null)
     {
         $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => akunIdByKode(10005), 'debit'  => $jumlah], // Kas Kecil (Petty Cash)
+            ['akun_id' => akunIdByKode(10005), 'debit' => $jumlah], // Kas Kecil (Petty Cash)
             ['akun_id' => akunIdByKode(10001), 'kredit' => $jumlah], // Kas Utama
         ], $reference);
     }
@@ -62,7 +59,7 @@ class JurnalRepository implements JurnalRepositoryInterface
     public function pengeluaranDariPettyCash($tanggal, $akunBebanId, $jumlah, $keterangan, $reference = null)
     {
         $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => $akunBebanId,        'debit'  => $jumlah],
+            ['akun_id' => $akunBebanId,        'debit' => $jumlah],
             ['akun_id' => akunIdByKode(10005), 'kredit' => $jumlah], // Kas Kecil (Petty Cash)
         ], $reference);
     }
@@ -70,7 +67,7 @@ class JurnalRepository implements JurnalRepositoryInterface
     public function pengeluaranUmum($tanggal, $akunBebanId, $jumlah, $keterangan, $reference = null)
     {
         $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => $akunBebanId,         'debit'  => $jumlah],
+            ['akun_id' => $akunBebanId,         'debit' => $jumlah],
             ['akun_id' => akunIdByKode(10001),  'kredit' => $jumlah], // Kas Utama
         ], $reference);
     }
@@ -78,16 +75,8 @@ class JurnalRepository implements JurnalRepositoryInterface
     public function penerimaanPemasukan($tanggal, $akunPendapatanId, $jumlah, $keterangan, $reference = null)
     {
         $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => akunIdByKode('10001'), 'debit'  => $jumlah], // Kas Utama naik
+            ['akun_id' => akunIdByKode('10001'), 'debit' => $jumlah], // Kas Utama naik
             ['akun_id' => $akunPendapatanId,     'kredit' => $jumlah], // Pendapatan
-        ], $reference);
-    }
-
-    public function alokasiDana($tanggal, $akunSumberId, $akunTujuanId, $jumlah, $keterangan, $reference = null)
-    {
-        $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => $akunSumberId, 'kredit' => $jumlah],
-            ['akun_id' => $akunTujuanId, 'debit'  => $jumlah],
         ], $reference);
     }
 
@@ -96,7 +85,7 @@ class JurnalRepository implements JurnalRepositoryInterface
         $keterangan = "Penerimaan Zakat dari {$muzakki}";
 
         $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => akunIdByKode('10001'), 'debit'  => $jumlah], // Kas Utama
+            ['akun_id' => akunIdByKode('10001'), 'debit' => $jumlah], // Kas Utama
             ['akun_id' => $akunLiabilitasId,     'kredit' => $jumlah], // Zakat Diterima (Liabilitas)
         ], $reference);
     }
@@ -106,47 +95,129 @@ class JurnalRepository implements JurnalRepositoryInterface
         $keterangan = "Penyaluran Zakat - {$keteranganPenyaluran}";
 
         $this->buatJurnal($tanggal, $keterangan, [
-            ['akun_id' => $akunLiabilitasId, 'debit'  => $jumlah], // Kurangi Liabilitas
+            ['akun_id' => $akunLiabilitasId, 'debit' => $jumlah], // Kurangi Liabilitas
             ['akun_id' => akunIdByKode('10001'), 'kredit' => $jumlah], // Kas Utama keluar
         ], $reference);
     }
 
-    public function terimaDanaTerikat($tanggal, $jumlah, $program, $donatur, $reference = null)
+    /**
+     * Terima Dana Terikat dengan jenis dana
+     */
+    public function terimaDanaTerikat($tanggal, $jumlah, $program, $donatur, $jenisDana = 'dana_terikat', $reference = null)
     {
-        $this->buatJurnal($tanggal, "Penerimaan Dana Terikat {$program->nama_program} - {$donatur}", [
-            ['akun_id' => akunIdByKode('10001'), 'debit'  => $jumlah], // Kas
-            ['akun_id' => $program->akun_liabilitas_id, 'kredit' => $jumlah],
+        $akunAsetId = $program->akun_aset_id ?? akunIdByKode('10003');
+
+        // 🔥 Pilih akun liabilitas berdasarkan jenis dana
+        $akunLiabilitasId = match ($jenisDana) {
+            'zakat_maal' => akunIdByKode('20002'),
+            'zakat_fitrah' => akunIdByKode('20001'),
+            'fidyah' => akunIdByKode('20003'),
+            'infaq_umum' => akunIdByKode('20005'),
+            'shodaqoh' => akunIdByKode('20006'),
+            'dana_titipan' => akunIdByKode('20099'),
+            'dana_terikat' => $program->akun_liabilitas_id,
+            default => $program->akun_liabilitas_id,
+        };
+
+        $this->buatJurnal($tanggal, "Penerimaan Dana {$jenisDana} - {$donatur}", [
+            ['akun_id' => $akunAsetId, 'debit' => $jumlah],
+            ['akun_id' => $akunLiabilitasId, 'kredit' => $jumlah],
         ], $reference);
     }
 
-    public function realisasiDanaTerikat($tanggal, $jumlah, $program, $penerima, $reference = null)
+    /**
+     * 🔥 BUAT JURNAL GROUPING REALISASI (1 JURNAL PER BULAN)
+     * BUKAN PER PENERIMA!
+     */
+    public function buatJurnalGroupRealisasi(
+        $tanggal,
+        $totalNominal,
+        $program,
+        $bulan,
+        $tahun,
+        $count,
+        $hasOperasional = false
+    ) {
+        $akunAsetId = $program->akun_aset_id ?? akunIdByKode('10003'); // Bank BNI
+
+        $keterangan = "Realisasi Santunan {$program->nama_program} - {$count} penerima (Bulan ".
+                    Carbon::create()->month($bulan)->translatedFormat('F')." {$tahun})";
+
+        if ($hasOperasional) {
+            $keterangan = "Realisasi Santunan + Biaya Operasional {$program->nama_program} - {$count} penerima (Bulan ".
+                        Carbon::create()->month($bulan)->translatedFormat('F')." {$tahun})";
+        }
+
+        $this->buatJurnal(
+            $tanggal,
+            $keterangan,
+            [
+                ['akun_id' => $program->akun_liabilitas_id, 'debit' => $totalNominal], // 20004 Infaq Terikat (Y/D)
+                ['akun_id' => $akunAsetId, 'kredit' => $totalNominal], // 10003 Bank BNI
+            ],
+            null
+        );
+
+        return true;
+    }
+
+    /**
+     * Alokasi dana dari sumber ke tujuan (misal Zakat → Dana Terikat)
+     */
+    public function alokasiDana($tanggal, $akunSumberId, $akunTujuanId, $jumlah, $keterangan, $reference = null)
     {
-        $this->buatJurnal($tanggal, "Realisasi {$program->nama_program} - {$penerima}", [
-            ['akun_id' => $program->akun_liabilitas_id, 'debit'  => $jumlah],
-            ['akun_id' => akunIdByKode('10001'), 'kredit' => $jumlah], // Kas keluar
+        $this->buatJurnal($tanggal, "Alokasi Dana - {$keterangan}", [
+            ['akun_id' => $akunSumberId, 'kredit' => $jumlah],  // Sumber berkurang
+            ['akun_id' => $akunTujuanId, 'debit' => $jumlah],  // Tujuan bertambah
         ], $reference);
     }
+
+    /**
+     * 🔴 METHOD INI DI-COMMENT / DIHAPUS
+     * Karena sudah diganti dengan buatJurnalGroupRealisasi()
+     */
+    // public function realisasiDanaTerikat($tanggal, $jumlah, $program, $penerima, $reference = null)
+    // {
+    //     $akunAsetId = $program->akun_aset_id ?? akunIdByKode('10001');
+    //     $this->buatJurnal($tanggal, "Realisasi {$program->nama_program} - {$penerima}", [
+    //         ['akun_id' => $program->akun_liabilitas_id, 'debit'  => $jumlah],
+    //         ['akun_id' => $akunAsetId, 'kredit' => $jumlah],
+    //     ], $reference);
+    // }
 
     public function koreksiRealisasiDanaTerikat($tanggal, $jumlah, $program, $keterangan, $reference = null)
     {
-        $bebanAkunId = $program->akun_liabilitas_id; // sesuaikan kode akun Beban Santunan kamu
-        $kasAkunId   = akunIdByKode('10001'); // Kas
+        $akunAsetId = $program->akun_aset_id ?? akunIdByKode('10001');
 
-        $entries = [
-            ['akun_id' => $bebanAkunId, 'debit'  => abs($jumlah)],
-            ['akun_id' => $kasAkunId,   'kredit' => abs($jumlah)],
-        ];
+        // 🔥 Tentukan jenis koreksi berdasarkan keterangan
+        $isOperasional = str_contains($keterangan, 'biaya operasional') ||
+                        str_contains($keterangan, 'Biaya Operasional') ||
+                        str_contains($keterangan, 'operasional');
 
-        // Jika koreksi negatif (pengurangan), balik debit-kredit
-        if ($jumlah < 0) {
-            $entries = array_reverse($entries);
-            foreach ($entries as $k => $v) {
-                $entries[$k]['debit']  = $v['kredit'] ?? 0;
-                $entries[$k]['kredit'] = $v['debit'] ?? 0;
-            }
+        // 🔥 Buat judul jurnal yang sesuai
+        if ($isOperasional) {
+            $judul = "Koreksi Biaya Operasional {$program->nama_program} — {$keterangan}";
+        } else {
+            $judul = "Koreksi Realisasi {$program->nama_program} — {$keterangan}";
         }
 
-        $this->buatJurnal($tanggal, "Koreksi Realisasi {$program->nama_program} — {$keterangan}", $entries, $reference);
-    }
+        // 🔥 Tentukan entries berdasarkan nilai
+        $nominal = abs($jumlah);
 
+        if ($jumlah > 0) {
+            // POSITIF: Tambah realisasi
+            $entries = [
+                ['akun_id' => $program->akun_liabilitas_id, 'debit' => $nominal],
+                ['akun_id' => $akunAsetId,                   'kredit' => $nominal],
+            ];
+        } else {
+            // NEGATIF: Kurangi realisasi (biaya admin, dll)
+            $entries = [
+                ['akun_id' => $akunAsetId,                   'debit' => $nominal],
+                ['akun_id' => $program->akun_liabilitas_id, 'kredit' => $nominal],
+            ];
+        }
+
+        $this->buatJurnal($tanggal, $judul, $entries, $reference);
+    }
 }

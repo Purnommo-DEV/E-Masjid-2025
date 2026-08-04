@@ -21,13 +21,15 @@ class DatabaseSeeder extends Seeder
             // MasjidSeeder::class,
             // KategoriBeritaSeeder::class,
             // KeuanganSeeder::class,
-            // AkunKeuanganSeeder::class,
+            AkunKeuanganSeeder::class,
             // MasjidFullDummySeeder::class,
             // QurbanReportSeeder::class,
             // QurbanSettingSeeder::class
             // QurbanReportSeeder::class,
             // PengumumanSeeder::class,
-            EvaluasiQurban1446Seeder::class
+            // EvaluasiQurban1446Seeder::class,
+            // DanaTerikatMustahikSeeder::class,
+            // DanaTerikatStatusApril2026Seeder::class
         ]);
     }
 }
