@@ -1,4 +1,5 @@
 <aside
+    id="admin-sidebar"
     x-data="{
         openKeuangan: {{ request()->routeIs([
             'admin.keuangan.saldo-awal*',
@@ -12,6 +13,8 @@
             'admin.keuangan.dana-terikat.index*',
             'admin.keuangan.jurnal.index*'
         ]) ? 'true' : 'false' }},
+
+        openKeuanganV2: {{ request()->routeIs('financial-v2.*') ? 'true' : 'false' }},
 
         openRamadhan: {{ request()->routeIs([
             'admin.ramadhan.jadwal-imam*',
@@ -32,6 +35,9 @@
             if (localStorage.getItem('openKeuangan') === 'true') {
                 this.openKeuangan = true;
             }
+            if (localStorage.getItem('openKeuanganV2') === 'true') {
+                this.openKeuanganV2 = true;
+            }
             if (localStorage.getItem('openRamadhan') === 'true') {
                 this.openRamadhan = true;
             }
@@ -42,6 +48,9 @@
             // Watch for changes
             this.$watch('openKeuangan', value => {
                 localStorage.setItem('openKeuangan', value);
+            });
+            this.$watch('openKeuanganV2', value => {
+                localStorage.setItem('openKeuanganV2', value);
             });
             this.$watch('openRamadhan', value => {
                 localStorage.setItem('openRamadhan', value);
@@ -68,7 +77,7 @@
                     <div class="text-xs text-emerald-200">Sistem Informasi Masjid</div>
                 </div>
             </div>
-            <button @click="sidebarOpen = false" class="lg:hidden p-2 rounded-md text-emerald-100 hover:bg-white/5">
+            <button type="button" @click="sidebarOpen = false" aria-label="Tutup sidebar" title="Tutup sidebar" class="lg:hidden p-2 rounded-md text-emerald-100 hover:bg-white/5">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -219,6 +228,77 @@
                                         @endif
                                     @endif
                                 </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </li>
+
+                <!-- KEUANGAN V2: operational navigation only. Accounting internals
+                     remain accessible from a transaction's accounting detail. -->
+                <li class="mt-2">
+                    <button @click="openKeuanganV2 = !openKeuanganV2"
+                            :class="openKeuanganV2
+                                ? 'bg-amber-400 text-emerald-900 font-semibold shadow-md ring-1 ring-amber-200'
+                                : 'text-white hover:bg-white/10'"
+                            class="w-full flex items-center justify-between gap-4 px-5 py-3 rounded-xl transition text-sm">
+                        <div class="flex items-center gap-4">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                <path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 7h16v12H4V7zm0-2h16V3H4v2zm12 7h2v2h-2v-2z" />
+                            </svg>
+                            <span>Keuangan V2</span>
+                        </div>
+                        <svg class="w-5 h-5 transition-transform duration-200" :class="openKeuanganV2 ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    @php
+                        $financialV2Entity = request('entity');
+                        $financialV2Menu = [
+                            ['route' => 'financial-v2.dashboard', 'label' => 'Dashboard'],
+                            ['route' => 'financial-v2.transactions.create', 'label' => 'Penerimaan', 'operation' => 'receipt'],
+                            ['route' => 'financial-v2.transactions.create', 'label' => 'Pengeluaran', 'operation' => 'payment'],
+                            ['route' => 'financial-v2.transactions.create', 'label' => 'Transfer', 'operation' => 'transfer'],
+                            ['route' => 'financial-v2.funds.index', 'label' => 'Dana'],
+                            ['route' => 'financial-v2.allocations.create', 'label' => 'Alokasi Dana'],
+                            ['route' => 'financial-v2.transactions.index', 'label' => 'Riwayat Transaksi'],
+                            ['route' => 'financial-v2.reports.index', 'label' => 'Laporan'],
+                            ['route' => 'financial-v2.controls.index', 'label' => 'Kontrol'],
+                        ];
+                        $financialV2MasterMenu = [
+                            ['route' => 'financial-v2.masters.accounts.index', 'label' => 'Rekening / Kas'],
+                            ['route' => 'financial-v2.masters.funds.index', 'label' => 'Dana'],
+                            ['route' => 'financial-v2.masters.programs.index', 'label' => 'Program'],
+                            ['route' => 'financial-v2.masters.categories.index', 'label' => 'Kategori Transaksi'],
+                            ['route' => 'financial-v2.masters.policies.index', 'label' => 'Aturan Dana'],
+                        ];
+                    @endphp
+                    <ul x-show="openKeuanganV2" x-collapse class="mt-2 space-y-1 pl-6 overflow-hidden">
+                        @foreach ($financialV2Menu as $item)
+                            @php
+                                $parameters = ['entity' => $financialV2Entity];
+                                if (isset($item['operation'])) $parameters['operation'] = $item['operation'];
+                                $isActive = request()->routeIs($item['route']) && (!isset($item['operation']) || request()->route('operation') === $item['operation']);
+                            @endphp
+                            <li>
+                                <a href="{{ route($item['route'], $parameters) }}"
+                                   @class([
+                                       'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                                       'bg-amber-300/90 text-emerald-900 font-semibold shadow' => $isActive,
+                                       'text-white hover:bg-white/10' => ! $isActive,
+                                   ])>{{ $item['label'] }}</a>
+                            </li>
+                        @endforeach
+                        <li class="px-4 pt-3 text-[10px] font-semibold uppercase tracking-wider text-emerald-100/70">Master Keuangan</li>
+                        @foreach ($financialV2MasterMenu as $item)
+                            @php $isActive = request()->routeIs($item['route']); @endphp
+                            <li>
+                                <a href="{{ route($item['route'], ['entity' => $financialV2Entity]) }}"
+                                   @class([
+                                       'flex items-center gap-3 px-4 py-2.5 rounded-lg transition text-xs md:text-sm',
+                                       'bg-amber-300/90 text-emerald-900 font-semibold shadow' => $isActive,
+                                       'text-white hover:bg-white/10' => ! $isActive,
+                                   ])>{{ $item['label'] }}</a>
                             </li>
                         @endforeach
                     </ul>

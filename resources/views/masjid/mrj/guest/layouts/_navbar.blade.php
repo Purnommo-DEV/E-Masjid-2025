@@ -105,6 +105,15 @@
                                 </a>
                             </li>
                             <li class="border-t border-emerald-800/30">
+                                <a href="{{ route('public.ziswaf.index') }}" class="flex items-center gap-3 px-5 py-3 text-emerald-100/90 hover:bg-emerald-800/30 hover:text-white transition-all duration-200">
+                                    <span class="text-xl">🤲</span>
+                                    <div>
+                                        <p class="text-sm font-semibold text-white">Laporan ZISWAF</p>
+                                        <p class="text-[10px] text-emerald-300/80">Transparansi Dana ZISWAF</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li class="border-t border-emerald-800/30">
                                 <a href="#" class="flex items-center gap-3 px-5 py-3 opacity-60 cursor-not-allowed">
                                     <span class="text-xl">📊</span>
                                     <div>
@@ -207,6 +216,9 @@
                     <div class="flex items-center gap-3 px-4 py-2 rounded-lg text-white/40 cursor-not-allowed text-sm">
                         <span>🌙</span> Laporan Ramadhan <span class="text-[9px] text-amber-500 ml-auto">Comming Soon</span>
                     </div>
+                    <a href="{{ route('public.ziswaf.index') }}" class="flex items-center gap-3 px-4 py-2 rounded-lg text-white/80 hover:text-white hover:bg-emerald-600/20 transition-all duration-200 text-sm mobile-menu-link">
+                        <span>🤲</span> Laporan ZISWAF
+                    </a>
                     <div class="flex items-center gap-3 px-4 py-2 rounded-lg text-white/40 cursor-not-allowed text-sm">
                         <span>📊</span> Laporan Lainnya <span class="text-[9px] text-amber-500 ml-auto">Comming Soon</span>
                     </div>

@@ -89,7 +89,7 @@ class PenerimaanPemasukanController extends Controller
                 'created_by'         => auth()->id(),
             ]);
 
-            $this->jurnal->penerimaanPemasukan(
+            $this->jurnal->terimaDanaTerikat(
                 $request->tanggal,
                 $akun->id,
                 $request->jumlah,

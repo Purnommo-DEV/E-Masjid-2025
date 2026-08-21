@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
             // MasjidSeeder::class,
             // KategoriBeritaSeeder::class,
             // KeuanganSeeder::class,
-            // AkunKeuanganSeeder::class,
+            AkunKeuanganSeeder::class,
             // MasjidFullDummySeeder::class,
             // QurbanReportSeeder::class,
             // QurbanSettingSeeder::class

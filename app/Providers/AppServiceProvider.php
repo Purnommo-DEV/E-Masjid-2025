@@ -2,27 +2,27 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
 use App\Interfaces\MasjidRepositoryInterface;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
-use Carbon\Carbon;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-
     protected $listen = [
         \App\Events\AcaraPublished::class => [
             \App\Listeners\SendAcaraPublishedNotification::class,
         ],
     ];
+
     /**
      * Register any application services.
      */
     public function register(): void
     {
         $this->app->singleton(\App\Services\JadwalSholatService::class);
-        
+
         // Binding MasjidRepositoryInterface dinamis
         $this->app->bind(\App\Interfaces\MasjidRepositoryInterface::class, function ($app) {
             $masjidName = masjid(); // ambil nama masjid dari helper
@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
             // Default repository namespace jika masjid tidak ada
             $class = "\\App\\Repositories\\{$masjidName}\\MasjidRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("Repository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -43,7 +43,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\KategoriRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("KategoriRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -56,7 +56,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\BeritaRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("BeritaRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -69,7 +69,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\AcaraRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("AcaraRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -82,7 +82,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\GaleriRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("GaleriRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -95,7 +95,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\PengumumanRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("PengumumanRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -108,7 +108,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\ProfilMasjidRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("ProfilMasjidRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -121,7 +121,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\KotakInfakRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("KotakInfakRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -134,7 +134,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\AkunKeuanganRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("AkunKeuanganRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -147,7 +147,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\SaldoAwalRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("SaldoAwalRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -160,7 +160,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\JurnalRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("JurnalRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -173,7 +173,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\ZakatRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("ZakatRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -186,7 +186,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\DanaTerikatRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("DanaTerikatRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -199,7 +199,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\DanaTerikatReferensiRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("DanaTerikatReferensiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -212,7 +212,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\BannerRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("BannerRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -225,7 +225,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\LayananRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("LayananRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -235,9 +235,9 @@ class AppServiceProvider extends ServiceProvider
         // resolve BannerService dinamis (sesuai lokasi folder kamu)
         $this->app->bind(\App\Interfaces\BannerServiceInterface::class, function ($app) {
             $masjid = masjid(); // contoh: "mrj"
-            $class  = "\\App\\Services\\{$masjid}\\BannerService";
+            $class = "\\App\\Services\\{$masjid}\\BannerService";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("BannerService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
@@ -247,9 +247,9 @@ class AppServiceProvider extends ServiceProvider
         // resolve AcaraService dinamis (sesuai lokasi folder kamu)
         $this->app->bind(\App\Interfaces\AcaraServiceInterface::class, function ($app) {
             $masjid = masjid(); // contoh: "mrj"
-            $class  = "\\App\\Services\\{$masjid}\\AcaraService";
+            $class = "\\App\\Services\\{$masjid}\\AcaraService";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("AcaraService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
@@ -259,9 +259,9 @@ class AppServiceProvider extends ServiceProvider
         // resolve BeritaService dinamis (sesuai lokasi folder kamu)
         $this->app->bind(\App\Interfaces\BeritaServiceInterface::class, function ($app) {
             $masjid = masjid(); // contoh: "mrj"
-            $class  = "\\App\\Services\\{$masjid}\\BeritaService";
+            $class = "\\App\\Services\\{$masjid}\\BeritaService";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("BeritaService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
@@ -271,9 +271,9 @@ class AppServiceProvider extends ServiceProvider
         // resolve PengumumanService dinamis (sesuai lokasi folder kamu)
         $this->app->bind(\App\Interfaces\PengumumanServiceInterface::class, function ($app) {
             $masjid = masjid(); // contoh: "mrj"
-            $class  = "\\App\\Services\\{$masjid}\\PengumumanService";
+            $class = "\\App\\Services\\{$masjid}\\PengumumanService";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("PengumumanService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
@@ -283,9 +283,9 @@ class AppServiceProvider extends ServiceProvider
         // resolve GaleriService dinamis (sesuai lokasi folder kamu)
         $this->app->bind(\App\Interfaces\GaleriServiceInterface::class, function ($app) {
             $masjid = masjid(); // contoh: "mrj"
-            $class  = "\\App\\Services\\{$masjid}\\GaleriService";
+            $class = "\\App\\Services\\{$masjid}\\GaleriService";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("GaleriService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
@@ -295,9 +295,9 @@ class AppServiceProvider extends ServiceProvider
         // resolve QurbanService dinamis (sesuai lokasi folder kamu)
         $this->app->bind(\App\Interfaces\QurbanServiceInterface::class, function ($app) {
             $masjid = masjid(); // contoh: "mrj"
-            $class  = "\\App\\Services\\{$masjid}\\QurbanService";
+            $class = "\\App\\Services\\{$masjid}\\QurbanService";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QurbanService untuk masjid {$masjid} tidak ditemukan: {$class}");
             }
 
@@ -310,7 +310,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QurbanRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QurbanRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -323,7 +323,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QurbanSettingRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QurbanSettingRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -336,7 +336,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QurbanRegistrasiRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QurbanRegistrasiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -349,7 +349,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QurbanGalleryRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QurbanGalleryRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -362,7 +362,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QurbanReportRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QurbanReportRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -375,7 +375,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\SlideMotivasiRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("SlideMotivasiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -388,7 +388,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QuoteHarianRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QuoteHarianRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -401,7 +401,7 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\QuoteHarianRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("QuoteHarianRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -414,20 +414,20 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\KhutbahJumatRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("KhutbahJumatRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
             return $app->make($class);
         });
-        
+
         // Binding JadwalImamTarawihRepositoryInterfaceInterface dinamis sesuai masjid
         $this->app->bind(\App\Interfaces\JadwalImamTarawihRepositoryInterface::class, function ($app) {
             $masjidName = masjid();
 
             $class = "\\App\\Repositories\\{$masjidName}\\JadwalImamTarawihRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("JadwalImamTarawihRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
@@ -440,8 +440,21 @@ class AppServiceProvider extends ServiceProvider
 
             $class = "\\App\\Repositories\\{$masjidName}\\LaporanRamadhanHarianRepository";
 
-            if (!class_exists($class)) {
+            if (! class_exists($class)) {
                 throw new \Exception("LaporanRamadhanHarianRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
+            }
+
+            return $app->make($class);
+        });
+
+        // Binding DanaAlokasiRepositoryInterface dinamis sesuai masjid
+        $this->app->bind(\App\Interfaces\DanaAlokasiRepositoryInterface::class, function ($app) {
+            $masjidName = masjid();
+
+            $class = "\App\\Repositories\\{$masjidName}\\DanaAlokasiRepository";
+
+            if (! class_exists($class)) {
+                throw new \Exception("DanaAlokasiRepository untuk masjid '{$masjidName}' tidak ditemukan: {$class}");
             }
 
             return $app->make($class);
@@ -453,13 +466,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-     
+
+        $this->loadMigrationsFrom(database_path('migrations/financial_v2'));
+
         // Set config dinamis berdasarkan masjid
         $masjidCode = config('app.masjid', 'default');
-        
+
         // Ambil konfigurasi dari masjids.php
         $masjidConfig = config("masjids.{$masjidCode}", []);
-        
+
         // Merge ke config app
         config([
             'app.masjid_name' => $masjidConfig['name'] ?? config('app.masjid_name'),
@@ -467,7 +482,7 @@ class AppServiceProvider extends ServiceProvider
             'app.masjid_phone' => $masjidConfig['phone'] ?? '',
             'app.masjid_email' => $masjidConfig['email'] ?? '',
         ]);
-    
+
         // Paksa HTTPS kalau lewat Cloudflare / tunnel
         if (request()->header('x-forwarded-proto') === 'https') {
             URL::forceScheme('https');
@@ -479,13 +494,11 @@ class AppServiceProvider extends ServiceProvider
 
             // Tanggal estimasi Ramadhan (boleh kamu ubah nanti)
             $ramadhanStart = Carbon::parse('2026-02-19');
-            $ramadhanEnd   = Carbon::parse('2026-03-20');
+            $ramadhanEnd = Carbon::parse('2026-03-20');
 
             $isRamadhan = $today->between($ramadhanStart, $ramadhanEnd);
 
             $view->with('isRamadhan', $isRamadhan);
         });
     }
-
-
 }

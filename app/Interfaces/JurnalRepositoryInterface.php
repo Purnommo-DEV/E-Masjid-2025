@@ -34,6 +34,13 @@ interface JurnalRepositoryInterface
     // Terima Dana Terikat
     public function terimaDanaTerikat($tanggal, $jumlah, $program, $donatur, $reference = null);
 
-    // Realisasi Dana Terikat
-    public function realisasiDanaTerikat($tanggal, $jumlah, $program, $penerima, $reference = null);
+    public function buatJurnalGroupRealisasi(
+        $tanggal,
+        $totalNominal,
+        $program,
+        $bulan,
+        $tahun,
+        $count,
+        $hasOperasional
+    );
 }

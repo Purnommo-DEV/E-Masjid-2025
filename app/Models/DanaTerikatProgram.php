@@ -12,6 +12,7 @@ class DanaTerikatProgram extends Model {
         'kode_program',
         'nama_program',
         'akun_liabilitas_id',
+        'akun_aset_id',
         'keterangan',
         'aktif'
     ];
@@ -29,5 +30,10 @@ class DanaTerikatProgram extends Model {
     public function akun() 
     { 
         return $this->belongsTo(AkunKeuangan::class, 'akun_liabilitas_id'); 
+    }
+
+    public function akunAset()
+    {
+        return $this->belongsTo(AkunKeuangan::class, 'akun_aset_id');
     }
 }

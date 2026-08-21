@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AkunKeuanganController;
 use App\Http\Controllers\Admin\AlokasiDanaController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\BeritaController;
+use App\Http\Controllers\Admin\DanaAlokasiController;
 use App\Http\Controllers\Admin\DanaTerikatController;
 use App\Http\Controllers\Admin\DanaTerikatReferensiController;
 use App\Http\Controllers\Admin\EvaluasiQurbanController;
@@ -33,6 +34,13 @@ use App\Http\Controllers\Admin\SlideMotivasiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZakatController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\FinancialV2\FinancialControlController;
+use App\Http\Controllers\FinancialV2\FinancialMasterDataController;
+use App\Http\Controllers\FinancialV2\FinancialOpeningBalanceController;
+use App\Http\Controllers\FinancialV2\FinancialReportController;
+use App\Http\Controllers\FinancialV2\HistoricalFundHistoryController;
+use App\Http\Controllers\FinancialV2\OperationalFinancialController;
+use App\Http\Controllers\FinancialV2\PublicZiswafReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
@@ -45,18 +53,7 @@ use App\Http\Controllers\User\KesehatanGuestController;
 use App\Http\Controllers\User\PendaftaranYatimDhuafaController;
 use App\Http\Controllers\User\ProgramRamadhanGuestController;
 use App\Http\Controllers\User\QurbanGuestController;
-use App\Http\Controllers\User\SaranController;
 use Illuminate\Support\Facades\Route;
-
-
-
-
-
-
-
-
-
-
 
 Route::get('/pwa-splash', function () {
     return view('pwa.splash');
@@ -72,25 +69,25 @@ Route::get('/manifest.json', function () {
     $config = config("masjids.{$kode}", config('masjids.default'));
 
     return response()->json([
-        'name'          => $config['name'],
-        'short_name'    => $config['short_name'],
-        'description'   => $config['jargon'] . ' – Masjid Era Digital',
+        'name' => $config['name'],
+        'short_name' => $config['short_name'],
+        'description' => $config['jargon'].' – Masjid Era Digital',
         // 'start_url'     => '/pwa-splash',
-        'display'       => 'standalone',
+        'display' => 'standalone',
         'background_color' => $config['gradient_from'],
-        'theme_color'   => $config['primary_color'],
-        'orientation'   => 'portrait-primary',
-        'icons'         => [
+        'theme_color' => $config['primary_color'],
+        'orientation' => 'portrait-primary',
+        'icons' => [
             [
-                'src'     => '/pwa/mrj-logo.png',
-                'sizes'   => '92x92',
-                'type'    => 'image/png',
+                'src' => '/pwa/mrj-logo.png',
+                'sizes' => '92x92',
+                'type' => 'image/png',
                 'purpose' => 'maskable',
             ],
             [
-                'src'     => '/pwa/mrj-logo.png',
-                'sizes'   => '92x92',
-                'type'    => 'image/png',
+                'src' => '/pwa/mrj-logo.png',
+                'sizes' => '92x92',
+                'type' => 'image/png',
                 'purpose' => 'maskable',
             ],
         ],
@@ -98,6 +95,12 @@ Route::get('/manifest.json', function () {
 })->name('pwa.manifest');
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// Landing page publik untuk informasi dan permintaan sewa Aula Masjid.
+// Tidak terhubung ke alur pemesanan atau data operasional yang sudah ada.
+Route::get('/aula', function () {
+    return view('masjid.'.masjid().'.guest.aula.index');
+})->name('aula.index');
 
 Route::prefix('program-ramadhan')->name('program-ramadhan.')->group(function () {
     Route::get('/', [ProgramRamadhanGuestController::class, 'index'])->name('index');
@@ -135,67 +138,67 @@ Route::get('/test-gemini', function () {
     $apiKey = env('GEMINI_API_KEY');
     $model = env('GEMINI_DEFAULT_MODEL', 'models/gemini-2.0-flash');
     $url = "https://generativelanguage.googleapis.com/v1beta/{$model}:generateContent?key={$apiKey}";
-    
+
     $data = [
         'contents' => [
             [
                 'parts' => [
-                    ['text' => 'Sebutkan 3 keutamaan ibadah qurban dalam bahasa Indonesia!']
-                ]
-            ]
-        ]
+                    ['text' => 'Sebutkan 3 keutamaan ibadah qurban dalam bahasa Indonesia!'],
+                ],
+            ],
+        ],
     ];
-    
+
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    
+
     return response()->json([
         'model' => $model,
         'http_code' => $httpCode,
-        'response' => json_decode($response, true)
+        'response' => json_decode($response, true),
     ]);
 });
 
 Route::get('/test-deepseek', function () {
     $apiKey = env('DEEPSEEK_API_KEY');
-    
+
     $data = [
         'model' => 'deepseek-chat',
         'messages' => [
-            ['role' => 'user', 'content' => 'Sebutkan 3 keutamaan ibadah qurban dalam bahasa Indonesia!']
-        ]
+            ['role' => 'user', 'content' => 'Sebutkan 3 keutamaan ibadah qurban dalam bahasa Indonesia!'],
+        ],
     ];
-    
+
     $ch = curl_init('https://api.deepseek.com/v1/chat/completions');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Content-Type: application/json',
-        'Authorization: Bearer ' . $apiKey
+        'Authorization: Bearer '.$apiKey,
     ]);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-    
+
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    
+
     return response()->json([
         'http_code' => $httpCode,
-        'response' => json_decode($response, true)
+        'response' => json_decode($response, true),
     ]);
 });
 
 Route::get('/test-groq', function () {
-    $service = new \App\Services\mrj\GroqAIService();
+    $service = new \App\Services\mrj\GroqAIService;
     $result = $service->testConnection();
-    
+
     return response()->json($result);
 });
 
@@ -217,9 +220,9 @@ Route::post('/kontak/kirim', [HomeController::class, 'kirimPesan'])->name('konta
 Route::get('/kegiatan-ramadhan', function () {
     $today = now();
     $ramadhanStart = \Carbon\Carbon::parse('2026-02-19');
-    $ramadhanEnd   = \Carbon\Carbon::parse('2026-03-19');
+    $ramadhanEnd = \Carbon\Carbon::parse('2026-03-19');
 
-    if (!$today->between($ramadhanStart, $ramadhanEnd)) {
+    if (! $today->between($ramadhanStart, $ramadhanEnd)) {
         abort(404, 'Halaman ini hanya tersedia selama bulan Ramadhan.');
     }
 
@@ -243,13 +246,13 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::delete('/delete/{id}', [PendaftaranYatimDhuafaController::class, 'destroy'])->name('destroy');
 
     Route::get('/scan-duplikat', [PendaftaranYatimDhuafaController::class, 'scanDuplikat'])
-    ->name('scan-duplikat');
+        ->name('scan-duplikat');
 
     Route::post('import', [ExcelYatimDhuafaController::class, 'import'])->name('import');
     Route::get('template', [ExcelYatimDhuafaController::class, 'downloadTemplate'])->name('template');
     Route::post('export', [ExcelYatimDhuafaController::class, 'export'])->name('export');
 
-    Route::post('export-by-sumber', 
+    Route::post('export-by-sumber',
         [ExcelYatimDhuafaController::class, 'exportBySumber']
     )->name('exportBySumber');
 
@@ -269,15 +272,24 @@ Route::prefix('daftar-donor-darah')->name('donor-darah.')->group(function () {
     Route::get('/export/donor-darah', [KesehatanGuestController::class, 'exportDonorDarah'])->name('export.donor');
     Route::get('/export/cek-kesehatan', [KesehatanGuestController::class, 'exportCekKesehatanNew'])->name('export.cek-kesehatan');
     Route::get('/export/cek-katarak', [KesehatanGuestController::class, 'exportCekKatarak'])->name('export.cek-katarak');
-    
+
     // === FEEDBACK BARU ===
     Route::get('/feedback', [KesehatanGuestController::class, 'feedback'])->name('feedback');
     Route::post('/feedback', [KesehatanGuestController::class, 'storeFeedback'])->name('feedback.store');
 });
 
 Route::get('/donor-darah/success', function () {
-    return view('masjid.' . masjid() . '.guest.program-kesehatan.success');
+    return view('masjid.'.masjid().'.guest.program-kesehatan.success');
 })->name('donor-darah.success');
+
+// Public Financial V2 disclosure. These endpoints are intentionally outside
+// the admin middleware and have no writer route or legacy financial source.
+Route::prefix('laporan-ziswaf')->name('public.ziswaf.')->group(function () {
+    Route::get('/', [PublicZiswafReportController::class, 'index'])->name('index');
+    Route::get('/dana/{fundCode}', [PublicZiswafReportController::class, 'fund'])
+        ->where('fundCode', '[A-Za-z0-9-]+')
+        ->name('fund');
+});
 
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {
@@ -348,7 +360,7 @@ Route::middleware(['auth'])->group(function () {
     // Prefix admin
     Route::prefix('admin')->group(function () {
 
-            // ==================== MANAJEMEN QURBAN ====================
+        // ==================== MANAJEMEN QURBAN ====================
         Route::get('/paket', [QurbanPaketController::class, 'index'])->name('admin.qurban.paket.index');
         Route::get('/paket/data', [QurbanPaketController::class, 'data'])->name('admin.qurban.paket.data');
         Route::post('/paket', [QurbanPaketController::class, 'store'])->name('admin.qurban.paket.store');
@@ -418,7 +430,6 @@ Route::middleware(['auth'])->group(function () {
 
         // REMOVE FIELD IMAGE
         Route::post('qurban/report/{id}/remove-field-image', [QurbanReportController::class, 'removeFieldImage'])->name('admin.qurban.report.remove-field-image');
-        
 
         // EVALUASI QURBAN
         // STATIC ROUTES (harus di atas)
@@ -426,19 +437,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/evaluasi-qurban/statistik', [EvaluasiQurbanController::class, 'statistik'])->name('admin.evaluasi-qurban.statistik');
         Route::get('/evaluasi-qurban/statistik-data', [EvaluasiQurbanController::class, 'statistikData'])->name('admin.evaluasi-qurban.statistik-data');
         Route::get('/evaluasi-qurban/generate-summary', [EvaluasiQurbanController::class, 'generateSummary'])->name('admin.evaluasi-qurban.generate-summary');
-        
+
         // WISH GENERATION ROUTES
         Route::post('/evaluasi-qurban/generate-wish/{id}', [EvaluasiQurbanController::class, 'generateWish'])->name('admin.evaluasi-qurban.generate-wish');
         Route::post('/evaluasi-qurban/generate-all-wish', [EvaluasiQurbanController::class, 'generateAllWish'])->name('admin.evaluasi-qurban.generate-all-wish');
-        
+
         // ✅ CEK STATUS AI (TAMBAHKAN INI)
         Route::get('/evaluasi-qurban/check-ai-status', [EvaluasiQurbanController::class, 'checkAIStatus'])->name('admin.evaluasi-qurban.check-ai-status');
-        
+
         // DYNAMIC ROUTES (dengan parameter)
         Route::get('/evaluasi-qurban', [EvaluasiQurbanController::class, 'index'])->name('admin.evaluasi-qurban.index');
         Route::get('/evaluasi-qurban/{id}', [EvaluasiQurbanController::class, 'show'])->name('admin.evaluasi-qurban.show');
         Route::delete('/evaluasi-qurban/{id}', [EvaluasiQurbanController::class, 'destroy'])->name('admin.evaluasi-qurban.destroy');
-        
+
         // Role
         Route::get('/role', [RoleController::class, 'index'])->name('admin.role');
         Route::get('/role/data', [RoleController::class, 'data'])->name('admin.role.data');
@@ -465,12 +476,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pengurus/reorder', [ProfilMasjidController::class, 'reorderPengurus'])->name('admin.profil.pengurus.reorder');
 
         // Banner
-        Route::get('banner',        [BannerController::class, 'index'])->name('admin.banner.index');
-        Route::get('banner/data',   [BannerController::class, 'data'])->name('admin.banner.data');
-        Route::post('banner',       [BannerController::class, 'store'])->name('admin.banner.store');
-        Route::get('banner/{id}',   [BannerController::class, 'edit'])->name('admin.banner.edit');
-        Route::put('banner/{id}',   [BannerController::class, 'update'])->name('admin.banner.update');
-        Route::delete('banner/{id}',[BannerController::class, 'destroy'])->name('admin.banner.destroy');
+        Route::get('banner', [BannerController::class, 'index'])->name('admin.banner.index');
+        Route::get('banner/data', [BannerController::class, 'data'])->name('admin.banner.data');
+        Route::post('banner', [BannerController::class, 'store'])->name('admin.banner.store');
+        Route::get('banner/{id}', [BannerController::class, 'edit'])->name('admin.banner.edit');
+        Route::put('banner/{id}', [BannerController::class, 'update'])->name('admin.banner.update');
+        Route::delete('banner/{id}', [BannerController::class, 'destroy'])->name('admin.banner.destroy');
 
         // Kategori
         Route::get('kategori', [KategoriController::class, 'index'])->name('admin.kategori.index');
@@ -543,19 +554,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('keuangan/jurnal', [JurnalController::class, 'index'])->name('admin.keuangan.jurnal.index');
         Route::get('keuangan/jurnal/data', [JurnalController::class, 'data'])->name('admin.keuangan.jurnal.data');
 
-
         // Keuangan (Saldo Awal, Petty Cash, Laporan)
         // Saldo Awal
         Route::get('keuangan/saldo-awal', [SaldoAwalController::class, 'index'])->name('admin.keuangan.saldo-awal');
         Route::post('keuangan/saldo-awal', [SaldoAwalController::class, 'store'])->name('admin.keuangan.saldo-awal.store');
+        Route::get('saldo-awal/data', [SaldoAwalController::class, 'getData'])->name('admin.keuangan.saldo-awal.data');
+        Route::post('keuangan/saldo-awal/update', [SaldoAwalController::class, 'updateSaldo'])->name('admin.keuangan.saldo-awal.update');
         Route::post('saldo-awal/create-new', [SaldoAwalController::class, 'createNewPeriod'])->name('admin.keuangan.saldo-awal.create-new');
-        
+
         // Petty Cash
         Route::get('keuangan/petty-cash', [PettyCashController::class, 'index'])->name('admin.keuangan.petty-cash');
         Route::post('keuangan/petty-cash', [PettyCashController::class, 'store'])->name('admin.keuangan.petty-cash.store');
         Route::get('keuangan/petty-cash/data', [PettyCashController::class, 'data'])->name('admin.keuangan.petty-cash.data');
         Route::get('keuangan/petty-cash/saldo', [PettyCashController::class, 'saldo'])->name('admin.keuangan.petty-cash.saldo')->middleware('auth');
-
 
         // Pengeluaran Umum
         Route::get('keuangan/pengeluaran', [PengeluaranController::class, 'index'])->name('admin.keuangan.pengeluaran');
@@ -587,7 +598,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('dana-terikat')->name('admin.keuangan.dana-terikat.')->group(function () {
             Route::get('/', [DanaTerikatController::class, 'index'])->name('index');
 
-            // Data untuk semua tab (saldo, penerima, penerimaan, realisasi)
+            // Data untuk semua tab (saldo, penerima, penerimaan, realisasi, status_bulanan)
             Route::get('/data', [DanaTerikatController::class, 'data'])->name('data');
 
             Route::get('/akun-options', [DanaTerikatController::class, 'akunOptions'])->name('options');
@@ -598,7 +609,7 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/penerima/update/{id}', [DanaTerikatController::class, 'updatePenerima'])->name('penerima.update');
             Route::get('/penerima/show', [DanaTerikatController::class, 'showPenerima'])->name('penerima.show');
             Route::get('/penerima/check-nama', [DanaTerikatController::class, 'cekNamaPenerima'])->name('penerima.check-nama');
-            Route::delete('penerima/{id}',[DanaTerikatController::class, 'destroyPenerima'])->name('penerima.destroy');
+            Route::delete('penerima/{id}', [DanaTerikatController::class, 'destroyPenerima'])->name('penerima.destroy');
 
             Route::post('/realisasi/store', [DanaTerikatController::class, 'realisasi'])->name('realisasi.store');
             Route::post('/koreksi/realisasi/store', [DanaTerikatController::class, 'koreksiStore'])->name('koreksi.realisasi.store');
@@ -608,37 +619,55 @@ Route::middleware(['auth'])->group(function () {
 
             Route::get('/kwitansi/{id}', [DanaTerikatController::class, 'kwitansi'])->name('kwitansi');
 
+            // ===== STATUS BULANAN (BARU) =====
+            Route::prefix('status-bulanan')->name('status-bulanan.')->group(function () {
+                Route::get('/', [DanaTerikatController::class, 'getStatusBulanan'])->name('index');
+                Route::get('/{penerimaId}', [DanaTerikatController::class, 'getStatusBulananById'])->name('show');
+                Route::post('/update', [DanaTerikatController::class, 'updateStatusBulanan'])->name('update');
+                Route::post('/update-lengkap', [DanaTerikatController::class, 'updateStatusBulananLengkap'])->name('update-lengkap');
+                Route::post('/copy', [DanaTerikatController::class, 'copyStatusBulanan'])->name('copy');
+                Route::post('/realisasi', [DanaTerikatController::class, 'realisasiDariStatus'])->name('realisasi');
+                Route::get('/export', [DanaTerikatController::class, 'exportStatusExcel'])->name('export');
+            });
+
+            // Di dalam group dana-terikat
+            Route::prefix('alokasi')->name('alokasi.')->group(function () {
+                Route::post('/store', [DanaAlokasiController::class, 'store'])->name('store');
+                Route::get('/riwayat/{programId}', [DanaAlokasiController::class, 'riwayat'])->name('riwayat');
+                Route::post('/hitung', [DanaAlokasiController::class, 'hitungAlokasi'])->name('hitung');
+            });
+
             // CRUD referensi
             Route::resource('referensi', DanaTerikatReferensiController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
         });
 
         // Slider Motivasi
         Route::resource('slide-motivasi', SlideMotivasiController::class)
-        ->names('admin.slide-motivasi')
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+            ->names('admin.slide-motivasi')
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::get('slide-motivasi/data', [SlideMotivasiController::class, 'data'])->name('admin.slide-motivasi.data');
 
         // Quote Harian
         Route::resource('quote-harian', QuoteHarianController::class)
-        ->names('admin.quote-harian')
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+            ->names('admin.quote-harian')
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::get('quote-harian/data', [QuoteHarianController::class, 'data'])->name('admin.quote-harian.data');
 
         // Khutbah Jumat
         Route::resource('khutbah-jumat', KhutbahJumatController::class)
-        ->names('admin.khutbah-jumat')
-        ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+            ->names('admin.khutbah-jumat')
+            ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::get('khutbah-jumat/data', [KhutbahJumatController::class, 'data'])->name('admin.khutbah-jumat.data');
-        
+
         // Neraca Saldo + Export
         // Route::get('keuangan/laporan/neraca-saldo', [LaporanController::class, 'neracaSaldo'])->name('admin.keuangan.laporan.neraca-saldo');
         // Route::get('keuangan/laporan/neraca-saldo/pdf', [LaporanController::class, 'neracaSaldoPdf'])->name('admin.keuangan.laporan.neraca-saldo.pdf');
         // Route::get('keuangan/laporan/neraca-saldo/excel', [LaporanController::class, 'neracaSaldoExcel'])->name('admin.keuangan.laporan.neraca-saldo.excel');
 
-        });
+    });
 
-        // PINDAHKAN RAMADHAN KE SINI (sejajar dengan prefix 'admin')
-        Route::prefix('admin/ramadhan')
+    // PINDAHKAN RAMADHAN KE SINI (sejajar dengan prefix 'admin')
+    Route::prefix('admin/ramadhan')
         ->name('admin.ramadhan.')
         ->middleware(['auth'])
         ->group(function () {
@@ -653,7 +682,6 @@ Route::middleware(['auth'])->group(function () {
 
             Route::resource('jadwal-imam', \App\Http\Controllers\Admin\Ramadhan\JadwalImamController::class)
                 ->only(['index', 'store', 'update', 'destroy']);
-
 
             // ================= LAPORAN HARIAN =================
 
@@ -670,25 +698,25 @@ Route::middleware(['auth'])->group(function () {
                 ->only(['index', 'store', 'update', 'destroy']);
         });
 
-        Route::get('/admin/ramadhan/laporan-harian/prev/{malam_ke}', function ($malam_ke) {
-            $prev = \App\Models\LaporanRamadhanHarian::where('malam_ke', $malam_ke - 1)->first();
-            
-            if (!$prev) {
-                return response()->json(['success' => false, 'data' => null]);
-            }
-            
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'infaq_ramadan_saldo_sekarang'       => $prev->infaq_ramadan_saldo_sekarang ?? 0,
-                    'ifthor_saldo_sekarang'               => $prev->ifthor_saldo_sekarang ?? 0,
-                    'santunan_yatim_terkumpul_kemarin'    => ($prev->santunan_yatim_terkumpul_kemarin ?? 0) + collect($prev->santunan_yatim_penerimaan_hari_ini ?? [])->sum('nominal'),
-                    'paket_sembako_terkumpul_kemarin'     => ($prev->paket_sembako_terkumpul_kemarin ?? 0) + collect($prev->paket_sembako_penerimaan_hari_ini ?? [])->sum('nominal'),
-                    'gebyar_anak_terkumpul_kemarin'       => ($prev->gebyar_anak_terkumpul_kemarin ?? 0) + collect($prev->gebyar_anak_penerimaan_hari_ini ?? [])->sum('nominal'),
-                    // tambahkan jika ada field kumulatif lain
-                ]
-            ]);
-        })->name('admin.ramadhan.laporan-harian.prev');
+    Route::get('/admin/ramadhan/laporan-harian/prev/{malam_ke}', function ($malam_ke) {
+        $prev = \App\Models\LaporanRamadhanHarian::where('malam_ke', $malam_ke - 1)->first();
+
+        if (! $prev) {
+            return response()->json(['success' => false, 'data' => null]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'infaq_ramadan_saldo_sekarang' => $prev->infaq_ramadan_saldo_sekarang ?? 0,
+                'ifthor_saldo_sekarang' => $prev->ifthor_saldo_sekarang ?? 0,
+                'santunan_yatim_terkumpul_kemarin' => ($prev->santunan_yatim_terkumpul_kemarin ?? 0) + collect($prev->santunan_yatim_penerimaan_hari_ini ?? [])->sum('nominal'),
+                'paket_sembako_terkumpul_kemarin' => ($prev->paket_sembako_terkumpul_kemarin ?? 0) + collect($prev->paket_sembako_penerimaan_hari_ini ?? [])->sum('nominal'),
+                'gebyar_anak_terkumpul_kemarin' => ($prev->gebyar_anak_terkumpul_kemarin ?? 0) + collect($prev->gebyar_anak_penerimaan_hari_ini ?? [])->sum('nominal'),
+                // tambahkan jika ada field kumulatif lain
+            ],
+        ]);
+    })->name('admin.ramadhan.laporan-harian.prev');
 });
 
 require __DIR__.'/auth.php';
