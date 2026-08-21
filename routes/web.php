@@ -305,57 +305,101 @@ Route::middleware(['auth'])->group(function () {
     // Logout
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-    // ==================== SUPERADMIN OPERATIONS ====================
-    // 🔒 Diproteksi: auth + verified + role:SuperAdmin + signed URL + POST only
-    // Generate signed URL dari controller/view: URL::signedRoute('admin.ops.clear-cache')
-    Route::middleware(['verified', 'role:SuperAdmin'])
-        ->withoutMiddleware([])
-        ->group(function () {
+    // Financial V2 operational UX. This namespace and URL are intentionally
+    // separate from legacy /admin/keuangan routes: no legacy journal, balance,
+    // or transaction table participates in this workflow.
+    Route::prefix('admin/keuangan-v2')->name('financial-v2.')->group(function () {
+        Route::get('/', [OperationalFinancialController::class, 'dashboard'])->name('dashboard');
+        Route::get('/riwayat', [OperationalFinancialController::class, 'history'])->name('transactions.index');
+        // Financial V2 reports are isolated from legacy /admin/keuangan
+        // reporting and read only the immutable Posted V2 ledger/journals.
+        Route::get('/laporan', [FinancialReportController::class, 'index'])->name('reports.index');
+        Route::get('/laporan/data', [FinancialReportController::class, 'data'])->name('reports.data');
+        Route::get('/kontrol', [FinancialControlController::class, 'index'])->name('controls.index');
+        Route::post('/kontrol/periode/{period}/tutup', [FinancialControlController::class, 'close'])->name('controls.close');
+        Route::post('/kontrol/rekonsiliasi', [FinancialControlController::class, 'storeReconciliation'])->name('controls.reconciliations.store');
+        Route::post('/kontrol/rekonsiliasi/{reconciliation}/tinjau', [FinancialControlController::class, 'review'])->name('controls.reconciliations.review');
+        Route::post('/kontrol/rekonsiliasi/{reconciliation}/selesai', [FinancialControlController::class, 'complete'])->name('controls.reconciliations.complete');
+        Route::post('/kontrol/rekonsiliasi/{reconciliation}/exception', [FinancialControlController::class, 'exception'])->name('controls.reconciliations.exception');
+        // Saldo Awal V2 is a governed rehearsal workflow; it never writes legacy facts.
+        Route::get('/saldo-awal', [FinancialOpeningBalanceController::class, 'index'])->name('opening-balances.index');
+        Route::post('/saldo-awal', [FinancialOpeningBalanceController::class, 'store'])->name('opening-balances.store');
+        Route::get('/saldo-awal/{openingBalanceBatch}', [FinancialOpeningBalanceController::class, 'show'])->name('opening-balances.show');
+        Route::post('/saldo-awal/{openingBalanceBatch}/baris', [FinancialOpeningBalanceController::class, 'storeLine'])->name('opening-balances.lines.store');
+        Route::post('/saldo-awal/{openingBalanceBatch}/verifikasi', [FinancialOpeningBalanceController::class, 'review'])->name('opening-balances.review');
+        Route::post('/saldo-awal/{openingBalanceBatch}/setujui', [FinancialOpeningBalanceController::class, 'approve'])->name('opening-balances.approve');
+        Route::post('/saldo-awal/{openingBalanceBatch}/catat', [FinancialOpeningBalanceController::class, 'post'])->name('opening-balances.post');
+        Route::get('/dana', [OperationalFinancialController::class, 'funds'])->name('funds.index');
+        Route::get('/dana/kelompok/{group}', [OperationalFinancialController::class, 'fundGroup'])->name('funds.groups.show');
+        Route::get('/dana/{fund}/riwayat-sumber/tambah', [HistoricalFundHistoryController::class, 'create'])->name('funds.history.create');
+        Route::post('/dana/{fund}/riwayat-sumber', [HistoricalFundHistoryController::class, 'store'])->name('funds.history.store');
+        Route::get('/dana/{fund}/riwayat-sumber/{history}/edit', [HistoricalFundHistoryController::class, 'edit'])->name('funds.history.edit');
+        Route::put('/dana/{fund}/riwayat-sumber/{history}', [HistoricalFundHistoryController::class, 'update'])->name('funds.history.update');
+        Route::get('/dana/{fund}', [OperationalFinancialController::class, 'fundDetail'])->name('funds.show');
+        // Governed V2 master data stays separate from legacy financial menus.
+        // These routes create configuration and audit events only; they never
+        // create Journal, JournalLine, Ledger, opening balance, or legacy facts.
+        Route::prefix('/master')->name('masters.')->group(function () {
+            Route::get('/rekening-kas', [FinancialMasterDataController::class, 'accounts'])->name('accounts.index');
+            Route::post('/rekening-kas', [FinancialMasterDataController::class, 'storeAccount'])->name('accounts.store');
+            Route::put('/rekening-kas/{financialAccount}', [FinancialMasterDataController::class, 'updateAccount'])->name('accounts.update');
+            Route::post('/rekening-kas/{financialAccount}/aktifkan', [FinancialMasterDataController::class, 'activateAccount'])->name('accounts.activate');
+            Route::post('/rekening-kas/{financialAccount}/nonaktifkan', [FinancialMasterDataController::class, 'deactivateAccount'])->name('accounts.deactivate');
 
-        Route::get('/admin/ops', function () {
-            return view('masjid.' . masjid() . '.admin.ops.index');
-        })->name('admin.ops.index');
+            Route::get('/dana', [FinancialMasterDataController::class, 'funds'])->name('funds.index');
+            Route::post('/dana/klasifikasi', [FinancialMasterDataController::class, 'storeFundType'])->name('fund-types.store');
+            Route::put('/dana/klasifikasi/{fundType}', [FinancialMasterDataController::class, 'updateFundType'])->name('fund-types.update');
+            Route::post('/dana/pembatasan', [FinancialMasterDataController::class, 'storeRestriction'])->name('restrictions.store');
+            Route::put('/dana/pembatasan/{restriction}', [FinancialMasterDataController::class, 'updateRestriction'])->name('restrictions.update');
+            Route::post('/dana', [FinancialMasterDataController::class, 'storeFund'])->name('funds.store');
+            Route::put('/dana/{fund}', [FinancialMasterDataController::class, 'updateFund'])->name('funds.update');
+            Route::post('/dana/{fund}/aktifkan', [FinancialMasterDataController::class, 'activateFund'])->name('funds.activate');
+            Route::post('/dana/{fund}/nonaktifkan', [FinancialMasterDataController::class, 'deactivateFund'])->name('funds.deactivate');
 
-        Route::post('/admin/ops/clear-cache', function () {
-            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+            Route::get('/program', [FinancialMasterDataController::class, 'programs'])->name('programs.index');
+            Route::post('/program', [FinancialMasterDataController::class, 'storeProgram'])->name('programs.store');
+            Route::put('/program/{program}', [FinancialMasterDataController::class, 'updateProgram'])->name('programs.update');
+            Route::post('/program/{program}/aktifkan', [FinancialMasterDataController::class, 'activateProgram'])->name('programs.activate');
+            Route::post('/program/{program}/nonaktifkan', [FinancialMasterDataController::class, 'deactivateProgram'])->name('programs.deactivate');
 
-            \Artisan::call('view:clear');
-            \Artisan::call('cache:clear');
-            \Artisan::call('config:clear');
+            Route::get('/kategori', [FinancialMasterDataController::class, 'categories'])->name('categories.index');
+            Route::post('/kategori', [FinancialMasterDataController::class, 'storeCategory'])->name('categories.store');
+            Route::put('/kategori/{category}', [FinancialMasterDataController::class, 'updateCategory'])->name('categories.update');
+            Route::post('/kategori/{category}/nonaktifkan', [FinancialMasterDataController::class, 'deactivateCategory'])->name('categories.deactivate');
 
-            $message = 'Cache berhasil dibersihkan.';
-
-            return request()->expectsJson()
-                ? response()->json(['message' => $message])
-                : back()->with('success', $message);
-        })->name('admin.ops.clear-cache');
-
-        Route::post('/admin/ops/run-migrate', function () {
-            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
-
-            \Artisan::call('migrate', ['--force' => true]);
-
-            $message = 'Migration berhasil dijalankan.';
-
-            return request()->expectsJson()
-                ? response()->json(['message' => $message])
-                : back()->with('success', $message);
-        })->name('admin.ops.run-migrate');
-
-        Route::post('/admin/ops/run-seeder', function () {
-            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
-
-            \Artisan::call('db:seed', ['--force' => true]);
-
-            $message = 'Seeder berhasil dijalankan.';
-
-            return request()->expectsJson()
-                ? response()->json(['message' => $message])
-                : back()->with('success', $message);
-        })->name('admin.ops.run-seeder');
-
+            Route::get('/aturan-dana', [FinancialMasterDataController::class, 'policies'])->name('policies.index');
+            Route::post('/aturan-dana', [FinancialMasterDataController::class, 'storePolicy'])->name('policies.store');
+            Route::put('/aturan-dana/{policyVersion}', [FinancialMasterDataController::class, 'updatePolicy'])->name('policies.update');
+            Route::post('/aturan-dana/{policyVersion}/berlakukan', [FinancialMasterDataController::class, 'makePolicyEffective'])->name('policies.effective');
+            Route::post('/aturan-dana/{policyVersion}/aturan', [FinancialMasterDataController::class, 'storePolicyRule'])->name('policy-rules.store');
+            Route::put('/aturan-dana/rule/{policyRule}', [FinancialMasterDataController::class, 'updatePolicyRule'])->name('policy-rules.update');
+        });
+        Route::get('/alokasi-dana/riwayat', [OperationalFinancialController::class, 'allocationHistory'])->name('allocations.history');
+        Route::get('/alokasi-dana/baru', [OperationalFinancialController::class, 'allocationForm'])->name('allocations.create');
+        Route::post('/alokasi-dana', [OperationalFinancialController::class, 'storeAllocation'])->name('allocations.store');
+        Route::post('/alokasi-dana/{allocation}/ajukan', [OperationalFinancialController::class, 'submitAllocation'])->name('allocations.submit');
+        Route::post('/alokasi-dana/{allocation}/setujui', [OperationalFinancialController::class, 'approveAllocation'])->name('allocations.approve');
+        Route::post('/alokasi-dana/{allocation}/batalkan', [OperationalFinancialController::class, 'cancelAllocation'])->name('allocations.cancel');
+        Route::get('/realisasi/draft', [OperationalFinancialController::class, 'realizationDrafts'])->name('realizations.drafts');
+        Route::get('/opsi', [OperationalFinancialController::class, 'options'])->name('options');
+        Route::post('/pratinjau', [OperationalFinancialController::class, 'preview'])->name('preview');
+        Route::get('/lampiran/{attachment}/lihat', [OperationalFinancialController::class, 'viewAttachment'])->name('attachments.view');
+        Route::get('/lampiran/{attachment}/unduh', [OperationalFinancialController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::get('/{operation}/baru', [OperationalFinancialController::class, 'create'])
+            ->where('operation', 'receipt|payment|transfer|interfund|realization')
+            ->name('transactions.create');
+        Route::post('/{operation}', [OperationalFinancialController::class, 'store'])
+            ->where('operation', 'receipt|payment|transfer|interfund|realization')
+            ->name('transactions.store');
+        Route::get('/transaksi/{transaction}/ubah', [OperationalFinancialController::class, 'edit'])->name('transactions.edit');
+        Route::put('/transaksi/{transaction}', [OperationalFinancialController::class, 'update'])->name('transactions.update');
+        Route::post('/transaksi/{transaction}/ajukan-realisasi', [OperationalFinancialController::class, 'submitRealization'])->name('realizations.submit');
+        Route::post('/transaksi/{transaction}/verifikasi-realisasi', [OperationalFinancialController::class, 'verifyRealization'])->name('realizations.verify');
+        Route::post('/transaksi/{transaction}/setujui-realisasi', [OperationalFinancialController::class, 'approveRealization'])->name('realizations.approve');
+        Route::post('/transaksi/{transaction}/catat', [OperationalFinancialController::class, 'post'])->name('transactions.post');
+        Route::post('/transaksi/{transaction}/batalkan', [OperationalFinancialController::class, 'cancel'])->name('transactions.cancel');
+        Route::get('/transaksi/{transaction}', [OperationalFinancialController::class, 'show'])->name('transactions.show');
     });
-    // =====================================================================
 
     // Prefix admin
     Route::prefix('admin')->group(function () {
