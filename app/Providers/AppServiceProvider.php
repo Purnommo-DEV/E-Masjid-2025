@@ -467,6 +467,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
 
+        $this->loadMigrationsFrom(database_path('migrations/financial_v2'));
+
         // Set config dinamis berdasarkan masjid
         $masjidCode = config('app.masjid', 'default');
 

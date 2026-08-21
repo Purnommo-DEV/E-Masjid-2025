@@ -14,6 +14,7 @@ yarn-error.log
 /public/docs
 /public/uploads-tmp
 /public/vendor/*
+/.codex-tmp/*
 
 # Storage
 /storage/*.key

@@ -2,7 +2,7 @@
   <div class="max-w-7xl mx-auto flex items-center justify-between">
     <div class="flex items-center gap-4">
       <!-- Tombol hamburger - PASTI muncul di < lg -->
-      <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-md hover:bg-gray-100 text-gray-700 z-50">
+      <button type="button" @click="sidebarOpen = !sidebarOpen" aria-label="Buka atau tutup sidebar" title="Buka atau tutup sidebar" aria-controls="admin-sidebar" :aria-expanded="sidebarOpen.toString()" class="lg:hidden p-2 rounded-md hover:bg-gray-100 text-gray-700 z-50">
         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
         </svg>
