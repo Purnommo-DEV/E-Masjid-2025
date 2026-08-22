@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * Replays the current mrj_prod_db baseline exported by financial-v2:export-seed.
+ * Replays the current raudhotu_mrj_db baseline exported by financial-v2:export-seed.
  * Only configuration and source history are raw upserted. Opening balances and
  * posted facts are recreated through OpeningBalanceService, lifecycle, and the
  * canonical PostingEngine. No Journal/JournalLine/Ledger raw writer exists here.
@@ -87,8 +87,8 @@ final class FinancialV2Seeder extends Seeder
             throw new RuntimeException('FinancialV2Seeder is prohibited in production.');
         }
         $database = (string) DB::connection()->getDatabaseName();
-        if (! ((app()->environment(['local', 'development']) && $database === 'mrj_prod_db') || (app()->environment('testing') && $database === 'mrj_test_db'))) {
-            throw new RuntimeException("FinancialV2Seeder may run only on local mrj_prod_db or testing mrj_test_db; current database: {$database}.");
+        if (! ((app()->environment(['local', 'development']) && $database === 'raudhotu_mrj_db') || (app()->environment('testing') && $database === 'mrj_test_db'))) {
+            throw new RuntimeException("FinancialV2Seeder may run only on local raudhotu_mrj_db or testing mrj_test_db; current database: {$database}.");
         }
     }
 
@@ -97,7 +97,7 @@ final class FinancialV2Seeder extends Seeder
     {
         $path = __DIR__.'/FinancialV2/current_mrj_financial_v2_snapshot.php';
         if (! is_file($path)) {
-            throw new RuntimeException('Missing Financial V2 snapshot. Run php artisan financial-v2:export-seed on local mrj_prod_db.');
+            throw new RuntimeException('Missing Financial V2 snapshot. Run php artisan financial-v2:export-seed on local raudhotu_mrj_db.');
         }
         $snapshot = require $path;
         if (! is_array($snapshot)) {
@@ -110,7 +110,7 @@ final class FinancialV2Seeder extends Seeder
     private function assertSnapshot(): void
     {
         if (($this->data['schema_version'] ?? null) !== 1
-            || ($this->data['source']['database'] ?? null) !== 'mrj_prod_db'
+            || ($this->data['source']['database'] ?? null) !== 'raudhotu_mrj_db'
             || ($this->data['source']['accounting_entity_code'] ?? null) !== self::ENTITY) {
             throw new RuntimeException('The Financial V2 snapshot is not the current governed MRJ source.');
         }
@@ -458,7 +458,7 @@ final class FinancialV2Seeder extends Seeder
     {
         $entity = AccountingEntity::query()->where('code', self::ENTITY)->first();
         $this->command?->table(['Control', 'Value'], [
-            ['Source / target', 'mrj_prod_db / '.DB::connection()->getDatabaseName()],
+            ['Source / target', 'raudhotu_mrj_db / '.DB::connection()->getDatabaseName()],
             ['Static created / updated / unchanged', $this->metrics['created'].' / '.$this->metrics['updated'].' / '.$this->metrics['skipped']],
             ['Existing semantic records / duplicate creations', $this->metrics['existing'].' / 0'],
             ['Financial fact replayed', (string) $this->metrics['replayed']],

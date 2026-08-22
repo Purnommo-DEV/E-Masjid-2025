@@ -1,11 +1,11 @@
 <?php
 
-/** Generated from mrj_prod_db by financial-v2:export-seed. */
+/** Generated from raudhotu_mrj_db by financial-v2:export-seed. */
 return array (
   'schema_version' => 1,
   'source' =>
   array (
-    'database' => 'mrj_prod_db',
+    'database' => 'raudhotu_mrj_db',
     'accounting_entity_code' => 'MRJ-ACTUAL',
     'exported_at' => '2026-08-22T16:14:39+07:00',
     'notes' => 'Current local Financial V2 state. Export excludes audit-event noise, failed posting attempts, sessions, caches, and queues.',
