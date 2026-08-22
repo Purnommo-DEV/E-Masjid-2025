@@ -7,7 +7,6 @@ use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AttachmentLink;
-use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Journal;
 use App\Models\FinancialV2\JournalLine;

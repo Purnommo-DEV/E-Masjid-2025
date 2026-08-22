@@ -403,6 +403,9 @@ test('an allocation reopens its one active realization draft without creating fa
         ->assertOk()
         ->assertSee('Draft Realisasi')
         ->assertSee('Penerima Draft Realisasi')
+        ->assertSee('1 bukti terlampir');
+    $this->actingAs($user)->get(route('financial-v2.transactions.show', $draftId))
+        ->assertOk()
         ->assertSee('bukti-draft.pdf');
     $this->actingAs($user)->get(route('financial-v2.transactions.index', ['entity' => $context['entity']->id]))
         ->assertOk()

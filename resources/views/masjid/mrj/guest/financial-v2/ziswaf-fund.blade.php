@@ -1,4 +1,4 @@
-@extends('masjid.mrj.guest.financial-v2.layout')
+@extends('masjid.master-guest')
 
 @section('title', $report['fund']['name'].' — Laporan Dana ZISWAF')
 

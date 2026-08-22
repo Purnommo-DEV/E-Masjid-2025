@@ -7,7 +7,7 @@
         @click="sidebarOpen = !sidebarOpen"
         :aria-expanded="sidebarOpen.toString()"
         aria-controls="admin-sidebar"
-        aria-label="Toggle sidebar navigation"
+        aria-label="Buka atau tutup sidebar"
         class="lg:hidden shrink-0 p-2 rounded-md hover:bg-gray-100 text-gray-700 z-50"
       >
         <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Tests\Support\UatFinancialFixture;
 
@@ -68,6 +69,28 @@ test('the public navigation places Laporan ZISWAF inside the Laporan submenu for
         ->and(strpos((string) $navbar, 'mobileLaporanSubmenu'))->toBeLessThan(strrpos((string) $navbar, 'Laporan ZISWAF'));
 });
 
+test('public ZISWAF routes are guest routes and reports use the default public guest shell', function () {
+    $index = Route::getRoutes()->getByName('public.ziswaf.index');
+    $fund = Route::getRoutes()->getByName('public.ziswaf.fund');
+    $reportView = file_get_contents(resource_path('views/masjid/mrj/guest/financial-v2/ziswaf-report.blade.php'));
+    $fundView = file_get_contents(resource_path('views/masjid/mrj/guest/financial-v2/ziswaf-fund.blade.php'));
+    $guestLayout = file_get_contents(resource_path('views/masjid/master-guest.blade.php'));
+    $navbar = file_get_contents(resource_path('views/masjid/mrj/guest/layouts/_navbar.blade.php'));
+
+    expect($index)->not->toBeNull()
+        ->and($fund)->not->toBeNull()
+        ->and($index->uri())->toBe('laporan-ziswaf')
+        ->and($index->methods())->toContain('GET', 'HEAD')
+        ->and($index->gatherMiddleware())->not->toContain('auth')
+        ->and($fund->gatherMiddleware())->not->toContain('auth')
+        ->and($reportView)->toContain("@extends('masjid.master-guest')")
+        ->and($fundView)->toContain("@extends('masjid.master-guest')")
+        ->and($guestLayout)->toContain("@include(guest_layout('_navbar'))")
+        ->and($guestLayout)->toContain("@include(guest_layout('_footer'))")
+        ->and($navbar)->not->toContain('localhost')
+        ->and($navbar)->not->toContain('127.0.0.1');
+});
+
 test('public ZISWAF report is read-only, ledger-backed, and separates Fund movement from account custody', function () {
     $context = UatFinancialFixture::context();
     configurePublicZiswafDisclosure($context);
@@ -86,6 +109,9 @@ test('public ZISWAF report is read-only, ledger-backed, and separates Fund movem
     $response = $this->get(route('public.ziswaf.index'));
     $response->assertOk()
         ->assertSee('Laporan Dana ZISWAF')
+        ->assertSee('id="mainNav"', false)
+        ->assertSee('Harapan & Doa', false)
+        ->assertSee('Laporan Idul Adha')
         ->assertSee('Transparansi')
         ->assertSee('Rp75,00')
         ->assertSee('Rp55,00')
