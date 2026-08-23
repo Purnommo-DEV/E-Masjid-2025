@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2\Reporting;
 
 use App\Domain\FinancialV2\DecimalAmount;
+use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\HistoricalFundHistory;
@@ -124,6 +125,12 @@ final class FundHistoryReadService
             $pageOpening = DecimalAmount::add($periodOpening, $this->amount($prior));
         }
 
+        [$rows, $periodOpening, $pageOpening] = $this->restateCashTromolOpeningComposition(
+            $rows,
+            $periodOpening,
+            $pageOpening,
+            empty($filters['transaction_type_code']),
+        );
         $sourceHistory = $this->historicalSourceHistory($entity, $fund);
 
         $running = $pageOpening;
@@ -172,9 +179,49 @@ final class FundHistoryReadService
             'page_opening' => $pageOpening,
             'from' => $from,
             'through' => $through,
-            'definition' => 'Riwayat Dana mengelompokkan Posted V2 Ledger per jurnal dan Dana. Saldo berjalan menggunakan dampak Dana, bukan saldo rekening atau jumlah debit/kredit.',
+            'definition' => 'Riwayat Dana mengelompokkan Posted V2 Ledger per jurnal dan Dana. Saldo berjalan menggunakan dampak Dana, bukan saldo rekening atau jumlah debit/kredit. Cash Tromol yang sejak awal merupakan komposisi Dana Dhuafa & Anak Yatim tidak ditampilkan sebagai pemindahan Dana.',
             'source_history' => $sourceHistory,
         ];
+    }
+
+    /**
+     * Converts the superseded Phase 12.5 Cash Tromol IFT presentation into
+     * the correct opening Fund/Account composition. The immutable ledger is
+     * untouched; this read-only restatement prevents a false Fund transfer
+     * from being exposed in the operational Fund history.
+     *
+     * @return array{0:\Illuminate\Support\Collection,1:string,2:string}
+     */
+    private function restateCashTromolOpeningComposition(\Illuminate\Support\Collection $rows, string $periodOpening, string $pageOpening, bool $restateOpening): array
+    {
+        $compositionDeltas = [];
+        $visibleRows = $rows->reject(function (object $row) use (&$compositionDeltas): bool {
+            if (! MrjZiswafOpeningPosition::isSupersededCashTromolTransferReference($row->source_reference ?? null)) {
+                return false;
+            }
+            $compositionDeltas[] = $this->amount($row->fund_balance_delta);
+
+            return true;
+        })->values();
+
+        foreach ($compositionDeltas as $delta) {
+            if (! $restateOpening) {
+                continue;
+            }
+            $openingIndex = $visibleRows->search(fn (object $row): bool => ($row->original_transaction_type_code ?: $row->transaction_type_code) === 'OPB'
+                && ! DecimalAmount::equals($this->amount($row->fund_balance_delta), '0.00'));
+            if ($openingIndex === false) {
+                $periodOpening = DecimalAmount::add($periodOpening, $delta);
+                $pageOpening = DecimalAmount::add($pageOpening, $delta);
+
+                continue;
+            }
+            $opening = $visibleRows->get($openingIndex);
+            $opening->fund_balance_delta = DecimalAmount::add($this->amount($opening->fund_balance_delta), $delta);
+            $visibleRows->put($openingIndex, $opening);
+        }
+
+        return [$visibleRows, $periodOpening, $pageOpening];
     }
 
     /**

@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\FinancialV2\BudgetAllocationService;
 use App\Domain\FinancialV2\EvidenceService;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
+use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use App\Domain\FinancialV2\OpeningBalanceService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Models\FinancialV2\AccountingEntity;
@@ -53,7 +54,7 @@ final class FinancialV2Seeder extends Seeder
     public function run(): void
     {
         $this->assertEnvironment();
-        $this->data = $this->snapshot();
+        $this->data = self::governedSnapshot();
         $this->assertSnapshot();
 
         DB::transaction(function (): void {
@@ -93,7 +94,7 @@ final class FinancialV2Seeder extends Seeder
     }
 
     /** @return array<string, mixed> */
-    private function snapshot(): array
+    public static function governedSnapshot(): array
     {
         $path = __DIR__.'/FinancialV2/current_mrj_financial_v2_snapshot.php';
         if (! is_file($path)) {
@@ -104,7 +105,174 @@ final class FinancialV2Seeder extends Seeder
             throw new RuntimeException('Financial V2 snapshot must return an array.');
         }
 
+        return self::applyPhase126CashTromolSourceSemantics($snapshot);
+    }
+
+    /**
+     * The exported Phase 12.5 capture is retained as a historical archive.
+     * Its Cash Tromol mapping and its matching IFT were superseded by the
+     * owner-confirmed Phase 12.6 source semantics: Cash Tromol is an existing
+     * Dhuafa & Anak Yatim opening position.  Seed replay must therefore begin
+     * with the corrected opening dimensions and replay only the genuine
+     * Rp1.200.000 Inter-Fund reclassification.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    private static function applyPhase126CashTromolSourceSemantics(array $snapshot): array
+    {
+        $funds = collect($snapshot['tables']['financial_v2_funds'] ?? [])->keyBy('code');
+        $infaq = $funds->get('INFAQ-TROMOL');
+        $dhuafa = $funds->get('DHUAFA');
+        if (! is_array($infaq) || ! is_array($dhuafa)) {
+            throw new RuntimeException('Phase 12.6 seed normalization requires INFAQ-TROMOL and DHUAFA Funds.');
+        }
+
+        $cashSourceReference = 'Sisa Alokasi Dana!D66:E66';
+        $cashAmount = '2653000.00';
+        $cashFundId = (string) $dhuafa['id'];
+        $infaqFundId = (string) $infaq['id'];
+        $openingFunds = collect(MrjZiswafOpeningPosition::funds())->keyBy('code');
+        $infaqOpening = $openingFunds->get('INFAQ-TROMOL');
+        $dhuafaOpening = $openingFunds->get('DHUAFA');
+        if (! is_array($infaqOpening) || ! is_array($dhuafaOpening)) {
+            throw new RuntimeException('Phase 12.6 seed normalization requires governed Cash Tromol opening positions.');
+        }
+        foreach ($snapshot['tables']['financial_v2_funds'] as $index => $fund) {
+            if (($fund['id'] ?? null) === $cashFundId) {
+                $snapshot['tables']['financial_v2_funds'][$index]['name'] = $dhuafaOpening['name'];
+            }
+        }
+
+        foreach ($snapshot['opening_balance']['lines'] ?? [] as $index => $line) {
+            if (($line['fund_id'] ?? null) !== $infaqFundId
+                || ! str_contains((string) ($line['source_reference'] ?? ''), 'Cash Tromol Yatim')) {
+                continue;
+            }
+
+            $snapshot['opening_balance']['lines'][$index]['fund_id'] = $cashFundId;
+            $snapshot['opening_balance']['lines'][$index]['mapping_ref'] = self::cashOpeningReference($cashSourceReference);
+            $snapshot['opening_balance']['lines'][$index]['source_reference'] = self::cashOpeningReference($cashSourceReference);
+            $snapshot['opening_balance']['lines'][$index]['line_description'] = 'Saldo awal Dana Dhuafa & Anak Yatim pada Cash Tromol Yatim; sumber '.$cashSourceReference;
+        }
+
+        foreach ($snapshot['opening_balance']['lines'] ?? [] as $index => $line) {
+            if (($line['financial_account_id'] ?? null) !== null || ! str_contains((string) ($line['source_reference'] ?? ''), 'FUND-NET-ASSET')) {
+                continue;
+            }
+
+            $fundCode = ($line['fund_id'] ?? null) === $infaqFundId
+                ? 'INFAQ-TROMOL'
+                : (($line['fund_id'] ?? null) === $cashFundId ? 'DHUAFA' : null);
+            if (! $fundCode) {
+                continue;
+            }
+            $opening = $fundCode === 'INFAQ-TROMOL' ? $infaqOpening : $dhuafaOpening;
+            $reference = 'ZISWAF UPDATE 3.xlsx|'.$opening['source_range'].'|FUND-NET-ASSET';
+            $snapshot['opening_balance']['lines'][$index]['debit_amount'] = '0.00';
+            $snapshot['opening_balance']['lines'][$index]['credit_amount'] = $opening['total'];
+            $snapshot['opening_balance']['lines'][$index]['source_debit_amount'] = '0.00';
+            $snapshot['opening_balance']['lines'][$index]['source_credit_amount'] = $opening['total'];
+            $snapshot['opening_balance']['lines'][$index]['mapping_ref'] = $reference;
+            $snapshot['opening_balance']['lines'][$index]['source_reference'] = $reference;
+            $snapshot['opening_balance']['lines'][$index]['line_description'] = "Saldo dana awal {$opening['name']}; sumber {$opening['source_range']}";
+        }
+
+        foreach ($snapshot['opening_balance']['mappings'] ?? [] as $index => $mapping) {
+            if (! str_contains((string) ($mapping['legacy_record_ref'] ?? ''), 'Cash Tromol Yatim')) {
+                continue;
+            }
+
+            $targetType = (string) ($mapping['target_entity_type'] ?? '');
+            $snapshot['opening_balance']['mappings'][$index]['legacy_record_ref'] = self::cashOpeningReference($cashSourceReference).'|'.$targetType;
+            if ($targetType !== 'fund') {
+                continue;
+            }
+            $snapshot['opening_balance']['mappings'][$index]['legacy_value'] = 'DHUAFA';
+            $snapshot['opening_balance']['mappings'][$index]['target_entity_id'] = $cashFundId;
+            $snapshot['opening_balance']['mappings'][$index]['rationale'] = 'Phase 12.6 source mapping: Cash Tromol is the original Dhuafa & Anak Yatim cash composition, not an Inter-Fund Transfer.';
+        }
+
+        foreach ($snapshot['opening_balance']['mappings'] ?? [] as $index => $mapping) {
+            $reference = (string) ($mapping['legacy_record_ref'] ?? '');
+            $fundCode = str_contains($reference, 'Sisa Alokasi Dana!A6:D7|FUND-NET-ASSET')
+                ? 'INFAQ-TROMOL'
+                : (str_contains($reference, 'Sisa Alokasi Dana!A11:D11|FUND-NET-ASSET') ? 'DHUAFA' : null);
+            if (! $fundCode) {
+                continue;
+            }
+            $opening = $fundCode === 'INFAQ-TROMOL' ? $infaqOpening : $dhuafaOpening;
+            $targetType = (string) ($mapping['target_entity_type'] ?? '');
+            $snapshot['opening_balance']['mappings'][$index]['legacy_record_ref'] = 'ZISWAF UPDATE 3.xlsx|'.$opening['source_range'].'|FUND-NET-ASSET|'.$targetType;
+            if ($targetType === 'fund') {
+                $snapshot['opening_balance']['mappings'][$index]['target_entity_id'] = $fundCode === 'INFAQ-TROMOL' ? $infaqFundId : $cashFundId;
+                $snapshot['opening_balance']['mappings'][$index]['legacy_value'] = $fundCode;
+            }
+            $snapshot['opening_balance']['mappings'][$index]['rationale'] = 'Phase 12.6 source mapping: '.($opening['name']).' opening Fund position.';
+        }
+
+        foreach ($snapshot['historical_fund_histories'] ?? [] as $index => $history) {
+            if (($history['source_reference'] ?? null) !== $cashSourceReference) {
+                continue;
+            }
+
+            $payload = json_decode((string) ($history['source_payload'] ?? '{}'), true);
+            if (! is_array($payload)) {
+                $payload = [];
+            }
+            $payload['kind'] = 'account_position';
+            $payload['financial_account_code'] = 'CASH-ZISWAF';
+            $payload['position_treatment'] = 'original_fund_account_composition';
+            $payload['notes'] = 'Komposisi rekening/kas Dana Dhuafa & Anak Yatim sejak posisi awal; bukan penerimaan, pengeluaran, atau pemindahan Dana.';
+
+            $snapshot['historical_fund_histories'][$index]['fund_id'] = $cashFundId;
+            $snapshot['historical_fund_histories'][$index]['source_fund_code'] = 'DHUAFA';
+            $snapshot['historical_fund_histories'][$index]['source_key'] = hash('sha256', implode('|', [
+                (string) ($history['source_hash'] ?? ''), 'DHUAFA', 'account_position', $cashSourceReference, 'Cash Tromol Yatim', $cashAmount,
+            ]));
+            $snapshot['historical_fund_histories'][$index]['source_payload'] = json_encode($payload, JSON_THROW_ON_ERROR);
+            $snapshot['historical_fund_histories'][$index]['notes'] = $payload['notes'];
+            $snapshot['historical_fund_histories'][$index]['status'] = 'active';
+            $snapshot['historical_fund_histories'][$index]['correction_reason'] = null;
+            $snapshot['historical_fund_histories'][$index]['corrected_at'] = null;
+        }
+
+        foreach ($snapshot['historical_fund_histories'] ?? [] as $index => $history) {
+            if (($history['description'] ?? null) !== 'Pemindahan Dana dari alokasi Infaq & Tromol'
+                || ($history['source_reference'] ?? null) !== 'Sisa Alokasi Dana Ziswaf DKM MRJ TCE (per 16 agustus 2026).pdf'
+                || ! in_array((string) ($history['entry_kind'] ?? ''), ['receipt', 'usage'], true)
+                || (string) ($history['amount'] ?? '') !== '1200000.00') {
+                continue;
+            }
+
+            // The same reclassification is now an immutable, canonical IFT.
+            // Retain these Phase 12.5 source-only explanation records as
+            // audit history, but prevent a second public/admin presentation.
+            $snapshot['historical_fund_histories'][$index]['status'] = 'void';
+            $snapshot['historical_fund_histories'][$index]['correction_reason'] = 'Phase 12.6: superseded source-only duplicate. The single official Rp1.200.000 reclassification is presented from Posted V2 Ledger.';
+        }
+
+        $snapshot['posted_interfund_transfers'] = array_values(array_filter(
+            $snapshot['posted_interfund_transfers'] ?? [],
+            fn (array $item): bool => ($item['transaction']['source_reference'] ?? null) !== 'MRJ-P12.5-CASH-ATTRIBUTION-2026-08-16',
+        ));
+
+        // The historic capture contained one additional, now-superseded Cash
+        // IFT. The governed source starts with Cash already attributed to
+        // DHUAFA, so only the genuine Rp1.200.000 IFT is replayed.
+        $snapshot['expected']['posted_fact_counts'] = [
+            'journals' => 2,
+            'journal_lines' => 15,
+            'ledger_entries' => 15,
+            'vouchers' => 2,
+        ];
+
         return $snapshot;
+    }
+
+    private static function cashOpeningReference(string $cashSourceReference): string
+    {
+        return 'ZISWAF UPDATE 3.xlsx|'.$cashSourceReference.'|Cash Tromol Yatim';
     }
 
     private function assertSnapshot(): void
@@ -421,7 +589,10 @@ final class FinancialV2Seeder extends Seeder
         $funds = collect($reports->report('fund-balance', $entityId, '2026-01-01', $asOf)['data']['rows'])->mapWithKeys(fn (array $row): array => [$row['code'] => (string) $row['fund_balance']])->all();
         $accounts = collect($reports->report('account-balance', $entityId, '2026-01-01', $asOf)['data']['rows'])->mapWithKeys(fn (array $row): array => [$row['code'] => (string) $row['closing_balance']])->all();
         if ($funds !== $this->data['expected']['fund_balances'] || $accounts !== $this->data['expected']['financial_account_balances']) {
-            throw new RuntimeException('Financial V2 Fund/Account semantic tie-out failed.');
+            throw new RuntimeException('Financial V2 Fund/Account semantic tie-out failed. Expected/actual Funds: '
+                .json_encode([$this->data['expected']['fund_balances'], $funds], JSON_THROW_ON_ERROR)
+                .'; expected/actual Financial Accounts: '
+                .json_encode([$this->data['expected']['financial_account_balances'], $accounts], JSON_THROW_ON_ERROR));
         }
     }
 

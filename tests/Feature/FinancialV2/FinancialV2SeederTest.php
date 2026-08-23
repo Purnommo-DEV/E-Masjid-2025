@@ -32,20 +32,29 @@ function financialV2ComparableSnapshotRow(array $row): array
         ->filter(fn (string $key): bool => str_ends_with($key, '_by_user_id') || in_array($key, ['created_at', 'updated_at', 'approved_at', 'reviewed_at', 'cancelled_at'], true))
         ->all();
 
-    return Arr::except($row, $ignored);
+    $comparable = Arr::except($row, $ignored);
+    if (is_string($comparable['source_payload'] ?? null)) {
+        $payload = json_decode($comparable['source_payload'], true);
+        if (is_array($payload)) {
+            ksort($payload);
+            $comparable['source_payload'] = $payload;
+        }
+    }
+
+    return $comparable;
 }
 
 test('Financial V2 snapshot seeder replays the current MRJ baseline idempotently through canonical writers', function () {
     /** @var array<string, mixed> $snapshot */
-    $snapshot = require database_path('seeders/FinancialV2/current_mrj_financial_v2_snapshot.php');
+    $snapshot = FinancialV2Seeder::governedSnapshot();
     app(FinancialV2Seeder::class)->setContainer(app())->run();
     $entity = AccountingEntity::query()->where('code', 'MRJ-ACTUAL')->sole();
     $first = financialV2BaselineCounts($entity->id);
 
     expect($first)->toMatchArray([
         'funds' => 11, 'accounts' => 10, 'programs' => 12, 'categories' => 31,
-        'history' => 33, 'allocations' => 2, 'realisations' => 4, 'transactions' => 7,
-        'journals' => 3, 'journal_lines' => 17, 'ledger' => 17, 'vouchers' => 3,
+        'history' => 33, 'allocations' => 2, 'realisations' => 4, 'transactions' => 6,
+        'journals' => 2, 'journal_lines' => 15, 'ledger' => 15, 'vouchers' => 2,
     ]);
 
     foreach ($snapshot['tables'] as $table => $rows) {
@@ -91,6 +100,8 @@ test('Financial V2 snapshot seeder replays the current MRJ baseline idempotently
 
     app(FinancialV2Seeder::class)->setContainer(app())->run();
     expect(financialV2BaselineCounts($entity->id))->toBe($first)
-        ->and(DB::table('financial_v2_vouchers')->where('accounting_entity_id', $entity->id)->distinct('voucher_number')->count('voucher_number'))->toBe(3)
+        ->and(DB::table('financial_v2_vouchers')->where('accounting_entity_id', $entity->id)->distinct('voucher_number')->count('voucher_number'))->toBe(2)
+        ->and(DB::table('financial_v2_transactions')->where('accounting_entity_id', $entity->id)->where('source_reference', 'MRJ-P12.5-CASH-ATTRIBUTION-2026-08-16')->count())->toBe(0)
+        ->and(DB::table('financial_v2_transactions')->where('accounting_entity_id', $entity->id)->where('source_reference', 'MRJ-P12.5-FUND-RECLASS-2026-08-16')->where('status', 'posted')->count())->toBe(1)
         ->and(DB::table('financial_v2_ledger_entries as ledger')->leftJoin('financial_v2_journal_lines as line', 'line.id', '=', 'ledger.journal_line_id')->where('ledger.accounting_entity_id', $entity->id)->whereNull('line.id')->count())->toBe(0);
 });

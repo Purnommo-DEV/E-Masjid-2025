@@ -135,6 +135,9 @@ final class HistoricalFundHistoryService
             $before = $this->summary($record);
             $update = [
                 'fund_id' => $fund->id,
+                'source_key' => $data['source_key'] ?? $record->source_key,
+                'source_fund_code' => $data['source_fund_code'] ?? $fund->code,
+                'source_payload' => $data['source_payload'] ?? $record->source_payload,
                 'entry_kind' => $data['entry_kind'],
                 'effective_date' => $data['effective_date'] ?? null,
                 'date_label' => $data['date_label'],
@@ -148,7 +151,7 @@ final class HistoricalFundHistoryService
             ];
             $changedFields = collect($update)
                 ->reject(fn (mixed $value, string $field): bool => in_array($field, ['status', 'correction_reason', 'corrected_at', 'updated_by_user_id'], true))
-                ->filter(fn (mixed $value, string $field): bool => (string) ($record->{$field} ?? '') !== (string) ($value ?? ''))
+                ->filter(fn (mixed $value, string $field): bool => $this->comparable($record->{$field} ?? null) !== $this->comparable($value))
                 ->keys()
                 ->values()
                 ->all();
@@ -169,6 +172,47 @@ final class HistoricalFundHistoryService
                 $actorUserId,
                 $before,
                 $after,
+            );
+
+            return $record->fresh(['fund', 'createdBy', 'updatedBy']);
+        }, 3);
+    }
+
+    /**
+     * Retires a source-only explanation that is no longer safe to display.
+     * This preserves both the record and an audit event; it never touches a
+     * Journal, JournalLine, Ledger, or other accounting fact.
+     */
+    public function voidRecord(string $entityId, string $historyId, string $reason, ?int $actorUserId = null): HistoricalFundHistory
+    {
+        return DB::transaction(function () use ($entityId, $historyId, $reason, $actorUserId): HistoricalFundHistory {
+            $record = HistoricalFundHistory::query()
+                ->where('accounting_entity_id', $entityId)
+                ->lockForUpdate()
+                ->find($historyId);
+            if (! $record) {
+                throw new FinancialDomainException('E-HISTORY-NOT-FOUND', 'Riwayat sumber Dana tidak ditemukan untuk entitas ini.');
+            }
+            if ($record->status === 'void') {
+                return $record->fresh(['fund', 'createdBy', 'updatedBy']);
+            }
+
+            $before = $this->summary($record);
+            $record->update([
+                'status' => 'void',
+                'correction_reason' => $reason,
+                'corrected_at' => now(),
+                'updated_by_user_id' => $actorUserId,
+            ]);
+            $this->auditTrail->record(
+                $entityId,
+                'historical_fund_history_voided',
+                'historical_fund_history',
+                $record->id,
+                (string) Str::uuid(),
+                $actorUserId,
+                $before,
+                $this->summary($record->fresh()),
             );
 
             return $record->fresh(['fund', 'createdBy', 'updatedBy']);
@@ -238,10 +282,12 @@ final class HistoricalFundHistoryService
         return [
             'fund_id' => $record->fund_id,
             'source_fund_code' => $record->source_fund_code,
+            'source_key' => $record->source_key,
             'source_filename' => $record->source_filename,
             'source_worksheet' => $record->source_worksheet,
             'source_reference' => $record->source_reference,
             'source_hash' => $record->source_hash,
+            'source_payload' => $record->source_payload,
             'entry_kind' => $record->entry_kind,
             'effective_date' => $record->effective_date?->toDateString(),
             'date_label' => $record->date_label,
@@ -251,5 +297,14 @@ final class HistoricalFundHistoryService
             'status' => $record->status,
             'correction_reason' => $record->correction_reason,
         ];
+    }
+
+    private function comparable(mixed $value): string
+    {
+        if (is_array($value)) {
+            return json_encode($value, JSON_THROW_ON_ERROR);
+        }
+
+        return (string) ($value ?? '');
     }
 }

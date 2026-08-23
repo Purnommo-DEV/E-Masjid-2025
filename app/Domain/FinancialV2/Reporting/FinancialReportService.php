@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2\Reporting;
 
 use App\Domain\FinancialV2\DecimalAmount;
+use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,118 @@ final class FinancialReportService
         ];
     }
 
+    /**
+     * Read-only, unpaginated Fund movement feed for a small governed
+     * disclosure scope. It deliberately reuses the same Posted Ledger
+     * contribution formula as the Fund Balance and Fund Movement reports;
+     * the public PDF must never invent a second balance calculation.
+     *
+     * @param  array<int, string>  $fundIds
+     * @return array{opening_by_fund: array<string, string>, rows: array<int, array<string, mixed>>}
+     */
+    public function fundMovementsForFunds(string $entityId, string $fromAccountingDate, string $throughAccountingDate, array $fundIds): array
+    {
+        if ($fromAccountingDate > $throughAccountingDate) {
+            throw new InvalidArgumentException('The report start date must not be after the through date.');
+        }
+
+        $fundIds = array_values(array_unique(array_filter($fundIds, 'is_string')));
+        if ($fundIds === []) {
+            return ['opening_by_fund' => [], 'rows' => []];
+        }
+
+        return DB::transaction(function () use ($entityId, $fromAccountingDate, $throughAccountingDate, $fundIds): array {
+            $effectiveType = $this->effectiveTypeSql();
+            $fundTransferTypes = $this->definitions->fundTransferTypes();
+            $contribution = $this->fundBalanceContributionSql($effectiveType, $fundTransferTypes);
+            $base = $this->postedLedger->ledger($entityId, $throughAccountingDate)
+                ->join('financial_v2_accounts as account', 'account.id', '=', 'ledger.account_id')
+                ->whereIn('ledger.fund_id', $fundIds);
+
+            $openingByFund = (clone $base)
+                ->where('ledger.accounting_date', '<', $fromAccountingDate)
+                ->select('ledger.fund_id')
+                ->selectRaw('COALESCE(SUM('.$contribution.'), 0) as opening_balance', $fundTransferTypes)
+                ->groupBy('ledger.fund_id')
+                ->get()
+                ->mapWithKeys(fn (object $row): array => [$row->fund_id => $this->amount($row->opening_balance)])
+                ->all();
+
+            $rows = (clone $base)
+                ->join('financial_v2_funds as fund', 'fund.id', '=', 'ledger.fund_id')
+                ->where('ledger.accounting_date', '>=', $fromAccountingDate)
+                ->select([
+                    'ledger.fund_id', 'fund.code as fund_code', 'fund.name as fund_name',
+                    'ledger.accounting_date', 'ledger.posting_sequence', 'ledger.line_no',
+                    'journal.id as journal_id', 'journal.description as journal_description',
+                    'financial_transaction.source_reference', 'transaction_type.code as transaction_type_code',
+                    'original_transaction_type.code as original_transaction_type_code',
+                ])
+                ->selectRaw($contribution.' as fund_balance_delta', $fundTransferTypes)
+                ->orderBy('ledger.accounting_date')
+                ->orderBy('ledger.posting_sequence')
+                ->orderBy('ledger.line_no')
+                ->get()
+                ->map(fn (object $row): array => [
+                    'fund_id' => $row->fund_id,
+                    'fund_code' => $row->fund_code,
+                    'fund_name' => $row->fund_name,
+                    'accounting_date' => $row->accounting_date,
+                    'posting_sequence' => (int) $row->posting_sequence,
+                    'journal_id' => $row->journal_id,
+                    'source_reference' => $row->source_reference,
+                    'description' => $row->journal_description ?: $row->source_reference,
+                    'transaction_type_code' => $row->original_transaction_type_code ?: $row->transaction_type_code,
+                    'fund_balance_delta' => $this->amount($row->fund_balance_delta),
+                ])
+                ->all();
+
+            return $this->restateSupersededCashTromolFundMovement($openingByFund, $rows);
+        }, 3);
+    }
+
+    /**
+     * The Phase 12.5 Cash Tromol IFT is retained as immutable technical audit
+     * lineage in already-onboarded local data. Phase 12.6 restates its Fund
+     * effect to the official opening position and hides the false transfer
+     * event from all outward Fund movement feeds.
+     *
+     * @param  array<string, string>  $openingByFund
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array{opening_by_fund: array<string, string>, rows: array<int, array<string, mixed>>}
+     */
+    private function restateSupersededCashTromolFundMovement(array $openingByFund, array $rows): array
+    {
+        $compositionDeltas = [];
+        $visibleRows = [];
+        foreach ($rows as $row) {
+            if (! MrjZiswafOpeningPosition::isSupersededCashTromolTransferReference($row['source_reference'] ?? null)) {
+                $visibleRows[] = $row;
+
+                continue;
+            }
+            $fundId = $row['fund_id'];
+            $compositionDeltas[$fundId] = DecimalAmount::add($compositionDeltas[$fundId] ?? '0.00', $row['fund_balance_delta']);
+        }
+
+        foreach ($compositionDeltas as $fundId => $delta) {
+            $openingIndex = collect($visibleRows)->search(fn (array $row): bool => $row['fund_id'] === $fundId
+                && $row['transaction_type_code'] === 'OPB'
+                && ! DecimalAmount::equals($row['fund_balance_delta'], '0.00'));
+            if ($openingIndex === false) {
+                $openingByFund[$fundId] = DecimalAmount::add($openingByFund[$fundId] ?? '0.00', $delta);
+
+                continue;
+            }
+            $visibleRows[$openingIndex]['fund_balance_delta'] = DecimalAmount::add(
+                $visibleRows[$openingIndex]['fund_balance_delta'],
+                $delta,
+            );
+        }
+
+        return ['opening_by_fund' => $openingByFund, 'rows' => $visibleRows];
+    }
+
     /** @param array<string, mixed> $filters @return array<string, mixed> */
     private function financialAccountBalances(string $entityId, string $from, string $through, array $filters): array
     {
@@ -191,6 +304,7 @@ final class FinancialReportService
         }
 
         $fundRows = $query->get();
+        $supersededCashTransferDeltas = $this->supersededCashTromolTransferDeltas($entityId, $from, $through);
 
         $distribution = $this->fundFinancialAccounts
             ->composition($entityId, $through, fundId: $fundId ?? null)
@@ -208,7 +322,7 @@ final class FinancialReportService
             ->groupBy('fund_id')
             ->map(fn ($items) => DecimalAmount::sum($items->pluck('liquidity_balance')));
 
-        $rows = $fundRows->map(function (object $row) use ($liquidityByFund): array {
+        $rows = $fundRows->map(function (object $row) use ($liquidityByFund, $supersededCashTransferDeltas): array {
             $opening = $this->amount($row->opening_fund_balance);
             $receipts = $this->amount($row->receipts);
             $expenses = $this->amount($row->expenses);
@@ -216,7 +330,14 @@ final class FinancialReportService
             $transferOut = $this->amount($row->transfer_out);
             $adjustments = $this->amount($row->adjustments);
             $fundBalance = $this->amount($row->fund_balance);
+            $openingCompositionAdjustment = $supersededCashTransferDeltas->get($row->fund_id, '0.00');
+            if (DecimalAmount::compare($openingCompositionAdjustment, '0.00') > 0) {
+                $transferIn = DecimalAmount::subtract($transferIn, $openingCompositionAdjustment);
+            } elseif (DecimalAmount::compare($openingCompositionAdjustment, '0.00') < 0) {
+                $transferOut = DecimalAmount::subtract($transferOut, DecimalAmount::negate($openingCompositionAdjustment));
+            }
             $explainedBalance = DecimalAmount::add($opening, $receipts);
+            $explainedBalance = DecimalAmount::add($explainedBalance, $openingCompositionAdjustment);
             $explainedBalance = DecimalAmount::subtract($explainedBalance, $expenses);
             $explainedBalance = DecimalAmount::add($explainedBalance, $transferIn);
             $explainedBalance = DecimalAmount::subtract($explainedBalance, $transferOut);
@@ -235,6 +356,11 @@ final class FinancialReportService
                 'transfer_in' => $transferIn,
                 'transfer_out' => $transferOut,
                 'adjustments' => $adjustments,
+                // Phase 12.6 re-expresses the old Cash Tromol IFT as an
+                // original Fund/Account opening composition. It keeps the
+                // ledger-derived balance intact while ensuring the event is
+                // never presented as a Fund transfer.
+                'opening_position_composition_adjustment' => $openingCompositionAdjustment,
                 'other_policy_components' => DecimalAmount::subtract($fundBalance, $explainedBalance),
                 // Backward-compatible aliases. Consumers should use the explicit fields above.
                 'opening_net_position' => $opening,
@@ -259,7 +385,7 @@ final class FinancialReportService
             'rows' => $rows,
             'account_composition' => $distribution,
             'liquidity_distribution' => $distribution,
-            'definition' => 'Saldo Dana dihitung dari Fund-attributed posted revenue, expense, net asset, dan Inter-Fund Transfer. Likuiditas Tersedia serta Komposisi Rekening berasal dari posted liquidity lines plus atribusi IFT posted; atribusi tidak memindahkan atau menambah saldo rekening.',
+            'definition' => 'Saldo Dana dihitung dari Fund-attributed posted revenue, expense, net asset, dan Inter-Fund Transfer. Posisi awal Cash Tromol yang sudah ada sejak awal diperlakukan sebagai komposisi Rekening/Dana, bukan pemindahan Dana. Likuiditas Tersedia serta Komposisi Rekening berasal dari posted liquidity lines plus atribusi IFT posted; atribusi tidak memindahkan atau menambah saldo rekening.',
             'fund_balance_scope' => [
                 'included_account_classes' => ['revenue', 'expense', 'net_asset', 'transfer for IFT'],
                 'unmapped_policy_component_classes' => $unmappedPolicyComponents,
@@ -274,6 +400,21 @@ final class FinancialReportService
                 ],
             ],
         ];
+    }
+
+    /** @return \Illuminate\Support\Collection<string, string> */
+    private function supersededCashTromolTransferDeltas(string $entityId, string $from, string $through): \Illuminate\Support\Collection
+    {
+        return $this->postedLedger->ledger($entityId, $through)
+            ->join('financial_v2_accounts as cash_semantic_account', 'cash_semantic_account.id', '=', 'ledger.account_id')
+            ->where('ledger.accounting_date', '>=', $from)
+            ->where('cash_semantic_account.account_class', 'transfer')
+            ->whereRaw('COALESCE(original_transaction.source_reference, financial_transaction.source_reference) = ?', [MrjZiswafOpeningPosition::CASH_TROMOL_SUPERSEDED_TRANSFER_REFERENCE])
+            ->select('ledger.fund_id')
+            ->selectRaw('COALESCE(SUM(journal_line.debit_amount - journal_line.credit_amount), 0) as balance_delta')
+            ->groupBy('ledger.fund_id')
+            ->get()
+            ->mapWithKeys(fn (object $row): array => [$row->fund_id => $this->amount($row->balance_delta)]);
     }
 
     /** @param array<string, mixed> $filters @return array<string, mixed> */

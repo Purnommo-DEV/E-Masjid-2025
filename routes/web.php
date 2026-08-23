@@ -29,7 +29,6 @@ use App\Http\Controllers\Admin\Qurban\QurbanSettingController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SaldoAwalController;
 use App\Http\Controllers\Admin\SeoPageController;
-
 use App\Http\Controllers\Admin\SlideMotivasiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZakatController;
@@ -286,6 +285,7 @@ Route::get('/donor-darah/success', function () {
 // the admin middleware and have no writer route or legacy financial source.
 Route::prefix('laporan-ziswaf')->name('public.ziswaf.')->group(function () {
     Route::get('/', [PublicZiswafReportController::class, 'index'])->name('index');
+    Route::get('/cetak', [PublicZiswafReportController::class, 'pdf'])->name('pdf');
     Route::get('/dana/{fundCode}', [PublicZiswafReportController::class, 'fund'])
         ->where('fundCode', '[A-Za-z0-9-]+')
         ->name('fund');
@@ -312,49 +312,49 @@ Route::middleware(['auth'])->group(function () {
         ->withoutMiddleware([])
         ->group(function () {
 
-        Route::get('/admin/ops', function () {
-            return view('masjid.' . masjid() . '.admin.ops.index');
-        })->name('admin.ops.index');
+            Route::get('/admin/ops', function () {
+                return view('masjid.'.masjid().'.admin.ops.index');
+            })->name('admin.ops.index');
 
-        Route::post('/admin/ops/clear-cache', function () {
-            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+            Route::post('/admin/ops/clear-cache', function () {
+                abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
 
-            \Artisan::call('view:clear');
-            \Artisan::call('cache:clear');
-            \Artisan::call('config:clear');
+                \Artisan::call('view:clear');
+                \Artisan::call('cache:clear');
+                \Artisan::call('config:clear');
 
-            $message = 'Cache berhasil dibersihkan.';
+                $message = 'Cache berhasil dibersihkan.';
 
-            return request()->expectsJson()
-                ? response()->json(['message' => $message])
-                : back()->with('success', $message);
-        })->name('admin.ops.clear-cache');
+                return request()->expectsJson()
+                    ? response()->json(['message' => $message])
+                    : back()->with('success', $message);
+            })->name('admin.ops.clear-cache');
 
-        Route::post('/admin/ops/run-migrate', function () {
-            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+            Route::post('/admin/ops/run-migrate', function () {
+                abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
 
-            \Artisan::call('migrate', ['--force' => true]);
+                \Artisan::call('migrate', ['--force' => true]);
 
-            $message = 'Migration berhasil dijalankan.';
+                $message = 'Migration berhasil dijalankan.';
 
-            return request()->expectsJson()
-                ? response()->json(['message' => $message])
-                : back()->with('success', $message);
-        })->name('admin.ops.run-migrate');
+                return request()->expectsJson()
+                    ? response()->json(['message' => $message])
+                    : back()->with('success', $message);
+            })->name('admin.ops.run-migrate');
 
-        Route::post('/admin/ops/run-seeder', function () {
-            abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
+            Route::post('/admin/ops/run-seeder', function () {
+                abort_unless(request()->hasValidSignature(), 403, 'URL tidak valid atau telah kedaluwarsa.');
 
-            \Artisan::call('db:seed', ['--force' => true]);
+                \Artisan::call('db:seed', ['--force' => true]);
 
-            $message = 'Seeder berhasil dijalankan.';
+                $message = 'Seeder berhasil dijalankan.';
 
-            return request()->expectsJson()
-                ? response()->json(['message' => $message])
-                : back()->with('success', $message);
-        })->name('admin.ops.run-seeder');
+                return request()->expectsJson()
+                    ? response()->json(['message' => $message])
+                    : back()->with('success', $message);
+            })->name('admin.ops.run-seeder');
 
-    });
+        });
 
     // Financial V2 operational UX. This namespace and URL are intentionally
     // separate from legacy /admin/keuangan routes: no legacy journal, balance,

@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
             // EvaluasiQurban1446Seeder::class,
             // KhutbahJumatSeeder::class,
             // QuoteSeeder::class,
-            FinancialV2Seeder::class,
+            // FinancialV2Seeder::class,
         ]);
     }
 }

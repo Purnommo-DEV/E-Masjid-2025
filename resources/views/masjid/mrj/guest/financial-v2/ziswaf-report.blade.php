@@ -68,15 +68,21 @@
                 </div>
             </header>
 
-            <form class="public-report-actions no-print mt-6 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm sm:flex-row sm:items-end sm:justify-between" method="GET" action="{{ route('public.ziswaf.index') }}">
-                <label class="block max-w-xs text-sm font-semibold text-slate-700" for="as_of">
-                    Tampilkan posisi per tanggal
-                    <input id="as_of" name="as_of" type="date" value="{{ $report['as_of'] }}" class="mt-1 block w-full rounded-xl border-slate-300 bg-white text-sm focus:border-emerald-600 focus:ring-emerald-600">
-                </label>
-                <div class="flex flex-wrap gap-2">
-                    <a class="rounded-xl px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600" href="{{ route('public.ziswaf.index') }}">Data terbaru</a>
-                    <button class="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2" type="submit">Terapkan</button>
-                    <button class="rounded-xl border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600" type="button" onclick="window.print()">Cetak laporan</button>
+            <form class="public-report-actions no-print mt-6 flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between" method="GET" action="{{ route('public.ziswaf.index') }}">
+                <div class="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 lg:max-w-xl">
+                    <label class="min-w-0 text-sm font-semibold text-slate-700" for="from">
+                        Tanggal mulai
+                        <input id="from" name="from" type="date" value="{{ $report['period_from'] }}" class="mt-1 block min-w-0 w-full rounded-xl border-slate-300 bg-white px-2 text-sm focus:border-emerald-600 focus:ring-emerald-600">
+                    </label>
+                    <label class="min-w-0 text-sm font-semibold text-slate-700" for="to">
+                        Tanggal akhir
+                        <input id="to" name="to" type="date" value="{{ $report['as_of'] }}" class="mt-1 block min-w-0 w-full rounded-xl border-slate-300 bg-white px-2 text-sm focus:border-emerald-600 focus:ring-emerald-600">
+                    </label>
+                    <button class="min-h-11 whitespace-nowrap rounded-xl bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:px-4" type="submit">Terapkan</button>
+                </div>
+                <div class="grid w-full grid-cols-2 gap-2 lg:flex lg:w-auto">
+                    <a class="inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 sm:px-4" href="{{ route('public.ziswaf.index') }}">Data terbaru</a>
+                    <a class="inline-flex min-h-11 items-center justify-center rounded-xl border border-emerald-700 px-3 text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 sm:px-4" href="{{ route('public.ziswaf.pdf', ['from' => $report['period_from'], 'to' => $report['as_of']]) }}">Cetak laporan PDF</a>
                 </div>
             </form>
 
@@ -147,6 +153,26 @@
                 <p class="mt-3 text-sm leading-6 text-slate-500">Pemindahan dana antar peruntukan ditampilkan terpisah; bukan pemasukan atau pengeluaran baru.</p>
             </section>
 
+            @if ($report['fund_transfers'] !== [])
+                <section class="mt-12" aria-labelledby="pemindahan-title">
+                    <div class="mb-5">
+                        <p class="text-xs font-bold uppercase tracking-[.18em] text-sky-700">Perpindahan antar Dana</p>
+                        <h2 id="pemindahan-title" class="mt-1 text-2xl font-bold text-emerald-950">Pemindahan Dana</h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">Setiap peristiwa ditampilkan satu kali. Cash Tromol Yatim merupakan komposisi rekening Dana Dhuafa &amp; Anak Yatim dan tidak ditampilkan sebagai pemindahan Dana.</p>
+                    </div>
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        @foreach ($report['fund_transfers'] as $transfer)
+                            <article class="report-card rounded-2xl border border-sky-100 bg-white p-6">
+                                <p class="text-xs font-bold uppercase tracking-[.14em] text-sky-700">{{ $transfer['category'] }}</p>
+                                <h3 class="mt-3 text-lg font-bold leading-snug text-emerald-950">{{ $transfer['from'] }} <span class="text-sky-600" aria-hidden="true">→</span> {{ $transfer['to'] }}</h3>
+                                <p class="mt-2 text-sm leading-6 text-slate-500">{{ $transfer['description'] }}</p>
+                                <p class="mt-5 text-2xl font-bold tracking-tight text-sky-800">{{ $rupiah($transfer['amount']) }}</p>
+                            </article>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             <section class="mt-12" aria-labelledby="rincian-title">
                 <div class="mb-5">
                     <p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">Telusuri per dana</p>
@@ -161,10 +187,20 @@
                                 <div class="flex items-center justify-between gap-4"><dt class="text-slate-500">Pengeluaran</dt><dd class="font-semibold text-rose-700">{{ $rupiah($fund['expenses']) }}</dd></div>
                                 <div class="flex items-center justify-between gap-4"><dt class="text-slate-500">Pemindahan Dana</dt><dd class="font-semibold text-sky-700">{{ $transferLabel($fund['transfer_net']) }}</dd></div>
                             </dl>
+                            @if ($fund['account_composition'] !== [])
+                                <div class="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                                    <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Komposisi rekening</p>
+                                    <dl class="mt-2 space-y-1.5">
+                                        @foreach ($fund['account_composition'] as $account)
+                                            <div class="flex items-center justify-between gap-3"><dt class="text-slate-600">{{ $account['name'] }}</dt><dd class="whitespace-nowrap font-semibold text-slate-900">{{ $rupiah($account['balance']) }}</dd></div>
+                                        @endforeach
+                                    </dl>
+                                </div>
+                            @endif
                             <div class="mt-auto border-t border-slate-100 pt-5">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Saldo Dana</p>
                                 <p class="mt-1 text-2xl font-bold text-slate-900">{{ $rupiah($fund['balance']) }}</p>
-                                <a class="mt-5 inline-flex rounded-xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-600" href="{{ route('public.ziswaf.fund', ['fundCode' => $fund['code'], 'as_of' => $report['as_of']]) }}">Lihat rincian dana</a>
+                                <a class="mt-5 inline-flex rounded-xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-600" href="{{ route('public.ziswaf.fund', ['fundCode' => $fund['code'], 'from' => $report['period_from'], 'to' => $report['as_of']]) }}">Lihat rincian dana</a>
                             </div>
                         </article>
                     @endforeach

@@ -71,11 +71,11 @@ test('actual MRJ ZISWAF opening onboarding is source-reconciled, canonical, and 
         ->and(FinancialTransaction::where('accounting_entity_id', $entity->id)->count())->toBe(1)
         ->and($fundRows->map(fn (array $row) => $row['fund_balance'])->sum())->toBe((float) MrjZiswafOpeningPosition::TOTAL)
         ->and($fundRows->get('ZAKAT-MAAL')['fund_balance'])->toBe('75745386.00')
-        ->and($fundRows->get('INFAQ-TROMOL')['fund_balance'])->toBe('19319949.00')
+        ->and($fundRows->get('INFAQ-TROMOL')['fund_balance'])->toBe('16666949.00')
         ->and($fundRows->get('SODAQOH')['fund_balance'])->toBe('6906000.00')
         ->and($fundRows->get('SANTUNAN-YATIM')['fund_balance'])->toBe('6600000.00')
         ->and($fundRows->get('FIDYAH')['fund_balance'])->toBe('7500000.00')
-        ->and($fundRows->get('DHUAFA')['fund_balance'])->toBe('9658977.00')
+        ->and($fundRows->get('DHUAFA')['fund_balance'])->toBe('12311977.00')
         ->and($accountRows->get('BNI-ZISWAF')['closing_balance'])->toBe(MrjZiswafOpeningPosition::BNI_TOTAL)
         ->and($accountRows->get('CASH-ZISWAF')['closing_balance'])->toBe(MrjZiswafOpeningPosition::CASH_TOTAL)
         ->and($reports->report('trial-balance', $entity->id, '2026-01-01', MrjZiswafOpeningPosition::AS_OF_DATE)['data']['is_balanced'])->toBeTrue();
@@ -85,17 +85,22 @@ test('actual MRJ ZISWAF opening onboarding is source-reconciled, canonical, and 
     $sodaqohHistory = $sourceHistory->history($entity, $sodaqoh, ['from' => '2026-01-01', 'through' => MrjZiswafOpeningPosition::AS_OF_DATE])['source_history'];
     $infaq = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'INFAQ-TROMOL')->sole();
     $infaqHistory = $sourceHistory->history($entity, $infaq, ['from' => '2026-01-01', 'through' => MrjZiswafOpeningPosition::AS_OF_DATE])['source_history'];
+    $dhuafa = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'DHUAFA')->sole();
+    $dhuafaHistory = $sourceHistory->history($entity, $dhuafa, ['from' => '2026-01-01', 'through' => MrjZiswafOpeningPosition::AS_OF_DATE])['source_history'];
 
     expect($sodaqohHistory['rows'])->toHaveCount(2)
         ->and($sodaqohHistory['rows'][0])->toMatchArray(['date_label' => 'Maret 2026', 'description' => 'Penerimaan Ramadhan 1447 H - Sodaqoh', 'receipt' => '8506000.00', 'running_balance' => '8506000.00', 'source_reference' => 'Buku Kas Detail!A9:F9'])
         ->and($sodaqohHistory['rows'][1])->toMatchArray(['description' => 'Beras 20 Pack', 'usage' => '1600000.00', 'running_balance' => '6906000.00', 'source_reference' => 'Buku Kas Detail!A24:F24'])
         ->and($sodaqohHistory['difference'])->toBe('0.00')
         ->and($infaqHistory['activity_balance'])->toBe('16666949.00')
-        ->and($infaqHistory['account_positions'][0])->toMatchArray(['description' => 'Cash Tromol Yatim', 'amount' => '2653000.00'])
+        ->and($infaqHistory['account_positions'])->toBeEmpty()
         ->and($infaqHistory['opening_source_balance'])->toBe('16666949.00')
         ->and($infaqHistory['source_fund_balance'])->toBe('16666949.00')
         ->and($infaqHistory['reconciled_balance'])->toBe('16666949.00')
         ->and($infaqHistory['difference'])->toBe('0.00')
+        ->and($dhuafaHistory['account_positions'][0])->toMatchArray(['description' => 'Cash Tromol Yatim', 'amount' => '2653000.00'])
+        ->and($dhuafaHistory['source_fund_balance'])->toBe('9658977.00')
+        ->and($dhuafaHistory['difference'])->toBe('0.00')
         ->and(BudgetAllocation::query()->where('accounting_entity_id', $entity->id)->count())->toBe(0);
 
     $user = \App\Models\User::factory()->create();
@@ -111,10 +116,9 @@ test('actual MRJ ZISWAF opening onboarding is source-reconciled, canonical, and 
     $sodaqohPage->assertSee('<div class="mt-4 overflow-x-auto">', false);
 
     $zakat = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'ZAKAT-MAAL')->sole();
-    $dhuafa = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'DHUAFA')->sole();
     foreach ([
         [$zakat, ['Penerimaan Ramadhan 1447 H - Zakat Maal', 'Penyaluran Zakat Maal April', 'Penyaluran Zakat Maal Mei', 'Buku Kas Detail!A7:F7']],
-        [$dhuafa, ['Saldo Awal Buku', 'Beasiswa Fauzan SMP AL Madina', 'SPP Mei-Juli 2026', 'Beasiswa SMP AL Madina', 'Buku Kas Detail!A19:F19']],
+        [$dhuafa, ['Saldo Awal Buku', 'Beasiswa Fauzan SMP AL Madina', 'SPP Mei-Juli 2026', 'Beasiswa SMP AL Madina', 'Cash Tromol Yatim', 'Buku Kas Detail!A19:F19']],
         [$infaq, ['Cash Tromol 10 Desember 2025', 'Penerimaan Ramadhan 1447 H - Infaq', 'Rekonsiliasi berupa admin Bank', 'Buku Kas Detail!A3:F3']],
     ] as [$fundForPage, $expectedText]) {
         $response = $this->actingAs($user)->get(route('financial-v2.funds.show', ['fund' => $fundForPage, 'entity' => $entity->id]))

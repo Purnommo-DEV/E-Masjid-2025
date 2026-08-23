@@ -40,7 +40,10 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 /**
- * Applies the owner-approved Phase 12.5 Fund-only correction.
+ * Superseded Phase 12.5 correction command retained only as an audit-safe
+ * compatibility entry point. Phase 12.6 established that Cash Tromol was
+ * never an Inter-Fund Transfer, so this command must never be used to create
+ * its old Rp2.653.000 posting.
  *
  * The command never edits the opening Journal or Ledger. Two distinct IFT
  * source transactions are posted through the canonical PostingEngine while
@@ -148,6 +151,10 @@ final class CorrectMrjZiswafFundAttributionCommand extends Command
         BalanceInquiryService $balances,
         FinancialReportService $reports,
     ): int {
+        $this->error('This Phase 12.5 command is superseded because Cash Tromol Rp2.653.000 is original Dhuafa & Anak Yatim cash composition, not an Inter-Fund Transfer. Use financial-v2:correct-current-state instead.');
+
+        return self::FAILURE;
+
         $this->assertPermittedEnvironment();
         $sourceFile = $this->verifiedSourceFile((string) $this->argument('source'), self::SOURCE_FILENAME, self::SOURCE_HASH, 'workbook sumber');
         $evidenceFile = $this->verifiedSourceFile((string) $this->argument('evidence'), self::EVIDENCE_FILENAME, self::EVIDENCE_HASH, 'PDF keputusan');

@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2\Reporting;
 
 use App\Domain\FinancialV2\DecimalAmount;
+use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
@@ -61,6 +62,14 @@ final class FundFinancialAccountCompositionReadService
 
         foreach ($this->attributionEvents($entityId, $throughAccountingDate, $fundId, $financialAccountId) as $event) {
             $amount = DecimalAmount::normalize((string) $event->attribution_amount);
+            if ($this->isSupersededCashTromolEvent($event)) {
+                // The legacy IFT remains immutable audit lineage only. Its
+                // balance effect is presented as the original Cash Tromol
+                // Fund/Account composition, never as a Fund transfer.
+                $this->applyOriginalCashTromolComposition($rows, $event, $fundId, $amount);
+
+                continue;
+            }
             // The event query must see either side in order to find a transfer
             // involving a filtered Fund. Only emit the requested side into the
             // final projection, otherwise a Fund-detail query would leak its
@@ -173,6 +182,9 @@ final class FundFinancialAccountCompositionReadService
             ->when($financialAccountId, fn (Builder $query, string $id) => $query->where('attribution_account.id', $id))
             ->select([
                 'journal.id as journal_id',
+                'journal.reversal_of_journal_id',
+                'financial_transaction.source_reference',
+                'original_transaction.source_reference as original_source_reference',
                 'attribution_account.id as financial_account_id',
                 'attribution_account.code as financial_account_code',
                 'attribution_account.name as financial_account_name',
@@ -190,6 +202,26 @@ final class FundFinancialAccountCompositionReadService
         }
 
         return $query->get();
+    }
+
+    /** @param array<string, object> $rows */
+    private function applyOriginalCashTromolComposition(array &$rows, object $event, ?string $fundId, string $amount): void
+    {
+        if ($fundId === null || $event->source_fund_id === $fundId) {
+            $this->apply($rows, $event, 'source', DecimalAmount::negate($amount));
+        }
+        if ($fundId === null || $event->destination_fund_id === $fundId) {
+            $this->apply($rows, $event, 'destination', $amount);
+        }
+    }
+
+    private function isSupersededCashTromolEvent(object $event): bool
+    {
+        $sourceReference = $event->reversal_of_journal_id !== null
+            ? $event->original_source_reference
+            : $event->source_reference;
+
+        return MrjZiswafOpeningPosition::isSupersededCashTromolTransferReference($sourceReference);
     }
 
     /** @param array<string, object> $rows */

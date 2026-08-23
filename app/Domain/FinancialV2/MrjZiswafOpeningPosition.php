@@ -21,16 +21,31 @@ final class MrjZiswafOpeningPosition
 
     public const CASH_TOTAL = '2653000.00';
 
+    /**
+     * Phase 12.6 source semantics. The Cash Tromol position belongs to
+     * Dhuafa & Anak Yatim from the opening position; it is not a Fund
+     * transfer, receipt, expense, or Treasury Transfer.
+     */
+    public const CASH_TROMOL_SOURCE_REFERENCE = 'Sisa Alokasi Dana!D66:E66';
+
+    public const CASH_TROMOL_FINANCIAL_ACCOUNT_CODE = 'CASH-ZISWAF';
+
+    public const CASH_TROMOL_FUND_CODE = 'DHUAFA';
+
+    public const CASH_TROMOL_SUPERSEDED_TRANSFER_REFERENCE = 'MRJ-P12.5-CASH-ATTRIBUTION-2026-08-16';
+
+    public const FUND_RECLASSIFICATION_REFERENCE = 'MRJ-P12.5-FUND-RECLASS-2026-08-16';
+
     /** @return array<int, array{code:string,name:string,bni:string,cash:string,total:string,source_range:string}> */
     public static function funds(): array
     {
         return [
             ['code' => 'ZAKAT-MAAL', 'name' => 'Dana Zakat Maal', 'bni' => '75745386.00', 'cash' => '0.00', 'total' => '75745386.00', 'source_range' => 'Sisa Alokasi Dana!A5:D5'],
-            ['code' => 'INFAQ-TROMOL', 'name' => 'Dana Infaq & Tromol', 'bni' => '16666949.00', 'cash' => '2653000.00', 'total' => '19319949.00', 'source_range' => 'Sisa Alokasi Dana!A6:D7'],
+            ['code' => 'INFAQ-TROMOL', 'name' => 'Dana Infaq & Tromol', 'bni' => '16666949.00', 'cash' => '0.00', 'total' => '16666949.00', 'source_range' => 'Sisa Alokasi Dana!D41:E41'],
             ['code' => 'SODAQOH', 'name' => 'Dana Sodaqoh', 'bni' => '6906000.00', 'cash' => '0.00', 'total' => '6906000.00', 'source_range' => 'Sisa Alokasi Dana!A8:D8'],
             ['code' => 'SANTUNAN-YATIM', 'name' => 'Dana Santunan Anak Yatim', 'bni' => '6600000.00', 'cash' => '0.00', 'total' => '6600000.00', 'source_range' => 'Sisa Alokasi Dana!A9:D9'],
             ['code' => 'FIDYAH', 'name' => 'Dana Fidyah', 'bni' => '7500000.00', 'cash' => '0.00', 'total' => '7500000.00', 'source_range' => 'Sisa Alokasi Dana!A10:D10'],
-            ['code' => 'DHUAFA', 'name' => 'Dana Dhuafa', 'bni' => '9658977.00', 'cash' => '0.00', 'total' => '9658977.00', 'source_range' => 'Sisa Alokasi Dana!A11:D11'],
+            ['code' => 'DHUAFA', 'name' => 'Dana Dhuafa & Anak Yatim', 'bni' => '9658977.00', 'cash' => '2653000.00', 'total' => '12311977.00', 'source_range' => 'Sisa Alokasi Dana!D61:E61; D66:E66'],
         ];
     }
 
@@ -149,7 +164,6 @@ final class MrjZiswafOpeningPosition
                 ['kind' => 'usage', 'date_label' => 'Sesi Ramadhan', 'description' => 'Kupon Print', 'notes' => '', 'amount' => '280000.00', 'source_reference' => 'Buku Kas Detail!A23:F23'],
                 ['kind' => 'usage', 'date_label' => '27 Juni 2026', 'description' => 'Rekonsiliasi berupa admin Bank', 'notes' => 'Biaya administrasi dan transfer.', 'amount' => '609051.00', 'source_reference' => 'Rekonsil 27 Juni 2026!A43:B43'],
                 ['kind' => 'closing', 'date_label' => '27 Juni 2026', 'description' => 'Saldo sumber Infaq & Tromol pada BNI', 'notes' => 'Laporan posisi rekening BNI; bukan Allocation.', 'amount' => '16666949.00', 'source_reference' => 'Sisa Alokasi Dana!D41:E41'],
-                ['kind' => 'account_position', 'date_label' => '14 Juni 2026', 'description' => 'Cash Tromol Yatim', 'notes' => 'Komposisi rekening/kas, bukan penerimaan atau pengeluaran Dana.', 'amount' => '2653000.00', 'source_reference' => 'Sisa Alokasi Dana!D66:E66'],
             ],
             'SODAQOH' => [
                 ['kind' => 'receipt', 'date_label' => 'Maret 2026', 'description' => 'Penerimaan Ramadhan 1447 H - Sodaqoh', 'notes' => '', 'amount' => '8506000.00', 'source_reference' => 'Buku Kas Detail!A9:F9'],
@@ -170,10 +184,28 @@ final class MrjZiswafOpeningPosition
                 ['kind' => 'usage', 'date_label' => 'Sesi Ramadhan', 'description' => 'SPP Mei-Juli 2026', 'notes' => '', 'amount' => '1095000.00', 'source_reference' => 'Buku Kas Detail!A16:F16'],
                 ['kind' => 'usage', 'date_label' => 'Sesi Ramadhan', 'description' => 'Beasiswa SMP AL Madina', 'notes' => '', 'amount' => '4095000.00', 'source_reference' => 'Buku Kas Detail!A19:F19'],
                 ['kind' => 'closing', 'date_label' => '27 Juni 2026', 'description' => 'Saldo sumber Dhuafa', 'notes' => 'Laporan posisi Fund; bukan Allocation.', 'amount' => '9658977.00', 'source_reference' => 'Sisa Alokasi Dana!D61:E61'],
+                ['kind' => 'account_position', 'date_label' => '14 Juni 2026', 'description' => 'Cash Tromol Yatim', 'notes' => 'Komposisi rekening/kas Dana Dhuafa & Anak Yatim sejak posisi awal; bukan penerimaan, pengeluaran, atau pemindahan Dana.', 'amount' => '2653000.00', 'source_reference' => self::CASH_TROMOL_SOURCE_REFERENCE],
             ],
         ];
 
         return $history[$fundCode] ?? [];
+    }
+
+    /** @return array{source_reference:string,financial_account_code:string,fund_code:string,amount:string,treatment:string} */
+    public static function cashTromolOriginalComposition(): array
+    {
+        return [
+            'source_reference' => self::CASH_TROMOL_SOURCE_REFERENCE,
+            'financial_account_code' => self::CASH_TROMOL_FINANCIAL_ACCOUNT_CODE,
+            'fund_code' => self::CASH_TROMOL_FUND_CODE,
+            'amount' => self::CASH_TOTAL,
+            'treatment' => 'original_fund_account_composition',
+        ];
+    }
+
+    public static function isSupersededCashTromolTransferReference(?string $sourceReference): bool
+    {
+        return $sourceReference === self::CASH_TROMOL_SUPERSEDED_TRANSFER_REFERENCE;
     }
 
     public static function assertIntegrity(): void
