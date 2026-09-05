@@ -291,6 +291,12 @@ Route::prefix('laporan-ziswaf')->name('public.ziswaf.')->group(function () {
         ->name('fund');
 });
 
+// Laporan program publik ini sengaja statis pada tahap awal. Tidak membaca
+// database atau Financial V2; angka ditampilkan sebagai ringkasan informasi.
+Route::get('/laporan-sembako-107-paket', function () {
+    return view('masjid.'.masjid().'.guest.laporan-sembako-107');
+})->name('public.sembako-107');
+
 // Group untuk user yang sudah login
 Route::middleware(['auth'])->group(function () {
 
@@ -428,6 +434,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/alokasi-dana/riwayat', [OperationalFinancialController::class, 'allocationHistory'])->name('allocations.history');
         Route::get('/alokasi-dana/baru', [OperationalFinancialController::class, 'allocationForm'])->name('allocations.create');
         Route::post('/alokasi-dana', [OperationalFinancialController::class, 'storeAllocation'])->name('allocations.store');
+        Route::get('/alokasi-dana/{allocation}/ubah', [OperationalFinancialController::class, 'editAllocation'])->name('allocations.edit');
+        Route::put('/alokasi-dana/{allocation}', [OperationalFinancialController::class, 'updateAllocation'])->name('allocations.update');
+        Route::post('/alokasi-dana/{allocation}/perubahan', [OperationalFinancialController::class, 'createAllocationAmendment'])->name('allocations.amendments.store');
+        Route::post('/alokasi-dana/{allocation}/perubahan/{version}/setujui', [OperationalFinancialController::class, 'approveAllocationAmendment'])->name('allocations.amendments.approve');
         Route::post('/alokasi-dana/{allocation}/ajukan', [OperationalFinancialController::class, 'submitAllocation'])->name('allocations.submit');
         Route::post('/alokasi-dana/{allocation}/setujui', [OperationalFinancialController::class, 'approveAllocation'])->name('allocations.approve');
         Route::post('/alokasi-dana/{allocation}/batalkan', [OperationalFinancialController::class, 'cancelAllocation'])->name('allocations.cancel');
@@ -436,6 +446,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pratinjau', [OperationalFinancialController::class, 'preview'])->name('preview');
         Route::get('/lampiran/{attachment}/lihat', [OperationalFinancialController::class, 'viewAttachment'])->name('attachments.view');
         Route::get('/lampiran/{attachment}/unduh', [OperationalFinancialController::class, 'downloadAttachment'])->name('attachments.download');
+        Route::post('/lampiran-link/{attachmentLink}/lepas', [OperationalFinancialController::class, 'removeAttachment'])->name('attachments.remove');
         Route::get('/{operation}/baru', [OperationalFinancialController::class, 'create'])
             ->where('operation', 'receipt|payment|transfer|interfund|realization')
             ->name('transactions.create');

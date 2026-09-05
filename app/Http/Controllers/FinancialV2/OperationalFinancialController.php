@@ -15,6 +15,7 @@ use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\FundGroupingReadService;
 use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
+use App\Domain\FinancialV2\TransactionEvidenceUploadService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\Attachment;
@@ -39,9 +40,9 @@ use App\Models\FinancialV2\Voucher;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 /**
@@ -67,6 +68,7 @@ final class OperationalFinancialController
         private readonly BudgetAllocationService $budgetAllocations,
         private readonly AllocationHistoryReadService $allocationHistory,
         private readonly EvidenceService $evidence,
+        private readonly TransactionEvidenceUploadService $evidenceUploads,
         private readonly BalanceInquiryService $balances,
         private readonly FinancialReportService $reports,
         private readonly FundGroupingReadService $fundGroups,
@@ -162,26 +164,33 @@ final class OperationalFinancialController
 
     public function edit(Request $request, FinancialTransaction $transaction)
     {
-        $transaction->load(['type', 'splits', 'primaryFinancialAccount', 'counterparty', 'category', 'realization']);
-        $this->ensureDraftIsEditable($transaction);
-        $operation = $this->operationForTransaction($transaction);
-        if (! in_array($operation, ['receipt', 'payment', 'realization'], true)) {
-            return $this->failure($request, new FinancialDomainException('E-UX-DRAFT-RECREATE', 'Draft jenis ini dapat dibatalkan lalu dibuat ulang agar rincian perpindahannya tetap terlacak.'));
+        try {
+            $transaction->load(['type', 'splits', 'primaryFinancialAccount', 'counterparty', 'category', 'realization']);
+            $this->ensureDraftIsEditable($transaction);
+            $operation = $this->operationForTransaction($transaction);
+            if (! in_array($operation, ['receipt', 'payment', 'realization'], true)) {
+                return $this->failure($request, new FinancialDomainException('E-UX-DRAFT-RECREATE', 'Draft jenis ini dapat dibatalkan lalu dibuat ulang agar rincian perpindahannya tetap terlacak.'));
+            }
+
+            $context = $this->contextForEntity($transaction->accounting_entity_id);
+            if ($operation === 'realization' && $transaction->realization?->budget_allocation_version_id) {
+                $this->realizationDimensions($context['entity'], $transaction->realization->budget_allocation_version_id);
+            }
+
+            return view('masjid.mrj.admin.financial-v2.form', [
+                'entities' => $context['entities'],
+                'entity' => $context['entity'],
+                'operation' => $operation,
+                'definition' => self::OPERATIONS[$operation],
+                'options' => $this->formOptions($transaction->accounting_entity_id),
+                'transaction' => $transaction,
+                'submissionKey' => Str::afterLast($transaction->idempotency_key, ':'),
+                'today' => $transaction->accounting_date->toDateString(),
+                'selectedAllocationVersionId' => null,
+            ]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
         }
-
-        $context = $this->contextForEntity($transaction->accounting_entity_id);
-
-        return view('masjid.mrj.admin.financial-v2.form', [
-            'entities' => $context['entities'],
-            'entity' => $context['entity'],
-            'operation' => $operation,
-            'definition' => self::OPERATIONS[$operation],
-            'options' => $this->formOptions($transaction->accounting_entity_id),
-            'transaction' => $transaction,
-            'submissionKey' => Str::afterLast($transaction->idempotency_key, ':'),
-            'today' => $transaction->accounting_date->toDateString(),
-            'selectedAllocationVersionId' => null,
-        ]);
     }
 
     public function update(Request $request, FinancialTransaction $transaction)
@@ -202,8 +211,10 @@ final class OperationalFinancialController
             $fundId = $input['fund_id'] ?? null;
             $programId = $input['program_id'] ?? null;
             $allocationVersionId = null;
+            $fundingSources = null;
             if ($operation === 'realization') {
                 [$fundId, $programId, $allocationVersionId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
+                $fundingSources = $this->realizationFundingSources($entity, $allocationVersionId, $input['funding_sources'] ?? null, $this->amount($input['amount']));
             }
             $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
             $category = $this->category($entity, $input['category_id'], $type->id);
@@ -224,14 +235,19 @@ final class OperationalFinancialController
                 'category_id' => $category->id,
                 'description' => $this->description($operation === 'receipt' ? ($input['source'] ?? null) : null, $input['description'] ?? null),
             ], $actorId);
-            $this->lifecycle->replaceDraftSplits($transaction->id, [[
-                'account_id' => $splitAccountId,
-                'split_amount' => $amount,
-                'fund_id' => $fundId,
-                'program_id' => $programId,
-                'category_id' => $category->id,
-                'counterparty_id' => $counterparty?->id,
-            ]], $actorId);
+            $splits = collect($fundingSources ?? [['fund_id' => $fundId, 'amount' => $amount]])
+                ->values()
+                ->map(fn (array $funding): array => [
+                    'account_id' => $splitAccountId,
+                    'split_amount' => $funding['amount'],
+                    'fund_id' => $funding['fund_id'],
+                    'program_id' => $programId,
+                    'category_id' => $category->id,
+                    'counterparty_id' => $counterparty?->id,
+                    'purpose_note' => $funding['note'] ?? null,
+                    'source_reference' => $funding['source_reference'] ?? null,
+                ])->all();
+            $this->lifecycle->replaceDraftSplits($transaction->id, $splits, $actorId);
             $this->attachUploadIfPresent($request, $entity, $transaction->fresh(), self::OPERATIONS[$operation]['evidence'], $actorId);
 
             return $this->success($request, 'Draft berhasil diperbarui.', route('financial-v2.transactions.show', $transaction), ['transaction_id' => $transaction->id, 'allocation_version_id' => $allocationVersionId]);
@@ -379,7 +395,7 @@ final class OperationalFinancialController
 
     public function show(Request $request, FinancialTransaction $transaction)
     {
-        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program']);
+        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.fundings.fund', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program']);
         $entity = $this->activeEntity($transaction->accounting_entity_id);
         $context = $this->contextForEntity($entity->id);
         $journal = Journal::query()->with('lines')->where('transaction_id', $transaction->id)->where('journal_status', 'posted')->first();
@@ -447,6 +463,25 @@ final class OperationalFinancialController
             'allocationHistory' => $allocationHistory,
             'submissionKey' => old('submission_key', (string) Str::uuid()),
             'today' => now()->toDateString(),
+            'editingAllocation' => null,
+        ]);
+    }
+
+    public function editAllocation(Request $request, BudgetAllocation $allocation)
+    {
+        $entity = $this->entityForAllocation($request, $allocation);
+        abort_unless($allocation->status === 'draft', 409, 'Hanya draft alokasi yang dapat diubah.');
+        $context = $this->contextForEntity($entity->id);
+        $history = $this->allocationHistory->page($entity->id, ['per_page' => 20]);
+
+        return view('masjid.mrj.admin.financial-v2.allocation-form', [
+            'entities' => $context['entities'],
+            'entity' => $entity,
+            'options' => $this->formOptions($entity),
+            'allocationHistory' => $history,
+            'submissionKey' => Str::afterLast($allocation->idempotency_key, ':'),
+            'today' => now()->toDateString(),
+            'editingAllocation' => $allocation->load(['versions.fundings.fund']),
         ]);
     }
 
@@ -574,15 +609,7 @@ final class OperationalFinancialController
     public function storeAllocation(Request $request)
     {
         $entity = $this->requiredEntity($request);
-        $input = $request->validate([
-            'submission_key' => ['required', 'uuid'],
-            'date' => ['required', 'date'],
-            'fund_id' => ['required', 'uuid'],
-            'program_id' => ['nullable', 'uuid'],
-            'category_id' => ['nullable', 'uuid'],
-            'amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
-            'reason' => ['required', 'string', 'max:2000'],
-        ], $this->validationMessages());
+        $input = $this->validatedAllocationInput($request);
         $idempotencyKey = $this->sourceKey('allocation', $input['submission_key']);
 
         try {
@@ -599,14 +626,14 @@ final class OperationalFinancialController
             if (! $period) {
                 throw new FinancialDomainException('E-PERIOD-CLOSED', 'Tanggal alokasi tidak berada dalam periode yang terbuka.');
             }
-            $fund = $this->fund($entity, $input['fund_id']);
             $program = $this->program($entity, $input['program_id'] ?? null);
             $category = $this->category($entity, $input['category_id'] ?? null);
             $amount = $this->amount($input['amount']);
             $allocation = $this->budgetAllocations->create([
                 'accounting_entity_id' => $entity->id,
                 'accounting_period_id' => $period->id,
-                'fund_id' => $fund->id,
+                'fund_id' => $input['fund_id'] ?? null,
+                'fundings' => $input['funding_sources'] ?? null,
                 'program_id' => $program?->id,
                 'category_id' => $category?->id,
                 'allocation_reference' => 'UX-ALC-'.$input['submission_key'],
@@ -617,6 +644,132 @@ final class OperationalFinancialController
             ], $request->user()?->id);
 
             return $this->success($request, 'Draft alokasi dana disimpan. Alokasi ini belum merupakan pengeluaran dan tidak membuat jurnal.', route('financial-v2.allocations.create', ['entity' => $entity->id]), ['allocation_id' => $allocation->id]);
+        } catch (FinancialDomainException|InvalidArgumentException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function updateAllocation(Request $request, BudgetAllocation $allocation)
+    {
+        $entity = $this->entityForAllocation($request, $allocation);
+        $input = $this->validatedAllocationInput($request, false);
+
+        try {
+            $period = AccountingPeriod::query()
+                ->where('accounting_entity_id', $entity->id)
+                ->where('status', 'open')
+                ->where('start_date', '<=', $input['date'])
+                ->where('end_date', '>=', $input['date'])
+                ->first();
+            if (! $period) {
+                throw new FinancialDomainException('E-PERIOD-CLOSED', 'Tanggal alokasi tidak berada dalam periode yang terbuka.');
+            }
+            $program = $this->program($entity, $input['program_id'] ?? null);
+            $category = $this->category($entity, $input['category_id'] ?? null);
+            $updated = $this->budgetAllocations->updateDraft($allocation->id, [
+                'accounting_period_id' => $period->id,
+                'program_id' => $program?->id,
+                'category_id' => $category?->id,
+                'allocated_amount' => $this->amount($input['amount']),
+                'effective_from' => $input['date'],
+                'reason' => $input['reason'],
+            ], $input['funding_sources'] ?? (($input['fund_id'] ?? null) ? [['fund_id' => $input['fund_id'], 'amount' => $input['amount']]] : null), $request->user()?->id);
+
+            return $this->success($request, 'Draft alokasi dan Sumber Dana berhasil diperbarui. Tidak ada Journal atau Ledger yang dibuat.', route('financial-v2.allocations.create', ['entity' => $entity->id]), ['allocation_id' => $updated->id]);
+        } catch (FinancialDomainException|InvalidArgumentException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function createAllocationAmendment(Request $request, BudgetAllocation $allocation)
+    {
+        $entity = $this->entityForAllocation($request, $allocation);
+        $input = $request->validate([
+            'effective_from' => ['required', 'date'],
+            'amendment_amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'funding_adjustments' => ['required', 'array', 'min:1', 'max:20'],
+            'funding_adjustments.*.fund_id' => ['required', 'uuid', 'distinct'],
+            'funding_adjustments.*.amount' => ['nullable', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'funding_adjustments.*.note' => ['nullable', 'string', 'max:1000'],
+            'reason' => ['required', 'string', 'max:2000'],
+        ], $this->validationMessages());
+
+        try {
+            $current = BudgetAllocationVersion::query()
+                ->with('fundings')
+                ->where('budget_allocation_id', $allocation->id)
+                ->where('status', 'approved')
+                ->firstOrFail();
+            $amendmentAmount = $this->amount($input['amendment_amount']);
+            $adjustments = collect($input['funding_adjustments'])
+                ->filter(fn (array $adjustment): bool => filled($adjustment['amount'] ?? null))
+                ->map(function (array $adjustment) use ($entity): array {
+                    $fund = $this->fund($entity, $adjustment['fund_id']);
+
+                    return [
+                        'fund_id' => $fund->id,
+                        'amount' => $this->amount($adjustment['amount']),
+                        'note' => filled($adjustment['note'] ?? null) ? trim((string) $adjustment['note']) : null,
+                    ];
+                });
+            if ($adjustments->isEmpty()) {
+                throw new FinancialDomainException('E-BUDGET-AMENDMENT-FUNDING', 'Minimal satu Sumber Dana perubahan wajib diisi.');
+            }
+            if (! DecimalAmount::equals(DecimalAmount::sum($adjustments->pluck('amount')), $amendmentAmount)) {
+                throw new FinancialDomainException('E-BUDGET-AMENDMENT-MISMATCH', 'Total tambahan per Sumber Dana harus sama dengan nilai perubahan Alokasi.');
+            }
+
+            $fundings = $current->fundings
+                ->mapWithKeys(fn ($funding): array => [$funding->fund_id => [
+                    'fund_id' => $funding->fund_id,
+                    'amount' => DecimalAmount::normalize($funding->amount),
+                    'note' => $funding->note,
+                    'source_reference' => $funding->source_reference,
+                ]]);
+            foreach ($adjustments as $adjustment) {
+                $existing = $fundings->get($adjustment['fund_id'], [
+                    'fund_id' => $adjustment['fund_id'],
+                    'amount' => '0.00',
+                    'note' => null,
+                    'source_reference' => null,
+                ]);
+                $existing['amount'] = DecimalAmount::add($existing['amount'], $adjustment['amount']);
+                $existing['note'] = $adjustment['note'] ?? $existing['note'];
+                $fundings->put($adjustment['fund_id'], $existing);
+            }
+
+            $version = $this->budgetAllocations->revise(
+                $allocation->id,
+                DecimalAmount::add($current->allocated_amount, $amendmentAmount),
+                $input['effective_from'],
+                $input['reason'],
+                $request->user()?->id,
+                $fundings->values()->all(),
+            );
+
+            return $this->success($request, 'Perubahan alokasi disimpan sebagai versi baru dan menunggu persetujuan. Belum ada Journal atau Ledger yang dibuat.', route('financial-v2.allocations.create', ['entity' => $entity->id]), [
+                'allocation_id' => $allocation->id,
+                'allocation_version_id' => $version->id,
+                'status' => $version->status,
+            ]);
+        } catch (FinancialDomainException|InvalidArgumentException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function approveAllocationAmendment(Request $request, BudgetAllocation $allocation, BudgetAllocationVersion $version)
+    {
+        $entity = $this->entityForAllocation($request, $allocation);
+        abort_unless($version->budget_allocation_id === $allocation->id, 404);
+
+        try {
+            $approved = $this->budgetAllocations->approveVersion($allocation->id, $version->id, $request->user()?->id);
+
+            return $this->success($request, 'Perubahan alokasi disetujui. Versi sebelumnya digantikan dan draft realisasi lama yang belum dicatat otomatis dibatalkan.', route('financial-v2.allocations.create', ['entity' => $entity->id]), [
+                'allocation_id' => $allocation->id,
+                'allocation_version_id' => $approved->id,
+                'status' => $approved->status,
+            ]);
         } catch (FinancialDomainException|InvalidArgumentException $exception) {
             return $this->failure($request, $exception);
         }
@@ -831,7 +984,7 @@ final class OperationalFinancialController
             ? TransactionType::query()->where('accounting_entity_id', $entityId)->where('code', $transactionTypeCode)->value('id')
             : null;
         $allocationVersions = BudgetAllocationVersion::query()
-            ->with('allocation')
+            ->with(['allocation', 'fundings.fund'])
             ->where('accounting_entity_id', $entityId)
             ->where('status', 'approved')
             ->whereHas('allocation', fn (Builder $query) => $query->where('status', 'approved'))
@@ -839,6 +992,7 @@ final class OperationalFinancialController
             ->get();
         $allocationVersions->each(function (BudgetAllocationVersion $version): void {
             $version->setAttribute('availability', $this->budgetAllocations->availability($version->id));
+            $version->setAttribute('funding_availability', $this->budgetAllocations->fundingAvailability($version->id));
         });
 
         return [
@@ -871,6 +1025,29 @@ final class OperationalFinancialController
     }
 
     /** @return array<string, mixed> */
+    private function validatedAllocationInput(Request $request, bool $requireSubmissionKey = true): array
+    {
+        $rules = [
+            'date' => ['required', 'date'],
+            'fund_id' => ['nullable', 'uuid', 'required_without:funding_sources'],
+            'funding_sources' => ['nullable', 'array', 'min:1', 'max:20', 'required_without:fund_id'],
+            'funding_sources.*.fund_id' => ['required_with:funding_sources', 'uuid', 'distinct'],
+            'funding_sources.*.amount' => ['required_with:funding_sources', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'funding_sources.*.note' => ['nullable', 'string', 'max:1000'],
+            'funding_sources.*.source_reference' => ['nullable', 'string', 'max:500'],
+            'program_id' => ['nullable', 'uuid'],
+            'category_id' => ['nullable', 'uuid'],
+            'amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+            'reason' => ['required', 'string', 'max:2000'],
+        ];
+        if ($requireSubmissionKey) {
+            $rules['submission_key'] = ['required', 'uuid'];
+        }
+
+        return $request->validate($rules, $this->validationMessages());
+    }
+
+    /** @return array<string, mixed> */
     private function validatedOperationInput(Request $request, string $operation): array
     {
         $rules = [
@@ -878,7 +1055,11 @@ final class OperationalFinancialController
             'date' => ['required', 'date'],
             'amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'description' => ['nullable', 'string', 'max:2000'],
-            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+            'attachments' => ['nullable', 'array', 'max:10'],
+            'attachments.*' => ['file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+            'attachment_types' => ['nullable', 'array', 'max:10'],
+            'attachment_types.*' => ['nullable', 'string', Rule::in(['receipt', 'invoice', 'transfer_proof', 'statement', 'cash_count', 'approval', 'policy', 'other'])],
         ];
         $rules += match ($operation) {
             'receipt' => [
@@ -914,6 +1095,11 @@ final class OperationalFinancialController
                 'counterparty_name' => ['nullable', 'string', 'max:240', 'required_without:counterparty_id'],
                 'financial_account_id' => ['required', 'uuid'],
                 'category_id' => ['required', 'uuid'],
+                'funding_sources' => ['nullable', 'array', 'min:1', 'max:20'],
+                'funding_sources.*.fund_id' => ['required_with:funding_sources', 'uuid', 'distinct'],
+                'funding_sources.*.amount' => ['required_with:funding_sources', 'regex:/^\d+(?:\.\d{1,2})?$/'],
+                'funding_sources.*.note' => ['nullable', 'string', 'max:1000'],
+                'funding_sources.*.source_reference' => ['nullable', 'string', 'max:500'],
             ],
         };
 
@@ -951,7 +1137,8 @@ final class OperationalFinancialController
     private function createRealization(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, ?int $actorId): FinancialTransaction
     {
         [$fundId, $programId, $versionId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
-        $prepared = $this->paymentInput($entity, $type, $input, $sourceKey, $fundId, $programId, $actorId, 'beneficiary');
+        $fundings = $this->realizationFundingSources($entity, $versionId, $input['funding_sources'] ?? null, $this->amount($input['amount']));
+        $prepared = $this->paymentInput($entity, $type, $input, $sourceKey, $fundId, $programId, $actorId, 'beneficiary', $fundings);
 
         return $this->lifecycle->createRealization($prepared['input'], $prepared['splits'], $versionId, $actorId);
     }
@@ -964,7 +1151,7 @@ final class OperationalFinancialController
     }
 
     /** @return array{input: array<string, mixed>, splits: array<int, array<string, mixed>>} */
-    private function paymentInput(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, string $fundId, ?string $programId, ?int $actorId, string $counterpartyType): array
+    private function paymentInput(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, string $fundId, ?string $programId, ?int $actorId, string $counterpartyType, ?array $fundingSources = null): array
     {
         $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
         $fund = $this->fund($entity, $fundId);
@@ -981,14 +1168,16 @@ final class OperationalFinancialController
                 'category_id' => $category->id,
                 'gross_amount' => $amount,
             ],
-            'splits' => [[
+            'splits' => collect($fundingSources ?? [['fund_id' => $fund->id, 'amount' => $amount]])->values()->map(fn (array $funding): array => [
                 'account_id' => $splitAccountId,
-                'split_amount' => $amount,
-                'fund_id' => $fund->id,
+                'split_amount' => $funding['amount'],
+                'fund_id' => $funding['fund_id'],
                 'program_id' => $program?->id,
                 'category_id' => $category->id,
                 'counterparty_id' => $counterparty->id,
-            ]],
+                'purpose_note' => $funding['note'] ?? null,
+                'source_reference' => $funding['source_reference'] ?? null,
+            ])->all(),
         ];
     }
 
@@ -1194,6 +1383,57 @@ final class OperationalFinancialController
         return [$version->allocation->fund_id, $version->allocation->program_id, $version->id];
     }
 
+    /**
+     * Resolve and validate the operational funding split before creating a
+     * PAY draft. PostingEngine repeats the authoritative, locked checks when
+     * the realization is posted.
+     *
+     * @param  array<int, array<string, mixed>>|null  $requested
+     * @return array<int, array{fund_id:string,amount:string,note:?string,source_reference:?string}>
+     */
+    private function realizationFundingSources(AccountingEntity $entity, string $versionId, ?array $requested, string $total): array
+    {
+        $available = collect($this->budgetAllocations->fundingAvailability($versionId))->keyBy('fund_id');
+        if ($available->isEmpty()) {
+            throw new FinancialDomainException('E-REALIZATION-FUNDING', 'Sumber Dana alokasi belum tersedia.');
+        }
+
+        $requested = collect($requested ?? [])
+            ->filter(fn (mixed $line): bool => is_array($line) && (filled($line['fund_id'] ?? null) || filled($line['amount'] ?? null)))
+            ->values()
+            ->all();
+        if ($requested === []) {
+            if ($available->count() !== 1) {
+                throw new FinancialDomainException('E-REALIZATION-FUNDING-REQUIRED', 'Realisasi alokasi multi-Dana wajib merinci seluruh Sumber Dana.');
+            }
+            $requested = [['fund_id' => $available->keys()->first(), 'amount' => $total]];
+        }
+
+        $normalized = collect($requested)->map(function (array $line) use ($entity, $available): array {
+            $fundId = (string) ($line['fund_id'] ?? '');
+            if (! $available->has($fundId)) {
+                throw new FinancialDomainException('E-REALIZATION-FUNDING', 'Sumber Dana realisasi harus berasal dari alokasi yang dipilih.');
+            }
+            $this->fund($entity, $fundId);
+            $amount = $this->amount((string) ($line['amount'] ?? '0'));
+
+            return [
+                'fund_id' => $fundId,
+                'amount' => $amount,
+                'note' => filled($line['note'] ?? null) ? trim((string) $line['note']) : null,
+                'source_reference' => filled($line['source_reference'] ?? null) ? trim((string) $line['source_reference']) : null,
+            ];
+        });
+        if ($normalized->pluck('fund_id')->duplicates()->isNotEmpty()) {
+            throw new FinancialDomainException('E-REALIZATION-FUNDING-DUPLICATE', 'Satu Dana hanya boleh muncul satu kali pada Sumber Dana realisasi.');
+        }
+        if (! DecimalAmount::equals(DecimalAmount::sum($normalized->pluck('amount')), $total)) {
+            throw new FinancialDomainException('E-REALIZATION-FUNDING-MISMATCH', 'Total Sumber Dana harus sama dengan nominal realisasi.');
+        }
+
+        return $normalized->all();
+    }
+
     private function amount(string $rawAmount): string
     {
         $amount = DecimalAmount::normalize($rawAmount);
@@ -1219,28 +1459,43 @@ final class OperationalFinancialController
 
     private function attachUploadIfPresent(Request $request, AccountingEntity $entity, FinancialTransaction $transaction, string $evidenceType, ?int $actorId): void
     {
-        /** @var UploadedFile|null $upload */
-        $upload = $request->file('attachment');
-        if (! $upload) {
-            return;
+        $uploads = collect($request->file('attachments', []));
+        if ($request->file('attachment')) {
+            $uploads->prepend($request->file('attachment'));
         }
-        $storageReference = $upload->store('financial-v2-evidence/'.$entity->id, 'local');
-        $this->evidence->attachToTransaction(
-            $entity->id,
-            $transaction->id,
-            $upload->getClientOriginalName(),
-            $upload->getMimeType() ?: 'application/octet-stream',
-            $upload->getSize() ?: 0,
-            hash_file('sha256', $upload->getRealPath()),
-            $storageReference,
-            $evidenceType,
-            $actorId,
-        );
+        $types = collect($request->input('attachment_types', []));
+        $uploads->values()->each(function ($upload, int $index) use ($entity, $transaction, $types, $evidenceType, $actorId): void {
+            $this->evidenceUploads->attach(
+                $entity->id,
+                $transaction->id,
+                $upload,
+                $types->get($index) ?: $evidenceType,
+                $actorId,
+            );
+        });
+    }
+
+    public function removeAttachment(Request $request, AttachmentLink $attachmentLink)
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
+        $entity = $this->activeEntity($attachmentLink->accounting_entity_id);
+        abort_unless($attachmentLink->target_type === 'transaction', 404);
+
+        try {
+            $link = $this->evidence->removeDraftTransactionEvidence($attachmentLink->id, $data['reason'], $request->user()?->id);
+
+            return $this->success($request, 'Lampiran dilepas dari draft dan tetap tercatat dalam audit.', route('financial-v2.transactions.show', $link->target_id), ['attachment_link_id' => $link->id, 'entity_id' => $entity->id]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
     }
 
     private function ensureDraftIsEditable(FinancialTransaction $transaction): void
     {
         if ($transaction->status !== 'draft') {
+            if ($transaction->status === 'cancelled' && $transaction->realization) {
+                throw new FinancialDomainException('E-REALIZATION-PARENT-CANCELLED', 'Draft Realisasi sudah dibatalkan dan tidak dapat dilanjutkan.');
+            }
             throw new FinancialDomainException('E-UX-POSTED-IMMUTABLE', 'Transaksi yang sudah dicatat tidak dapat diubah langsung. Gunakan koreksi atau reversal sesuai kewenangan.');
         }
     }
@@ -1526,6 +1781,7 @@ final class OperationalFinancialController
             'E-MASTER-INACTIVE', 'E-UX-FUND', 'E-UX-FINANCIAL-ACCOUNT', 'E-UX-PROGRAM', 'E-UX-COUNTERPARTY', 'E-UX-CATEGORY' => 'Pilihan master tidak aktif, tidak sesuai, atau tidak tersedia untuk transaksi ini.',
             'E-FINANCIAL-ACCOUNT', 'E-FINANCIAL-ACCOUNT-DETAIL' => 'Kas atau rekening tidak siap digunakan untuk pencatatan ini.',
             'E-REALIZATION-ALLOCATION', 'E-BUDGET-INSUFFICIENT' => 'Alokasi dana tidak tersedia atau sisa alokasinya tidak mencukupi untuk realisasi ini.',
+            'E-REALIZATION-PARENT-CANCELLED' => 'Draft Realisasi tidak dapat dilanjutkan karena alokasi induknya sudah dibatalkan.',
             'E-TRANSACTION-STATE' => 'Status transaksi belum memenuhi syarat untuk tindakan ini.',
             default => 'Transaksi belum dapat diproses. Periksa data yang diisi dan konfigurasi master yang berlaku.',
         };

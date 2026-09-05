@@ -55,7 +55,7 @@ final class RealizationDraftReadService
     {
         $perPage = min(100, max(10, (int) ($filters['per_page'] ?? 20)));
         $drafts = $this->activeQuery($entityId)
-            ->when($filters['fund_id'] ?? null, fn (Builder $query, string $fundId) => $query->whereHas('realization.budgetAllocationVersion.allocation', fn (Builder $allocation) => $allocation->where('fund_id', $fundId)))
+            ->when($filters['fund_id'] ?? null, fn (Builder $query, string $fundId) => $query->whereHas('splits', fn (Builder $splits) => $splits->where('fund_id', $fundId)))
             ->when($filters['program_id'] ?? null, fn (Builder $query, string $programId) => $query->whereHas('realization.budgetAllocationVersion.allocation', fn (Builder $allocation) => $allocation->where('program_id', $programId)))
             ->latest('updated_at')
             ->paginate($perPage, ['*'], 'draft_page')
@@ -77,11 +77,16 @@ final class RealizationDraftReadService
                 'splits.fund:id,code,name',
                 'realization.budgetAllocationVersion.allocation.fund:id,code,name',
                 'realization.budgetAllocationVersion.allocation.program:id,code,name',
+                'realization.budgetAllocationVersion.fundings.fund:id,code,name',
             ])
             ->where('accounting_entity_id', $entityId)
             ->whereIn('status', self::ACTIVE_TRANSACTION_STATUSES)
             ->whereHas('type', fn (Builder $query) => $query->where('code', 'PAY'))
-            ->whereHas('realization', fn (Builder $query) => $query->where('status', 'draft'));
+            ->whereHas('realization', fn (Builder $query) => $query
+                ->where('status', 'draft')
+                ->whereHas('budgetAllocationVersion', fn (Builder $version) => $version
+                    ->where('status', 'approved')
+                    ->whereHas('allocation', fn (Builder $allocation) => $allocation->where('status', 'approved'))));
     }
 
     /** @param Collection<int, FinancialTransaction> $transactions */

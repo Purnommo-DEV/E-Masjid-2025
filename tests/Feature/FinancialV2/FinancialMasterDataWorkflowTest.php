@@ -35,6 +35,47 @@ test('Financial V2 master sidebar contains business navigation and does not expo
         ->toContain('aria-controls="admin-sidebar"');
 });
 
+test('financial dashboard total card has an explicit accessible colour contract and the admin menu scrolls independently', function () {
+    $entity = new \App\Models\FinancialV2\AccountingEntity([
+        'id' => (string) Str::uuid(),
+        'code' => 'UI-CHECK',
+        'name' => 'UI Check Entity',
+    ]);
+    $summary = [
+        'totalBalance' => '125730312.00',
+        'asOf' => '2026-08-30',
+        'activity' => ['receipts' => '0.00', 'payments' => '0.00', 'transfers' => '0.00'],
+        'financialAccounts' => collect(),
+        'funds' => collect(),
+        'controls' => ['periodStatus' => 'open', 'unresolvedReconciliations' => 0, 'periodName' => null],
+        'recent' => collect(),
+    ];
+
+    $dashboard = view('masjid.mrj.admin.financial-v2.dashboard', [
+        'entities' => collect([$entity]),
+        'entity' => $entity,
+        'summary' => $summary,
+        'errors' => new \Illuminate\Support\ViewErrorBag,
+    ])->render();
+    $sidebar = view('masjid.mrj.admin.layouts._sidebar')->render();
+
+    expect($dashboard)
+        ->toContain('data-testid="financial-total-balance-card"')
+        ->toContain('Total kas & rekening')
+        ->toContain('Rp125.730.312,00')
+        ->toContain('Per 30')
+        ->toContain('.financial-total-balance-card__amount')
+        ->toContain('color: #ffffff');
+
+    expect($sidebar)
+        ->toContain('admin-sidebar-shell')
+        ->toContain('admin-sidebar-scroll')
+        ->toContain('overflow-y: auto')
+        ->toContain('height: 100dvh')
+        ->toContain('Keuangan V2')
+        ->toContain('Master Keuangan');
+});
+
 test('master account CRUD is audited, can be deactivated, and has no hard-delete endpoint', function () {
     $context = UatFinancialFixture::context();
     $user = User::factory()->create();

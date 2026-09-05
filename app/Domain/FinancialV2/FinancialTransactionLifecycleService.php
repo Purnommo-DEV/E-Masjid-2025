@@ -125,10 +125,17 @@ final class FinancialTransactionLifecycleService
             }
 
             $transaction = $this->createPayment($input, $splits, $actorUserId);
-            $hasFund = $transaction->splits()->where('fund_id', $version->allocation_fund_id)->exists();
-            $hasProgram = ! $version->allocation_program_id || $transaction->splits()->where('program_id', $version->allocation_program_id)->exists();
-            if (! $hasFund || ! $hasProgram) {
-                throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Fund Realization dimensions must match its Budget Allocation.');
+            $allowedFundIds = DB::table('financial_v2_budget_allocation_fundings')
+                ->where('budget_allocation_version_id', $budgetAllocationVersionId)
+                ->lockForUpdate()
+                ->pluck('fund_id');
+            $transactionSplits = $transaction->splits;
+            $usedFundIds = $transactionSplits->pluck('fund_id')->filter()->unique()->values();
+            $hasInvalidFund = $transactionSplits->contains(fn (TransactionSplit $split): bool => ! $split->fund_id || ! $allowedFundIds->contains($split->fund_id));
+            $hasInvalidProgram = $version->allocation_program_id
+                && $transactionSplits->contains(fn (TransactionSplit $split): bool => $split->program_id !== $version->allocation_program_id);
+            if ($allowedFundIds->isEmpty() || $usedFundIds->isEmpty() || $hasInvalidFund || $hasInvalidProgram) {
+                throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Sumber Dana dan Program Realisasi harus sesuai dengan funding Alokasi yang disetujui.');
             }
 
             $realization = FundRealization::create([
@@ -139,7 +146,16 @@ final class FinancialTransactionLifecycleService
                 'created_by_user_id' => $actorUserId,
                 'updated_by_user_id' => $actorUserId,
             ]);
-            $this->auditTrail->record($transaction->accounting_entity_id, 'fund_realization_registered', 'fund_realization', $realization->id, $transaction->correlation_id, $actorUserId, null, ['transaction_id' => $transaction->id, 'budget_allocation_version_id' => $budgetAllocationVersionId]);
+            $this->auditTrail->record($transaction->accounting_entity_id, 'fund_realization_registered', 'fund_realization', $realization->id, $transaction->correlation_id, $actorUserId, null, [
+                'transaction_id' => $transaction->id,
+                'budget_allocation_version_id' => $budgetAllocationVersionId,
+                'fundings' => $transactionSplits->map(fn (TransactionSplit $split): array => [
+                    'fund_id' => $split->fund_id,
+                    'amount' => $split->split_amount,
+                    'note' => $split->purpose_note,
+                    'source_reference' => $split->source_reference,
+                ])->all(),
+            ]);
 
             return $transaction;
         });
@@ -153,6 +169,7 @@ final class FinancialTransactionLifecycleService
             if ($transaction->status !== 'draft') {
                 throw new FinancialDomainException('E-TRANSACTION-STATE', 'Only Draft transactions may be edited.');
             }
+            $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, (string) ($changes['accounting_date'] ?? $transaction->accounting_date->toDateString()), $transaction->type?->code);
             $allowed = ['source_reference', 'business_date', 'accounting_date', 'description', 'currency_code', 'gross_amount', 'primary_financial_account_id', 'counterparty_id', 'category_id', 'reason_code_id', 'related_transaction_id', 'idempotency_key', 'policy_version_ref'];
             $changes = array_intersect_key($changes, array_flip($allowed));
@@ -172,6 +189,7 @@ final class FinancialTransactionLifecycleService
             if ($transaction->status !== 'draft') {
                 throw new FinancialDomainException('E-TRANSACTION-STATE', 'Only Draft transaction splits may be replaced.');
             }
+            $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
             $before = $transaction->splits()->orderBy('line_no')->get()->map(fn (TransactionSplit $split) => $this->splitSummary($split))->all();
             $transaction->splits()->get()->each->delete();
@@ -200,6 +218,7 @@ final class FinancialTransactionLifecycleService
             if ($transaction->status !== 'verified') {
                 throw new FinancialDomainException('E-TRANSACTION-STATE', 'Only Verified transactions may be approved.');
             }
+            $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
             $required = ApprovalRequirement::query()
                 ->where('accounting_entity_id', $transaction->accounting_entity_id)
@@ -253,6 +272,7 @@ final class FinancialTransactionLifecycleService
     public function post(string $transactionId, string $idempotencyKey, string $fingerprint, ?int $actorUserId = null): PostingResult
     {
         $transaction = FinancialTransaction::query()->findOrFail($transactionId);
+        $this->assertRealizationParentApproved($transaction);
         $this->auditTrail->record($transaction->accounting_entity_id, 'posting_requested', 'transaction', $transaction->id, $transaction->correlation_id, $actorUserId, ['status' => $transaction->status], ['idempotency_key' => $idempotencyKey]);
 
         return app(PostingEngine::class)->post($transaction->id, $idempotencyKey, $fingerprint, $actorUserId);
@@ -265,6 +285,7 @@ final class FinancialTransactionLifecycleService
             if ($transaction->status !== $from) {
                 throw new FinancialDomainException('E-TRANSACTION-STATE', "Transaction must be {$from} before it can be {$to}.");
             }
+            $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
             if ($to === 'submitted') {
                 $this->assertSubmittable($transaction);
@@ -306,6 +327,87 @@ final class FinancialTransactionLifecycleService
         $this->auditTrail->record($transaction->accounting_entity_id, $eventType, 'transaction', $transaction->id, $transaction->correlation_id, $actorUserId, $before, ['status' => $status]);
 
         return $transaction->fresh();
+    }
+
+    /**
+     * Cancels every non-posted realization below allocation versions as one
+     * governed lifecycle action. This is intentionally not a financial
+     * correction and therefore never invokes PostingEngine.
+     *
+     * @param  iterable<string>  $budgetAllocationVersionIds
+     */
+    public function cancelRealizationDraftsForAllocation(iterable $budgetAllocationVersionIds, string $reason, ?int $actorUserId = null): int
+    {
+        if (blank($reason)) {
+            throw new FinancialDomainException('E-TRANSACTION-REASON', 'Alasan pembatalan realisasi wajib diisi.');
+        }
+
+        return $this->transactions->run(function () use ($budgetAllocationVersionIds, $reason, $actorUserId): int {
+            $realizations = FundRealization::query()
+                ->whereIn('budget_allocation_version_id', collect($budgetAllocationVersionIds)->filter()->values())
+                ->where('status', 'draft')
+                ->lockForUpdate()
+                ->get();
+            $cancelled = 0;
+
+            foreach ($realizations as $realization) {
+                $transaction = FinancialTransaction::query()->lockForUpdate()->findOrFail($realization->transaction_id);
+                if (! in_array($transaction->status, RealizationDraftReadService::ACTIVE_TRANSACTION_STATUSES, true)) {
+                    continue;
+                }
+
+                $beforeStatus = $transaction->status;
+                FinancialTransactionStateGuard::withinLifecycle(fn () => $transaction->update([
+                    'status' => 'cancelled',
+                    'updated_by_user_id' => $actorUserId,
+                ]));
+                $realization->update(['status' => 'cancelled', 'updated_by_user_id' => $actorUserId]);
+                $this->auditTrail->record(
+                    $transaction->accounting_entity_id,
+                    'transaction_cancelled_by_allocation',
+                    'transaction',
+                    $transaction->id,
+                    $transaction->correlation_id,
+                    $actorUserId,
+                    ['status' => $beforeStatus],
+                    ['status' => 'cancelled', 'reason' => $reason, 'budget_allocation_version_id' => $realization->budget_allocation_version_id],
+                );
+                $this->auditTrail->record(
+                    $transaction->accounting_entity_id,
+                    'fund_realization_cancelled_by_allocation',
+                    'fund_realization',
+                    $realization->id,
+                    $transaction->correlation_id,
+                    $actorUserId,
+                    ['status' => 'draft'],
+                    ['status' => 'cancelled', 'reason' => $reason],
+                );
+                $cancelled++;
+            }
+
+            return $cancelled;
+        });
+    }
+
+    private function assertRealizationParentApproved(FinancialTransaction $transaction): void
+    {
+        // Repeated posting requests for an already-posted realization are
+        // handled idempotently by PostingEngine. Do not reinterpret that
+        // immutable recorded fact as an active child workflow.
+        if (in_array($transaction->status, ['posted', 'reversed'], true)) {
+            return;
+        }
+
+        $parent = DB::table('financial_v2_fund_realizations as realization')
+            ->join('financial_v2_budget_allocation_versions as version', 'version.id', '=', 'realization.budget_allocation_version_id')
+            ->join('financial_v2_budget_allocations as allocation', 'allocation.id', '=', 'version.budget_allocation_id')
+            ->where('realization.transaction_id', $transaction->id)
+            ->select('realization.status as realization_status', 'version.status as version_status', 'allocation.status as allocation_status')
+            ->first();
+
+        if ($parent && ($parent->realization_status !== 'draft' || $parent->version_status !== 'approved' || $parent->allocation_status !== 'approved')) {
+            throw new FinancialDomainException('E-REALIZATION-PARENT-CANCELLED', 'Realisasi tidak dapat diproses karena alokasi induknya sudah tidak aktif.');
+        }
     }
 
     /** @param array<string, mixed> $input @param array<int, array<string, mixed>> $splits */
@@ -399,6 +501,7 @@ final class FinancialTransactionLifecycleService
                 'counterparty_id' => $split['counterparty_id'] ?? null,
                 'category_id' => $split['category_id'] ?? null,
                 'purpose_note' => $split['purpose_note'] ?? null,
+                'source_reference' => $split['source_reference'] ?? null,
                 'created_by_user_id' => $actorUserId,
                 'updated_by_user_id' => $actorUserId,
             ]);
@@ -456,6 +559,6 @@ final class FinancialTransactionLifecycleService
     /** @return array<string, mixed> */
     private function splitSummary(TransactionSplit $split): array
     {
-        return $split->only(['line_no', 'split_amount', 'account_id', 'fund_id', 'financial_account_id', 'program_id', 'cost_center_id', 'counterparty_id', 'category_id']);
+        return $split->only(['line_no', 'split_amount', 'account_id', 'fund_id', 'financial_account_id', 'program_id', 'cost_center_id', 'counterparty_id', 'category_id', 'purpose_note', 'source_reference']);
     }
 }

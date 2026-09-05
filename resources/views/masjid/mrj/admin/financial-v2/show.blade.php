@@ -10,11 +10,13 @@
             'posted' => 'Dicatat resmi', 'reversed' => 'Dibalik', 'rejected' => 'Ditolak', 'cancelled' => 'Dibatalkan',
         ][$transaction->status] ?? ucfirst($transaction->status);
         $fund = $transaction->splits->first()?->fund;
+        $fundingSplits = $transaction->splits->groupBy('fund_id')->map(fn ($items) => ['fund' => $items->first()?->fund, 'amount' => $items->sum('split_amount'), 'notes' => $items->pluck('purpose_note')->filter()->unique()->values()]);
         $program = $transaction->splits->first()?->program_id ? $options['programs']->firstWhere('id', $transaction->splits->first()->program_id) : null;
         $isRealization = $operation === 'realization';
         $realizationVersion = $transaction->realization?->budgetAllocationVersion;
         $realizationAllocation = $realizationVersion?->allocation;
-        $canEdit = $transaction->status === 'draft' && in_array($operation, ['receipt', 'payment', 'realization'], true);
+        $realizationParentInactive = $isRealization && ($realizationVersion?->status !== 'approved' || $realizationAllocation?->status !== 'approved');
+        $canEdit = ! $realizationParentInactive && $transaction->status === 'draft' && in_array($operation, ['receipt', 'payment', 'realization'], true);
         $financialAccountLabel = match ($operation) {
             'receipt' => 'Masuk ke',
             'payment', 'realization' => 'Dibayar dari',
@@ -27,7 +29,9 @@
         <span @class(['badge badge-lg', 'badge-success' => $transaction->status === 'posted', 'badge-warning' => in_array($transaction->status, ['draft', 'submitted', 'verified']), 'badge-error' => in_array($transaction->status, ['reversed', 'rejected', 'cancelled'])])>{{ $statusLabel }}</span>
     </div>
 
-    @if ($transaction->status === 'posted')
+    @if ($realizationParentInactive)
+        <div class="alert mb-5 border border-error/25 bg-error/10 text-error-content"><span>Transaksi ini tidak dapat dicatat karena Alokasi induknya telah dibatalkan atau versi Alokasinya sudah tidak aktif. Draft disimpan hanya untuk audit dan seluruh bukti tetap dipertahankan.</span></div>
+    @elseif ($transaction->status === 'posted')
         <div class="alert mb-5 border border-emerald-200 bg-emerald-50 text-emerald-950"><span>Transaksi sudah dicatat secara resmi. Data keuangannya tidak dapat diubah langsung; bila diperlukan gunakan koreksi/reversal sesuai kewenangan pada tahap berikutnya.</span></div>
     @elseif (in_array($transaction->status, ['submitted', 'verified']))
         <div class="alert mb-5 border border-amber-200 bg-amber-50 text-amber-950"><span>Transaksi sedang melalui pemeriksaan atau persetujuan yang dikonfigurasi. Pencatatan resmi hanya dapat dilakukan setelah seluruh syarat terpenuhi.</span></div>
@@ -42,12 +46,12 @@
             <h2 class="font-bold">Ringkasan</h2>
             <dl class="mt-4 grid gap-4 sm:grid-cols-2">
                 <div><dt class="text-xs text-base-content/55">{{ $financialAccountLabel }}</dt><dd class="mt-1 font-semibold">{{ $transaction->primaryFinancialAccount?->name ?? '—' }}</dd>@if($operation === 'interfund' && $transaction->primaryFinancialAccount)<p class="mt-1 text-xs text-base-content/55">Menjelaskan atribusi lokasi likuiditas; saldo kas/rekening tidak dipindahkan.</p>@endif</div>
-                <div><dt class="text-xs text-base-content/55">Dana</dt><dd class="mt-1 font-semibold">{{ $fund?->name ?? ($transaction->interfundTransfer ? 'Pindah dana' : '—') }}</dd></div>
+                <div><dt class="text-xs text-base-content/55">Dana</dt><dd class="mt-1 space-y-1 font-semibold">@forelse($fundingSplits as $funding)<span class="block">{{ $funding['fund']?->name ?? 'Dana' }}{{ $fundingSplits->count() > 1 ? ' · '.$rupiah($funding['amount']) : '' }}</span>@empty{{ $transaction->interfundTransfer ? 'Pindah dana' : '—' }}@endforelse</dd></div>
                 @if ($transaction->category)<div><dt class="text-xs text-base-content/55">Kategori</dt><dd class="mt-1 font-semibold">{{ $transaction->category->name }}</dd></div>@endif
                 @if ($program)<div><dt class="text-xs text-base-content/55">Program</dt><dd class="mt-1 font-semibold">{{ $program->name }}</dd></div>@endif
                 @if ($transaction->counterparty)<div><dt class="text-xs text-base-content/55">{{ $operation === 'receipt' ? 'Sumber' : 'Penerima' }}</dt><dd class="mt-1 font-semibold">{{ $transaction->counterparty->display_name }}</dd></div>@endif
                 @if ($isRealization && $realizationAllocation)
-                    <div><dt class="text-xs text-base-content/55">Alokasi</dt><dd class="mt-1 font-semibold">{{ $realizationAllocation->allocation_reference }}</dd><p class="mt-1 text-xs text-base-content/55">{{ $realizationAllocation->fund?->name ?? 'Dana' }}{{ $realizationAllocation->program ? ' · '.$realizationAllocation->program->name : '' }}</p></div>
+                    <div><dt class="text-xs text-base-content/55">Alokasi</dt><dd class="mt-1 font-semibold">{{ $realizationAllocation->allocation_reference }}</dd><p class="mt-1 text-xs text-base-content/55">{{ $realizationVersion?->fundings?->pluck('fund.name')->filter()->join(' + ') ?: ($realizationAllocation->fund?->name ?? 'Dana') }}{{ $realizationAllocation->program ? ' · '.$realizationAllocation->program->name : '' }}</p></div>
                     <div><dt class="text-xs text-base-content/55">Posisi alokasi</dt><dd class="mt-1 font-semibold">Total {{ $rupiah($realizationAvailability['allocated'] ?? 0) }}</dd><p class="mt-1 text-xs text-base-content/55">Sudah direalisasikan {{ $rupiah($realizationAvailability['actual'] ?? 0) }} · Sisa {{ $rupiah($realizationAvailability['available'] ?? 0) }}</p></div>
                 @endif
                 @if ($transaction->treasuryTransfer)
@@ -62,24 +66,24 @@
                 @endif
             </dl>
             <div class="mt-5 border-t border-base-300 pt-5"><p class="text-xs text-base-content/55">Keterangan</p><p class="mt-1 whitespace-pre-line text-sm leading-6">{{ $transaction->description ?: 'Tidak ada keterangan tambahan.' }}</p></div>
-            <div class="mt-5 border-t border-base-300 pt-5"><div class="flex items-center justify-between"><h3 class="font-semibold">Bukti/lampiran</h3><span class="text-xs text-base-content/55">{{ $attachments->count() }} file</span></div><div class="mt-3 space-y-2">@forelse($attachments as $attachment)<div class="flex items-center justify-between gap-3 rounded-xl bg-base-200 px-3 py-3 text-sm"><span class="min-w-0 truncate"><span class="font-medium">{{ $attachment->original_filename }}</span><span class="mt-1 block text-xs text-base-content/55">{{ strtoupper($attachment->evidence_type) }} · {{ number_format($attachment->byte_size / 1024, 1, ',', '.') }} KB · {{ \Carbon\Carbon::parse($attachment->linked_at)->format('d/m/Y') }}</span></span><span class="flex shrink-0 gap-2"><a class="link text-emerald-700" target="_blank" href="{{ route('financial-v2.attachments.view', ['attachment' => $attachment->attachment_id]) }}">Lihat</a><a class="link text-emerald-700" href="{{ route('financial-v2.attachments.download', ['attachment' => $attachment->attachment_id]) }}">Unduh</a></span></div>@empty<p class="rounded-xl bg-base-200 p-3 text-sm text-base-content/65">Belum ada bukti terlampir.</p>@endforelse</div></div>
+                <div class="mt-5 border-t border-base-300 pt-5"><div class="flex items-center justify-between"><h3 class="font-semibold">Bukti/lampiran</h3><span class="text-xs text-base-content/55">{{ $attachments->count() }} file</span></div><div class="mt-3 space-y-2">@forelse($attachments as $attachment)<div class="flex flex-col gap-3 rounded-xl bg-base-200 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span class="min-w-0 truncate"><span class="font-medium">{{ $attachment->original_filename }}</span><span class="mt-1 block text-xs text-base-content/55">{{ strtoupper($attachment->evidence_type) }} · {{ strtoupper(str_replace(['image/', 'application/'], '', $attachment->media_type)) }} · {{ number_format($attachment->byte_size / 1024, 1, ',', '.') }} KB · {{ \Carbon\Carbon::parse($attachment->linked_at)->format('d/m/Y') }}</span></span><span class="flex shrink-0 flex-wrap items-center gap-2"><a class="link text-emerald-700" target="_blank" href="{{ route('financial-v2.attachments.view', ['attachment' => $attachment->attachment_id]) }}">Lihat</a><a class="link text-emerald-700" href="{{ route('financial-v2.attachments.download', ['attachment' => $attachment->attachment_id]) }}">Unduh</a>@if($transaction->status === 'draft' && ! $realizationParentInactive)<form method="POST" action="{{ route('financial-v2.attachments.remove', ['attachmentLink' => $attachment->link_id]) }}" data-financial-ajax class="flex items-center gap-1">@csrf<input name="reason" class="input input-bordered input-xs w-32" placeholder="Alasan lepas" required><button class="btn btn-ghost btn-xs text-error">Lepas</button></form>@endif</span></div>@empty<p class="rounded-xl bg-base-200 p-3 text-sm text-base-content/65">Belum ada bukti terlampir.</p>@endforelse</div></div>
         </section>
 
         <aside class="space-y-4">
             <div class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300"><p class="text-xs text-base-content/55">Nomor bukti</p><p class="mt-1 break-all font-mono text-sm font-semibold">{{ $voucher?->voucher_number ?? 'Akan diterbitkan saat Posted' }}</p><p class="mt-3 text-xs text-base-content/55">Status</p><p class="mt-1 text-sm font-semibold">{{ $statusLabel }}</p></div>
             @if ($canEdit)<a class="btn btn-outline w-full" href="{{ route('financial-v2.transactions.edit', $transaction) }}">Ubah draft</a>@endif
-            @if ($isRealization && $transaction->status === 'draft')
+            @if (! $realizationParentInactive && $isRealization && $transaction->status === 'draft')
                 <form method="POST" action="{{ route('financial-v2.realizations.submit', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Ajukan Realisasi</button></form>
-            @elseif ($isRealization && $transaction->status === 'submitted')
+            @elseif (! $realizationParentInactive && $isRealization && $transaction->status === 'submitted')
                 <form method="POST" action="{{ route('financial-v2.realizations.verify', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Verifikasi Realisasi</button></form>
-            @elseif ($isRealization && $transaction->status === 'verified')
+            @elseif (! $realizationParentInactive && $isRealization && $transaction->status === 'verified')
                 <form method="POST" action="{{ route('financial-v2.realizations.approve', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Setujui Realisasi</button></form>
-            @elseif ($isRealization && $transaction->status === 'approved')
+            @elseif (! $realizationParentInactive && $isRealization && $transaction->status === 'approved')
                 <form method="POST" action="{{ route('financial-v2.transactions.post', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Catat Resmi</button></form>
-            @elseif (! $isRealization && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
+            @elseif (! $realizationParentInactive && ! $isRealization && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
                 <form method="POST" action="{{ route('financial-v2.transactions.post', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Catat resmi</button></form>
             @endif
-            @if (in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
+            @if (! $realizationParentInactive && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
                 <form method="POST" action="{{ route('financial-v2.transactions.cancel', $transaction) }}" data-financial-ajax class="rounded-2xl border border-base-300 p-3">@csrf<label class="form-control"><span class="label-text text-xs">Alasan pembatalan</span><input name="reason" class="input input-bordered input-sm" placeholder="Wajib diisi" required></label><button class="btn btn-ghost btn-sm mt-2 w-full text-error">Batalkan draft</button></form>
             @endif
         </aside>

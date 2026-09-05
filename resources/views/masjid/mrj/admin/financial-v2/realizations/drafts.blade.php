@@ -42,7 +42,8 @@
                     <article class="p-4 sm:p-6">
                         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                             <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2"><p class="font-semibold">{{ $allocation?->fund?->name ?? $transaction->splits->first()?->fund?->name ?? 'Dana' }}{{ $allocation?->program ? ' · '.$allocation->program->name : '' }}</p><span class="badge badge-outline">{{ $statusLabel[$transaction->status] ?? ucfirst($transaction->status) }}</span></div>
+                                <div class="flex flex-wrap items-center gap-2"><p class="font-semibold">{{ $transaction->splits->pluck('fund.name')->filter()->unique()->join(' + ') ?: ($allocation?->fund?->name ?? 'Dana') }}{{ $allocation?->program ? ' · '.$allocation->program->name : '' }}</p><span class="badge badge-outline">{{ $statusLabel[$transaction->status] ?? ucfirst($transaction->status) }}</span></div>
+                                <p class="mt-2 text-xs text-base-content/55">{{ $transaction->splits->map(fn($split) => ($split->fund?->name ?? 'Dana').' '.$rupiah($split->split_amount))->join(' + ') }}</p>
                                 <p class="mt-1 text-sm text-base-content/65">{{ $allocation?->reason ?? $transaction->description ?? 'Realisasi Dana' }}</p>
                                 <p class="mt-2 text-xs text-base-content/55">{{ $transaction->source_reference }} · {{ $transaction->accounting_date->translatedFormat('d M Y') }} · diubah {{ $transaction->updated_at->translatedFormat('d M Y H:i') }}</p>
                             </div>

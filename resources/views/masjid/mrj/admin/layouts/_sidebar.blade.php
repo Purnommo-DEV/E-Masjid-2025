@@ -62,14 +62,14 @@
     }"
     id="admin-sidebar"
     x-bind:class="sidebarOpen ? '!translate-x-0 shadow-2xl' : ''"
-    class="fixed inset-y-0 left-0 z-50 w-[min(80vw,20rem)] max-w-[20rem] -translate-x-full transform transition-transform duration-300 ease-in-out lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-2xl"
+    class="admin-sidebar-shell fixed inset-y-0 left-0 z-50 w-[min(80vw,20rem)] max-w-[20rem] -translate-x-full transform overflow-hidden transition-transform duration-300 ease-in-out lg:w-64 lg:max-w-none lg:translate-x-0 lg:shadow-2xl"
     aria-label="Sidebar"
 >
     <!-- Konten Sidebar -->
-    <div class="h-dvh max-h-dvh overflow-y-auto overscroll-contain sidebar-wrap rounded-r-2xl shadow-2xl flex flex-col relative">
+    <div class="sidebar-wrap relative flex h-full min-h-0 flex-col overflow-hidden rounded-r-2xl shadow-2xl">
         
         <!-- HEADER -->
-        <div class="flex items-center justify-between px-6 py-5 border-b" style="background: linear-gradient(180deg,#07332e,#0f4d45);">
+        <div class="shrink-0 flex items-center justify-between px-6 py-5 border-b" style="background: linear-gradient(180deg,#07332e,#0f4d45);">
             <div class="flex items-center gap-3">
                 <img src="{{ asset('vendor/material-ui/img/logo-ct.png') }}" alt="logo" class="h-10 w-10 rounded-full object-cover ring-1 ring-white/10 shadow-sm">
                 <div>
@@ -85,7 +85,7 @@
         </div>
 
         <!-- PRAYER TIMES -->
-        <div class="px-4 py-3 border-b bg-[rgba(255,255,255,0.02)]">
+        <div class="shrink-0 px-4 py-3 border-b bg-[rgba(255,255,255,0.02)]">
             <div class="flex items-center justify-between text-xs text-emerald-100/80 mb-2">
                 <span>Waktu Sholat</span>
                 <a href="#" class="text-emerald-200 text-xs">refresh</a>
@@ -99,7 +99,7 @@
         </div>
 
         <!-- NAV ITEMS -->
-        <nav class="px-3 py-4 flex-1" @click="if ($event.target.closest('a') && window.innerWidth < 1024) sidebarOpen = false">
+        <nav class="admin-sidebar-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4" @click="if ($event.target.closest('a') && window.innerWidth < 1024) sidebarOpen = false">
             <ul class="space-y-2">
                 @php
                     $menuItems = [
@@ -488,7 +488,7 @@
         </nav>
 
         <!-- LOGOUT -->
-        <div class="px-6 py-5 border-t mt-auto">
+        <div class="shrink-0 px-6 py-5 border-t">
             <form action="{{ route('logout') }}" method="POST">
                 @csrf
                 <button type="submit"
@@ -502,7 +502,7 @@
         </div>
 
         <!-- FOOTER -->
-        <div class="px-4 py-3 text-xs text-emerald-200/70 border-t">
+        <div class="shrink-0 px-4 py-3 text-xs text-emerald-200/70 border-t">
             © {{ date('Y') }} E-Masjid — Sistem Informasi Masjid
         </div>
     </div>
@@ -511,6 +511,25 @@
         .sidebar-wrap {
             background: linear-gradient(180deg,#0b3b37,#0f4d45);
             color: #fff;
+            height: 100vh;
+            height: 100dvh;
+        }
+        .admin-sidebar-shell {
+            overflow: hidden;
+        }
+        .admin-sidebar-scroll {
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-gutter: stable;
+        }
+        .admin-sidebar-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .admin-sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(209, 250, 229, 0.26);
+            border-radius: 999px;
         }
         @media (max-width: 1023px) {
             aside[aria-label="Sidebar"] { width: 80vw; max-width: 320px; }

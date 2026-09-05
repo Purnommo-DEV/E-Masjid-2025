@@ -751,7 +751,7 @@ final class PostingEngine
         if ($transaction->type?->code !== TransactionTypeCode::Payment->value || $transaction->realization->status !== 'draft' || ! $transaction->realization->budget_allocation_version_id) {
             throw new FinancialPostingException('E-REALIZATION-STATE', 'Fund Realization must be a draft link to a Payment and approved Budget Allocation Version.');
         }
-        $version = BudgetAllocationVersion::query()->with('allocation')->lockForUpdate()->find($transaction->realization->budget_allocation_version_id);
+        $version = BudgetAllocationVersion::query()->with(['allocation', 'fundings'])->lockForUpdate()->find($transaction->realization->budget_allocation_version_id);
         if (! $version || ! $version->allocation || $version->status !== 'approved' || $version->allocation->status !== 'approved'
             || $version->accounting_entity_id !== $transaction->accounting_entity_id
             || $version->effective_from->gt($transaction->accounting_date)
@@ -772,6 +772,35 @@ final class PostingEngine
             ->pluck('gross_amount'));
         if (DecimalAmount::compare(DecimalAmount::add($actual, $transaction->gross_amount), $version->allocated_amount) > 0) {
             throw new FinancialPostingException('E-BUDGET-INSUFFICIENT', 'Fund Realization exceeds the approved available Budget Allocation.');
+        }
+
+        $allocatedByFund = $version->fundings->mapWithKeys(fn ($funding): array => [
+            $funding->fund_id => DecimalAmount::normalize($funding->amount),
+        ]);
+        $proposedByFund = $transaction->splits
+            ->groupBy('fund_id')
+            ->map(fn ($splits): string => DecimalAmount::sum($splits->pluck('split_amount')));
+        if ($allocatedByFund->isEmpty() || $proposedByFund->keys()->contains(null) || $proposedByFund->keys()->diff($allocatedByFund->keys())->isNotEmpty()) {
+            throw new FinancialPostingException('E-REALIZATION-FUNDING', 'Fund Realization contains a funding source outside its approved Budget Allocation.');
+        }
+
+        $actualByFund = DB::table('financial_v2_fund_realizations as realization')
+            ->join('financial_v2_transactions as source_transaction', 'source_transaction.id', '=', 'realization.transaction_id')
+            ->join('financial_v2_transaction_splits as source_split', 'source_split.transaction_id', '=', 'source_transaction.id')
+            ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'source_transaction.id')
+            ->where('realization.budget_allocation_version_id', $version->id)
+            ->where('realization.status', 'recorded')
+            ->where('journal.journal_status', 'posted')
+            ->groupBy('source_split.fund_id')
+            ->lockForUpdate()
+            ->select('source_split.fund_id', DB::raw('SUM(source_split.split_amount) as actual'))
+            ->pluck('actual', 'source_split.fund_id');
+
+        foreach ($proposedByFund as $fundId => $proposed) {
+            $used = DecimalAmount::normalize($actualByFund->get($fundId, '0.00'));
+            if (DecimalAmount::compare(DecimalAmount::add($used, $proposed), $allocatedByFund->get($fundId)) > 0) {
+                throw new FinancialPostingException('E-BUDGET-FUND-INSUFFICIENT', 'Realisasi melebihi sisa alokasi untuk salah satu Sumber Dana.');
+            }
         }
     }
 

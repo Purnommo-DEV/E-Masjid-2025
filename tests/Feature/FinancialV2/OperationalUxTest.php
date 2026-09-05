@@ -7,6 +7,7 @@ use App\Models\FinancialV2\AccountGroup;
 use App\Models\FinancialV2\AccountingCalendar;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
+use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\BankAccountDetail;
@@ -141,6 +142,83 @@ test('operational receipt UX is idempotent, retains evidence, and posts through 
         ->and(JournalLine::where('accounting_entity_id', $context['entity']->id)->count())->toBe(2)
         ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(2)
         ->and(FinancialTransaction::findOrFail($transactionId)->status)->toBe('posted');
+});
+
+test('draft realization accepts multiple evidence files, converts images to readable WebP, and preserves PDF and source metadata', function () {
+    Storage::fake('local');
+    $context = uxOperationalContext();
+    $user = User::factory()->create();
+    $budget = app(BudgetAllocationService::class);
+    $allocation = $budget->create([
+        'accounting_entity_id' => $context['entity']->id,
+        'accounting_period_id' => $context['period']->id,
+        'fund_id' => $context['fund']->id,
+        'program_id' => $context['program']->id,
+        'account_id' => $context['expense']->id,
+        'category_id' => $context['paymentCategory']->id,
+        'allocation_reference' => 'WEBP-'.Str::uuid(),
+        'idempotency_key' => 'webp-allocation-'.Str::uuid(),
+        'allocated_amount' => '20.00',
+        'effective_from' => $context['today'],
+        'reason' => 'Uji lampiran realisasi majemuk',
+    ]);
+    $budget->submit($allocation->id);
+    $version = $budget->approveVersion($allocation->id, $allocation->versions->sole()->id);
+
+    $response = $this->actingAs($user)->post(route('financial-v2.transactions.store', 'realization'), [
+        'entity' => $context['entity']->id,
+        'submission_key' => (string) Str::uuid(),
+        'date' => $context['today'],
+        'amount' => '20.00',
+        'budget_allocation_version_id' => $version->id,
+        'counterparty_name' => 'Penerima Sembako',
+        'financial_account_id' => $context['sourceFinancialAccount']->id,
+        'category_id' => $context['paymentCategory']->id,
+        'funding_sources' => [['fund_id' => $context['fund']->id, 'amount' => '20.00']],
+        'attachments' => [
+            UploadedFile::fake()->image('nota-besar.jpg', 2500, 1250),
+            UploadedFile::fake()->image('daftar-penerima.png', 800, 1200),
+            UploadedFile::fake()->createWithContent('persetujuan.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
+        ],
+        'attachment_types' => ['invoice', 'other', 'approval'],
+    ], ['Accept' => 'application/json']);
+    $response->assertOk();
+
+    $transactionId = $response->json('transaction_id');
+    $links = AttachmentLink::query()->where('target_type', 'transaction')->where('target_id', $transactionId)->where('status', 'active')->get();
+    $attachments = Attachment::query()->whereIn('id', $links->pluck('attachment_id'))->get()->keyBy('original_filename');
+    $jpeg = $attachments->get('nota-besar.jpg');
+    $png = $attachments->get('daftar-penerima.png');
+    $pdf = $attachments->get('persetujuan.pdf');
+
+    expect($links)->toHaveCount(3)
+        ->and($jpeg?->media_type)->toBe('image/webp')
+        ->and($jpeg?->source_media_type)->toBe('image/jpeg')
+        ->and($jpeg?->image_width)->toBe(2400)
+        ->and($jpeg?->image_height)->toBe(1200)
+        ->and($png?->media_type)->toBe('image/webp')
+        ->and($png?->source_media_type)->toBe('image/png')
+        ->and($png?->image_width)->toBe(800)
+        ->and($png?->image_height)->toBe(1200)
+        ->and($pdf?->media_type)->toBe('application/pdf')
+        ->and($pdf?->source_media_type)->toBe('application/pdf')
+        ->and($pdf?->byte_size)->toBe($pdf?->source_byte_size)
+        ->and($links->pluck('evidence_type')->sort()->values()->all())->toBe(['approval', 'invoice', 'other'])
+        ->and(Journal::where('transaction_id', $transactionId)->count())->toBe(0)
+        ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0);
+
+    foreach ($attachments as $attachment) {
+        Storage::disk('local')->assertExists($attachment->storage_reference);
+        $this->actingAs($user)->get(route('financial-v2.attachments.view', $attachment))->assertOk();
+    }
+
+    $removedLink = $links->firstWhere('evidence_type', 'other');
+    $this->actingAs($user)->postJson(route('financial-v2.attachments.remove', $removedLink->id), [
+        'reason' => 'Daftar penerima akan diganti sebelum diajukan.',
+    ])->assertOk();
+    expect($removedLink->fresh()->status)->toBe('removed_with_audit')
+        ->and(Attachment::whereKey($removedLink->attachment_id)->exists())->toBeTrue()
+        ->and(AuditEvent::where('event_type', 'attachment_removed_from_draft')->where('target_id', $removedLink->id)->count())->toBe(1);
 });
 
 test('financial control UX is isolated and soft close is performed only through the closing control endpoint', function () {
@@ -280,7 +358,7 @@ test('allocation UX completes its governed lifecycle before a realization posts 
         'entity' => $context['entity']->id, 'submission_key' => (string) Str::uuid(), 'date' => $context['today'], 'amount' => '20.00',
         'budget_allocation_version_id' => $version->id, 'counterparty_name' => 'Penerima Santunan Uji',
         'financial_account_id' => $context['sourceFinancialAccount']->id, 'category_id' => $context['paymentCategory']->id,
-        'description' => 'Realisasi biaya utilitas', 'attachment' => UploadedFile::fake()->create('bukti-realisasi.pdf', 32, 'application/pdf'),
+        'description' => 'Realisasi biaya utilitas', 'attachment' => UploadedFile::fake()->createWithContent('bukti-realisasi.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
     ], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('ok', true);
     $this->actingAs($user)->postJson(route('financial-v2.transactions.post', $realization->json('transaction_id')))
         ->assertStatus(422)
@@ -364,7 +442,7 @@ test('an allocation reopens its one active realization draft without creating fa
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'category_id' => $context['paymentCategory']->id,
         'description' => 'Realisasi sedang disiapkan',
-        'attachment' => UploadedFile::fake()->create('bukti-draft.pdf', 32, 'application/pdf'),
+        'attachment' => UploadedFile::fake()->createWithContent('bukti-draft.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
     ];
     $draft = $this->actingAs($user)->post(route('financial-v2.transactions.store', 'realization'), $payload, ['Accept' => 'application/json'])
         ->assertOk()
@@ -421,6 +499,7 @@ test('an allocation reopens its one active realization draft without creating fa
 });
 
 test('an unfixed allocation can be cancelled without financial facts and draft payments are hidden by default', function () {
+    Storage::fake('local');
     $context = uxOperationalContext();
     $user = User::factory()->create();
 
@@ -454,10 +533,12 @@ test('an unfixed allocation can be cancelled without financial facts and draft p
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'category_id' => $context['paymentCategory']->id,
         'description' => 'Pembayaran draft yang belum final',
+        'attachment' => UploadedFile::fake()->createWithContent('bukti-cancelled-draft.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
     ])->assertOk();
     $draftTransaction = FinancialTransaction::findOrFail($draftRealization->json('transaction_id'));
     expect($draftTransaction->status)->toBe('draft')
-        ->and(FundRealization::where('transaction_id', $draftTransaction->id)->value('status'))->toBe('draft');
+        ->and(FundRealization::where('transaction_id', $draftTransaction->id)->value('status'))->toBe('draft')
+        ->and(AttachmentLink::where('target_type', 'transaction')->where('target_id', $draftTransaction->id)->where('status', 'active')->count())->toBe(1);
 
     $reports = app(FinancialReportService::class);
     $fundBefore = collect($reports->report('fund-balance', $context['entity']->id, $context['today'], $context['today'])['data']['rows'])
@@ -485,6 +566,8 @@ test('an unfixed allocation can be cancelled without financial facts and draft p
         ->sole();
     expect($cancelled->status)->toBe('cancelled')
         ->and($cancelled->versions->sole()->status)->toBe('cancelled')
+        ->and($draftTransaction->fresh()->status)->toBe('cancelled')
+        ->and(FundRealization::where('transaction_id', $draftTransaction->id)->value('status'))->toBe('cancelled')
         ->and($cancelled->cancellation_reason)->toBe($reason)
         ->and($cancelled->cancelled_by_user_id)->toBe($user->id)
         ->and($cancelled->cancelledBy?->id)->toBe($user->id)
@@ -512,7 +595,25 @@ test('an unfixed allocation can be cancelled without financial facts and draft p
     $this->actingAs($user)->postJson(route('financial-v2.transactions.post', $draftTransaction))
         ->assertStatus(422)
         ->assertJsonPath('code', 'E-REALIZATION-ALLOCATION');
-    expect($draftTransaction->fresh()->status)->toBe('draft')
+    $this->actingAs($user)->postJson(route('financial-v2.realizations.submit', $draftTransaction))
+        ->assertStatus(422)
+        ->assertJsonPath('code', 'E-REALIZATION-ALLOCATION');
+    $this->actingAs($user)->getJson(route('financial-v2.transactions.edit', $draftTransaction))
+        ->assertStatus(422)
+        ->assertJsonPath('code', 'E-REALIZATION-PARENT-CANCELLED');
+    $this->actingAs($user)->get(route('financial-v2.realizations.drafts', ['entity' => $context['entity']->id]))
+        ->assertOk()
+        ->assertDontSee($draftTransaction->source_reference)
+        ->assertDontSee('Penerima rencana belum final');
+    $this->actingAs($user)->get(route('financial-v2.transactions.show', $draftTransaction))
+        ->assertOk()
+        ->assertSee('Alokasi induknya telah dibatalkan')
+        ->assertSee('bukti-cancelled-draft.pdf')
+        ->assertDontSee('Ajukan Realisasi')
+        ->assertDontSee('Catat Resmi')
+        ->assertDontSee('Batalkan draft');
+    expect($draftTransaction->fresh()->status)->toBe('cancelled')
+        ->and(AttachmentLink::where('target_type', 'transaction')->where('target_id', $draftTransaction->id)->where('status', 'active')->count())->toBe(1)
         ->and([Journal::where('accounting_entity_id', $context['entity']->id)->count(), LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count()])
         ->toBe([$factsBefore['journals'], $factsBefore['ledger']]);
 
@@ -522,7 +623,7 @@ test('an unfixed allocation can be cancelled without financial facts and draft p
         ->assertDontSee($draftTransaction->source_reference);
     $this->actingAs($user)->get(route('financial-v2.transactions.index', ['entity' => $context['entity']->id, 'status' => 'draft']))
         ->assertOk()
-        ->assertSee($draftTransaction->source_reference)
+        ->assertDontSee($draftTransaction->source_reference)
         ->assertDontSee($postedTransaction->source_reference);
     $this->actingAs($user)->get(route('financial-v2.dashboard', ['entity' => $context['entity']->id]))
         ->assertOk()

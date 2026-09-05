@@ -4,6 +4,7 @@ namespace App\Models\FinancialV2;
 
 use DomainException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BudgetAllocationVersion extends FinancialV2Model
 {
@@ -30,5 +31,10 @@ class BudgetAllocationVersion extends FinancialV2Model
     public function allocation(): BelongsTo
     {
         return $this->belongsTo(BudgetAllocation::class, 'budget_allocation_id');
+    }
+
+    public function fundings(): HasMany
+    {
+        return $this->hasMany(BudgetAllocationFunding::class, 'budget_allocation_version_id')->orderBy('line_no');
     }
 }

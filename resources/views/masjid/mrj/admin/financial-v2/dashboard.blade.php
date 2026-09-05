@@ -2,6 +2,33 @@
 
 @section('title', 'Dashboard Keuangan')
 
+@push('styles')
+    <style>
+        /* Self-contained so the primary financial total remains legible even
+           while a browser is refreshing a versioned stylesheet after deploy. */
+        .financial-total-balance-card {
+            background: linear-gradient(135deg, #065f46 0%, #047857 55%, #0f766e 100%);
+            border: 1px solid rgba(236, 253, 245, 0.24);
+            color: #ffffff;
+        }
+
+        .financial-total-balance-card__label {
+            color: #d1fae5;
+            font-weight: 600;
+        }
+
+        .financial-total-balance-card__amount {
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .financial-total-balance-card__period {
+            color: #ecfdf5;
+        }
+    </style>
+@endpush
+
 @section('content')
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -31,10 +58,10 @@
             $statusLabel = fn ($status) => ['posted' => 'Dicatat resmi', 'draft' => 'Draft', 'submitted' => 'Dikirim', 'verified' => 'Dalam pemeriksaan', 'approved' => 'Disetujui', 'rejected' => 'Ditolak', 'cancelled' => 'Dibatalkan', 'reversed' => 'Dibalik'][$status] ?? ucfirst((string) $status);
         @endphp
         <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article class="rounded-2xl bg-emerald-800 p-5 text-white shadow-sm">
-                <p class="text-sm text-emerald-100">Total kas & rekening</p>
-                <p class="mt-2 text-2xl font-bold">{{ $rupiah($summary['totalBalance']) }}</p>
-                <p class="mt-2 text-xs text-emerald-100">Per {{ \Carbon\Carbon::parse($summary['asOf'])->translatedFormat('d F Y') }}</p>
+            <article class="financial-total-balance-card rounded-2xl p-5 shadow-sm" data-testid="financial-total-balance-card">
+                <p class="financial-total-balance-card__label text-sm">Total kas & rekening</p>
+                <p class="financial-total-balance-card__amount mt-2 break-words text-2xl sm:text-3xl">{{ $rupiah($summary['totalBalance']) }}</p>
+                <p class="financial-total-balance-card__period mt-2 text-xs">Per {{ \Carbon\Carbon::parse($summary['asOf'])->translatedFormat('d F Y') }}</p>
             </article>
             <article class="rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
                 <p class="text-sm text-base-content/60">Pemasukan bulan ini</p>

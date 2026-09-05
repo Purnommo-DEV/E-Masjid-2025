@@ -26,11 +26,11 @@ final class AllocationHistoryReadService
                 'fund:id,code,name',
                 'program:id,code,name',
                 'category:id,code,name',
-                'versions',
+                'versions.fundings.fund:id,code,name',
                 'cancelledBy:id,name',
             ])
             ->where('accounting_entity_id', $entityId)
-            ->when($filters['fund_id'] ?? null, fn ($builder, string $fundId) => $builder->where('fund_id', $fundId))
+            ->when($filters['fund_id'] ?? null, fn ($builder, string $fundId) => $builder->whereHas('versions.fundings', fn ($fundings) => $fundings->where('fund_id', $fundId)))
             ->when($filters['program_id'] ?? null, fn ($builder, string $programId) => $builder->where('program_id', $programId))
             ->when($filters['status'] ?? null, fn ($builder, string $status) => $builder->where('status', $status))
             ->when($filters['from'] ?? null, fn ($builder, string $from) => $builder->whereHas('versions', fn ($versions) => $versions->whereDate('effective_from', '>=', $from)))
@@ -49,7 +49,7 @@ final class AllocationHistoryReadService
             ? collect()
             : FundRealization::query()
                 ->select('financial_v2_fund_realizations.*')
-                ->with(['transaction.type', 'transaction.primaryFinancialAccount', 'transaction.category'])
+                ->with(['transaction.type', 'transaction.primaryFinancialAccount', 'transaction.category', 'transaction.splits.fund:id,code,name'])
                 ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'financial_v2_fund_realizations.transaction_id')
                 ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
                 ->where('financial_v2_fund_realizations.accounting_entity_id', $entityId)
@@ -64,12 +64,23 @@ final class AllocationHistoryReadService
             ->map(fn ($items) => DecimalAmount::sum($items->pluck('transaction.gross_amount')));
         $realizationsByVersion = $realizations->groupBy('budget_allocation_version_id');
 
-        $history->setCollection($allocations->map(function (BudgetAllocation $allocation) use ($actualByVersion, $realizationsByVersion): array {
-            $version = $allocation->versions
-                ->sortByDesc('version_no')
-                ->first();
-            $allocated = $version ? DecimalAmount::normalize($version->allocated_amount) : '0.00';
-            $actual = $version ? $actualByVersion->get($version->id, '0.00') : '0.00';
+        $filterFundId = $filters['fund_id'] ?? null;
+        $history->setCollection($allocations->map(function (BudgetAllocation $allocation) use ($actualByVersion, $realizationsByVersion, $filterFundId): array {
+            $versions = $allocation->versions->sortByDesc('version_no');
+            $version = $allocation->status === 'approved'
+                ? $versions->firstWhere('status', 'approved')
+                : $versions->first();
+            $pendingVersion = $allocation->status === 'approved'
+                ? $versions->firstWhere('status', 'draft')
+                : null;
+            $allocated = $version
+                ? DecimalAmount::normalize($filterFundId ? ($version->fundings->firstWhere('fund_id', $filterFundId)?->amount ?? '0.00') : $version->allocated_amount)
+                : '0.00';
+            $actual = ! $version
+                ? '0.00'
+                : ($filterFundId
+                    ? DecimalAmount::sum($realizationsByVersion->get($version->id, collect())->flatMap(fn (FundRealization $realization) => $realization->transaction?->splits?->where('fund_id', $filterFundId)->pluck('split_amount') ?? collect()))
+                    : $actualByVersion->get($version->id, '0.00'));
 
             return [
                 'allocation' => $allocation,
@@ -77,7 +88,9 @@ final class AllocationHistoryReadService
                 'allocated' => $allocated,
                 'realized' => $actual,
                 'remaining' => DecimalAmount::subtract($allocated, $actual),
+                'fundings' => $version?->fundings ?? collect(),
                 'realizations' => $version ? $realizationsByVersion->get($version->id, collect()) : collect(),
+                'pending_version' => $pendingVersion,
             ];
         }));
 
@@ -89,31 +102,47 @@ final class AllocationHistoryReadService
      */
     public function summary(string $entityId, ?string $fundId = null): array
     {
-        $latestVersions = DB::table('financial_v2_budget_allocation_versions')
-            ->select('budget_allocation_id', DB::raw('MAX(version_no) as version_no'))
+        $latestVersions = DB::table('financial_v2_budget_allocation_versions as candidate')
+            ->join('financial_v2_budget_allocations as candidate_allocation', 'candidate_allocation.id', '=', 'candidate.budget_allocation_id')
+            ->where(function ($query): void {
+                $query->where(function ($approved): void {
+                    $approved->where('candidate_allocation.status', 'approved')->where('candidate.status', 'approved');
+                })->orWhere(function ($pending): void {
+                    $pending->whereIn('candidate_allocation.status', ['draft', 'submitted'])->where('candidate.status', 'draft');
+                });
+            })
+            ->select('candidate.budget_allocation_id', DB::raw('MAX(candidate.version_no) as version_no'))
             ->groupBy('budget_allocation_id');
 
-        $allocated = DB::table('financial_v2_budget_allocations as allocation')
+        $allocatedQuery = DB::table('financial_v2_budget_allocations as allocation')
             ->joinSub($latestVersions, 'latest_version', fn ($join) => $join->on('latest_version.budget_allocation_id', '=', 'allocation.id'))
             ->join('financial_v2_budget_allocation_versions as version', function ($join): void {
                 $join->on('version.budget_allocation_id', '=', 'latest_version.budget_allocation_id')
                     ->on('version.version_no', '=', 'latest_version.version_no');
             })
             ->where('allocation.accounting_entity_id', $entityId)
-            ->when($fundId, fn ($query, string $id) => $query->where('allocation.fund_id', $id))
-            ->whereNotIn('allocation.status', ['cancelled', 'superseded'])
-            ->sum('version.allocated_amount');
+            ->whereNotIn('allocation.status', ['cancelled', 'superseded']);
+        if ($fundId) {
+            $allocatedQuery
+                ->join('financial_v2_budget_allocation_fundings as funding', 'funding.budget_allocation_version_id', '=', 'version.id')
+                ->where('funding.fund_id', $fundId);
+        }
+        $allocated = $allocatedQuery->sum($fundId ? 'funding.amount' : 'version.allocated_amount');
 
-        $realized = DB::table('financial_v2_fund_realizations as realization')
+        $realizedQuery = DB::table('financial_v2_fund_realizations as realization')
             ->join('financial_v2_budget_allocation_versions as version', 'version.id', '=', 'realization.budget_allocation_version_id')
             ->join('financial_v2_budget_allocations as allocation', 'allocation.id', '=', 'version.budget_allocation_id')
             ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'realization.transaction_id')
             ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
             ->where('realization.accounting_entity_id', $entityId)
-            ->when($fundId, fn ($query, string $id) => $query->where('allocation.fund_id', $id))
             ->where('realization.status', 'recorded')
-            ->where('journal.journal_status', 'posted')
-            ->sum('transaction.gross_amount');
+            ->where('journal.journal_status', 'posted');
+        if ($fundId) {
+            $realizedQuery
+                ->join('financial_v2_transaction_splits as split', 'split.transaction_id', '=', 'transaction.id')
+                ->where('split.fund_id', $fundId);
+        }
+        $realized = $realizedQuery->sum($fundId ? 'split.split_amount' : 'transaction.gross_amount');
 
         $allocated = DecimalAmount::normalize($allocated);
         $realized = DecimalAmount::normalize($realized);

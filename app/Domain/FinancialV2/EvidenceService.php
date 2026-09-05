@@ -23,9 +23,10 @@ final class EvidenceService
 
     public function __construct(private readonly AuditTrailService $auditTrail) {}
 
-    public function attachToTransaction(string $entityId, string $transactionId, string $originalFilename, string $mediaType, int $byteSize, string $contentHash, string $storageReference, string $evidenceType, ?int $actorUserId = null): AttachmentLink
+    /** @param array{source_media_type?:string,source_byte_size?:int,image_width?:int,image_height?:int} $sourceMetadata */
+    public function attachToTransaction(string $entityId, string $transactionId, string $originalFilename, string $mediaType, int $byteSize, string $contentHash, string $storageReference, string $evidenceType, ?int $actorUserId = null, array $sourceMetadata = []): AttachmentLink
     {
-        return DB::transaction(function () use ($entityId, $transactionId, $originalFilename, $mediaType, $byteSize, $contentHash, $storageReference, $evidenceType, $actorUserId): AttachmentLink {
+        return DB::transaction(function () use ($entityId, $transactionId, $originalFilename, $mediaType, $byteSize, $contentHash, $storageReference, $evidenceType, $actorUserId, $sourceMetadata): AttachmentLink {
             if (! in_array($mediaType, self::ACCEPTED_MEDIA_TYPES, true) || $byteSize <= 0 || ! preg_match('/^[a-f0-9]{64}(?:[a-f0-9]{64})?$/i', $contentHash)) {
                 throw new FinancialDomainException('E-ATTACHMENT-INVALID', 'Evidence must be a supported image/PDF with positive size and SHA-256/SHA-512 hash.');
             }
@@ -39,6 +40,10 @@ final class EvidenceService
                     'original_filename' => $originalFilename,
                     'media_type' => $mediaType,
                     'byte_size' => $byteSize,
+                    'source_media_type' => $sourceMetadata['source_media_type'] ?? $mediaType,
+                    'source_byte_size' => $sourceMetadata['source_byte_size'] ?? $byteSize,
+                    'image_width' => $sourceMetadata['image_width'] ?? null,
+                    'image_height' => $sourceMetadata['image_height'] ?? null,
                     'storage_reference' => $storageReference,
                     'status' => 'active',
                     'received_at' => now(),
@@ -62,6 +67,29 @@ final class EvidenceService
             $this->auditTrail->record($entityId, 'attachment_linked', 'attachment_link', $link->id, $transaction->correlation_id, $actorUserId, null, ['transaction_id' => $transaction->id, 'attachment_id' => $attachment->id, 'evidence_type' => $evidenceType]);
 
             return $link;
+        }, 3);
+    }
+
+    public function removeDraftTransactionEvidence(string $attachmentLinkId, string $reason, ?int $actorUserId = null): AttachmentLink
+    {
+        if (blank($reason)) {
+            throw new FinancialDomainException('E-ATTACHMENT-REASON', 'Alasan melepas lampiran wajib diisi.');
+        }
+
+        return DB::transaction(function () use ($attachmentLinkId, $reason, $actorUserId): AttachmentLink {
+            $link = AttachmentLink::query()->lockForUpdate()->findOrFail($attachmentLinkId);
+            if ($link->target_type !== 'transaction' || $link->status !== 'active') {
+                throw new FinancialDomainException('E-ATTACHMENT-REMOVE', 'Hanya lampiran transaksi aktif yang dapat dilepas.');
+            }
+            $transaction = FinancialTransaction::query()->lockForUpdate()->findOrFail($link->target_id);
+            if ($transaction->status !== 'draft') {
+                throw new FinancialDomainException('E-ATTACHMENT-IMMUTABLE', 'Lampiran transaksi yang sudah diajukan atau dicatat resmi tidak dapat dilepas.');
+            }
+
+            $link->update(['status' => 'removed_with_audit', 'updated_by_user_id' => $actorUserId]);
+            $this->auditTrail->record($link->accounting_entity_id, 'attachment_removed_from_draft', 'attachment_link', $link->id, $transaction->correlation_id, $actorUserId, ['status' => 'active'], ['status' => 'removed_with_audit', 'reason' => trim($reason)]);
+
+            return $link->fresh();
         }, 3);
     }
 

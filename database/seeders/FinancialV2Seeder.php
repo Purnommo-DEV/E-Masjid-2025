@@ -16,13 +16,15 @@ use App\Models\FinancialV2\OpeningBalanceBatch;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
  * Replays the current raudhotu_mrj_db baseline exported by financial-v2:export-seed.
- * Only configuration and source history are raw upserted. Opening balances and
- * posted facts are recreated through OpeningBalanceService, lifecycle, and the
- * canonical PostingEngine. No Journal/JournalLine/Ledger raw writer exists here.
+ * Configuration, source history, and retained non-financial Allocation source
+ * state are replayed directly. Opening balances and posted facts are recreated
+ * through OpeningBalanceService, lifecycle, and the canonical PostingEngine.
+ * No Journal/JournalLine/Ledger raw writer exists here.
  */
 final class FinancialV2Seeder extends Seeder
 {
@@ -426,7 +428,6 @@ final class FinancialV2Seeder extends Seeder
 
     private function allocations(string $entityId): void
     {
-        $service = app(BudgetAllocationService::class);
         foreach ($this->data['operational_allocations'] as $source) {
             $allocationSource = $source['allocation'];
             if (count($source['versions']) !== 1) {
@@ -435,16 +436,36 @@ final class FinancialV2Seeder extends Seeder
             $versionSource = $source['versions'][0];
             $allocation = BudgetAllocation::query()->where('accounting_entity_id', $entityId)->where('allocation_reference', $allocationSource['allocation_reference'])->first();
             if (! $allocation) {
-                $allocation = $service->create([
-                    'accounting_entity_id' => $entityId, 'accounting_period_id' => $allocationSource['accounting_period_id'],
-                    'fund_id' => $allocationSource['fund_id'], 'program_id' => $allocationSource['program_id'],
-                    'account_id' => $allocationSource['account_id'], 'category_id' => $allocationSource['category_id'],
-                    'allocation_reference' => $allocationSource['allocation_reference'], 'idempotency_key' => $allocationSource['idempotency_key'],
-                    'correlation_id' => $allocationSource['correlation_id'], 'allocated_amount' => $versionSource['allocated_amount'],
-                    'effective_from' => $versionSource['effective_from'], 'effective_to' => $versionSource['effective_to'], 'reason' => $allocationSource['reason'],
-                ])->fresh('versions');
-                $service->submit($allocation->id);
-                $service->approveVersion($allocation->id, $allocation->versions->sole()->id);
+                // These are governed source snapshots, including an allocation
+                // whose historical effective date predates the current PAY
+                // policy. They are non-financial operational facts; replaying
+                // them must not reinterpret policy or create Journal/Ledger.
+                // A cancelled source is temporarily restored as approved so
+                // its retained realization records can be linked, then the
+                // governed cancellation is replayed below.
+                $pendingCancellation = $allocationSource['status'] === 'cancelled';
+                DB::table('financial_v2_budget_allocations')->insert(array_replace($this->withoutSourceUsers($allocationSource), $pendingCancellation ? [
+                    'status' => 'approved',
+                    'cancelled_at' => null,
+                    'cancelled_by_user_id' => null,
+                    'cancellation_reason' => null,
+                ] : []));
+                DB::table('financial_v2_budget_allocation_versions')->insert(array_replace($this->withoutSourceUsers($versionSource), $pendingCancellation ? ['status' => 'approved'] : []));
+                DB::table('financial_v2_budget_allocation_fundings')->insert([
+                    'id' => (string) Str::uuid(),
+                    'accounting_entity_id' => $entityId,
+                    'budget_allocation_version_id' => $versionSource['id'],
+                    'fund_id' => $allocationSource['fund_id'],
+                    'line_no' => 1,
+                    'amount' => $versionSource['allocated_amount'],
+                    'note' => 'Backward-compatible governed snapshot funding source.',
+                    'source_reference' => $allocationSource['allocation_reference'],
+                    'created_at' => $versionSource['created_at'],
+                    'updated_at' => $versionSource['updated_at'],
+                    'created_by_user_id' => null,
+                    'updated_by_user_id' => null,
+                ]);
+                $allocation = BudgetAllocation::query()->findOrFail($allocationSource['id']);
                 $this->metrics['created']++;
             } else {
                 $this->metrics['existing']++;
@@ -602,11 +623,7 @@ final class FinancialV2Seeder extends Seeder
         if (! isset($row['id'])) {
             throw new RuntimeException("{$table} snapshot row lacks a stable UUID.");
         }
-        foreach (array_keys($row) as $key) {
-            if (str_ends_with($key, '_by_user_id')) {
-                $row[$key] = null;
-            }
-        }
+        $row = $this->withoutSourceUsers($row);
         $existing = DB::table($table)->where('id', $row['id'])->first();
         if (! $existing) {
             DB::table($table)->insert($row);
@@ -623,6 +640,18 @@ final class FinancialV2Seeder extends Seeder
             }
         }
         $this->metrics['skipped']++;
+    }
+
+    /** @param array<string, mixed> $row */
+    private function withoutSourceUsers(array $row): array
+    {
+        foreach (array_keys($row) as $key) {
+            if (str_ends_with($key, '_by_user_id')) {
+                $row[$key] = null;
+            }
+        }
+
+        return $row;
     }
 
     private function summary(): void
