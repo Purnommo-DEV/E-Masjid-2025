@@ -29,4 +29,9 @@ class AccountingEntity extends FinancialV2Model
     {
         return $this->hasMany(FinancialTransaction::class);
     }
+
+    public function plannings(): HasMany
+    {
+        return $this->hasMany(Planning::class);
+    }
 }

@@ -15,3 +15,12 @@ test('normalizes the MySQL DECIMAL scale without using floats', function () {
         ->and(DecimalAmount::normalize('-0004.5'))->toBe('-4.50')
         ->and(DecimalAmount::equals('7.5', '7.50'))->toBeTrue();
 });
+
+test('formats Indonesian Planning values exactly without converting to floats', function () {
+    expect(DecimalAmount::formatIndonesian('1000'))->toBe('1.000')
+        ->and(DecimalAmount::formatIndonesian('1250000'))->toBe('1.250.000')
+        ->and(DecimalAmount::formatIndonesian('7500000'))->toBe('7.500.000')
+        ->and(DecimalAmount::formatIndonesian('1000000', true))->toBe('Rp1.000.000')
+        ->and(DecimalAmount::formatIndonesian('90071992547409999.50', true))->toBe('Rp90.071.992.547.409.999,50')
+        ->and(DecimalAmount::formatIndonesian('-1500.00', true))->toBe('-Rp1.500');
+});

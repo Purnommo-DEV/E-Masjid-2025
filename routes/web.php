@@ -33,13 +33,17 @@ use App\Http\Controllers\Admin\SlideMotivasiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZakatController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\FinancialV2\DistributionController;
 use App\Http\Controllers\FinancialV2\FinancialControlController;
 use App\Http\Controllers\FinancialV2\FinancialMasterDataController;
 use App\Http\Controllers\FinancialV2\FinancialOpeningBalanceController;
 use App\Http\Controllers\FinancialV2\FinancialReportController;
 use App\Http\Controllers\FinancialV2\HistoricalFundHistoryController;
 use App\Http\Controllers\FinancialV2\OperationalFinancialController;
+use App\Http\Controllers\FinancialV2\PlanningController;
 use App\Http\Controllers\FinancialV2\PublicZiswafReportController;
+use App\Http\Controllers\FinancialV2\PublicZiswafReportingV2Controller;
+use App\Http\Controllers\FinancialV2\ZiswafReportingV2Controller;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
@@ -291,6 +295,11 @@ Route::prefix('laporan-ziswaf')->name('public.ziswaf.')->group(function () {
         ->name('fund');
 });
 
+// ZISWAF Reporting V2 is intentionally independent from the legacy public
+// report above. It is web-only; it has no PDF, export, or writer endpoint.
+Route::get('/laporan-ziswaf-v2', [PublicZiswafReportingV2Controller::class, 'index'])
+    ->name('public.ziswaf-v2.index');
+
 // Laporan program publik ini sengaja statis pada tahap awal. Tidak membaca
 // database atau Financial V2; angka ditampilkan sebagai ringkasan informasi.
 Route::get('/laporan-sembako-107-paket', function () {
@@ -372,6 +381,21 @@ Route::middleware(['auth'])->group(function () {
         // reporting and read only the immutable Posted V2 ledger/journals.
         Route::get('/laporan', [FinancialReportController::class, 'index'])->name('reports.index');
         Route::get('/laporan/data', [FinancialReportController::class, 'data'])->name('reports.data');
+        Route::get('/laporan-ziswaf', [ZiswafReportingV2Controller::class, 'index'])->name('ziswaf-v2.index');
+        Route::get('/laporan-ziswaf/program/{program}', [ZiswafReportingV2Controller::class, 'program'])->name('ziswaf-v2.program');
+        Route::get('/penerima', [DistributionController::class, 'beneficiaries'])->name('beneficiaries.index');
+        Route::post('/penerima', [DistributionController::class, 'saveBeneficiary'])->name('beneficiaries.store');
+        Route::delete('/penerima', [DistributionController::class, 'destroyBeneficiaries'])->name('beneficiaries.destroy-bulk');
+        Route::get('/penerima/{beneficiary}', [DistributionController::class, 'beneficiary'])->name('beneficiaries.show');
+        Route::patch('/penerima/{beneficiary}', [DistributionController::class, 'saveBeneficiary'])->name('beneficiaries.update');
+        Route::get('/penyaluran', [DistributionController::class, 'index'])->name('distributions.index');
+        Route::post('/penyaluran', [DistributionController::class, 'store'])->name('distributions.store');
+        Route::get('/penyaluran/{distribution}', [DistributionController::class, 'show'])->name('distributions.show');
+        Route::delete('/penyaluran/{distribution}', [DistributionController::class, 'destroy'])->name('distributions.destroy');
+        Route::post('/penyaluran/{distribution}/penerima', [DistributionController::class, 'item'])->name('distributions.items.store');
+        Route::patch('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.update');
+        Route::delete('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.destroy');
+        Route::post('/penyaluran/{distribution}/finalize', [DistributionController::class, 'finalize'])->name('distributions.finalize');
         Route::get('/kontrol', [FinancialControlController::class, 'index'])->name('controls.index');
         Route::post('/kontrol/periode/{period}/tutup', [FinancialControlController::class, 'close'])->name('controls.close');
         Route::post('/kontrol/rekonsiliasi', [FinancialControlController::class, 'storeReconciliation'])->name('controls.reconciliations.store');
@@ -393,6 +417,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dana/{fund}/riwayat-sumber/{history}/edit', [HistoricalFundHistoryController::class, 'edit'])->name('funds.history.edit');
         Route::put('/dana/{fund}/riwayat-sumber/{history}', [HistoricalFundHistoryController::class, 'update'])->name('funds.history.update');
         Route::get('/dana/{fund}', [OperationalFinancialController::class, 'fundDetail'])->name('funds.show');
+        Route::get('/perencanaan', [PlanningController::class, 'index'])->name('plannings.index');
+        Route::get('/perencanaan/baru', [PlanningController::class, 'create'])->name('plannings.create');
+        Route::post('/perencanaan', [PlanningController::class, 'store'])->name('plannings.store');
+        Route::post('/perencanaan/pratinjau', [PlanningController::class, 'preview'])->name('plannings.preview');
+        Route::get('/perencanaan/{planning}', [PlanningController::class, 'show'])->name('plannings.show');
+        Route::get('/perencanaan/{planning}/ubah', [PlanningController::class, 'edit'])->name('plannings.edit');
+        Route::put('/perencanaan/{planning}', [PlanningController::class, 'update'])->name('plannings.update');
+        Route::post('/perencanaan/{planning}/setujui', [PlanningController::class, 'approve'])->name('plannings.approve');
+        Route::post('/perencanaan/{planning}/batalkan', [PlanningController::class, 'cancel'])->name('plannings.cancel');
+        Route::post('/perencanaan/{planning}/konversi', [PlanningController::class, 'convert'])->name('plannings.convert');
         // Governed V2 master data stays separate from legacy financial menus.
         // These routes create configuration and audit events only; they never
         // create Journal, JournalLine, Ledger, opening balance, or legacy facts.

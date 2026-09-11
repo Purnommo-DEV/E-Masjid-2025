@@ -6,6 +6,9 @@ use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\BudgetAllocation;
+use App\Models\FinancialV2\Counterparty;
+use App\Models\FinancialV2\Distribution;
+use App\Models\FinancialV2\DistributionItem;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\HistoricalFundHistory;
@@ -13,6 +16,7 @@ use App\Models\FinancialV2\Journal;
 use App\Models\FinancialV2\JournalLine;
 use App\Models\FinancialV2\LedgerEntry;
 use App\Models\FinancialV2\OpeningBalanceBatch;
+use App\Models\FinancialV2\Program;
 use Illuminate\Support\Facades\Storage;
 
 /** @return array{0:string,1:string} */
@@ -42,6 +46,22 @@ test('actual MRJ ZISWAF opening onboarding is source-reconciled, canonical, and 
         'timezone' => 'Asia/Jakarta',
         'fiscal_year_start_month' => 1,
         'status' => 'active',
+    ]);
+    $sampleProgram = Program::query()->create([
+        'accounting_entity_id' => $sample->id, 'code' => 'SAMPLE-DIST', 'name' => 'Sample distribution program',
+        'start_date' => '2026-01-01', 'end_date' => '2026-12-31', 'status' => 'active',
+    ]);
+    $sampleRecipient = Counterparty::query()->create([
+        'accounting_entity_id' => $sample->id, 'code' => 'SAMPLE-BEN', 'party_type' => 'beneficiary',
+        'display_name' => 'Sample recipient', 'status' => 'active',
+    ]);
+    $sampleDistribution = Distribution::query()->create([
+        'accounting_entity_id' => $sample->id, 'program_id' => $sampleProgram->id, 'title' => 'Sample distribution',
+        'period_label' => 'January 2026', 'starts_on' => '2026-01-01', 'ends_on' => '2026-01-31', 'status' => 'draft',
+    ]);
+    $sampleDistributionItem = DistributionItem::query()->create([
+        'distribution_id' => $sampleDistribution->id, 'beneficiary_id' => $sampleRecipient->id,
+        'amount' => '1.00', 'identity_snapshot' => ['display_name' => 'Sample recipient'],
     ]);
 
     $this->artisan('financial-v2:onboard-mrj-ziswaf', [
@@ -150,7 +170,8 @@ test('actual MRJ ZISWAF opening onboarding is source-reconciled, canonical, and 
         LedgerEntry::where('accounting_entity_id', $entity->id)->count(),
         FinancialTransaction::where('accounting_entity_id', $entity->id)->count(),
     ])->toBe($factsBeforeReplay)
-        ->and(AccountingEntity::find($sample->id))->toBeNull();
+        ->and(AccountingEntity::find($sample->id))->toBeNull()
+        ->and(DistributionItem::find($sampleDistributionItem->id))->toBeNull();
 
     $this->artisan('financial-v2:onboard-mrj-ziswaf', [
         'source' => $source,

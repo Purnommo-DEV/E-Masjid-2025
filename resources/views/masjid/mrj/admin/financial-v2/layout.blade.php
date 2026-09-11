@@ -29,33 +29,85 @@
                     <a class="btn btn-primary btn-sm" href="{{ route('financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $entityId]) }}">+ Catat</a>
                 </div>
             </div>
-            <nav class="-mx-4 flex gap-1 overflow-x-auto px-4 pb-3 text-xs font-medium sm:mx-0 sm:px-0">
-                @php
-                    $nav = [
-                        ['financial-v2.dashboard', 'Dashboard', route('financial-v2.dashboard', ['entity' => $entityId])],
-                        ['financial-v2.transactions.create', 'Penerimaan', route('financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $entityId]), 'receipt'],
-                        ['financial-v2.transactions.create', 'Pengeluaran', route('financial-v2.transactions.create', ['operation' => 'payment', 'entity' => $entityId]), 'payment'],
-                        ['financial-v2.transactions.create', 'Transfer', route('financial-v2.transactions.create', ['operation' => 'transfer', 'entity' => $entityId]), 'transfer'],
-                        ['financial-v2.funds.index', 'Dana', route('financial-v2.funds.index', ['entity' => $entityId])],
-                        ['financial-v2.allocations.create', 'Alokasi Dana', route('financial-v2.allocations.create', ['entity' => $entityId])],
-                        ['financial-v2.realizations.drafts', 'Draft Realisasi', route('financial-v2.realizations.drafts', ['entity' => $entityId])],
-                        ['financial-v2.transactions.index', 'Riwayat Transaksi', route('financial-v2.transactions.index', ['entity' => $entityId])],
-                        ['financial-v2.reports.index', 'Laporan', route('financial-v2.reports.index', ['entity' => $entityId])],
-                        ['financial-v2.controls.index', 'Kontrol', route('financial-v2.controls.index', ['entity' => $entityId])],
-                    ];
-                @endphp
-                @foreach ($nav as $item)
-                    @php
-                        [$routeName, $label, $url] = $item;
-                        $operation = $item[3] ?? null;
-                        $isActive = request()->routeIs($routeName) && ($operation === null || request()->route('operation') === $operation);
-                    @endphp
-                    <a href="{{ $url }}" @class([
-                        'whitespace-nowrap rounded-full px-3 py-2 transition',
-                        'bg-emerald-100 text-emerald-900' => $isActive,
-                        'text-base-content/70 hover:bg-base-300' => ! $isActive,
-                    ])>{{ $label }}</a>
+            @php
+                $isTransactionCreate = request()->routeIs('financial-v2.transactions.create');
+                $transactionOperation = request()->route('operation');
+                $navGroups = [
+                    [
+                        'key' => 'finance',
+                        'label' => 'Keuangan',
+                        'items' => [
+                            ['key' => 'receipt', 'label' => 'Penerimaan', 'url' => route('financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $entityId]), 'active' => $isTransactionCreate && $transactionOperation === 'receipt'],
+                            ['key' => 'payment', 'label' => 'Pengeluaran', 'url' => route('financial-v2.transactions.create', ['operation' => 'payment', 'entity' => $entityId]), 'active' => $isTransactionCreate && $transactionOperation === 'payment'],
+                            ['key' => 'transfer', 'label' => 'Transfer', 'url' => route('financial-v2.transactions.create', ['operation' => 'transfer', 'entity' => $entityId]), 'active' => $isTransactionCreate && in_array($transactionOperation, ['transfer', 'interfund'], true)],
+                            ['key' => 'funds', 'label' => 'Dana', 'url' => route('financial-v2.funds.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.funds.*')],
+                            ['key' => 'allocations', 'label' => 'Alokasi Dana', 'url' => route('financial-v2.allocations.create', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.allocations.*')],
+                            ['key' => 'realization', 'label' => 'Draft Realisasi', 'url' => route('financial-v2.realizations.drafts', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.realizations.*') || ($isTransactionCreate && $transactionOperation === 'realization')],
+                            ['key' => 'history', 'label' => 'Riwayat Transaksi', 'url' => route('financial-v2.transactions.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.transactions.index', 'financial-v2.transactions.show', 'financial-v2.transactions.edit')],
+                        ],
+                    ],
+                    [
+                        'key' => 'ziswaf',
+                        'label' => 'ZISWAF',
+                        'items' => [
+                            ['key' => 'distributions', 'label' => 'Penyaluran ZISWAF', 'url' => route('financial-v2.distributions.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.distributions.*'), 'visible' => auth()->user()?->can('view penyaluran ziswaf')],
+                            ['key' => 'beneficiaries', 'label' => 'Penerima ZISWAF', 'url' => route('financial-v2.beneficiaries.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.beneficiaries.*'), 'visible' => auth()->user()?->can('view penerima ziswaf')],
+                            ['key' => 'planning', 'label' => 'Perencanaan', 'url' => route('financial-v2.plannings.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.plannings.*'), 'visible' => auth()->user()?->can('financial-v2.planning.view')],
+                        ],
+                    ],
+                    [
+                        'key' => 'reports',
+                        'label' => 'Laporan',
+                        'align' => 'end',
+                        'items' => [
+                            ['key' => 'financial-report', 'label' => 'Laporan Keuangan', 'url' => route('financial-v2.reports.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.reports.*')],
+                            ['key' => 'ziswaf-report', 'label' => 'Laporan ZISWAF V2', 'url' => route('financial-v2.ziswaf-v2.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.ziswaf-v2.*')],
+                        ],
+                    ],
+                ];
+
+                foreach ($navGroups as &$navGroup) {
+                    $navGroup['items'] = array_values(array_filter(
+                        $navGroup['items'],
+                        fn (array $item): bool => $item['visible'] ?? true,
+                    ));
+                    $navGroup['active'] = collect($navGroup['items'])->contains('active', true);
+                }
+                unset($navGroup);
+            @endphp
+            <nav aria-label="Navigasi Financial V2" class="-mx-4 flex flex-wrap items-center gap-2 px-4 pb-3 text-sm font-medium sm:mx-0 sm:px-0" data-financial-nav>
+                @foreach ($navGroups as $navGroup)
+                    @continue(empty($navGroup['items']))
+                    <details @class(['dropdown group', 'dropdown-end' => ($navGroup['align'] ?? 'start') === 'end']) data-nav-group="{{ $navGroup['key'] }}" data-active="{{ $navGroup['active'] ? 'true' : 'false' }}">
+                        <summary id="financial-v2-nav-{{ $navGroup['key'] }}-trigger" aria-controls="financial-v2-nav-{{ $navGroup['key'] }}-menu" aria-expanded="false" aria-haspopup="menu" data-nav-trigger @class([
+                            'btn btn-ghost btn-sm list-none whitespace-nowrap rounded-full font-semibold [&::-webkit-details-marker]:hidden',
+                            'bg-emerald-100 text-emerald-900 hover:bg-emerald-200' => $navGroup['active'],
+                            'text-base-content/75 hover:bg-base-300' => ! $navGroup['active'],
+                        ])>
+                            {{ $navGroup['label'] }}
+                            <svg class="h-3.5 w-3.5 transition-transform group-open:rotate-180" aria-hidden="true" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clip-rule="evenodd" />
+                            </svg>
+                        </summary>
+                        <ul id="financial-v2-nav-{{ $navGroup['key'] }}-menu" aria-labelledby="financial-v2-nav-{{ $navGroup['key'] }}-trigger" class="menu dropdown-content z-40 mt-2 w-60 max-w-[calc(100vw-2rem)] rounded-box border border-base-300 bg-base-100 p-2 text-sm shadow-xl" data-nav-menu>
+                            @foreach ($navGroup['items'] as $navItem)
+                                <li>
+                                    <a href="{{ $navItem['url'] }}" data-nav-item="{{ $navItem['key'] }}" data-active="{{ $navItem['active'] ? 'true' : 'false' }}" @if ($navItem['active']) aria-current="page" @endif @class([
+                                        'min-h-10 rounded-xl px-3 py-2.5',
+                                        'bg-emerald-100 font-semibold text-emerald-900' => $navItem['active'],
+                                        'text-base-content/75 hover:bg-base-200' => ! $navItem['active'],
+                                    ])>{{ $navItem['label'] }}</a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </details>
                 @endforeach
+                @php $controlActive = request()->routeIs('financial-v2.controls.*'); @endphp
+                <a href="{{ route('financial-v2.controls.index', ['entity' => $entityId]) }}" data-nav-item="controls" data-active="{{ $controlActive ? 'true' : 'false' }}" @if ($controlActive) aria-current="page" @endif @class([
+                    'btn btn-ghost btn-sm whitespace-nowrap rounded-full font-semibold',
+                    'bg-emerald-100 text-emerald-900 hover:bg-emerald-200' => $controlActive,
+                    'text-base-content/75 hover:bg-base-300' => ! $controlActive,
+                ])>Kontrol</a>
             </nav>
         </div>
     </header>
@@ -75,6 +127,44 @@
 
     <script>
         (() => {
+            const navigation = document.querySelector('[data-financial-nav]');
+            if (navigation) {
+                const dropdowns = [...navigation.querySelectorAll('[data-nav-group]')];
+                let openDropdown = null;
+
+                const applyOpenDropdown = (nextDropdown) => {
+                    openDropdown = nextDropdown;
+                    dropdowns.forEach((dropdown) => {
+                        const isOpen = dropdown === openDropdown;
+                        dropdown.open = isOpen;
+                        dropdown.querySelector('[data-nav-trigger]')?.setAttribute('aria-expanded', String(isOpen));
+                    });
+                };
+
+                dropdowns.forEach((dropdown) => {
+                    dropdown.querySelector('[data-nav-trigger]')?.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        applyOpenDropdown(openDropdown === dropdown ? null : dropdown);
+                    });
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (openDropdown && ! navigation.contains(event.target)) {
+                        applyOpenDropdown(null);
+                    }
+                });
+
+                document.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Escape' || ! openDropdown) return;
+                    const trigger = openDropdown.querySelector('[data-nav-trigger]');
+                    applyOpenDropdown(null);
+                    trigger?.focus();
+                    event.preventDefault();
+                });
+
+                applyOpenDropdown(null);
+            }
+
             const message = document.getElementById('financial-ajax-message');
             const showMessage = (text, tone = 'error') => {
                 message.className = `alert ${tone === 'success' ? 'alert-success' : 'alert-error'} mb-5 text-sm`;
@@ -166,10 +256,12 @@
 
                 return hasDecimal ? `${grouped},${fraction}` : grouped;
             };
-            document.querySelectorAll('[data-money-field]').forEach((field) => {
+            const bindMoneyField = (field) => {
+                if (field.dataset.moneyBound === 'true') return;
                 const input = field.querySelector('[data-money-input]');
                 const value = field.querySelector('[data-money-value]');
                 if (!input || !value) return;
+                field.dataset.moneyBound = 'true';
                 const sync = (raw, notify = true, canonicalInput = false) => {
                     if (!String(raw || '').trim()) {
                         value.value = '';
@@ -185,7 +277,13 @@
                 sync(value.value, false, true);
                 input.addEventListener('input', () => sync(input.value));
                 input.closest('form')?.addEventListener('submit', () => sync(input.value, false));
-            });
+            };
+            const bindMoneyFields = (root = document) => {
+                if (root.matches?.('[data-money-field]')) bindMoneyField(root);
+                root.querySelectorAll?.('[data-money-field]').forEach(bindMoneyField);
+            };
+            window.FinancialV2Money = Object.freeze({ bind: bindMoneyFields });
+            bindMoneyFields();
             document.querySelectorAll('[data-realization-allocation]').forEach((select) => {
                 const form = select.closest('form');
                 const amount = form?.querySelector('input[name="amount"]');

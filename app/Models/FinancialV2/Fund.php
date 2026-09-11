@@ -25,4 +25,9 @@ class Fund extends FinancialV2Model
     {
         return $this->hasMany(FundPolicyVersion::class);
     }
+
+    public function planningFundings(): HasMany
+    {
+        return $this->hasMany(PlanningFunding::class);
+    }
 }

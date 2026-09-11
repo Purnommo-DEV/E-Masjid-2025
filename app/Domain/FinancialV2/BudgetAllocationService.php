@@ -34,6 +34,9 @@ final class BudgetAllocationService
                     throw new FinancialDomainException('E-BUDGET-MASTER-SCOPE', 'Budget Allocation dimensions must be in the same AccountingEntity.');
                 }
             }
+            if (! empty($input['planning_id']) && ! DB::table('financial_v2_plannings')->where('id', $input['planning_id'])->where('accounting_entity_id', $entityId)->where('status', 'approved')->exists()) {
+                throw new FinancialDomainException('E-BUDGET-MASTER-SCOPE', 'Planning must be Approved and in the same AccountingEntity as its Allocation.');
+            }
             $amount = DecimalAmount::normalize($input['allocated_amount']);
             if (DecimalAmount::compare($amount, '0.00') <= 0) {
                 throw new FinancialDomainException('E-BUDGET-AMOUNT', 'Budget Allocation amount must be positive.');
@@ -49,6 +52,7 @@ final class BudgetAllocationService
             );
             $allocation = BudgetAllocation::create([
                 'accounting_entity_id' => $entityId,
+                'planning_id' => $input['planning_id'] ?? null,
                 'accounting_period_id' => $input['accounting_period_id'],
                 // Retained as the primary/legacy Fund pointer. The complete
                 // source-of-funding truth belongs to version funding lines.

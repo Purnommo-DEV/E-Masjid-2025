@@ -104,6 +104,106 @@ final class FinancialReportService
     }
 
     /**
+     * Posted payment usage by Program and Fund.
+     *
+     * This is a deliberately narrow, read-only extension of the canonical
+     * report query.  It is useful to presentation layers that need to show a
+     * Program's multiple funding sources without treating an Allocation as an
+     * expense.  Each value is derived from the posted expense ledger line, so
+     * reversals remain represented by their ledger effect.
+     *
+     * @param  array<int, string>|null  $fundIds
+     * @return array<int, array{program_id:string,program_code:string,program_name:string,fund_id:string,fund_code:string,fund_name:string,actual_expense:string}>
+     */
+    public function programExpenseFunding(string $entityId, string $fromAccountingDate, string $throughAccountingDate, ?array $fundIds = null, ?string $programId = null): array
+    {
+        if ($fromAccountingDate > $throughAccountingDate) {
+            throw new InvalidArgumentException('The report start date must not be after the through date.');
+        }
+
+        $cashOutTypes = $this->definitions->cashOutTypes();
+        $effectiveType = $this->effectiveTypeSql();
+        $fundIds = array_values(array_unique(array_filter($fundIds ?? [], 'is_string')));
+
+        $query = $this->postedLedger->ledger($entityId, $throughAccountingDate)
+            ->join('financial_v2_accounts as account', 'account.id', '=', 'ledger.account_id')
+            ->join('financial_v2_programs as program', 'program.id', '=', 'ledger.program_id')
+            ->join('financial_v2_funds as fund', 'fund.id', '=', 'ledger.fund_id')
+            ->where('ledger.accounting_date', '>=', $fromAccountingDate)
+            ->where('account.account_class', 'expense')
+            ->whereRaw($effectiveType.' IN ('.$this->placeholders($cashOutTypes).')', $cashOutTypes)
+            ->select([
+                'program.id as program_id', 'program.code as program_code', 'program.name as program_name',
+                'fund.id as fund_id', 'fund.code as fund_code', 'fund.name as fund_name',
+            ])
+            ->selectRaw('COALESCE(SUM(ledger.signed_amount), 0) as actual_expense')
+            ->groupBy('program.id', 'program.code', 'program.name', 'fund.id', 'fund.code', 'fund.name')
+            ->orderBy('program.code')
+            ->orderBy('fund.code');
+
+        if ($fundIds !== []) {
+            $query->whereIn('ledger.fund_id', $fundIds);
+        }
+        if ($programId) {
+            $query->where('ledger.program_id', $programId);
+        }
+
+        return $query->get()->map(fn (object $row): array => [
+            'program_id' => $row->program_id,
+            'program_code' => $row->program_code,
+            'program_name' => $row->program_name,
+            'fund_id' => $row->fund_id,
+            'fund_code' => $row->fund_code,
+            'fund_name' => $row->fund_name,
+            'actual_expense' => $this->amount($row->actual_expense),
+        ])->all();
+    }
+
+    /**
+     * Posted payment usage without a Program, grouped by Fund.
+     *
+     * This must be queried by the ledger line's program identity. It is not a
+     * residual of a selected Program report: expenses of another Program must
+     * never be presented as non-Program expenses.
+     *
+     * @param  array<int, string>|null  $fundIds
+     * @return array<int, array{fund_id:string,fund_code:string,fund_name:string,actual_expense:string}>
+     */
+    public function nonProgramExpenseByFund(string $entityId, string $fromAccountingDate, string $throughAccountingDate, ?array $fundIds = null): array
+    {
+        if ($fromAccountingDate > $throughAccountingDate) {
+            throw new InvalidArgumentException('The report start date must not be after the through date.');
+        }
+
+        $cashOutTypes = $this->definitions->cashOutTypes();
+        $effectiveType = $this->effectiveTypeSql();
+        $fundIds = array_values(array_unique(array_filter($fundIds ?? [], 'is_string')));
+
+        $query = $this->postedLedger->ledger($entityId, $throughAccountingDate)
+            ->join('financial_v2_accounts as account', 'account.id', '=', 'ledger.account_id')
+            ->join('financial_v2_funds as fund', 'fund.id', '=', 'ledger.fund_id')
+            ->where('ledger.accounting_date', '>=', $fromAccountingDate)
+            ->where('account.account_class', 'expense')
+            ->whereNull('ledger.program_id')
+            ->whereRaw($effectiveType.' IN ('.$this->placeholders($cashOutTypes).')', $cashOutTypes)
+            ->select(['fund.id as fund_id', 'fund.code as fund_code', 'fund.name as fund_name'])
+            ->selectRaw('COALESCE(SUM(ledger.signed_amount), 0) as actual_expense')
+            ->groupBy('fund.id', 'fund.code', 'fund.name')
+            ->orderBy('fund.code');
+
+        if ($fundIds !== []) {
+            $query->whereIn('ledger.fund_id', $fundIds);
+        }
+
+        return $query->get()->map(fn (object $row): array => [
+            'fund_id' => $row->fund_id,
+            'fund_code' => $row->fund_code,
+            'fund_name' => $row->fund_name,
+            'actual_expense' => $this->amount($row->actual_expense),
+        ])->all();
+    }
+
+    /**
      * Read-only, unpaginated Fund movement feed for a small governed
      * disclosure scope. It deliberately reuses the same Posted Ledger
      * contribution formula as the Fund Balance and Fund Movement reports;

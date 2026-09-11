@@ -22,6 +22,11 @@ class BudgetAllocation extends FinancialV2Model
         return $this->belongsTo(AccountingPeriod::class, 'accounting_period_id');
     }
 
+    public function planning(): BelongsTo
+    {
+        return $this->belongsTo(Planning::class);
+    }
+
     public function fund(): BelongsTo
     {
         return $this->belongsTo(Fund::class);

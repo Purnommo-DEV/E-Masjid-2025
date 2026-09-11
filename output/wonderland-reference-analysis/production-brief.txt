@@ -1,0 +1,303 @@
+Gunakan file audio MP3 yang saya lampirkan sebagai MASTER REFERENCE UTAMA.
+
+Tugas utama:
+
+Buat ulang musik instrumental baru dengan karakter, atmosfer, perkembangan energi, struktur, durasi, tempo, instrumentasi, dan tingkat emosional yang sangat dekat dengan audio referensi, tetapi dengan kualitas produksi yang jauh lebih profesional, bersih, luas, detail, dan sinematik.
+
+JANGAN hanya melakukan konversi MP3 ke WAV.
+JANGAN hanya menaikkan volume.
+JANGAN sekadar menambahkan equalizer atau limiter pada file lama.
+
+Lakukan rekonstruksi atau regenerasi musik secara menyeluruh berdasarkan karakter referensi.
+
+TARGET MUSIK
+
+Genre:
+Cinematic inspirational orchestral, emotional corporate cinematic, uplifting dramatic underscore.
+
+Durasi:
+Pertahankan sekitar 60–62 detik.
+
+Tempo:
+Sekitar 117 BPM. Pertahankan sensasi tempo dan ritme yang sama dengan referensi.
+
+Tanpa vokal.
+Tanpa lirik.
+Tanpa spoken word.
+Tanpa suara manusia.
+Tanpa efek suara lingkungan.
+
+KARAKTER UTAMA
+
+Musik harus terasa:
+
+* Inspiratif
+* Emosional
+* Elegan
+* Megah
+* Optimistis
+* Dramatis tetapi tidak agresif
+* Cocok untuk video profil, opening acara, dokumentasi, cinematic montage, dan presentasi institusi
+
+Pertahankan perjalanan emosional referensi:
+
+1. INTRO — 0:00–0:12
+
+Mulai dengan sangat lembut, luas, atmosferik, dan emosional.
+
+Gunakan:
+
+* Soft cinematic piano atau piano accents yang sangat halus
+* Warm ambient orchestral pad
+* Airy string texture
+* Delicate high-frequency shimmer
+* Subtle reverse swells
+* Long natural reverb tails
+
+Intro harus memiliki banyak ruang dan kedalaman.
+
+Jangan langsung menggunakan drum besar.
+Jangan terlalu ramai.
+Jangan menghasilkan intro yang kosong atau membosankan.
+
+2. EARLY BUILD — 0:12–0:24
+
+Tambahkan perkembangan secara bertahap:
+
+* Low strings yang hangat
+* Violin dan viola legato
+* Cello layer
+* Subtle rhythmic pulse
+* Soft cinematic percussion
+* Gentle orchestral riser
+
+Energi mulai meningkat, tetapi masih terkendali dan elegan.
+
+Transisi harus halus tanpa potongan kasar atau perubahan volume mendadak.
+
+3. MAIN DEVELOPMENT — 0:24–0:42
+
+Masukkan tema utama dengan nuansa heroik dan inspiratif.
+
+Gunakan:
+
+* Wide orchestral strings
+* Rhythmic string ostinato
+* Emotional violin melody
+* Supporting cello movement
+* Deep cinematic bass
+* Powerful but controlled orchestral percussion
+* Taiko-style drums yang lembut dan tidak berlebihan
+* Warm brass support yang halus
+* Piano tetap menjadi lapisan pendukung
+
+Melodi harus terasa jelas, memorable, emosional, dan dekat dengan karakter referensi.
+
+Jangan membuat melodi terdengar acak.
+Jangan membuat aransemen terlalu rumit.
+Jangan mengubahnya menjadi trailer action yang agresif.
+
+4. CLIMAX — 0:42–0:56
+
+Bangun menuju klimaks terbesar.
+
+Gunakan:
+
+* Full cinematic string ensemble
+* High soaring violins
+* Warm cinematic brass
+* Deep orchestral drums
+* Controlled cymbal swells
+* Subtle choir-like pad tanpa suara manusia yang jelas
+* Wide bass foundation
+* Additional upper harmonics untuk memberi sensasi megah
+
+Klimaks harus:
+
+* Besar dan emosional
+* Lebar secara stereo
+* Tetap bersih
+* Tidak pecah
+* Tidak terlalu keras
+* Tidak kehilangan detail instrumen
+
+Hindari distorsi, clipping, harsh brass, dan perkusi yang menutupi string.
+
+5. ENDING — 0:56–1:01
+
+Akhiri musik dengan resolusi yang elegan dan memuaskan.
+
+Gunakan:
+
+* Final sustained orchestral chord
+* Soft cinematic impact
+* Natural decay
+* Smooth long reverb tail
+
+Ending jangan terpotong mendadak.
+Tidak boleh ada suara klik.
+Tidak boleh ada noise digital.
+Tidak boleh fade-out terlalu panjang.
+
+INSTRUMENTASI
+
+Prioritaskan instrumen berikut:
+
+* Cinematic grand piano
+* First violins
+* Second violins
+* Violas
+* Cellos
+* Double bass
+* Warm orchestral brass
+* French horn-style cinematic layer
+* Soft taiko or orchestral drums
+* Low cinematic percussion
+* Cymbal swells
+* Subtle impacts
+* Ambient orchestral pads
+* Soft pulses
+* Delicate shimmer textures
+
+Semua instrumen harus terdengar realistis, mahal, organik, dan memiliki artikulasi natural.
+
+Hindari:
+
+* String sintetis murahan
+* Piano tipis
+* Brass kasar
+* Drum EDM
+* Trap drums
+* Rock drums
+* Electronic dance beat
+* Synth lead
+* Arpeggiator elektronik dominan
+* Dubstep bass
+* Distorted percussion
+* Chipmunk artifacts
+* Metallic AI artifacts
+
+KUALITAS PRODUKSI
+
+Hasil akhir harus memiliki:
+
+* High-fidelity audio
+* Clean transients
+* Natural orchestral dynamics
+* Deep but controlled low end
+* Detailed midrange
+* Smooth high frequencies
+* Wide stereo image
+* Strong center image
+* Clear instrument separation
+* Realistic depth
+* Professional cinematic mastering
+* No audible compression pumping
+* No clipping
+* No digital crackle
+* No hiss
+* No hum
+* No sudden volume spike
+* No phase problems
+* No muddy low-mid frequencies
+* No harsh frequencies
+* No excessive reverb
+
+Jangan membuat semua instrumen sama kerasnya.
+
+Pertahankan dinamika alami:
+intro lembut, build bertahap, klimaks besar, kemudian resolusi yang halus.
+
+MIXING TARGET
+
+* Piano tetap jelas tetapi tidak terlalu depan
+* Violin utama berada di depan saat tema masuk
+* Cello dan viola memberikan kehangatan
+* Low strings dan bass terasa kokoh tetapi tidak boomy
+* Brass menjadi pendukung, bukan mendominasi
+* Perkusi kuat tetapi tidak menutupi melodi
+* Reverb lebar tetapi center tetap fokus
+* Hindari penumpukan frekuensi pada 200–500 Hz
+* Kendalikan harshness sekitar upper-mid dan high frequencies
+* Low end harus tetap bersih dan mono-compatible
+* Tidak ada instrumen yang terdengar menempel secara tidak natural
+
+MASTERING TARGET
+
+Buat mastering profesional untuk penggunaan video dan media digital.
+
+Target:
+
+* Integrated loudness sekitar -14 hingga -12 LUFS
+* True peak maksimal -1 dBTP
+* Tidak ada clipping
+* Tidak menggunakan limiter secara berlebihan
+* Dynamic range tetap terasa
+* Klimaks terdengar besar karena aransemen dan dinamika, bukan hanya karena volume
+
+OUTPUT
+
+Buat beberapa hasil berikut:
+
+1. MASTER WAV
+
+   * WAV
+   * 48 kHz
+   * 24-bit
+   * Stereo
+
+2. MASTER MP3
+
+   * MP3
+   * 320 kbps
+   * Stereo
+   * 48 kHz apabila didukung
+
+3. PREVIEW COMPARISON
+
+   * Gabungkan bagian pendek audio referensi dan hasil baru secara bergantian untuk perbandingan karakter, kejernihan, dinamika, dan kedalaman.
+
+4. ANALYSIS REPORT
+   Jelaskan:
+
+   * Durasi hasil
+   * Tempo/BPM
+   * Struktur musik
+   * Instrumen yang digunakan
+   * Perubahan yang dilakukan
+   * Nilai integrated LUFS
+   * True peak
+   * Sample rate
+   * Bit depth
+   * Apakah terdapat clipping atau tidak
+
+PROSEDUR KERJA
+
+1. Analisis file referensi terlebih dahulu.
+2. Deteksi tempo, durasi, struktur, bagian build-up, klimaks, dan ending.
+3. Identifikasi karakter melodi, harmoni, dinamika, serta instrumentasi.
+4. Buat ulang komposisinya dengan kualitas instrumen dan mixing yang lebih baik.
+5. Dengarkan dan evaluasi seluruh hasil.
+6. Periksa adanya clipping, noise, volume spike, transisi kasar, dan artefak AI.
+7. Perbaiki bagian yang bermasalah.
+8. Lakukan mastering profesional.
+9. Ekspor seluruh output ke folder `output`.
+10. Jangan menyatakan selesai sebelum file WAV dan MP3 berhasil dibuat dan dapat diputar.
+
+PRIORITAS UTAMA
+
+Prioritas pertama adalah mempertahankan nuansa, struktur energi, tempo, dan identitas emosional musik referensi.
+
+Prioritas kedua adalah meningkatkan:
+
+* Realisme instrumen
+* Kualitas string
+* Detail piano
+* Kedalaman bass
+* Kekuatan klimaks
+* Kejernihan mixing
+* Lebar stereo
+* Kehalusan transisi
+* Kualitas mastering
+
+Hasil akhirnya harus terdengar seperti versi produksi studio profesional dari musik referensi: lebih jernih, lebih megah, lebih emosional, lebih realistis, dan lebih mahal, tetapi tetap sangat dekat dengan karakter musik aslinya.

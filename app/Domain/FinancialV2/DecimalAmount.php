@@ -69,6 +69,27 @@ final class DecimalAmount
         return self::add($left, self::negate($right));
     }
 
+    public static function multiplyByInteger(int|string $amount, int $multiplier): string
+    {
+        if ($multiplier < 0) {
+            throw new InvalidArgumentException('Financial amount multiplier must not be negative.');
+        }
+
+        $result = '0.00';
+        $addend = self::normalize($amount);
+        while ($multiplier > 0) {
+            if (($multiplier & 1) === 1) {
+                $result = self::add($result, $addend);
+            }
+            $multiplier = intdiv($multiplier, 2);
+            if ($multiplier > 0) {
+                $addend = self::add($addend, $addend);
+            }
+        }
+
+        return $result;
+    }
+
     /** @param int|string $left @param int|string $right */
     public static function equals(int|string $left, int|string $right): bool
     {
@@ -97,6 +118,19 @@ final class DecimalAmount
         return $normalized === '0.00'
             ? $normalized
             : (str_starts_with($normalized, '-') ? substr($normalized, 1) : '-'.$normalized);
+    }
+
+    /** Format an exact decimal using Indonesian separators without converting it to float. */
+    public static function formatIndonesian(int|string $amount, bool $currency = false): string
+    {
+        $normalized = self::normalize($amount);
+        $negative = str_starts_with($normalized, '-');
+        $unsigned = $negative ? substr($normalized, 1) : $normalized;
+        [$integer, $fraction] = explode('.', $unsigned, 2);
+        $grouped = preg_replace('/\B(?=(\d{3})+(?!\d))/', '.', $integer) ?? $integer;
+        $formatted = $grouped.($fraction === '00' ? '' : ','.$fraction);
+
+        return ($negative ? '-' : '').($currency ? 'Rp' : '').$formatted;
     }
 
     /** @param int|string $amount @return array{0: bool, 1: string} */

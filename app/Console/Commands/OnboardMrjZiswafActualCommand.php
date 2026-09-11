@@ -636,7 +636,7 @@ final class OnboardMrjZiswafActualCommand extends Command
             $tables,
             fn (string $table): bool => $table !== 'financial_v2_accounting_entities' && ! Schema::hasColumn($table, 'accounting_entity_id'),
         ));
-        $supportedEntityLess = ['financial_v2_bank_account_details', 'financial_v2_cash_account_details'];
+        $supportedEntityLess = ['financial_v2_bank_account_details', 'financial_v2_cash_account_details', 'financial_v2_distribution_items'];
         sort($entityLessTables);
         sort($supportedEntityLess);
         if ($entityLessTables !== $supportedEntityLess) {
@@ -645,13 +645,15 @@ final class OnboardMrjZiswafActualCommand extends Command
 
         $sampleId = $before['entity_id'];
         $financialAccountIds = DB::table('financial_v2_financial_accounts')->where('accounting_entity_id', $sampleId)->pluck('id')->all();
-        DB::transaction(function () use ($tables, $sampleId, $financialAccountIds): void {
+        $distributionIds = DB::table('financial_v2_distributions')->where('accounting_entity_id', $sampleId)->pluck('id')->all();
+        DB::transaction(function () use ($tables, $sampleId, $financialAccountIds, $distributionIds): void {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
             try {
                 DB::table('financial_v2_bank_account_details')->whereIn('financial_account_id', $financialAccountIds)->delete();
                 DB::table('financial_v2_cash_account_details')->whereIn('financial_account_id', $financialAccountIds)->delete();
+                DB::table('financial_v2_distribution_items')->whereIn('distribution_id', $distributionIds)->delete();
                 foreach ($tables as $table) {
-                    if (in_array($table, ['financial_v2_accounting_entities', 'financial_v2_bank_account_details', 'financial_v2_cash_account_details'], true)) {
+                    if (in_array($table, ['financial_v2_accounting_entities', 'financial_v2_bank_account_details', 'financial_v2_cash_account_details', 'financial_v2_distribution_items'], true)) {
                         continue;
                     }
                     if (Schema::hasColumn($table, 'accounting_entity_id')) {

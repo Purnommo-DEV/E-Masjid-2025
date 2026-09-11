@@ -1,0 +1,70 @@
+{
+  "source": "C:\\Users\\Kelascom\\Downloads\\Opening - Ekspedisi Wonderland Indonesia.mp3",
+  "duration_seconds": 60.70858333333333,
+  "source_metadata": "[mp3 @ 000001713756f540] Estimating duration from bitrate, this may be inaccurate\r\nInput #0, mp3, from 'C:\\Users\\Kelascom\\Downloads\\Opening - Ekspedisi Wonderland Indonesia.mp3':\r\n  Metadata:\r\n    encoder         : Lavf61.7.103\r\n  Duration: 00:01:00.71, start: 0.000000, bitrate: 320 kb/s\r\n  Stream #0:0: Audio: mp3 (mp3float), 44100 Hz, stereo, fltp, 320 kb/s\r\n",
+  "integrated_lufs": -13.93,
+  "true_peak_dbtp": -2.62,
+  "loudness_range_lu": 17.8,
+  "decoded_sample_peak_dbfs": -2.6514244079589844,
+  "decoded_samples_at_or_above_full_scale": 0,
+  "stereo_correlation": 0.47553623782793975,
+  "tempo_candidates_not_confirmed": [
+    {
+      "bpm": 117.19,
+      "relative_autocorrelation": 0.824
+    },
+    {
+      "bpm": 175.78,
+      "relative_autocorrelation": 0.775
+    },
+    {
+      "bpm": 87.89,
+      "relative_autocorrelation": 0.761
+    },
+    {
+      "bpm": 70.31,
+      "relative_autocorrelation": 0.702
+    },
+    {
+      "bpm": 140.62,
+      "relative_autocorrelation": 0.596
+    }
+  ],
+  "sections_from_user_brief": [
+    {
+      "section_from_brief": "Intro",
+      "start_s": 0,
+      "end_s": 12,
+      "rms_dbfs": -28.4,
+      "sample_peak_dbfs": -6.2
+    },
+    {
+      "section_from_brief": "Early build",
+      "start_s": 12,
+      "end_s": 24,
+      "rms_dbfs": -16.18,
+      "sample_peak_dbfs": -3.8
+    },
+    {
+      "section_from_brief": "Main development",
+      "start_s": 24,
+      "end_s": 42,
+      "rms_dbfs": -15.68,
+      "sample_peak_dbfs": -2.65
+    },
+    {
+      "section_from_brief": "Climax",
+      "start_s": 42,
+      "end_s": 56,
+      "rms_dbfs": -15.54,
+      "sample_peak_dbfs": -4.81
+    },
+    {
+      "section_from_brief": "Ending",
+      "start_s": 56,
+      "end_s": 60.70858333333333,
+      "rms_dbfs": -39.81,
+      "sample_peak_dbfs": -21.06
+    }
+  ]
+}
