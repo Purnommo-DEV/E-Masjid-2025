@@ -1,18 +1,17 @@
 <?php
 
 use App\Models\User;
-use Database\Seeders\FinancialV2PlanningPermissionSeeder;
-use Database\Seeders\ZiswafDistributionPermissionSeeder;
 use Illuminate\Testing\TestResponse;
+use Spatie\Permission\Models\Permission;
 use Tests\Support\UatFinancialFixture;
 
 function financialNavigationUser(array $permissions = []): User
 {
-    (new FinancialV2PlanningPermissionSeeder)->run();
-    (new ZiswafDistributionPermissionSeeder)->run();
-
     $user = User::factory()->create();
     if ($permissions !== []) {
+        foreach ($permissions as $permission) {
+            Permission::findOrCreate($permission, 'web');
+        }
         $user->givePermissionTo($permissions);
     }
 
@@ -30,14 +29,12 @@ function assertFinancialNavigationActive(TestResponse $response, ?string $group,
 
 test('Financial V2 navigation uses the requested grouped order without duplicate root links', function () {
     $context = UatFinancialFixture::context();
-    $response = $this->actingAs(financialNavigationUser([
-        'financial-v2.planning.view',
-        'view penyaluran ziswaf',
-        'view penerima ziswaf',
-    ]))->get(route('financial-v2.dashboard', [
-        'entity' => $context['entity']->id,
-    ]));
+    $url = route('financial-v2.dashboard', ['entity' => $context['entity']->id]);
 
+    $this->get($url)->assertRedirect(route('login'));
+    expect(Permission::query()->count())->toBe(0);
+
+    $response = $this->actingAs(financialNavigationUser())->get($url);
     $response->assertOk()
         ->assertSeeInOrder(['data-nav-group="finance"', 'data-nav-group="ziswaf"', 'data-nav-group="reports"', 'data-nav-item="controls"'], false)
         ->assertSeeInOrder([
@@ -79,6 +76,8 @@ test('Financial V2 navigation uses the requested grouped order without duplicate
         ->assertDontSee('data-nav-group="funding"', false)
         ->assertDontSee('Dana &amp; Perencanaan', false);
 
+    expect(Permission::query()->count())->toBe(0);
+
     $html = $response->getContent();
     foreach (['finance', 'ziswaf', 'reports'] as $group) {
         expect(substr_count($html, 'data-nav-group="'.$group.'"'))->toBe(1);
@@ -87,19 +86,9 @@ test('Financial V2 navigation uses the requested grouped order without duplicate
         ->and(substr_count($html, 'aria-expanded="false"'))->toBe(3)
         ->and(substr_count($html, 'aria-controls="financial-v2-nav-'))->toBe(3)
         ->and(substr_count($html, ' data-nav-menu>'))->toBe(3);
-
-    $limitedResponse = $this->actingAs(financialNavigationUser())->get(route('financial-v2.dashboard', [
-        'entity' => $context['entity']->id,
-    ]));
-    $limitedResponse->assertOk()
-        ->assertDontSee('data-nav-group="ziswaf"', false)
-        ->assertDontSee('data-nav-item="planning"', false)
-        ->assertDontSee('data-nav-item="distributions"', false)
-        ->assertDontSee('data-nav-item="beneficiaries"', false)
-        ->assertSee('data-nav-item="ziswaf-report"', false);
 });
 
-test('Financial V2 navigation filters protected children and marks every parent and child route active', function () {
+test('Financial V2 navigation marks every parent and child route active without changing endpoint authorization', function () {
     $context = UatFinancialFixture::context();
     $user = financialNavigationUser([
         'financial-v2.planning.view',
@@ -128,4 +117,9 @@ test('Financial V2 navigation filters protected children and marks every parent 
         $response = $this->actingAs($user)->get(route($routeName, $parameters));
         assertFinancialNavigationActive($response, $group, $item);
     }
+
+    $unprivilegedUser = financialNavigationUser();
+    $this->actingAs($unprivilegedUser)->get(route('financial-v2.plannings.index', ['entity' => $entity]))->assertForbidden();
+    $this->actingAs($unprivilegedUser)->get(route('financial-v2.distributions.index', ['entity' => $entity]))->assertForbidden();
+    $this->actingAs($unprivilegedUser)->get(route('financial-v2.beneficiaries.index', ['entity' => $entity]))->assertForbidden();
 });

@@ -50,9 +50,9 @@
                         'key' => 'ziswaf',
                         'label' => 'ZISWAF',
                         'items' => [
-                            ['key' => 'distributions', 'label' => 'Penyaluran ZISWAF', 'url' => route('financial-v2.distributions.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.distributions.*'), 'visible' => auth()->user()?->can('view penyaluran ziswaf')],
-                            ['key' => 'beneficiaries', 'label' => 'Penerima ZISWAF', 'url' => route('financial-v2.beneficiaries.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.beneficiaries.*'), 'visible' => auth()->user()?->can('view penerima ziswaf')],
-                            ['key' => 'planning', 'label' => 'Perencanaan', 'url' => route('financial-v2.plannings.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.plannings.*'), 'visible' => auth()->user()?->can('financial-v2.planning.view')],
+                            ['key' => 'distributions', 'label' => 'Penyaluran ZISWAF', 'url' => route('financial-v2.distributions.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.distributions.*')],
+                            ['key' => 'beneficiaries', 'label' => 'Penerima ZISWAF', 'url' => route('financial-v2.beneficiaries.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.beneficiaries.*')],
+                            ['key' => 'planning', 'label' => 'Perencanaan', 'url' => route('financial-v2.plannings.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.plannings.*')],
                         ],
                     ],
                     [
@@ -67,17 +67,12 @@
                 ];
 
                 foreach ($navGroups as &$navGroup) {
-                    $navGroup['items'] = array_values(array_filter(
-                        $navGroup['items'],
-                        fn (array $item): bool => $item['visible'] ?? true,
-                    ));
                     $navGroup['active'] = collect($navGroup['items'])->contains('active', true);
                 }
                 unset($navGroup);
             @endphp
             <nav aria-label="Navigasi Financial V2" class="-mx-4 flex flex-wrap items-center gap-2 px-4 pb-3 text-sm font-medium sm:mx-0 sm:px-0" data-financial-nav>
                 @foreach ($navGroups as $navGroup)
-                    @continue(empty($navGroup['items']))
                     <details @class(['dropdown group', 'dropdown-end' => ($navGroup['align'] ?? 'start') === 'end']) data-nav-group="{{ $navGroup['key'] }}" data-active="{{ $navGroup['active'] ? 'true' : 'false' }}">
                         <summary id="financial-v2-nav-{{ $navGroup['key'] }}-trigger" aria-controls="financial-v2-nav-{{ $navGroup['key'] }}-menu" aria-expanded="false" aria-haspopup="menu" data-nav-trigger @class([
                             'btn btn-ghost btn-sm list-none whitespace-nowrap rounded-full font-semibold [&::-webkit-details-marker]:hidden',
