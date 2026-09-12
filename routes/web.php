@@ -243,6 +243,7 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::get('/', [PendaftaranYatimDhuafaController::class, 'indexPublik'])->name('index');
     Route::get('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'index'])->name('form');
     Route::get('/data', [PendaftaranYatimDhuafaController::class, 'dataTable'])->name('data');
+    Route::get('/data-grouped', [PendaftaranYatimDhuafaController::class, 'groupedData'])->name('data-grouped');
     Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])->name('submit');
     Route::get('{id}/edit', [PendaftaranYatimDhuafaController::class, 'edit'])->name('edit');
     Route::put('{id}', [PendaftaranYatimDhuafaController::class, 'update'])->name('update');
@@ -258,11 +259,9 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::post('export-by-sumber',
         [ExcelYatimDhuafaController::class, 'exportBySumber']
     )->name('exportBySumber');
+    Route::post('export-all', [ExcelYatimDhuafaController::class, 'exportAll'])->name('exportAll');
 
 });
-
-Route::get('/santunan-ramadhan/scan-duplikat', [PendaftaranYatimDhuafaController::class, 'scanDuplikat'])
-    ->name('santunan-ramadhan.scan-duplikat');
 
 // Program Kesehatan
 Route::prefix('daftar-donor-darah')->name('donor-darah.')->group(function () {

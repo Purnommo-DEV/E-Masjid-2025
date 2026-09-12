@@ -11,7 +11,7 @@ class Counterparty extends FinancialV2Model
         return match ($this->beneficiary_type) {
             'YATIM' => 'Yatim',
             'DHUAFA' => 'Dhuafa',
-            'YATIM_DHUAFA' => 'Yatim & Dhuafa',
+            'YATIM_DHUAFA' => 'Yatim yang Dhuafa',
             default => 'Belum ditentukan',
         };
     }

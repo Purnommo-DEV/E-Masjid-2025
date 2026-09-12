@@ -22,7 +22,7 @@
             </a>
 
             {{-- MENU DESKTOP --}}
-            <ul class="hidden md:flex items-center gap-1 text-sm font-medium">
+            <ul class="hidden lg:flex items-center gap-1 text-sm font-medium">
                 <li><a href="{{ route('home') }}" class="relative px-4 py-2 rounded-full text-emerald-100/90 hover:text-white hover:bg-white/10 transition-all duration-300">Beranda</a></li>
                 <li><a href="{{ route('home') }}#jadwal" class="relative px-4 py-2 rounded-full text-emerald-100/90 hover:text-white hover:bg-white/10 transition-all duration-300">Jadwal Sholat</a></li>
                 <li><a href="{{ route('home') }}#acara" class="relative px-4 py-2 rounded-full text-emerald-100/90 hover:text-white hover:bg-white/10 transition-all duration-300">Agenda</a></li>
@@ -148,7 +148,7 @@
             </ul>
 
             {{-- HAMBURGER MENU MOBILE --}}
-            <div class="md:hidden">
+            <div class="lg:hidden">
                 <button id="mobileMenuBtn" class="w-10 h-10 rounded-full hover:bg-white/10 transition-all duration-300 focus:outline-none active:scale-95 flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -159,7 +159,7 @@
     </div>
 
     {{-- Mobile Menu Panel --}}
-    <div id="mobileMenuPanel" class="fixed hidden md:hidden backdrop-blur-md bg-slate-950/80 rounded-2xl shadow-2xl border border-emerald-500/30 overflow-hidden z-50 transition-all duration-300 transform scale-95 opacity-0" style="top: 70px; right: 16px; width: 280px;">
+    <div id="mobileMenuPanel" class="fixed hidden lg:hidden backdrop-blur-md bg-slate-950/80 rounded-2xl shadow-2xl border border-emerald-500/30 overflow-hidden z-50 transition-all duration-300 transform scale-95 opacity-0" style="top: 70px; right: 16px; width: min(280px, calc(100vw - 32px));">
         <div class="px-4 py-3 border-b border-emerald-800/50 flex items-center justify-between">
             <p class="text-xs font-semibold text-emerald-400 tracking-wider">✦ MENU NAVIGASI ✦</p>
             <button id="closeMobileMenu" class="text-emerald-400 hover:text-emerald-300 text-lg leading-none transition-all duration-200 hover:rotate-90 hover:scale-110">&times;</button>

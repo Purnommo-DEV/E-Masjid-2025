@@ -10,7 +10,7 @@ $statusFilter = request()->has('status') ? (string) request('status') : (($recip
 @selected($statusFilter === $value)>{{ $label }}</option>
 @endforeach</select></label>
 <label class="form-control text-sm">Jenis<select class="select select-bordered" name="beneficiary_type"><option value="">Semua</option>
-@foreach(['YATIM' => 'Yatim', 'DHUAFA' => 'Dhuafa', 'YATIM_DHUAFA' => 'Yatim & Dhuafa', 'BELUM_DITENTUKAN' => 'Belum ditentukan'] as $value => $label)<option value="{{ $value }}"
+@foreach(['YATIM' => 'Yatim', 'DHUAFA' => 'Dhuafa', 'YATIM_DHUAFA' => 'Yatim yang Dhuafa', 'BELUM_DITENTUKAN' => 'Belum ditentukan'] as $value => $label)<option value="{{ $value }}"
 @selected(request('beneficiary_type') === $value)>{{ $label }}</option>
 @endforeach</select></label>
 <label class="form-control text-sm">RT<input class="input input-bordered w-full" name="rt" value="{{ request('rt') }}" maxlength="10"></label>

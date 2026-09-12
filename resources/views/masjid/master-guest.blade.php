@@ -193,17 +193,17 @@
 
         {{-- ================= FLOATING ACTION BUTTONS ================= --}}
         <!-- Floating Action Bar: Install PWA + Notifikasi + Chat WA -->
-        <div class="fixed bottom-6 right-6 z-50 flex flex-col-reverse items-end gap-4 sm:bottom-8 sm:right-8">
+        <div class="mt-6 flex flex-row-reverse items-center justify-center gap-4 px-4 sm:fixed sm:bottom-8 sm:right-8 sm:z-50 sm:mt-0 sm:flex-col-reverse sm:items-end sm:px-0">
 
             <!-- Tombol Chat WA (paling bawah) -->
             @php $wa = preg_replace('/[^0-9]/', '', profil('no_wa') ?? '62895704043814'); @endphp
-            <a href="https://wa.me/{{ $wa }}" target="_blank" 
+            <a href="https://wa.me/{{ $wa }}" target="_blank" rel="noopener noreferrer" aria-label="Hubungi masjid melalui WhatsApp"
                class="btn btn-circle btn-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xl shadow-emerald-900/40 border-none transition-all duration-300 hover:scale-110 active:scale-95">
                 <span class="text-2xl">💬</span>
             </a>
 
             <!-- Tombol Notifikasi (tengah) -->
-            <button id="enableNotificationBtn" 
+            <button id="enableNotificationBtn" aria-label="Aktifkan notifikasi"
                     class="btn btn-circle btn-lg bg-cyan-600 hover:bg-cyan-700 text-white shadow-xl shadow-cyan-900/40 border-none transition-all duration-300 hover:scale-110 active:scale-95 relative">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -212,7 +212,7 @@
             </button>
 
             <!-- Tombol Install PWA (paling atas) -->
-            <button id="installPwaBtn" 
+            <button id="installPwaBtn" aria-label="Instal aplikasi"
                     class="btn btn-circle btn-lg bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-teal-900/50 border-none transition-all duration-300 hover:scale-110 active:scale-95 hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -262,7 +262,7 @@
     @include(guest_layout('_footer'))
 
     <!-- SCROLL HASH -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             function scrollToHash(){

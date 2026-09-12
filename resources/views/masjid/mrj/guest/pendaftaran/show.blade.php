@@ -24,111 +24,63 @@
                     </p>
                 </div>
 
-                <!-- Baris Atas: 3 kolom -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
-                    <!-- Tahun -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-end">
                     <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Tahun</span>
-                        </label>
-                        <div class="relative">
-                            <select id="filterTahun" class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none bg-white appearance-none">
-                                <option value="">Semua</option>
-                                @for($y = date('Y'); $y >= 2024; $y--)
-                                    <option value="{{ $y }}">{{ $y }}</option>
-                                @endfor
-                            </select>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📅</span>
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
-                        </div>
+                        <label class="label pb-1" for="filterSumber"><span class="label-text font-semibold text-slate-800">Sumber Informasi</span></label>
+                        <select id="filterSumber" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
+                            <option value="">Semua sumber</option>
+                            @foreach($sumberList as $sumber)
+                                <option value="{{ $sumber }}">{{ $sumber }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
-                    <!-- Umur (nilai) -->
                     <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Umur</span>
-                        </label>
-                        <div class="relative">
-                            <input type="number" id="filterUmurValue" min="0" placeholder="Angka umur"
-                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white" />
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🎂</span>
-                        </div>
+                        <label class="label pb-1" for="filterKategori"><span class="label-text font-semibold text-slate-800">Kategori</span></label>
+                        <select id="filterKategori" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
+                            <option value="">Semua kategori</option>
+                            <option value="yatim">Yatim</option>
+                            <option value="dhuafa">Dhuafa</option>
+                            <option value="yatim_dhuafa">Yatim yang Dhuafa</option>
+                            <option value="__undetermined__">Belum Ditentukan</option>
+                        </select>
                     </div>
 
-                    <!-- Satuan Umur -->
                     <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Satuan</span>
-                        </label>
-                        <div class="relative">
-                            <select id="filterUmurSatuan" class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none bg-white appearance-none">
-                                <option value="">Semua</option>
-                                <option value="tahun">Tahun</option>
-                                <option value="bulan">Bulan</option>
-                                <option value="hari">Hari</option>
-                            </select>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">📏</span>
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
-                        </div>
+                        <label class="label pb-1" for="filterRw"><span class="label-text font-semibold text-slate-800">RW</span></label>
+                        <select id="filterRw" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
+                            <option value="">Semua RW</option>
+                            @foreach($rwList as $rw)
+                                <option value="{{ $rw }}">{{ $rw }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label pb-1" for="filterRt"><span class="label-text font-semibold text-slate-800">RT</span></label>
+                        <select id="filterRt" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
+                            <option value="">Semua RT</option>
+                            @foreach($rtList as $rt)
+                                <option value="{{ $rt }}">{{ $rt }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
 
-                <!-- Baris Bawah: 3 kolom + search span lebar -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end mt-6">
-                    <!-- Jenis Kelamin -->
+                <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_auto] gap-5 items-end mt-5">
                     <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Jenis Kelamin</span>
-                        </label>
+                        <label class="label pb-1" for="globalSearch"><span class="label-text font-semibold text-slate-800">Cari Nama Penerima</span></label>
                         <div class="relative">
-                            <select id="filterJk" class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none bg-white appearance-none">
-                                <option value="">Semua</option>
-                                <option value="L">Laki-laki</option>
-                                <option value="P">Perempuan</option>
-                            </select>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">⚥</span>
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
-                        </div>
-                    </div>
-
-                    <!-- Kategori -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Kategori</span>
-                        </label>
-                        <div class="relative">
-                            <select id="filterKategori" class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none bg-white appearance-none">
-                                <option value="">Semua</option>
-                                <option value="yatim_dhuafa">Yatim Dhuafa</option>
-                                <option value="dhuafa">Dhuafa</option>
-                            </select>
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👶</span>
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
-                        </div>
-                    </div>
-
-                    <!-- Search Box (span lebar di baris bawah) -->
-                    <div class="form-control">
-                        <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Cari Nama / Orang Tua / Sumber / Alamat</span>
-                        </label>
-                        <div class="relative">
-                            <input type="text" id="globalSearch" placeholder="Ketik untuk cari..."
-                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white" />
+                            <input type="search" id="globalSearch" placeholder="Contoh: Muhammad"
+                                   class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none placeholder-slate-400 text-slate-900 bg-white" />
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
                         </div>
                     </div>
-
-                </div>
-                    <div class="flex justify-center mt-8">
-                        <button id="btnResetFilter"
-                                class="px-10 py-4 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                            </svg>
-                            <span>Reset Filter</span>
-                        </button>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button id="btnApplyFilter" class="px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition">Cari / Filter</button>
+                        <button id="btnResetFilter" class="px-7 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl border border-slate-300 transition">Reset</button>
                     </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
@@ -198,33 +150,42 @@
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
 
                     <div>
-                        <h3 class="text-xl font-bold text-slate-800">Export Data</h3>
+                        <h3 class="text-xl font-bold text-slate-800">Export Excel Santunan</h3>
                         <p class="text-sm text-slate-500">
-                            Export seluruh data atau berdasarkan sumber informasi tertentu.
+                            Pilih export satu sumber atau seluruh sumber informasi.
                         </p>
                     </div>
 
-                    <!-- EXPORT ALL -->
-                    <div>
-                        <button id="btnExportExcel"
-                            class="w-full flex items-center justify-center gap-2 px-6 py-3
-                                   bg-gradient-to-r from-amber-500 to-orange-600
-                                   hover:from-amber-600 hover:to-orange-700
-                                   text-white font-bold rounded-xl shadow-lg transition">
+                    <form id="formExportSantunan"
+                          method="POST"
+                          action="{{ route('santunan-ramadhan.export') }}"
+                          class="space-y-4">
+                        @csrf
+                        <input type="hidden" name="tahun_program" value="{{ now()->year }}">
 
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 20V8m0 12l-4-4m4 4l4-4M4 4h16"/>
-                            </svg>
+                        <fieldset class="space-y-3">
+                            <legend class="mb-2 text-sm font-semibold text-slate-700">Mode Export</legend>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+                                <input id="exportModeSelected" type="radio" name="export_mode" value="selected" checked
+                                    class="mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <span>
+                                    <span class="block font-semibold text-slate-800">Export Sumber Terpilih</span>
+                                    <span class="block text-sm text-slate-500">Satu sumber ke dua sheet kategori.</span>
+                                </span>
+                            </label>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+                                <input id="exportModeAll" type="radio" name="export_mode" value="all"
+                                    class="mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <span>
+                                    <span class="block font-semibold text-slate-800">Export Semuanya</span>
+                                    <span class="block text-sm text-slate-500">Setiap sumber informasi dibuat menjadi satu sheet.</span>
+                                </span>
+                            </label>
+                        </fieldset>
 
-                            Export Semua Data (Laporan)
-                        </button>
-                    </div>
-
-                    <!-- EXPORT BY SUMBER -->
-                    <div class="space-y-3">
-
-                        <select id="filterSumberExport"
+                        <div id="exportSourceField">
+                            <label for="filterSumberExport" class="mb-2 block text-sm font-semibold text-slate-700">Sumber Informasi</label>
+                            <select id="filterSumberExport" name="sumber_informasi" required
                                 class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
                                        focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200
                                        outline-none bg-white text-slate-800">
@@ -232,43 +193,28 @@
                             @foreach($sumberList as $s)
                                 <option value="{{ $s }}">{{ $s }}</option>
                             @endforeach
-                        </select>
+                            </select>
+                        </div>
 
-                        <button id="btnExportBySumber"
+                        <p id="exportHelper" class="text-sm leading-relaxed text-slate-500">
+                            Export satu sumber ke dua sheet kategori.
+                        </p>
+                        <p id="exportValidation" class="text-sm font-semibold text-red-600" role="alert">
+                            Silakan pilih sumber informasi terlebih dahulu.
+                        </p>
+
+                        <button id="btnExportBySumber" type="submit" disabled
                             class="w-full flex items-center justify-center gap-2 px-6 py-3
                                    bg-gradient-to-r from-indigo-600 to-purple-600
                                    hover:from-indigo-700 hover:to-purple-700
-                                   text-white font-bold rounded-xl shadow-lg transition">
-
-                            Export Berdasarkan Sumber
+                                   text-white font-bold rounded-xl shadow-lg transition
+                                   disabled:cursor-not-allowed disabled:opacity-50">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
+                            </svg>
+                            Export Excel
                         </button>
-
-                    </div>
-
-                    <!-- Hidden Form -->
-                    <form id="formExportBySumber"
-                          method="POST"
-                          action="{{ route('santunan-ramadhan.exportBySumber') }}"
-                          target="downloadFrame">
-                        @csrf
-                        <input type="hidden" name="sumber_informasi" id="ex_sumber">
                     </form>
-
-                    <form id="exportForm"
-                          method="POST"
-                          action="{{ route('santunan-ramadhan.export') }}"
-                          target="downloadFrame">
-                        @csrf
-                        <input type="hidden" name="tahun" id="ex_tahun">
-                        <input type="hidden" name="umur_value" id="ex_umur_value">
-                        <input type="hidden" name="umur_satuan" id="ex_umur_satuan">
-                        <input type="hidden" name="jenis_kelamin" id="ex_jk">
-                        <input type="hidden" name="kategori" id="ex_kategori">
-                        <input type="hidden" name="search" id="ex_search">
-                        <input type="hidden" name="download_token" id="ex_token">
-                    </form>
-
-                    <iframe name="downloadFrame" style="display:none;"></iframe>
 
                 </div>
 
@@ -299,61 +245,67 @@
                     </p>
                 </div>
             </div>
-            <!-- Tombol Switch Mode Tampilan (responsif & lebih kecil) -->
-            <div class="flex flex-col sm:flex-row justify-end items-center gap-3 mb-6">
-                <span class="text-sm font-medium text-slate-700 whitespace-nowrap">Mode Tampilan:</span>
-                <div class="inline-flex rounded-full shadow-sm overflow-hidden border border-slate-200/70 bg-white/80 backdrop-blur-sm w-full sm:w-auto">
-                    <!-- Responsive -->
-                    <button id="btnModeResponsive"
-                            class="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2
-                                   bg-gradient-to-r from-emerald-600/90 to-teal-600/90 text-white
-                                   hover:from-emerald-700 hover:to-teal-700
-                                   shadow hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
-                        </svg>
-                        Responsive
+            <div class="mb-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+                <span class="text-sm font-semibold text-slate-700">Tampilan:</span>
+                <div class="inline-flex overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" role="tablist" aria-label="Pilih tampilan data">
+                    <button id="btnViewTable" type="button" role="tab" aria-selected="true"
+                            class="flex-1 bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition sm:flex-none">
+                        Tabel
                     </button>
-
-                    <!-- Full -->
-                    <button id="btnModeFull"
-                            class="flex-1 sm:flex-none px-5 sm:px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2
-                                   bg-gradient-to-r from-amber-500/90 to-orange-600/90 text-white
-                                   hover:from-amber-600 hover:to-orange-700
-                                   shadow hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-                        </svg>
-                        Full Scroll
+                    <button id="btnViewGrouped" type="button" role="tab" aria-selected="false"
+                            class="flex-1 bg-white px-6 py-3 text-sm font-bold text-slate-700 transition hover:bg-emerald-50 sm:flex-none">
+                        Grouping
                     </button>
                 </div>
             </div>
-            <!-- Tabel (padding lebih besar, tidak mepet) -->
-            <div class="bg-white rounded-3xl shadow-2xl overflow-hidden border border-emerald-100/60 p-6 lg:p-10 mt-4">
-                <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900">
-                    <thead class="bg-emerald-600 text-white">
-                        <tr>
-                            <!-- <th></th> -->
-                            <th>No</th>
-                            <th>Penanggung Jawab Informasi</th>
-                            <th>No WA</th>
-                            <th>Kategori</th>
-                            <th>Nama Anak</th>
-                            <th>Panggilan</th>
-                            <th>Jenis Kelamin</th>
-                            <th>Tanggal Lahir</th>
-                            <th>Umur</th>
-                            <th>Nama Orang Tua / Wali</th>
-                            <th>Pekerjaan Orang Tua / Wali</th>
-                            <th>Alamat Lengkap</th>
-                            <th>Keterangan Tambahan</th>
-                            <th>Tahun</th>
-                            <th class="text-center">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
+
+            <section id="tableViewPanel" role="tabpanel" aria-labelledby="btnViewTable">
+                <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
+                    <span class="text-sm font-medium text-slate-600">Mode tabel:</span>
+                    <div class="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <button id="btnModeResponsive" type="button"
+                                class="flex-1 bg-slate-800 px-5 py-2.5 text-xs font-semibold text-white transition sm:flex-none">
+                            Responsive
+                        </button>
+                        <button id="btnModeFull" type="button"
+                                class="flex-1 bg-white px-5 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex-none">
+                            Full Scroll
+                        </button>
+                    </div>
+                </div>
+
+                <div class="rounded-3xl border border-emerald-100/60 bg-white p-4 shadow-2xl sm:p-6 lg:p-10">
+                    <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="groupedViewPanel" class="hidden" role="tabpanel" aria-labelledby="btnViewGrouped">
+                <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-600">Data Peserta</p>
+                        <h2 class="text-2xl font-bold text-slate-900 sm:text-3xl">Santunan Yatim & Dhuafa</h2>
+                    </div>
+                    <p id="groupedGrandTotal" class="text-sm font-semibold text-slate-600" aria-live="polite"></p>
+                </div>
+
+                <div id="groupedLoading" class="rounded-3xl border border-emerald-100 bg-white p-12 text-center shadow-lg">
+                    <span class="loading loading-spinner loading-lg text-emerald-600"></span>
+                    <p class="mt-4 font-semibold text-slate-700">Memuat kelompok penerima...</p>
+                </div>
+
+                <div id="groupedError" class="hidden rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700" role="alert"></div>
+
+                <div id="groupedEmpty" class="hidden rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+                    <div class="text-4xl" aria-hidden="true">🔍</div>
+                    <h3 class="mt-4 text-xl font-bold text-slate-800">Data tidak ditemukan</h3>
+                    <p class="mt-2 text-slate-600">Tidak ada penerima yang sesuai dengan filter atau pencarian.</p>
+                </div>
+
+                <div id="groupedResults" class="hidden space-y-8"></div>
+            </section>
 
             <div class="mt-8 flex flex-col sm:flex-row justify-center lg:justify-end gap-4 items-center">
                 <button id="btnScanDuplikat"
@@ -402,35 +354,59 @@
 
             <!-- CTA Daftar Baru -->
             <div class="text-center mt-10">
-                <a href="{{ route('santunan-ramadhan.form') }}" 
-                   class="inline-block px-10 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base">
-                    Daftar Anak Baru
-                </a>
+                @if($registrationOpen)
+                    <a href="{{ route('santunan-ramadhan.form') }}"
+                       class="inline-block px-10 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base">
+                        Daftar Anak Baru
+                    </a>
+                @else
+                    <span class="inline-block px-10 py-4 bg-slate-200 text-slate-600 font-bold rounded-full text-base" aria-disabled="true">
+                        Pendaftaran Ditutup
+                    </span>
+                @endif
             </div>
         </div>
     </div>
     
     <!-- Modal Detail (Read-Only) -->
     <dialog id="detailModal" class="modal">
-        <div class="modal-box max-w-4xl">
+        <div class="modal-box max-w-4xl max-h-[90vh] overflow-y-auto text-slate-800">
             <div class="modal-header flex items-center justify-between">
                 <h3 class="text-xl font-bold text-slate-900">Detail Data Anak</h3>
-                <button type="button" class="text-slate-500 hover:text-slate-700 text-2xl" onclick="document.getElementById('detailModal').close()">✕</button>
+                <button type="button" class="text-slate-500 hover:text-slate-700 text-2xl" aria-label="Tutup detail" onclick="document.getElementById('detailModal').close()">✕</button>
             </div>
-            <div class="modal-body space-y-4 text-slate-800">
-                <!-- Isi detail seperti sebelumnya -->
-                <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="font-semibold">Nama Lengkap</label>
-                        <p id="detailNama" class="mt-1"></p>
-                    </div>
-                    <!-- ... tambahkan field lain sesuai kebutuhan ... -->
-                </div>
+            <div id="detailLoading" class="py-12 text-center text-emerald-700">
+                <span class="loading loading-spinner loading-md"></span>
+                <p class="mt-3">Memuat detail...</p>
             </div>
-            <div class="modal-footer flex justify-end">
+            <div id="detailError" class="hidden my-5 rounded-xl bg-red-50 p-4 text-red-700" role="alert"></div>
+            <div id="detailContent" class="modal-body hidden">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                    <div><dt class="detail-label">Nama Lengkap</dt><dd id="detailNama" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Nama Panggilan</dt><dd id="detailPanggilan" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Kategori</dt><dd id="detailKategori" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Jenis Kelamin</dt><dd id="detailJenisKelamin" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Tanggal Lahir</dt><dd id="detailTanggalLahir" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Umur</dt><dd id="detailUmur" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Nama Orang Tua / Wali</dt><dd id="detailNamaOrtu" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Pekerjaan Orang Tua / Wali</dt><dd id="detailPekerjaanOrtu" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">RT</dt><dd id="detailRt" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">RW</dt><dd id="detailRw" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Nama RT / Koordinator</dt><dd id="detailNamaRt" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Nomor WhatsApp</dt><dd id="detailNoWa" class="detail-value"></dd></div>
+                    <div class="sm:col-span-2"><dt class="detail-label">Alamat Lengkap</dt><dd id="detailAlamat" class="detail-value whitespace-pre-wrap"></dd></div>
+                    <div><dt class="detail-label">Penanggung Jawab Informasi</dt><dd id="detailSumber" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Tahun Program</dt><dd id="detailTahun" class="detail-value"></dd></div>
+                    <div class="sm:col-span-2"><dt class="detail-label">Keterangan Tambahan</dt><dd id="detailCatatan" class="detail-value whitespace-pre-wrap"></dd></div>
+                </dl>
+            </div>
+            <div class="modal-footer flex justify-end mt-6">
                 <button type="button" class="btn btn-outline" onclick="document.getElementById('detailModal').close()">Tutup</button>
             </div>
         </div>
+        <form method="dialog" class="modal-backdrop">
+            <button aria-label="Tutup detail">close</button>
+        </form>
     </dialog>
 
     <!-- Modal Edit (Guest bisa edit semua field) -->
@@ -483,7 +459,7 @@
                             <select name="kategori" required id="editKategori"
                                     class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
                                 <option value="" disabled selected>Pilih salah satu</option>
-                                <option value="yatim_dhuafa">Anak Yatim yang Dhuafa</option>
+                                <option value="yatim_dhuafa">Yatim yang Dhuafa</option>
                                 <option value="dhuafa">Anak Dhuafa</option>
                             </select>
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👶</span>
@@ -604,6 +580,28 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-control">
+                            <label class="label pb-1" for="editRt"><span class="label-text font-semibold text-slate-800">RT (opsional)</span></label>
+                            <input type="text" name="rt" id="editRt" maxlength="5" inputmode="numeric"
+                                   class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-slate-900 bg-white"
+                                   placeholder="Contoh: 006">
+                        </div>
+                        <div class="form-control">
+                            <label class="label pb-1" for="editRw"><span class="label-text font-semibold text-slate-800">RW (opsional)</span></label>
+                            <input type="text" name="rw" id="editRw" maxlength="5" inputmode="numeric"
+                                   class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-slate-900 bg-white"
+                                   placeholder="Contoh: 007">
+                        </div>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label pb-1" for="editNamaRt"><span class="label-text font-semibold text-slate-800">Nama RT / Koordinator (opsional)</span></label>
+                        <input type="text" name="nama_rt" id="editNamaRt" maxlength="150"
+                               class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-slate-900 bg-white"
+                               placeholder="Contoh: Pak Parno">
+                    </div>
+
                     <!-- Nama Orang Tua & Pekerjaan -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="form-control">
@@ -677,118 +675,60 @@
 @endsection
 
 @push('scripts')
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
 
 
 <script>
-    let table;
+    let table = null;
+    let tableMode = 'responsive';
+    let activeDataView = 'table';
+    let tableDirty = false;
+    let groupedDirty = true;
+    let groupedLoaded = false;
     let lastSelectedSatuan = '';
-    let currentMode = 'responsive'; // default
 
-    $('#btnExportExcel').on('click', function(e) {
-        e.preventDefault();
+    function syncExportMode() {
+        const mode = $('input[name="export_mode"]:checked').val();
+        const source = $('#filterSumberExport').val();
+        const exportAll = mode === 'all';
 
-        // Isi filter ke hidden inputs
-        $('#ex_tahun').val($('#filterTahun').val() || '');
-        $('#ex_umur_value').val($('#filterUmurValue').val() || '');
-        $('#ex_umur_satuan').val($('#filterUmurSatuan').val() || '');
-        $('#ex_jk').val($('#filterJk').val() || '');
-        $('#ex_kategori').val($('#filterKategori').val() || '');
-        $('#ex_search').val($('#globalSearch').val() || '');
+        $('#filterSumberExport')
+            .prop('disabled', exportAll)
+            .prop('required', !exportAll);
+        $('#exportSourceField').toggleClass('opacity-50', exportAll);
+        $('#btnExportBySumber').prop('disabled', !exportAll && !source);
+        $('#exportValidation').toggleClass('hidden', exportAll || Boolean(source));
+        $('#exportHelper').text(exportAll
+            ? 'Export seluruh sumber informasi. Setiap sumber dibuat menjadi satu sheet.'
+            : 'Export satu sumber ke dua sheet kategori.');
+    }
 
-        // Tampilkan loader
-        $('#exportLoading').removeClass('hidden');
+    $('input[name="export_mode"], #filterSumberExport').on('change', syncExportMode);
+    syncExportMode();
 
-        // Submit form secara normal (bukan ke iframe)
-        $('#exportForm').removeAttr('target');  // pastikan ga ada target=iframe
-        $('#exportForm')[0].submit();
+    $('#formExportSantunan').on('submit', function (event) {
+        const mode = $('input[name="export_mode"]:checked').val();
+        const source = $('#filterSumberExport').val();
 
-        // Loader akan hilang otomatis setelah download mulai (browser handle sendiri)
-        // Tapi untuk UX bagus, kita pakai timer fallback
-        setTimeout(() => {
-            $('#exportLoading').addClass('hidden');
+        if (mode !== 'all' && !source) {
+            event.preventDefault();
+            $('#exportValidation').removeClass('hidden');
             Swal.fire({
-                icon: 'success',
-                title: 'Sedang diunduh...',
-                text: 'Cek folder Downloads Anda',
-                timer: 2500,
-                showConfirmButton: false
+                icon: 'warning',
+                text: 'Silakan pilih sumber informasi terlebih dahulu.',
+                confirmButtonColor: '#4f46e5'
             });
-        }, 1500);  // sesuaikan kalau file besar
-    });
-    
-    $('#btnExportBySumber').on('click', function(){
-
-        let sumber = $('#filterSumberExport').val();
-
-        if(!sumber){
-            Swal.fire('Pilih sumber informasi dulu');
             return;
         }
 
-        $('#ex_sumber').val(sumber);
-        $('#formExportBySumber').submit();
+        $('#exportLoading').removeClass('hidden');
+        setTimeout(() => $('#exportLoading').addClass('hidden'), 1500);
     });
-
-    function waitForDownload(token) {
-        const maxTime = 60000; // naikkan jadi 60 detik dulu untuk debug
-        let elapsed = 0;
-
-        console.log('[Export] Mulai polling cookie dengan token:', token);
-
-        const checkInterval = setInterval(() => {
-            elapsed += 500;
-            const cookieValue = getCookie('fileDownload');
-
-            console.log(
-                `[Export] Cek ke-${elapsed/1000}s | cookie saat ini:`,
-                cookieValue,
-                '(dibandingkan dengan token:', token, ')'
-            );
-
-            if (cookieValue == token) {   // pakai == biar toleran tipe
-                clearInterval(checkInterval);
-                document.cookie = "fileDownload=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;";
-                $('#exportLoading').addClass('hidden');
-                console.log('[Export] Sukses! Cookie cocok → loader di-hide');
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berhasil!',
-                    text: 'File Excel berhasil didownload',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            }
-
-            if (elapsed >= maxTime) {
-                clearInterval(checkInterval);
-                $('#exportLoading').addClass('hidden');
-                console.warn('[Export] Timeout polling cookie');
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Timeout',
-                    text: 'File mungkin sudah terdownload, tapi loader tidak tertutup otomatis.'
-                });
-            }
-        }, 500);
-    }
-
-    function getCookie(name) {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) {
-            let val = parts.pop().split(';').shift();
-            // trim dan bersihkan tanda kutip kalau ada
-            return val.trim().replace(/^"|"$/g, '');
-        }
-        return null;
-    }
 
     $('#importFile').on('change', function () {
         const fileName = this.files[0]?.name || 'Pilih file Excel (.xlsx)';
@@ -834,7 +774,7 @@
                     confirmButtonColor:'#059669'
                 });
 
-                table.ajax.reload(null,false);
+                refreshDataViews();
                 $('#formImportExcel')[0].reset();
 
                 $('#btnImportExcel').prop('disabled', true)
@@ -868,49 +808,87 @@
     });
 
     
+    let groupedRequest = null;
+    let searchTimer = null;
+
+    function currentFilterData() {
+        return {
+            sumber_informasi: $('#filterSumber').val() || null,
+            kategori: $('#filterKategori').val() || null,
+            rw: $('#filterRw').val() || null,
+            rt: $('#filterRt').val() || null,
+            search: $('#globalSearch').val().trim() || null
+        };
+    }
+
+    function tableColumns(mode) {
+        const columns = [
+            { data: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'sumber_informasi', defaultContent: '-' },
+            { data: 'no_wa', defaultContent: '-' },
+            { data: 'kategori_display', defaultContent: '-' },
+            { data: 'nama_lengkap', defaultContent: '-' },
+            { data: 'nama_panggilan', defaultContent: '-' },
+            { data: 'jenis_kelamin_display', defaultContent: '-' },
+            { data: 'tanggal_lahir_formatted', defaultContent: '-' },
+            { data: 'umur_display', defaultContent: '-' },
+            { data: 'nama_orang_tua', defaultContent: '-' },
+            { data: 'pekerjaan_orang_tua', defaultContent: '-' },
+            { data: 'alamat', defaultContent: '-' },
+            { data: 'catatan_tambahan', defaultContent: '-' },
+            { data: 'tahun_program', defaultContent: '-' },
+            {
+                data: null,
+                orderable: false,
+                searchable: false,
+                className: 'text-center',
+                render: function (data, type, row) {
+                    const safeId = JSON.stringify(row?.id ?? 0);
+
+                    return `
+                        <div class="flex justify-center gap-2">
+                            <button class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg"
+                                    onclick="openEditModal(${safeId})">Edit</button>
+                            <button class="btn btn-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+                                    onclick="hapusData(${safeId})">Hapus</button>
+                        </div>`;
+                }
+            }
+        ];
+
+        if (mode === 'responsive') {
+            columns.unshift({ data: null, defaultContent: '', className: 'control', orderable: false, searchable: false });
+        }
+
+        return columns;
+    }
+
     function initTable(mode = 'responsive') {
         if (table) {
             table.destroy();
         }
 
-        // Bersihkan thead & tbody
-        $('#tabelYatimDhuafa thead').empty();
+        const controlHeading = mode === 'responsive' ? '<th></th>' : '';
+        $('#tabelYatimDhuafa thead').html(`
+            <tr>
+                ${controlHeading}
+                <th>No</th>
+                <th>Penanggung Jawab Informasi</th>
+                <th>No WA</th>
+                <th>Kategori</th>
+                <th>Nama Anak</th>
+                <th>Panggilan</th>
+                <th>Jenis Kelamin</th>
+                <th>Tanggal Lahir</th>
+                <th>Umur</th>
+                <th>Nama Orang Tua / Wali</th>
+                <th>Pekerjaan Orang Tua / Wali</th>
+                <th>Alamat Lengkap</th>
+                <th>Keterangan Tambahan</th>
+                <th>Tahun</th>
+                <th class="text-center">Aksi</th>
+            </tr>`);
         $('#tabelYatimDhuafa tbody').empty();
-
-        // Bangun thead
-        let theadHtml = '<tr>';
-        if (mode === 'responsive') {
-            theadHtml += '<th></th>';
-        }
-        theadHtml += `
-            <th>No</th>
-            <th>Penanggung Jawab Informasi</th>
-            <th>No WA</th>
-            <th>Kategori</th>
-            <th>Nama Anak</th>
-            <th>Panggilan</th>
-            <th>Jenis Kelamin</th>
-            <th>Tanggal Lahir</th>
-            <th>Umur</th>
-            <th>Nama Orang Tua / Wali</th>
-            <th>Pekerjaan Orang Tua / Wali</th>
-            <th>Alamat Lengkap</th>
-            <th>Keterangan Tambahan</th>
-            <th>Tahun</th>
-            <th class="text-center">Aksi</th>
-        </tr>`;
-        $('#tabelYatimDhuafa thead').html(theadHtml);
-
-        // Load responsive library dinamis
-        if (mode === 'responsive' && !$('script[src*="dataTables.responsive.min.js"]').length) {
-            $('<script/>', {
-                src: 'https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js'
-            }).appendTo('head');
-            $('<link/>', {
-                rel: 'stylesheet',
-                href: 'https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css'
-            }).appendTo('head');
-        }
 
         table = $('#tabelYatimDhuafa').DataTable({
             processing: true,
@@ -919,112 +897,23 @@
             paging: true,
             searching: false,
             dom: 'lrtip',
-
             responsive: mode === 'responsive' ? {
-                details: {
-                    type: 'column',
-                    target: 0
-                }
+                details: { type: 'column', target: 0 }
             } : false,
-
-            scrollX: mode === 'full' ? true : false,
+            scrollX: mode === 'full',
             scrollCollapse: true,
-
-            columnDefs: mode === 'responsive' ? [
-                { className: 'control', orderable: false, targets: 0 }
-            ] : [],
-
+            columnDefs: mode === 'responsive'
+                ? [{ className: 'control', orderable: false, targets: 0 }]
+                : [],
             ajax: {
                 url: '{{ route("santunan-ramadhan.data") }}',
-                data: function (d) {
-                    d.tahun = $('#filterTahun').val() || null;
-                    d.umur_value = $('#filterUmurValue').val() || null;
-                    d.umur_satuan = $('#filterUmurSatuan').val() || null;
-                    d.jenis_kelamin = $('#filterJk').val() || null;
-                    d.kategori = $('#filterKategori').val() || null;
-                    d.search = $('#globalSearch').val() || null;
+                data: function (request) {
+                    Object.assign(request, currentFilterData());
                 }
             },
-
-            columns: mode === 'responsive' ? [
-                { data: null, defaultContent: '', className: 'control', orderable: false },
-                { data: 'DT_RowIndex', orderable: false, searchable: false },
-                { data: 'sumber_informasi' },
-                { data: 'no_wa' },
-                { data: 'kategori_display' },
-                { data: 'nama_lengkap' },
-                { data: 'nama_panggilan' ?? '-' },
-                { data: 'jenis_kelamin_display' },
-                { data: 'tanggal_lahir_formatted' },
-                { data: 'umur_display' },
-                { data: 'nama_orang_tua' },
-                { data: 'pekerjaan_orang_tua' ?? '-' },
-                { data: 'alamat' },
-                { data: 'catatan_tambahan' ?? '-' },
-                { data: 'tahun_program' },
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-                    className: 'text-center',
-                    render: function (data, type, row) {
-                        const id = row && typeof row.id !== 'undefined' ? row.id : 0;
-                        const safeId = JSON.stringify(id);
-                        return `
-                            <div class="flex justify-center gap-2">
-                                <button class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg"
-                                        onclick="openEditModal(${safeId})">
-                                    Edit
-                                </button>
-                                <button class="btn btn-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
-                                        onclick="hapusData(${safeId})">
-                                    Hapus
-                                </button>
-                            </div>
-                        `;
-                    }
-                }
-            ] : [
-                { data: 'DT_RowIndex', orderable: false, searchable: false },
-                { data: 'sumber_informasi' },
-                { data: 'no_wa' },
-                { data: 'kategori_display' },
-                { data: 'nama_lengkap' },
-                { data: 'nama_panggilan' ?? '-' },
-                { data: 'jenis_kelamin_display' },
-                { data: 'tanggal_lahir_formatted' },
-                { data: 'umur_display' },
-                { data: 'nama_orang_tua' },
-                { data: 'pekerjaan_orang_tua' ?? '-' },
-                { data: 'alamat' },
-                { data: 'catatan_tambahan' ?? '-' },
-                { data: 'tahun_program' },
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-                    className: 'text-center',
-                    render: function (data, type, row) {
-                        const id = row && typeof row.id !== 'undefined' ? row.id : 0;
-                        const safeId = JSON.stringify(id);
-                        return `
-                            <div class="flex justify-center gap-2">
-                                <button class="btn btn-sm bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-lg"
-                                        onclick="openEditModal(${safeId})">
-                                    Edit
-                                </button>
-                                <button class="btn btn-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
-                                        onclick="hapusData(${safeId})">
-                                    Hapus
-                                </button>
-                            </div>
-                        `;
-                    }
-                }
-            ],
-
+            columns: tableColumns(mode),
             language: {
-                processing: `<div class="flex items-center gap-3 text-emerald-600"><span class="loading loading-spinner loading-md"></span> Memuat data...</div>`,
+                processing: '<div class="flex items-center gap-3 text-emerald-600"><span class="loading loading-spinner loading-md"></span> Memuat data...</div>',
                 emptyTable: 'Belum ada data',
                 info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ entri',
                 infoEmpty: 'Tidak ada entri',
@@ -1040,69 +929,237 @@
             }
         });
 
-        // Update tombol aktif
-        $('#btnModeResponsive').toggleClass('btn-active', mode === 'responsive');
-        $('#btnModeFull').toggleClass('btn-active', mode === 'full');
-
-        currentMode = mode;
+        tableMode = mode;
+        tableDirty = false;
+        $('#btnModeResponsive')
+            .toggleClass('bg-slate-800 text-white', mode === 'responsive')
+            .toggleClass('bg-white text-slate-700', mode !== 'responsive');
+        $('#btnModeFull')
+            .toggleClass('bg-slate-800 text-white', mode === 'full')
+            .toggleClass('bg-white text-slate-700', mode !== 'full');
     }
 
-    // Inisialisasi awal
-    initTable('responsive');
+    function escapeHtml(value) {
+        return $('<div>').text(value ?? '').html();
+    }
 
-    $('#btnModeResponsive').on('click', function () {
-        initTable('responsive');
-    });
+    function displayValue(value) {
+        return value === null || value === undefined || String(value).trim() === ''
+            ? 'Belum diisi'
+            : value;
+    }
 
-    $('#btnModeFull').on('click', function () {
-        initTable('full');
-    });
+    function renderRecipientTable(recipients) {
+        const rows = recipients.map((recipient, index) => {
+            const id = Number(recipient.id);
+            const gender = recipient.jenis_kelamin === 'L' ? 'L' : (recipient.jenis_kelamin === 'P' ? 'P' : '—');
 
-    // Filter tetap reload dengan mode saat ini
-    $('#filterTahun, #filterUmurValue, #filterUmurSatuan, #filterJk, #filterKategori').on('change', function () {
-        table.ajax.reload();
-    });
+            return `
+                <tr data-recipient-id="${id}" class="border-b border-slate-100 last:border-0">
+                    <td data-label="No">${index + 1}</td>
+                    <td data-label="Nama Anak" class="font-semibold text-slate-900">${escapeHtml(displayValue(recipient.nama_lengkap))}</td>
+                    <td data-label="JK">${gender}</td>
+                    <td data-label="Tanggal Lahir">${escapeHtml(displayValue(recipient.tanggal_lahir))}</td>
+                    <td data-label="Umur">${escapeHtml(displayValue(recipient.umur))}</td>
+                    <td data-label="Orang Tua / Wali">${escapeHtml(displayValue(recipient.nama_orang_tua))}</td>
+                    <td data-label="Alamat">${escapeHtml(displayValue(recipient.alamat))}</td>
+                    <td data-label="Aksi">
+                        <div class="flex flex-wrap gap-2 md:justify-center">
+                            <button type="button" class="grouped-action bg-emerald-600 hover:bg-emerald-700" onclick="openDetailModal(${id})">Detail</button>
+                            <button type="button" class="grouped-action bg-amber-500 hover:bg-amber-600" onclick="openEditModal(${id})">Edit</button>
+                            <button type="button" class="grouped-action bg-red-500 hover:bg-red-600" onclick="hapusData(${id})">Hapus</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
 
-    let debounceTimer;
-    $('#filterUmurValue').on('input', function () {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => table.ajax.reload(), 300);
-    });
+        return `
+            <div class="grouped-table-wrap">
+                <table class="grouped-recipient-table">
+                    <thead>
+                        <tr>
+                            <th>No</th><th>Nama Anak</th><th>JK</th><th>Tanggal Lahir</th>
+                            <th>Umur</th><th>Orang Tua / Wali</th><th>Alamat</th><th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+    }
 
-    $('#globalSearch').on('keyup', function () {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => table.ajax.reload(), 300);
-    });
+    function renderGroupedResults(groups) {
+        return groups.map(source => `
+            <article class="source-group">
+                <header class="source-group-header">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Sumber Informasi</p>
+                        <h3 class="mt-1 text-2xl sm:text-3xl font-black uppercase text-white break-words">${escapeHtml(source.label)}</h3>
+                    </div>
+                    <span class="group-total group-total-dark">${source.total} penerima</span>
+                </header>
+                <div class="space-y-6 p-4 sm:p-6">
+                    ${source.categories.map(category => `
+                        <section class="category-group">
+                            <header class="category-group-header">
+                                <h4 class="text-lg sm:text-xl font-black uppercase text-emerald-900">${escapeHtml(category.label)}</h4>
+                                <span class="group-total">${category.total} penerima</span>
+                            </header>
+                            <div class="space-y-5 p-3 sm:p-5">
+                                ${category.rws.map(rw => `
+                                    <section class="rw-group">
+                                        <div class="rw-group-header">
+                                            <h5 class="font-extrabold text-slate-800">RW ${escapeHtml(rw.label)}</h5>
+                                            <span class="text-sm font-semibold text-slate-500">${rw.total} penerima</span>
+                                        </div>
+                                        <div class="space-y-4 p-3 sm:p-4">
+                                            ${rw.rts.map(rt => `
+                                                <section class="rt-group">
+                                                    <header class="rt-group-header">
+                                                        <h6 class="font-extrabold text-slate-900">RT ${escapeHtml(rt.label)} / RW ${escapeHtml(rw.label)}</h6>
+                                                        <span class="text-sm font-bold text-emerald-700">${rt.total} penerima</span>
+                                                    </header>
+                                                    <div class="coordinator-list">
+                                                        ${rt.coordinators.map(coordinator => `
+                                                            <section class="coordinator-group">
+                                                                ${coordinator.label ? `
+                                                                    <header class="coordinator-group-header">
+                                                                        <div>
+                                                                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Koordinator / Nama RT</p>
+                                                                            <p class="mt-1 font-extrabold text-slate-900">${escapeHtml(coordinator.label)}</p>
+                                                                        </div>
+                                                                        <span class="text-sm font-semibold text-slate-500">${coordinator.total} penerima</span>
+                                                                    </header>
+                                                                ` : ''}
+                                                                ${renderRecipientTable(coordinator.recipients)}
+                                                            </section>
+                                                        `).join('')}
+                                                    </div>
+                                                </section>
+                                            `).join('')}
+                                        </div>
+                                    </section>
+                                `).join('')}
+                            </div>
+                        </section>
+                    `).join('')}
+                </div>
+            </article>
+        `).join('');
+    }
 
-    // Inisialisasi awal (default responsive)
-    $(document).ready(function () {
-        initTable('responsive');
+    function loadGroupedData() {
+        groupedRequest?.abort();
+        $('#groupedLoading').removeClass('hidden');
+        $('#groupedResults, #groupedEmpty, #groupedError').addClass('hidden');
 
-        // Toggle mode
-        $('#btnModeResponsive').on('click', function () {
-            initTable('responsive');
+        groupedRequest = $.ajax({
+            url: '{{ route("santunan-ramadhan.data-grouped") }}',
+            method: 'GET',
+            data: currentFilterData(),
+            success: function (response) {
+                groupedLoaded = true;
+                groupedDirty = false;
+                $('#groupedGrandTotal').text(`Total hasil: ${response.total} penerima`);
+                $('#groupedLoading').addClass('hidden');
+
+                if (!response.groups.length) {
+                    $('#groupedEmpty').removeClass('hidden');
+                    return;
+                }
+
+                $('#groupedResults').html(renderGroupedResults(response.groups)).removeClass('hidden');
+            },
+            error: function (xhr, status) {
+                if (status === 'abort') return;
+                $('#groupedLoading').addClass('hidden');
+                $('#groupedError')
+                    .text(xhr.responseJSON?.message || 'Data penerima tidak dapat dimuat. Silakan coba lagi.')
+                    .removeClass('hidden');
+            },
+            complete: function () {
+                groupedRequest = null;
+            }
         });
+    }
 
-        $('#btnModeFull').on('click', function () {
-            initTable('full');
-        });
+    function updateViewSwitcher() {
+        const tableActive = activeDataView === 'table';
 
-        // Filter tetap reload table dengan mode saat ini
-        $('#filterTahun, #filterUmurValue, #filterUmurSatuan, #filterJk, #filterKategori').on('change', function () {
+        $('#btnViewTable')
+            .attr('aria-selected', tableActive)
+            .toggleClass('bg-emerald-600 text-white', tableActive)
+            .toggleClass('bg-white text-slate-700 hover:bg-emerald-50', !tableActive);
+        $('#btnViewGrouped')
+            .attr('aria-selected', !tableActive)
+            .toggleClass('bg-emerald-600 text-white', !tableActive)
+            .toggleClass('bg-white text-slate-700 hover:bg-emerald-50', tableActive);
+    }
+
+    function setDataView(view) {
+        if (view === activeDataView) return;
+
+        activeDataView = view;
+        const tableActive = view === 'table';
+        $('#tableViewPanel').toggleClass('hidden', !tableActive);
+        $('#groupedViewPanel').toggleClass('hidden', tableActive);
+        updateViewSwitcher();
+
+        if (tableActive) {
+            groupedRequest?.abort();
+            if (tableDirty) {
+                table.ajax.reload();
+                tableDirty = false;
+            } else {
+                table.columns.adjust();
+                table.responsive?.recalc();
+            }
+            return;
+        }
+
+        if (!groupedLoaded || groupedDirty) {
+            loadGroupedData();
+        }
+    }
+
+    function refreshDataViews() {
+        if (activeDataView === 'table') {
+            groupedDirty = true;
             table.ajax.reload();
-        });
+            tableDirty = false;
+            return;
+        }
 
-        let debounceTimer;
-        $('#filterUmurValue').on('input', function () {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => table.ajax.reload(), 300);
-        });
+        tableDirty = true;
+        loadGroupedData();
+    }
 
-        $('#globalSearch').on('keyup', function () {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => table.ajax.reload(), 300);
-        });
+    $('#btnViewTable').on('click', () => setDataView('table'));
+    $('#btnViewGrouped').on('click', () => setDataView('grouped'));
+    $('#btnModeResponsive').on('click', () => initTable('responsive'));
+    $('#btnModeFull').on('click', () => initTable('full'));
+    $('#btnApplyFilter').on('click', refreshDataViews);
+
+    $('#filterSumber, #filterKategori, #filterRw, #filterRt').on('change', function () {
+        tableDirty = true;
+        groupedDirty = true;
     });
+
+    $('#globalSearch').on('input', function () {
+        tableDirty = true;
+        groupedDirty = true;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(refreshDataViews, 350);
+    });
+
+    $('#globalSearch').on('keydown', function (event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            clearTimeout(searchTimer);
+            refreshDataViews();
+        }
+    });
+
+    initTable('responsive');
 
     // Fungsi hapus data
     function hapusData(id) {
@@ -1124,7 +1181,7 @@
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function (res) {
-                        table.ajax.reload(null, false);
+                        refreshDataViews();
                         Swal.fire('Terhapus!', res.message || 'Data berhasil dihapus', 'success');
                     },
                     error: function (xhr) {
@@ -1135,27 +1192,13 @@
         });
     }
 
-    // Tombol Reset Filter
     $('#btnResetFilter').on('click', function () {
-        // Reset semua filter ke default
-        $('#filterTahun').val('');
-        $('#filterUmurValue').val('');
-        $('#filterUmurSatuan').val('');
-        $('#filterJk').val('');
+        $('#filterSumber').val('');
         $('#filterKategori').val('');
+        $('#filterRw').val('');
+        $('#filterRt').val('');
         $('#globalSearch').val('');
-
-        // Reload tabel dengan filter kosong
-        table.ajax.reload();
-
-        // Optional: tampilkan notif sukses
-        Swal.fire({
-            icon: 'success',
-            title: 'Filter Direset',
-            text: 'Semua filter telah dikembalikan ke default',
-            timer: 1500,
-            showConfirmButton: false
-        });
+        refreshDataViews();
     });
 
     // =============================================
@@ -1280,6 +1323,60 @@
         }
     }
 
+    function detailValue(value) {
+        return value === null || value === undefined || String(value).trim() === '' ? 'Belum diisi' : value;
+    }
+
+    function openDetailModal(id) {
+        const modal = document.getElementById('detailModal');
+        $('#detailLoading').removeClass('hidden');
+        $('#detailContent, #detailError').addClass('hidden');
+        $('#detailError').text('');
+        modal.showModal();
+
+        $.ajax({
+            url: '{{ route("santunan-ramadhan.edit", ":id") }}'.replace(':id', id),
+            method: 'GET',
+            success: function (row) {
+                let tanggalLahir = 'Belum diisi';
+                if (row.tanggal_lahir) {
+                    const parts = row.tanggal_lahir.split('-');
+                    tanggalLahir = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+
+                const kategori = row.kategori === 'yatim_dhuafa' ? 'Yatim yang Dhuafa' : 'Dhuafa';
+                const jenisKelamin = row.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
+                const umur = row.umur && row.umur_satuan ? `${row.umur} ${row.umur_satuan}` : 'Belum diisi';
+
+                $('#detailNama').text(detailValue(row.nama_lengkap));
+                $('#detailPanggilan').text(detailValue(row.nama_panggilan));
+                $('#detailKategori').text(kategori);
+                $('#detailJenisKelamin').text(jenisKelamin);
+                $('#detailTanggalLahir').text(tanggalLahir);
+                $('#detailUmur').text(umur);
+                $('#detailNamaOrtu').text(detailValue(row.nama_orang_tua));
+                $('#detailPekerjaanOrtu').text(detailValue(row.pekerjaan_orang_tua));
+                $('#detailRt').text(detailValue(row.rt));
+                $('#detailRw').text(detailValue(row.rw));
+                $('#detailNamaRt').text(detailValue(row.nama_rt));
+                $('#detailNoWa').text(detailValue(row.no_wa));
+                $('#detailAlamat').text(detailValue(row.alamat));
+                $('#detailSumber').text(detailValue(row.sumber_informasi));
+                $('#detailTahun').text(detailValue(row.tahun_program));
+                $('#detailCatatan').text(detailValue(row.catatan_tambahan));
+
+                $('#detailLoading').addClass('hidden');
+                $('#detailContent').removeClass('hidden');
+            },
+            error: function (xhr) {
+                $('#detailLoading').addClass('hidden');
+                $('#detailError')
+                    .text(xhr.responseJSON?.message || 'Detail data tidak dapat dimuat. Silakan coba lagi.')
+                    .removeClass('hidden');
+            }
+        });
+    }
+
     function openEditModal(id) {
         $.ajax({
             url: '{{ route("santunan-ramadhan.edit", ":id") }}'.replace(':id', id),
@@ -1291,6 +1388,9 @@
                 $('#editKategori').val(row.kategori || '');
                 $('#editJenisKelamin').val(row.jenis_kelamin || '');
                 $('#editAlamat').val(row.alamat || '');
+                $('#editRt').val(row.rt || '');
+                $('#editRw').val(row.rw || '');
+                $('#editNamaRt').val(row.nama_rt || '');
                 $('#editNoWa').val(row.no_wa || '');
                 $('#editNamaOrtu').val(row.nama_orang_tua || '');
                 $('#editPekerjaanOrtu').val(row.pekerjaan_orang_tua || '');
@@ -1353,7 +1453,7 @@
             data: $(this).serialize(),
             success: function (res) {
                 document.getElementById('editModal').close();
-                table.ajax.reload(null, false);
+                refreshDataViews();
                 Swal.fire('Sukses', res.message || 'Data berhasil diperbarui', 'success');
             },
             error: function (xhr) {
@@ -1383,8 +1483,6 @@
             success: function(response) {
                 $('#duplikatLoading').addClass('hidden');
 
-                console.log('Full response:', response);
-
                 let pairsArray = [];
                 if (Array.isArray(response.pairs)) {
                     pairsArray = response.pairs;
@@ -1392,11 +1490,7 @@
                     pairsArray = Object.values(response.pairs);
                 }
 
-                // Filter super ketat
                 pairsArray = pairsArray.filter(item => item && typeof item === 'object' && item.id_a);
-
-                console.log('Pairs setelah filter:', pairsArray);
-                console.log('Jumlah baris valid:', pairsArray.length);
 
                 if (pairsArray.length === 0) {
                     Swal.fire('Peringatan', 'Tidak ada data valid dari server (cek controller).', 'warning');
@@ -1423,9 +1517,8 @@
                             }
                         },
                         {
-                            render: function (data, type, row) {  // pakai row sebagai fallback
+                            render: function (data, type, row) {
                                 const item = row || data || {};
-                                console.log('Render Record 1 - row data:', item); // DEBUG per baris
                                 return `
                                     <div class="font-medium text-slate-800">${item.nama_a || item.nama_lengkap || item.nama || '-'}</div>
                                     <div class="text-sm text-slate-600">Ortu: ${item.ortu_a || item.nama_orang_tua || '-'}</div>
@@ -1437,7 +1530,6 @@
                         {
                             render: function (data, type, row) {
                                 const item = row || data || {};
-                                console.log('Render Record 2 - row data:', item);
                                 return `
                                     <div class="font-medium text-slate-800">${item.nama_b || item.nama_lengkap || item.nama || '-'}</div>
                                     <div class="text-sm text-slate-600">Ortu: ${item.ortu_b || item.nama_orang_tua || '-'}</div>
@@ -1653,65 +1745,6 @@
     /* =========================
        TABLE STYLING
        ========================= */
-    #tabelYatimDhuafa tbody td {
-        color: #0f172a !important;
-    }
-
-    #tabelYatimDhuafa thead th {
-        background-color: #059669 !important;
-        color: white !important;
-    }
-
-    /* Zebra */
-    #tabelYatimDhuafa tbody tr:nth-child(odd) {
-        background-color: #f1f5f9;
-    }
-
-    #tabelYatimDhuafa tbody tr:nth-child(even) {
-        background-color: #ffffff;
-    }
-
-    /* Hover */
-    #tabelYatimDhuafa tbody tr:hover {
-        background-color: #d1fae5 !important;
-        transition: background-color 0.15s ease-in-out;
-    }
-
-
-    /* Matikan TOTAL icon default Responsive */
-    td.control::before {
-        all: unset !important;
-        content: none !important;
-        display: none !important;
-    }
-
-    td.control {
-        position: relative;
-        width: 40px;
-        cursor: pointer;
-    }
-
-    td.control::after {
-        content: "+";
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-        background-color: #059669;
-        color: white;
-        font-weight: bold;
-        border-radius: 6px;
-        font-size: 16px;
-        margin: auto;
-        transition: all 0.2s ease;
-    }
-
-    tr.parent td.control::after {
-        content: "−";
-        background-color: #dc2626;
-    }
-
     /* Fix potong kanan di mode responsive */
     .dataTables_wrapper .dataTables_scrollBody {
         overflow-x: auto !important;
@@ -1730,6 +1763,305 @@
     /* Responsive collapse tidak memotong kanan */
     .dtr-modal .dtr-modal-content {
         max-width: 90vw !important;
+    }
+
+    #tabelYatimDhuafa tbody td {
+        color: #0f172a !important;
+    }
+
+    #tabelYatimDhuafa thead th {
+        background-color: #059669 !important;
+        color: #ffffff !important;
+    }
+
+    #tabelYatimDhuafa tbody tr:nth-child(odd) {
+        background-color: #f1f5f9;
+    }
+
+    #tabelYatimDhuafa tbody tr:nth-child(even) {
+        background-color: #ffffff;
+    }
+
+    #tabelYatimDhuafa tbody tr:hover {
+        background-color: #d1fae5 !important;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    #tabelYatimDhuafa td.control::before {
+        all: unset !important;
+        content: none !important;
+        display: none !important;
+    }
+
+    #tabelYatimDhuafa td.control {
+        cursor: pointer;
+        position: relative;
+        width: 40px;
+    }
+
+    #tabelYatimDhuafa td.control::after {
+        align-items: center;
+        background-color: #059669;
+        border-radius: 6px;
+        color: #ffffff;
+        content: "+";
+        display: flex;
+        font-size: 16px;
+        font-weight: 700;
+        height: 22px;
+        justify-content: center;
+        margin: auto;
+        transition: all 0.2s ease;
+        width: 22px;
+    }
+
+    #tabelYatimDhuafa tr.parent td.control::after {
+        background-color: #dc2626;
+        content: "−";
+    }
+
+    #tableViewPanel .dataTables_scroll,
+    #tableViewPanel .dataTables_scrollBody {
+        max-width: 100%;
+    }
+
+    .source-group {
+        overflow: hidden;
+        border: 1px solid rgba(16, 185, 129, 0.25);
+        border-radius: 1.5rem;
+        background: #ffffff;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.09);
+    }
+
+    .source-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+        background: linear-gradient(135deg, #047857, #0f766e);
+    }
+
+    .group-total {
+        flex: none;
+        border-radius: 9999px;
+        background: #d1fae5;
+        padding: 0.4rem 0.75rem;
+        color: #047857;
+        font-size: 0.75rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .group-total-dark {
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.14);
+        color: #ffffff;
+    }
+
+    .category-group {
+        overflow: hidden;
+        border: 1px solid #d1fae5;
+        border-radius: 1rem;
+        background: #f8fafc;
+    }
+
+    .category-group-header,
+    .rw-group-header,
+    .rt-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .category-group-header {
+        padding: 0.9rem 1.1rem;
+        background: #ecfdf5;
+        border-bottom: 1px solid #d1fae5;
+    }
+
+    .rw-group {
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.9rem;
+        background: #ffffff;
+    }
+
+    .rw-group-header {
+        padding: 0.75rem 1rem;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .rt-group {
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.75rem;
+        background: #ffffff;
+    }
+
+    .rt-group-header {
+        padding: 0.8rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .coordinator-list {
+        display: grid;
+    }
+
+    .coordinator-group + .coordinator-group {
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .coordinator-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+        background: #f8fafc;
+    }
+
+    .grouped-table-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .grouped-recipient-table {
+        width: 100%;
+        min-width: 900px;
+        border-collapse: collapse;
+        color: #334155;
+        font-size: 0.85rem;
+    }
+
+    .grouped-recipient-table th {
+        padding: 0.7rem 0.8rem;
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    .grouped-recipient-table td {
+        padding: 0.8rem;
+        vertical-align: top;
+        overflow-wrap: anywhere;
+    }
+
+    .grouped-action {
+        border-radius: 0.5rem;
+        padding: 0.35rem 0.6rem;
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        transition: background-color 0.2s ease;
+    }
+
+    .detail-label {
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .detail-value {
+        color: #0f172a;
+        margin-top: 0.25rem;
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 640px) {
+        .source-group-header,
+        .category-group-header,
+        .rw-group-header,
+        .rt-group-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .grouped-table-wrap {
+            overflow: visible;
+        }
+
+        .grouped-recipient-table,
+        .grouped-recipient-table tbody,
+        .grouped-recipient-table tr,
+        .grouped-recipient-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .grouped-recipient-table {
+            min-width: 0;
+        }
+
+        .grouped-recipient-table thead {
+            display: none;
+        }
+
+        .grouped-recipient-table tr {
+            padding: 0.65rem 0;
+        }
+
+        .grouped-recipient-table td {
+            display: grid;
+            grid-template-columns: minmax(90px, 38%) minmax(0, 1fr);
+            gap: 0.5rem;
+            padding: 0.45rem 0.75rem;
+        }
+
+        .grouped-recipient-table td::before {
+            content: attr(data-label);
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        #tabelYatimDhuafa tbody tr.child td.child {
+            max-width: 100% !important;
+            padding: 0.75rem !important;
+            white-space: normal !important;
+            width: auto !important;
+        }
+
+        #tabelYatimDhuafa tbody tr.child ul.dtr-details {
+            display: block !important;
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+
+        #tabelYatimDhuafa tbody tr.child ul.dtr-details > li {
+            display: grid !important;
+            gap: 0.25rem;
+            grid-template-columns: minmax(0, 1fr);
+            max-width: 100% !important;
+        }
+
+        #tabelYatimDhuafa .dtr-title,
+        #tabelYatimDhuafa .dtr-data {
+            display: block !important;
+            max-width: 100% !important;
+            overflow-wrap: anywhere;
+            white-space: normal !important;
+            word-break: break-word;
+        }
+
+        #detailModal .modal-box,
+        #editModal .modal-box {
+            max-height: calc(100dvh - 2rem);
+            max-width: calc(100vw - 1rem);
+            overflow-y: auto;
+            padding: 1rem;
+            width: calc(100vw - 1rem);
+        }
     }
 
     /* =========================

@@ -7,7 +7,7 @@
 @required($field === 'display_name')></label>
 @endforeach
 <label class="form-control text-sm">Jenis penerima<select class="select select-bordered" name="beneficiary_type">
-@foreach(['YATIM' => 'Yatim', 'DHUAFA' => 'Dhuafa', 'YATIM_DHUAFA' => 'Yatim & Dhuafa', 'BELUM_DITENTUKAN' => 'Belum ditentukan'] as $value => $label)<option value="{{ $value }}"
+@foreach(['YATIM' => 'Yatim', 'DHUAFA' => 'Dhuafa', 'YATIM_DHUAFA' => 'Yatim yang Dhuafa', 'BELUM_DITENTUKAN' => 'Belum ditentukan'] as $value => $label)<option value="{{ $value }}"
 @selected(old('beneficiary_type', $person?->beneficiary_type ?? 'BELUM_DITENTUKAN') === $value)>{{ $label }}</option>
 @endforeach</select></label>
 <label class="form-control text-sm">Status<select class="select select-bordered" name="status">
