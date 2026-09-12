@@ -1,10 +1,7 @@
 @extends('masjid.mrj.admin.financial-v2.layout')
 @section('title', 'Master Penerima ZISWAF')
 @section('content')
-@php
-    $canDelete = auth()->user()?->can('delete penerima ziswaf') ?? false;
-    $columnCount = $canDelete ? 10 : 9;
-@endphp
+@php $columnCount = 10; @endphp
 
 <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
     <div>
@@ -40,7 +37,7 @@
     @method('DELETE')
     <input type="hidden" name="entity" value="{{ $entity->id }}">
 
-    @if($canDelete && $people->isNotEmpty())
+    @if($people->isNotEmpty())
         <div class="mb-3 flex flex-col gap-3 rounded-2xl border border-base-300 bg-base-100 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-wrap items-center gap-4">
                 <label class="flex cursor-pointer items-center gap-2 font-medium">
@@ -57,7 +54,7 @@
         <table class="table min-w-[70rem]">
             <thead class="bg-base-200/80 text-xs uppercase tracking-wide text-base-content/65">
                 <tr>
-                    @if($canDelete)<th class="w-12 text-center"><span class="sr-only">Pilih</span></th>@endif
+                    <th class="w-12 text-center"><span class="sr-only">Pilih</span></th>
                     <th class="w-16 text-right">No</th>
                     <th>Nama</th>
                     <th>Kategori</th>
@@ -98,9 +95,7 @@
                         </tr>
                     @endif
                     <tr class="transition-colors hover:bg-base-200/60" data-beneficiary-row>
-                        @if($canDelete)
-                            <td class="text-center"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" name="beneficiary_ids[]" value="{{ $person->id }}" data-beneficiary-select aria-label="Pilih {{ $person->display_name }}"></td>
-                        @endif
+                        <td class="text-center"><input type="checkbox" class="checkbox checkbox-sm checkbox-primary" name="beneficiary_ids[]" value="{{ $person->id }}" data-beneficiary-select aria-label="Pilih {{ $person->display_name }}"></td>
                         <td class="text-right tabular-nums text-base-content/55">{{ number_format(($people->firstItem() ?? 1) + $loop->index, 0, ',', '.') }}</td>
                         <td class="min-w-52"><a class="font-semibold text-emerald-800 hover:underline" href="{{ route('financial-v2.beneficiaries.show', ['beneficiary' => $person->id, 'entity' => $entity->id]) }}">{{ $person->display_name }}</a></td>
                         <td><span class="badge badge-outline whitespace-nowrap">{{ $person->beneficiary_type_label }}</span></td>
@@ -122,8 +117,7 @@
         </table>
     </div>
 
-    @if($canDelete)
-        <dialog id="beneficiary-delete-dialog" class="modal">
+    <dialog id="beneficiary-delete-dialog" class="modal">
             <div class="modal-box max-w-lg">
                 <h2 class="text-xl font-bold">Hapus <span data-confirm-count>0</span> penerima?</h2>
                 <p class="mt-3 text-sm leading-relaxed text-base-content/70">Tidak ada data keuangan yang akan dihapus. Penerima yang sudah memiliki riwayat penyaluran atau referensi Financial V2 tidak akan dihapus secara permanen.</p>
@@ -132,22 +126,19 @@
                     <button type="submit" class="btn btn-error">Ya, Hapus Terpilih</button>
                 </div>
             </div>
-        </dialog>
-    @endif
+    </dialog>
 </form>
 
 @if($people->hasPages())
     <div class="mt-5">{{ $people->links() }}</div>
 @endif
 
-@can('create penerima ziswaf')
-    <details class="mt-6 rounded-2xl bg-base-100 p-5" @if($errors->any()) open @endif>
-        <summary class="cursor-pointer font-semibold">Tambah penerima</summary>
-        <form method="post" action="{{ route('financial-v2.beneficiaries.store') }}" class="mt-4">
-            @include('masjid.mrj.admin.financial-v2.distributions.person-form', ['person' => null])
-        </form>
-    </details>
-@endcan
+<details class="mt-6 rounded-2xl bg-base-100 p-5" @if($errors->any()) open @endif>
+    <summary class="cursor-pointer font-semibold">Tambah penerima</summary>
+    <form method="post" action="{{ route('financial-v2.beneficiaries.store') }}" class="mt-4">
+        @include('masjid.mrj.admin.financial-v2.distributions.person-form', ['person' => null])
+    </form>
+</details>
 @endsection
 
 @push('scripts')

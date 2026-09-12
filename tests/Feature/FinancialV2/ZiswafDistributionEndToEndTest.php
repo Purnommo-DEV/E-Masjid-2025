@@ -16,7 +16,6 @@ use App\Models\FinancialV2\LedgerEntry;
 use App\Models\FinancialV2\Program;
 use App\Models\User;
 use Carbon\Carbon;
-use Database\Seeders\ZiswafDistributionPermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -272,9 +271,7 @@ test('Santunan Dhuafa January to February distribution posts once and reaches in
         ->and($public)->not->toHaveKey('transactions')
         ->and($public['summary'])->not->toHaveKey('planned_usage');
 
-    (new ZiswafDistributionPermissionSeeder)->run();
     $user = User::factory()->create();
-    $user->givePermissionTo(ZiswafDistributionPermissionSeeder::PERMISSIONS);
     $this->actingAs($user);
     $this->get(route('financial-v2.beneficiaries.index', ['entity' => $context['entity']->id, 'q' => 'Beneficiary QA 01']))
         ->assertOk()->assertSee('Beneficiary QA 01');

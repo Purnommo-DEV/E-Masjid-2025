@@ -12,7 +12,6 @@ use App\Models\FinancialV2\Journal;
 use App\Models\FinancialV2\JournalLine;
 use App\Models\FinancialV2\LedgerEntry;
 use App\Models\User;
-use Database\Seeders\ZiswafDistributionPermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -83,13 +82,9 @@ function distributionRealization(array $c): FinancialTransaction
     ], $version->id);
 }
 
-function distributionUser(array $permissions = ZiswafDistributionPermissionSeeder::PERMISSIONS): User
+function distributionUser(): User
 {
-    (new ZiswafDistributionPermissionSeeder)->run();
-    $user = User::factory()->create();
-    $user->givePermissionTo($permissions);
-
-    return $user;
+    return User::factory()->create();
 }
 
 test('cancelled realization cannot finalize or publish a distribution', function () {
@@ -155,25 +150,22 @@ test('distribution selection groups by rw then rt and sorts names within the gro
         ->and(substr_count($managedHtml, 'RT: 03 · RW: 06 · Total Penerima: 1'))->toBe(1);
 });
 
-test('internal aggregate permission does not expose recipient identity', function () {
+test('internal aggregate report does not expose recipient identity', function () {
     $c = UatFinancialFixture::context();
     $d = app(DistributionService::class)->create($c['entity']->id, distributionInput($c), null);
     $p = distributionPerson($c);
     distributionAttach($d, $p);
-    $this->actingAs(distributionUser(['view penyaluran ziswaf']));
+    $this->actingAs(distributionUser());
     $this->get(route('financial-v2.ziswaf-v2.program', ['entity' => $c['entity']->id, 'program' => $c['program']->id, 'from' => $c['today'], 'through' => $c['today']]))
         ->assertOk()->assertSee('Penyaluran dan penerima manfaat')->assertSee('1 penyaluran')->assertDontSee($p->display_name)->assertDontSee($p->address)->assertDontSee($p->contact_reference);
 });
 
-test('entity selection and permission registration are safe and idempotent', function () {
-    $role = \Spatie\Permission\Models\Role::findOrCreate('SuperAdmin', 'web');
+test('entity selection works without granular permission records', function () {
     $this->actingAs(distributionUser());
-    $count = \Spatie\Permission\Models\Permission::count();
-    (new ZiswafDistributionPermissionSeeder)->run();
-    expect(\Spatie\Permission\Models\Permission::count())->toBe($count);
-    expect($role->fresh()->hasAllPermissions(ZiswafDistributionPermissionSeeder::PERMISSIONS))->toBeTrue();
+    expect(\Spatie\Permission\Models\Permission::query()->count())->toBe(0);
     $this->get(route('financial-v2.beneficiaries.index'))->assertOk()->assertSee('Pilih entitas Financial V2');
     $this->get(route('financial-v2.distributions.index'))->assertOk()->assertSee('Pilih entitas Financial V2');
+    expect(\Spatie\Permission\Models\Permission::query()->count())->toBe(0);
 });
 
 test('beneficiary master reuses Counterparty and updates cannot rewrite historical identity', function () {
@@ -595,18 +587,13 @@ test('finalized and newly linked stale distributions cannot be deleted through t
         ->and(substr_count($html, '>Detail<'))->toBe(4);
 });
 
-test('distribution deletion uses module access and exact entity scope', function () {
+test('distribution deletion needs no granular permission and uses exact entity scope', function () {
     $a = UatFinancialFixture::context();
     $b = UatFinancialFixture::context();
     $draft = app(DistributionService::class)->create($a['entity']->id, distributionInput($a), null);
     distributionAttach($draft, distributionPerson($a));
 
-    $this->actingAs(distributionUser(['view penerima ziswaf']));
-    $this->get(route('financial-v2.distributions.index', ['entity' => $a['entity']->id]))->assertForbidden();
-    $this->delete(route('financial-v2.distributions.destroy', $draft->id), ['entity' => $a['entity']->id])->assertForbidden();
-    expect($draft->fresh())->not->toBeNull()->and($draft->items()->count())->toBe(1);
-
-    $this->actingAs(distributionUser(['view penyaluran ziswaf']));
+    $this->actingAs(distributionUser());
     $modulePage = $this->get(route('financial-v2.distributions.index', ['entity' => $a['entity']->id]))->assertOk();
     expect(substr_count($modulePage->getContent(), 'data-delete-distribution-trigger'))->toBe(2);
     $this->delete(route('financial-v2.distributions.destroy', $draft->id), ['entity' => $b['entity']->id])->assertNotFound();
@@ -628,27 +615,25 @@ test('distribution deletion is service-only and rolls back when copy lineage blo
         ->and($source->fresh())->not->toBeNull()->and($copy->fresh())->not->toBeNull();
 });
 
-test('permission gates deny every unauthorized operation', function () {
+test('authentication is required and missing granular permissions do not block Financial V2 operations', function () {
     $c = UatFinancialFixture::context();
     $s = app(DistributionService::class);
     $p = distributionPerson($c);
     $d = $s->create($c['entity']->id, distributionInput($c), null);
     distributionAttach($d, $p);
-    $this->get(route('financial-v2.beneficiaries.index', ['entity' => $c['entity']->id]))->assertRedirect();
-    $this->actingAs(distributionUser([]));
+    $this->get(route('financial-v2.beneficiaries.index', ['entity' => $c['entity']->id]))->assertRedirect(route('login'));
+    expect(\Spatie\Permission\Models\Permission::query()->count())->toBe(0);
+    $this->actingAs(distributionUser());
     foreach (['beneficiaries.index' => [], 'beneficiaries.show' => ['beneficiary' => $p->id], 'distributions.index' => [], 'distributions.show' => ['distribution' => $d->id]] as $name => $args) {
-        $this->get(route('financial-v2.'.$name, $args + ['entity' => $c['entity']->id]))->assertForbidden();
+        $this->get(route('financial-v2.'.$name, $args + ['entity' => $c['entity']->id]))->assertOk();
     }
-    $this->actingAs(distributionUser(['view penerima ziswaf', 'view penyaluran ziswaf']));
-    $this->post(route('financial-v2.beneficiaries.store'), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->patch(route('financial-v2.beneficiaries.update', $p->id), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->post(route('financial-v2.distributions.store'), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->post(route('financial-v2.distributions.items.store', $d->id), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->patch(route('financial-v2.distributions.items.update', [$d->id, $d->items()->sole()->id]), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->delete(route('financial-v2.distributions.items.destroy', [$d->id, $d->items()->sole()->id]), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->post(route('financial-v2.distributions.finalize', $d->id), ['entity' => $c['entity']->id])->assertForbidden();
-    $this->actingAs(distributionUser(['view penyaluran ziswaf']));
-    $this->get(route('financial-v2.distributions.show', ['entity' => $c['entity']->id, 'distribution' => $d->id]))->assertForbidden();
+    $this->post(route('financial-v2.beneficiaries.store'), ['entity' => $c['entity']->id])->assertRedirect()->assertSessionHasErrors();
+    $this->patch(route('financial-v2.beneficiaries.update', $p->id), ['entity' => $c['entity']->id])->assertRedirect()->assertSessionHasErrors();
+    $this->post(route('financial-v2.distributions.store'), ['entity' => $c['entity']->id])->assertRedirect()->assertSessionHasErrors();
+    $this->post(route('financial-v2.distributions.items.store', $d->id), ['entity' => $c['entity']->id])->assertRedirect()->assertSessionHasErrors();
+    $this->patch(route('financial-v2.distributions.items.update', [$d->id, $d->items()->sole()->id]), ['entity' => $c['entity']->id])->assertRedirect()->assertSessionHasErrors();
+    $this->post(route('financial-v2.distributions.finalize', $d->id), ['entity' => $c['entity']->id])->assertRedirect()->assertSessionHasErrors();
+    expect(\Spatie\Permission\Models\Permission::query()->count())->toBe(0);
 });
 
 test('entity scoping rejects cross-entity people programs distributions and realizations', function () {

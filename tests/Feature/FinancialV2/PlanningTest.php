@@ -13,11 +13,9 @@ use App\Models\FinancialV2\JournalLine;
 use App\Models\FinancialV2\LedgerEntry;
 use App\Models\FinancialV2\Voucher;
 use App\Models\User;
-use Database\Seeders\FinancialV2PlanningPermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Tests\Support\UatFinancialFixture;
 
 test('Planning draft validates master data amounts periods and exact multi-Fund totals without financial facts', function () {
@@ -191,52 +189,56 @@ test('Planning-created Allocation supports the existing Realization and canonica
         ->and($planningService->calculateBalanceImpact($context['entity']->id, $context['fund']->id))->toMatchArray(['actual' => '350.00', 'outstanding' => '50.00', 'available' => '300.00']);
 });
 
-test('Planning permissions routes UI state and validation are enforced', function () {
+test('Planning routes and lifecycle actions need no granular permissions', function () {
     $context = planningFundedContext();
-    $superAdmin = Role::findOrCreate('SuperAdmin', 'web');
-    $this->seed(FinancialV2PlanningPermissionSeeder::class);
-    $viewer = User::factory()->create();
-    $viewer->givePermissionTo('financial-v2.planning.view');
     $operator = User::factory()->create();
-    $operator->givePermissionTo(FinancialV2PlanningPermissionSeeder::PERMISSIONS);
     $planning = app(PlanningService::class)->createDraft($context['entity']->id, planningInput($context, '50.00'), [['fund_id' => $context['fund']->id, 'amount' => '50.00']], $operator->id);
 
-    $this->actingAs($viewer)->get(route('financial-v2.plannings.index', ['entity' => $context['entity']->id]))
-        ->assertOk()->assertSee('Perencanaan Penggunaan Dana');
-    $this->actingAs($viewer)->get(route('financial-v2.plannings.create', ['entity' => $context['entity']->id]))->assertForbidden();
-    $this->actingAs($viewer)->put(route('financial-v2.plannings.update', ['entity' => $context['entity']->id, 'planning' => $planning->id]), [])->assertForbidden();
-    $this->actingAs($viewer)->post(route('financial-v2.plannings.approve', ['entity' => $context['entity']->id, 'planning' => $planning->id]))->assertForbidden();
-    $this->actingAs($viewer)->post(route('financial-v2.plannings.convert', ['entity' => $context['entity']->id, 'planning' => $planning->id]))->assertForbidden();
-    $this->actingAs($viewer)->post(route('financial-v2.plannings.cancel', ['entity' => $context['entity']->id, 'planning' => $planning->id]), ['cancellation_reason' => 'Tidak berwenang'])->assertForbidden();
-    $this->actingAs($viewer)->get(route('financial-v2.plannings.show', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
-        ->assertOk()->assertDontSee('Convert to Allocation')->assertDontSee('Batalkan Planning');
+    $this->get(route('financial-v2.plannings.index', ['entity' => $context['entity']->id]))->assertRedirect(route('login'));
+    expect(Permission::query()->count())->toBe(0);
 
-    $this->actingAs($operator)->get(route('financial-v2.plannings.create', ['entity' => $context['entity']->id]))
+    $this->actingAs($operator)->get(route('financial-v2.plannings.index', ['entity' => $context['entity']->id]))
+        ->assertOk()->assertSee('Perencanaan Penggunaan Dana');
+    $this->get(route('financial-v2.plannings.create', ['entity' => $context['entity']->id]))
         ->assertOk()->assertSee('Fund Capacity Preview')->assertSee('Tambah Sumber Dana');
-    $this->actingAs($operator)->get(route('financial-v2.plannings.show', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
-        ->assertOk()->assertSee('Edit')->assertSee('Approve')->assertDontSee('Convert to Allocation');
-    $this->actingAs($operator)->post(route('financial-v2.plannings.store', ['entity' => $context['entity']->id]), planningInput($context, '100.00') + [
+    $this->get(route('financial-v2.plannings.show', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
+        ->assertOk()->assertSee('Edit')->assertSee('Approve')->assertSee('Batalkan Planning')->assertDontSee('Convert to Allocation');
+    $this->put(route('financial-v2.plannings.update', ['entity' => $context['entity']->id, 'planning' => $planning->id]), planningInput($context, '40.00') + [
+        'fundings' => [['fund_id' => $context['fund']->id, 'amount' => '40.00']],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    expect($planning->fresh()->total_amount)->toBe('40.00');
+    $this->post(route('financial-v2.plannings.store', ['entity' => $context['entity']->id]), planningInput($context, '100.00') + [
         'fundings' => [['fund_id' => $context['fund']->id, 'amount' => '99.00']],
     ])->assertSessionHasErrors('financial');
-    $this->actingAs($operator)->postJson(route('financial-v2.plannings.preview', ['entity' => $context['entity']->id]), [
+    $this->postJson(route('financial-v2.plannings.preview', ['entity' => $context['entity']->id]), [
         'period_start' => $context['today'], 'fundings' => [['fund_id' => $context['fund']->id, 'amount' => '10.00']],
     ])->assertOk()->assertJsonPath('lines.0.actual', '1000.00')->assertJsonPath('lines.0.sufficient', true);
 
-    app(PlanningService::class)->approve($planning->id, $operator->id);
-    $this->actingAs($operator)->get(route('financial-v2.plannings.show', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
-        ->assertOk()->assertSee('Convert to Allocation')->assertDontSee('>Edit<', false);
+    $otherContext = UatFinancialFixture::context();
+    $this->get(route('financial-v2.plannings.show', ['entity' => $otherContext['entity']->id, 'planning' => $planning->id]))->assertNotFound();
+    $this->post(route('financial-v2.plannings.approve', ['entity' => $otherContext['entity']->id, 'planning' => $planning->id]))->assertNotFound();
 
-    foreach (FinancialV2PlanningPermissionSeeder::PERMISSIONS as $permission) {
-        expect(Permission::findByName($permission, 'web')->name)->toBe($permission);
-    }
-    expect($superAdmin->fresh()->hasAllPermissions(FinancialV2PlanningPermissionSeeder::PERMISSIONS))->toBeTrue();
+    $this->post(route('financial-v2.plannings.approve', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
+        ->assertRedirect()->assertSessionHasNoErrors();
+    expect($planning->fresh()->status)->toBe('approved');
+    $this->get(route('financial-v2.plannings.show', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
+        ->assertOk()->assertSee('Convert to Allocation')->assertSee('Batalkan Planning')->assertDontSee('>Edit<', false);
+    $this->post(route('financial-v2.plannings.convert', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
+        ->assertRedirect()->assertSessionHasNoErrors();
+    expect($planning->fresh()->status)->toBe('converted')->and($planning->fresh()->allocation)->not->toBeNull();
+    $this->get(route('financial-v2.plannings.show', ['entity' => $context['entity']->id, 'planning' => $planning->id]))
+        ->assertOk()->assertSee('Lihat Allocation')->assertDontSee('Batalkan Planning');
+
+    $cancelled = app(PlanningService::class)->createDraft($context['entity']->id, planningInput($context, '25.00'), [['fund_id' => $context['fund']->id, 'amount' => '25.00']], $operator->id);
+    $this->post(route('financial-v2.plannings.cancel', ['entity' => $context['entity']->id, 'planning' => $cancelled->id]), ['cancellation_reason' => 'Tidak lagi diperlukan'])
+        ->assertRedirect()->assertSessionHasNoErrors();
+    expect($cancelled->fresh()->status)->toBe('cancelled')
+        ->and(Permission::query()->count())->toBe(0);
 });
 
 test('Planning form keeps A B C workflow separate from the responsive sticky summary and localizes values', function () {
     $context = planningFundedContext('2000000.00', '500000.00');
-    $this->seed(FinancialV2PlanningPermissionSeeder::class);
     $operator = User::factory()->create();
-    $operator->givePermissionTo(FinancialV2PlanningPermissionSeeder::PERMISSIONS);
 
     $create = $this->actingAs($operator)->get(route('financial-v2.plannings.create', ['entity' => $context['entity']->id]));
     $create->assertOk()

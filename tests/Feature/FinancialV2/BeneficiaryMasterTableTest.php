@@ -7,7 +7,6 @@ use App\Models\FinancialV2\Distribution;
 use App\Models\FinancialV2\DistributionItem;
 use App\Models\FinancialV2\Program;
 use App\Models\User;
-use Database\Seeders\ZiswafDistributionPermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -33,13 +32,9 @@ function beneficiaryMasterPerson(AccountingEntity $entity, string $name, array $
     ]);
 }
 
-function beneficiaryMasterUser(array $permissions = ZiswafDistributionPermissionSeeder::PERMISSIONS): User
+function beneficiaryMasterUser(): User
 {
-    (new ZiswafDistributionPermissionSeeder)->run();
-    $user = User::factory()->create();
-    $user->givePermissionTo($permissions);
-
-    return $user;
+    return User::factory()->create();
 }
 
 function beneficiaryIntegrityCounts(): array
@@ -151,7 +146,7 @@ test('recipient and RW RT group counts use Indonesian thousands separators', fun
         ->assertOk()->assertSee('1.000 penerima sesuai filter')->assertSee('Total Penerima: 1.000');
 });
 
-test('bulk delete enforces permission entity scope history protection audit and financial fact integrity', function () {
+test('bulk delete needs no granular permission and enforces entity scope history protection audit and financial fact integrity', function () {
     $entity = beneficiaryMasterEntity();
     $otherEntity = beneficiaryMasterEntity('Entity Lain');
     $eligible = beneficiaryMasterPerson($entity, 'Aman Dihapus', ['rw' => '04', 'rt' => '03']);
@@ -179,13 +174,6 @@ test('bulk delete enforces permission entity scope history protection audit and 
         'identity_snapshot' => ['display_name' => $protected->display_name, 'rt' => '03', 'rw' => '04'],
     ]);
     $before = beneficiaryIntegrityCounts();
-
-    $this->actingAs(beneficiaryMasterUser(['view penerima ziswaf']));
-    $this->delete(route('financial-v2.beneficiaries.destroy-bulk'), [
-        'entity' => $entity->id,
-        'beneficiary_ids' => [$eligible->id],
-    ])->assertForbidden();
-    expect($eligible->fresh())->not->toBeNull();
 
     $this->actingAs(beneficiaryMasterUser());
     $this->delete(route('financial-v2.beneficiaries.destroy-bulk'), [

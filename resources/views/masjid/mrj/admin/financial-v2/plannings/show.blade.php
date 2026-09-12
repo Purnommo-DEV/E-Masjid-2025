@@ -7,10 +7,10 @@
         <div><a class="text-sm text-emerald-700 hover:underline" href="{{ route('financial-v2.plannings.index', ['entity' => $entity->id]) }}">← Daftar Planning</a><div class="mt-4 flex flex-wrap items-center gap-2"><h1 class="text-2xl font-bold sm:text-3xl">{{ $planning->name }}</h1><span @class(['badge', 'badge-ghost' => $planning->status === 'draft', 'badge-success' => $planning->status === 'approved', 'badge-primary' => $planning->status === 'converted', 'badge-error' => $planning->status === 'cancelled'])>{{ ucfirst($planning->status) }}</span></div><p class="mt-2 font-mono text-sm text-base-content/60">{{ $planning->planning_number }}</p></div>
         <div class="flex flex-wrap gap-2">
             @if ($planning->status === 'draft')
-                @can('financial-v2.planning.update')<a class="btn btn-outline btn-sm" href="{{ route('financial-v2.plannings.edit', ['entity' => $entity->id, 'planning' => $planning->id]) }}">Edit</a>@endcan
-                @can('financial-v2.planning.approve')<form method="POST" action="{{ route('financial-v2.plannings.approve', ['entity' => $entity->id, 'planning' => $planning->id]) }}">@csrf<button class="btn btn-success btn-sm">Approve</button></form>@endcan
+                <a class="btn btn-outline btn-sm" href="{{ route('financial-v2.plannings.edit', ['entity' => $entity->id, 'planning' => $planning->id]) }}">Edit</a>
+                <form method="POST" action="{{ route('financial-v2.plannings.approve', ['entity' => $entity->id, 'planning' => $planning->id]) }}">@csrf<button class="btn btn-success btn-sm">Approve</button></form>
             @elseif ($planning->status === 'approved')
-                @can('financial-v2.planning.convert')<form method="POST" action="{{ route('financial-v2.plannings.convert', ['entity' => $entity->id, 'planning' => $planning->id]) }}">@csrf<button class="btn btn-primary btn-sm">Convert to Allocation</button></form>@endcan
+                <form method="POST" action="{{ route('financial-v2.plannings.convert', ['entity' => $entity->id, 'planning' => $planning->id]) }}">@csrf<button class="btn btn-primary btn-sm">Convert to Allocation</button></form>
             @elseif ($planning->status === 'converted' && $planning->allocation)
                 <a class="btn btn-outline btn-sm" href="{{ route('financial-v2.allocations.history', ['entity' => $entity->id]) }}">Lihat Allocation</a>
                 @if ($realizationCount > 0)<a class="btn btn-outline btn-sm" href="{{ route('financial-v2.transactions.index', ['entity' => $entity->id]) }}">Lihat Realization ({{ $realizationCount }})</a>@endif
@@ -57,8 +57,6 @@
     </section>
 
     @if (in_array($planning->status, ['draft', 'approved'], true))
-        @can('financial-v2.planning.cancel')
-            <section class="mt-5 rounded-3xl border border-error/30 bg-error/5 p-5"><h2 class="font-bold">Batalkan Planning</h2><p class="mt-1 text-sm text-base-content/60">Pembatalan tidak menghapus histori dan tidak membuat fakta finansial.</p><form class="mt-4 flex flex-col gap-3 sm:flex-row" method="POST" action="{{ route('financial-v2.plannings.cancel', ['entity' => $entity->id, 'planning' => $planning->id]) }}">@csrf<input class="input input-bordered flex-1" name="cancellation_reason" required maxlength="1000" placeholder="Alasan pembatalan"><button class="btn btn-error">Batalkan Planning</button></form></section>
-        @endcan
+        <section class="mt-5 rounded-3xl border border-error/30 bg-error/5 p-5"><h2 class="font-bold">Batalkan Planning</h2><p class="mt-1 text-sm text-base-content/60">Pembatalan tidak menghapus histori dan tidak membuat fakta finansial.</p><form class="mt-4 flex flex-col gap-3 sm:flex-row" method="POST" action="{{ route('financial-v2.plannings.cancel', ['entity' => $entity->id, 'planning' => $planning->id]) }}">@csrf<input class="input input-bordered flex-1" name="cancellation_reason" required maxlength="1000" placeholder="Alasan pembatalan"><button class="btn btn-error">Batalkan Planning</button></form></section>
     @endif
 @endsection

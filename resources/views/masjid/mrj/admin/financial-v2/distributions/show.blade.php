@@ -36,7 +36,6 @@ $distributionItemsByRw = $sortedDistributionItems->groupBy(fn ($item) => $groupK
 @if($distribution->copied_from_id)<section class="rounded-2xl bg-base-100 p-5 mb-5"><h2 class="font-semibold">Perbandingan dengan periode sumber salinan</h2><p class="text-sm mt-2">Sebelumnya {{ $continuity['previous'] }} · Sekarang {{ $continuity['current'] }} · Masuk {{ $continuity['added'] }} · Keluar {{ $continuity['removed'] }}</p></section>
 @endif
 @if($editable)
-@can('edit penyaluran ziswaf')
 <section class="mt-6 border-y border-base-300 py-5" data-distribution-selection
     data-storage-key="financial-v2-distribution-selection:{{ $entity->id }}:{{ $distribution->id }}"
     data-clear-selection="{{ session('distribution_batch_added') ? 'true' : 'false' }}">
@@ -90,7 +89,6 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 @endforelse
 </div></fieldset>
 </section>
-@endcan
 @endif
 
 <section class="mt-6 border-y border-base-300 py-5" data-draft-items><div class="flex flex-wrap items-end justify-between gap-2"><div><h2 class="text-xl font-bold">Kelola Penerima Draft</h2><p class="mt-1 text-sm text-base-content/65">Snapshot identitas saat penerima ditambahkan.</p></div><p class="text-sm"><strong>Penerima: {{ $distribution->items->count() }}</strong><br><strong>Total: {{ $money($total) }}</strong></p></div>
@@ -114,7 +112,6 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 </div></section>
 
 @if($editable)
-@can('finalize penyaluran ziswaf')
 <section class="bg-base-100 rounded-2xl p-5 mt-6"><h2 class="font-bold text-xl">Validasi dan finalisasi</h2><p class="text-sm my-3">Pilih realisasi existing. Total penerima harus tepat sama dengan nominal realisasi dan rincian multi-Dana. Finalisasi mengunci rincian; tidak mem-posting transaksi.</p>
 <form method="post" action="{{ route('financial-v2.distributions.finalize', $distribution->id) }}">
 @csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="revision" value="{{ $distribution->revision }}">
@@ -129,7 +126,6 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 <button class="btn btn-primary mt-4" 
 @disabled($realizations->isEmpty() || $distribution->items->isEmpty())>Finalisasi dan kunci penyaluran</button>
 </form><div class="mt-4">{{ $realizations->links() }}</div></section>
-@endcan
 @endif
 @endsection
 @push('scripts')

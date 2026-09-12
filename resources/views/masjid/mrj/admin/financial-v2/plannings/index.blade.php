@@ -25,9 +25,7 @@
                 <h1 class="mt-1 text-2xl font-bold sm:text-3xl">Perencanaan Penggunaan Dana</h1>
                 <p class="mt-2 max-w-3xl text-sm text-base-content/65">Planning adalah komitmen non-finansial. Saldo aktual baru berubah ketika Realization dicatat melalui PostingEngine.</p>
             </div>
-            @can('financial-v2.planning.create')
-                <a class="btn btn-primary" href="{{ route('financial-v2.plannings.create', ['entity' => $entity->id]) }}">+ Buat Planning</a>
-            @endcan
+            <a class="btn btn-primary" href="{{ route('financial-v2.plannings.create', ['entity' => $entity->id]) }}">+ Buat Planning</a>
         </div>
 
         <div class="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

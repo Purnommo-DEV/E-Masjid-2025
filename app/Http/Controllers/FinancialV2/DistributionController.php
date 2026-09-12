@@ -12,18 +12,13 @@ use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Program;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Gate;
 
 final class DistributionController
 {
     public function __construct(private readonly DistributionService $service) {}
 
-    private function context(Request $request, string $kind, ?string $action = null): AccountingEntity
+    private function context(Request $request): AccountingEntity
     {
-        Gate::authorize('view '.$kind.' ziswaf');
-        if ($action) {
-            Gate::authorize($action.' '.$kind.' ziswaf');
-        }
         $request->validate(['entity' => 'required|uuid']);
 
         return AccountingEntity::where('status', 'active')->findOrFail($request->input('entity'));
@@ -49,11 +44,10 @@ final class DistributionController
 
     public function beneficiaries(Request $request)
     {
-        Gate::authorize('view penerima ziswaf');
         if (! $request->filled('entity')) {
             return $this->chooseEntity();
         }
-        $entity = $this->context($request, 'penerima');
+        $entity = $this->context($request);
         $request->validate(['per_page' => 'nullable|in:10,20,100,all']);
         $perPage = (string) $request->input('per_page', '20');
         $query = $this->people($request, $entity->id);
@@ -80,7 +74,7 @@ final class DistributionController
 
     public function destroyBeneficiaries(Request $request)
     {
-        $entity = $this->context($request, 'penerima', 'delete');
+        $entity = $this->context($request);
         $input = $request->validate([
             'beneficiary_ids' => 'required|array|min:1',
             'beneficiary_ids.*' => 'required|uuid|distinct',
@@ -99,17 +93,17 @@ final class DistributionController
 
     public function beneficiary(Request $request, string $beneficiary)
     {
-        $entity = $this->context($request, 'penerima');
+        $entity = $this->context($request);
         $person = Counterparty::forEntity($entity->id)->where('party_type', 'beneficiary')->findOrFail($beneficiary);
-        $history = Gate::allows('view penyaluran ziswaf') ? DistributionItem::where('beneficiary_id', $person->id)->whereHas('distribution', fn ($q) => $q->forEntity($entity->id))
-            ->with(['distribution.program', 'distribution.realization.transaction'])->latest()->paginate(20)->withQueryString() : null;
+        $history = DistributionItem::where('beneficiary_id', $person->id)->whereHas('distribution', fn ($q) => $q->forEntity($entity->id))
+            ->with(['distribution.program', 'distribution.realization.transaction'])->latest()->paginate(20)->withQueryString();
 
         return view('masjid.mrj.admin.financial-v2.distributions.beneficiary', compact('entity', 'person', 'history'));
     }
 
     public function saveBeneficiary(Request $request, ?string $beneficiary = null)
     {
-        $entity = $this->context($request, 'penerima', $beneficiary ? 'edit' : 'create');
+        $entity = $this->context($request);
         $person = $this->service->saveBeneficiary($entity->id, $request->all(), $beneficiary, $request->user()->id);
 
         return redirect()->route('financial-v2.beneficiaries.show', ['entity' => $entity->id, 'beneficiary' => $person->id])->with('success', 'Data penerima disimpan.');
@@ -117,11 +111,10 @@ final class DistributionController
 
     public function index(Request $request)
     {
-        Gate::authorize('view penyaluran ziswaf');
         if (! $request->filled('entity')) {
             return $this->chooseEntity();
         }
-        $entity = $this->context($request, 'penyaluran');
+        $entity = $this->context($request);
         $request->validate(['program_id' => 'nullable|uuid', 'next_start' => 'nullable|date_format:Y-m-d', 'next_end' => 'nullable|date_format:Y-m-d']);
         $programs = Program::forEntity($entity->id)->orderBy('name')->get();
         $distributions = Distribution::forEntity($entity->id)->when($request->input('program_id'), fn ($q, $id) => $q->where('program_id', $id))
@@ -132,12 +125,7 @@ final class DistributionController
 
     public function store(Request $request)
     {
-        $entity = $this->context($request, 'penyaluran', 'create');
-        Gate::authorize('view penerima ziswaf');
-        if ($request->boolean('copy_previous')) {
-            // Copying identity snapshots is also a beneficiary read capability.
-            Gate::authorize('view penerima ziswaf');
-        }
+        $entity = $this->context($request);
         $distribution = $request->boolean('copy_previous')
             ? $this->service->copyPrevious($entity->id, $request->all(), $request->user()->id)
             : $this->service->create($entity->id, $request->all(), $request->user()->id);
@@ -147,8 +135,7 @@ final class DistributionController
 
     public function show(Request $request, string $distribution)
     {
-        $entity = $this->context($request, 'penyaluran');
-        Gate::authorize('view penerima ziswaf');
+        $entity = $this->context($request);
         $distribution = Distribution::forEntity($entity->id)->with(['program', 'realization.transaction.splits.fund', 'items', 'copiedFrom.items'])->findOrFail($distribution);
         $total = DecimalAmount::sum($distribution->items->pluck('amount'));
         $peopleQuery = $this->people($request, $entity->id);
@@ -169,7 +156,7 @@ final class DistributionController
 
     public function destroy(Request $request, string $distribution)
     {
-        $entity = $this->context($request, 'penyaluran');
+        $entity = $this->context($request);
         $this->service->deleteDraft($entity->id, $distribution, $request->user()->id);
 
         return redirect()->route('financial-v2.distributions.index', ['entity' => $entity->id])
@@ -178,8 +165,7 @@ final class DistributionController
 
     public function item(Request $request, string $distribution, ?string $item = null)
     {
-        $entity = $this->context($request, 'penyaluran', 'edit');
-        Gate::authorize('view penerima ziswaf');
+        $entity = $this->context($request);
         if ($item === null && ! $request->isMethod('delete') && $request->has('items')) {
             $count = count($request->input('items', []));
             $this->service->addItemsToDraft($entity->id, $distribution, $request->all(), $request->user()->id);
@@ -194,8 +180,7 @@ final class DistributionController
 
     public function finalize(Request $request, string $distribution)
     {
-        $entity = $this->context($request, 'penyaluran', 'finalize');
-        Gate::authorize('view penerima ziswaf');
+        $entity = $this->context($request);
         $input = $request->validate(['realization_id' => 'required|uuid', 'revision' => 'required|integer|min:0']);
         $this->service->finalize($entity->id, $distribution, $input['realization_id'], (int) $input['revision'], $request->user()->id);
 

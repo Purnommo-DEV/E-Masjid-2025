@@ -1,6 +1,5 @@
 
 @if($editable)
-@can('edit penyaluran ziswaf')
 <div class="col-start-2 flex flex-wrap items-center gap-1 lg:col-auto">
 <details class="relative"><summary class="btn btn-ghost btn-xs">Edit</summary>
 <form class="absolute left-0 z-20 mt-1 grid w-72 max-w-[calc(100vw-6rem)] gap-2 rounded-lg border border-base-300 bg-base-100 p-3 shadow-xl lg:left-auto lg:right-0" method="post" action="{{ route('financial-v2.distributions.items.update', [$distribution->id, $item->id]) }}">
@@ -13,7 +12,6 @@
 @csrf 
 @method('DELETE')<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="revision" value="{{ $distribution->revision }}"><button class="btn btn-ghost btn-xs text-error">Hapus</button></form>
 </div>
-@endcan
 @else
 <span class="col-start-2 text-xs font-semibold text-base-content/55 lg:col-auto">Terkunci</span>
 @endif

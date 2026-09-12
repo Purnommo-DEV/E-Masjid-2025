@@ -19,8 +19,6 @@
 @empty<p>Belum ada penyaluran.</p>
 @endforelse</div>
 <div class="mt-4">{{ $distributions->links() }}</div>
-@can('create penyaluran ziswaf')
-@can('view penerima ziswaf')
 <section id="create" class="bg-base-100 rounded-2xl p-5 mt-6"><h2 class="font-bold text-xl mb-4">Buat penyaluran / salin periode sebelumnya</h2>
 <form method="post" action="{{ route('financial-v2.distributions.store') }}">
 @csrf<input type="hidden" name="entity" value="{{ $entity->id }}">
@@ -37,6 +35,4 @@
 </div><label class="flex gap-3 items-center my-5"><input class="checkbox" type="checkbox" name="copy_previous" value="1" 
 @checked(old('copy_previous', request('copy_previous')))><span>Salin dari Penyaluran Sebelumnya</span></label><p class="text-sm mb-4 opacity-70">Menyalin daftar dan nominal dari periode terakhir sebelum tanggal mulai. Salinan selalu draft, tanpa realisasi atau posting.</p><button class="btn btn-primary">Buat draft penyaluran</button>
 </form></section>
-@endcan
-@endcan
 @endsection

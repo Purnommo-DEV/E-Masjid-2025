@@ -11,7 +11,6 @@ use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Planning;
 use App\Models\FinancialV2\Program;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 
 final class PlanningController
@@ -20,7 +19,6 @@ final class PlanningController
 
     public function index(Request $request)
     {
-        Gate::authorize('financial-v2.planning.view');
         if (! $request->filled('entity')) {
             return view('masjid.mrj.admin.financial-v2.plannings.index', [
                 'entity' => null,
@@ -66,7 +64,6 @@ final class PlanningController
 
     public function create(Request $request)
     {
-        Gate::authorize('financial-v2.planning.create');
         $entity = $this->entity($request);
 
         return $this->form($entity, new Planning(['period_start' => now()->toDateString(), 'period_end' => now()->toDateString(), 'status' => 'draft']), false);
@@ -74,7 +71,6 @@ final class PlanningController
 
     public function store(Request $request)
     {
-        Gate::authorize('financial-v2.planning.create');
         $entity = $this->entity($request);
         $input = $this->validated($request);
 
@@ -89,7 +85,6 @@ final class PlanningController
 
     public function show(Request $request, string $planning)
     {
-        Gate::authorize('financial-v2.planning.view');
         $entity = $this->entity($request);
         $planning = Planning::forEntity($entity->id)->with(['program', 'fundings.fund', 'allocation.versions.fundings.fund', 'approvedBy', 'convertedBy', 'cancelledBy'])->findOrFail($planning);
         $impacts = $planning->fundings->mapWithKeys(fn ($funding) => [
@@ -105,7 +100,6 @@ final class PlanningController
 
     public function edit(Request $request, string $planning)
     {
-        Gate::authorize('financial-v2.planning.update');
         $entity = $this->entity($request);
         $planning = Planning::forEntity($entity->id)->with('fundings')->findOrFail($planning);
         abort_unless($planning->status === 'draft', 409, 'Hanya Draft Planning yang dapat diubah.');
@@ -115,7 +109,6 @@ final class PlanningController
 
     public function update(Request $request, string $planning)
     {
-        Gate::authorize('financial-v2.planning.update');
         $entity = $this->entity($request);
         $record = Planning::forEntity($entity->id)->findOrFail($planning);
         $input = $this->validated($request);
@@ -131,14 +124,11 @@ final class PlanningController
 
     public function approve(Request $request, string $planning)
     {
-        Gate::authorize('financial-v2.planning.approve');
-
         return $this->transition($request, $planning, fn ($record) => $this->service->approve($record->id, $request->user()->id), 'Planning disetujui. Saldo akuntansi tidak berubah.');
     }
 
     public function cancel(Request $request, string $planning)
     {
-        Gate::authorize('financial-v2.planning.cancel');
         $request->validate(['cancellation_reason' => 'required|string|max:1000']);
 
         return $this->transition($request, $planning, fn ($record) => $this->service->cancel($record->id, $request->input('cancellation_reason'), $request->user()->id), 'Planning dibatalkan dan tetap disimpan sebagai histori.');
@@ -146,14 +136,11 @@ final class PlanningController
 
     public function convert(Request $request, string $planning)
     {
-        Gate::authorize('financial-v2.planning.convert');
-
         return $this->transition($request, $planning, fn ($record) => $this->service->convertToAllocation($record->id, $request->user()->id), 'Planning dikonversi menjadi Draft Allocation. Belum ada transaksi akuntansi.');
     }
 
     public function preview(Request $request)
     {
-        Gate::authorize($request->filled('planning_id') ? 'financial-v2.planning.update' : 'financial-v2.planning.create');
         $entity = $this->entity($request);
         $data = $request->validate([
             'planning_id' => 'nullable|uuid',

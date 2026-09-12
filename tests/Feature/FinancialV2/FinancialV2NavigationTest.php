@@ -5,17 +5,9 @@ use Illuminate\Testing\TestResponse;
 use Spatie\Permission\Models\Permission;
 use Tests\Support\UatFinancialFixture;
 
-function financialNavigationUser(array $permissions = []): User
+function financialNavigationUser(): User
 {
-    $user = User::factory()->create();
-    if ($permissions !== []) {
-        foreach ($permissions as $permission) {
-            Permission::findOrCreate($permission, 'web');
-        }
-        $user->givePermissionTo($permissions);
-    }
-
-    return $user;
+    return User::factory()->create();
 }
 
 function assertFinancialNavigationActive(TestResponse $response, ?string $group, string $item): void
@@ -88,13 +80,9 @@ test('Financial V2 navigation uses the requested grouped order without duplicate
         ->and(substr_count($html, ' data-nav-menu>'))->toBe(3);
 });
 
-test('Financial V2 navigation marks every parent and child route active without changing endpoint authorization', function () {
+test('authenticated user without granular permissions can open every Financial V2 navigation target', function () {
     $context = UatFinancialFixture::context();
-    $user = financialNavigationUser([
-        'financial-v2.planning.view',
-        'view penyaluran ziswaf',
-        'view penerima ziswaf',
-    ]);
+    $user = financialNavigationUser();
     $entity = $context['entity']->id;
 
     $pages = [
@@ -118,8 +106,5 @@ test('Financial V2 navigation marks every parent and child route active without 
         assertFinancialNavigationActive($response, $group, $item);
     }
 
-    $unprivilegedUser = financialNavigationUser();
-    $this->actingAs($unprivilegedUser)->get(route('financial-v2.plannings.index', ['entity' => $entity]))->assertForbidden();
-    $this->actingAs($unprivilegedUser)->get(route('financial-v2.distributions.index', ['entity' => $entity]))->assertForbidden();
-    $this->actingAs($unprivilegedUser)->get(route('financial-v2.beneficiaries.index', ['entity' => $entity]))->assertForbidden();
+    expect(Permission::query()->count())->toBe(0);
 });
