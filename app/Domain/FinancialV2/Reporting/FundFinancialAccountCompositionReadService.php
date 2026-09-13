@@ -150,6 +150,65 @@ final class FundFinancialAccountCompositionReadService
         )->isNotEmpty();
     }
 
+    /**
+     * Proves a proposed backdated effect against every later posted balance.
+     *
+     * The effect is applied to the balance on its accounting date and remains
+     * part of every later balance. Checking every date with posted custody or
+     * attribution activity prevents a historical posting from making an
+     * intermediate Fund/account position fall below its configured minimum.
+     *
+     * @return array{minimum_projected_balance:string,minimum_projected_date:string}
+     */
+    public function projectedMinimumBalanceAfterBackdatedEffect(
+        string $entityId,
+        string $fundId,
+        string $financialAccountId,
+        string $accountingDate,
+        string $effect,
+    ): array {
+        $dates = $this->postedLedger->ledger($entityId, '9999-12-31')
+            ->where('ledger.fund_id', $fundId)
+            ->where('ledger.financial_account_id', $financialAccountId)
+            ->where('ledger.accounting_date', '>', $accountingDate)
+            ->distinct()
+            ->pluck('ledger.accounting_date')
+            ->map(fn ($date): string => (string) $date);
+
+        $attributionDates = $this->attributionEvents(
+            $entityId,
+            '9999-12-31',
+            $fundId,
+            $financialAccountId,
+            afterAccountingDate: $accountingDate,
+        )->pluck('accounting_date')->map(fn ($date): string => (string) $date);
+
+        $dates = $dates
+            ->merge($attributionDates)
+            ->push($accountingDate)
+            ->unique()
+            ->sort()
+            ->values();
+
+        $minimumBalance = null;
+        $minimumDate = $accountingDate;
+        foreach ($dates as $date) {
+            $projected = DecimalAmount::add(
+                $this->currentBalance($entityId, $fundId, $financialAccountId, $date),
+                $effect,
+            );
+            if ($minimumBalance === null || DecimalAmount::compare($projected, $minimumBalance) < 0) {
+                $minimumBalance = $projected;
+                $minimumDate = $date;
+            }
+        }
+
+        return [
+            'minimum_projected_balance' => $minimumBalance ?? DecimalAmount::normalize($effect),
+            'minimum_projected_date' => $minimumDate,
+        ];
+    }
+
     /** @return Collection<int, object> */
     private function attributionEvents(
         string $entityId,
@@ -182,6 +241,7 @@ final class FundFinancialAccountCompositionReadService
             ->when($financialAccountId, fn (Builder $query, string $id) => $query->where('attribution_account.id', $id))
             ->select([
                 'journal.id as journal_id',
+                'journal.accounting_date',
                 'journal.reversal_of_journal_id',
                 'financial_transaction.source_reference',
                 'original_transaction.source_reference as original_source_reference',

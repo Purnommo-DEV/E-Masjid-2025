@@ -19,6 +19,8 @@ final class EvidenceService
         'image/webp',
         'image/heic',
         'image/heif',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
     ];
 
     public function __construct(private readonly AuditTrailService $auditTrail) {}
@@ -28,7 +30,7 @@ final class EvidenceService
     {
         return DB::transaction(function () use ($entityId, $transactionId, $originalFilename, $mediaType, $byteSize, $contentHash, $storageReference, $evidenceType, $actorUserId, $sourceMetadata): AttachmentLink {
             if (! in_array($mediaType, self::ACCEPTED_MEDIA_TYPES, true) || $byteSize <= 0 || ! preg_match('/^[a-f0-9]{64}(?:[a-f0-9]{64})?$/i', $contentHash)) {
-                throw new FinancialDomainException('E-ATTACHMENT-INVALID', 'Evidence must be a supported image/PDF with positive size and SHA-256/SHA-512 hash.');
+                throw new FinancialDomainException('E-ATTACHMENT-INVALID', 'Evidence must be a supported image/PDF/Excel file with positive size and SHA-256/SHA-512 hash.');
             }
             if (! in_array($evidenceType, ['receipt', 'invoice', 'transfer_proof', 'statement', 'cash_count', 'approval', 'policy', 'other'], true)) {
                 throw new FinancialDomainException('E-ATTACHMENT-TYPE', 'Evidence type is not in the approved evidence taxonomy.');
@@ -177,7 +179,7 @@ final class EvidenceService
     private function assertValidEvidence(string $mediaType, int $byteSize, string $contentHash, string $evidenceType): void
     {
         if (! in_array($mediaType, self::ACCEPTED_MEDIA_TYPES, true) || $byteSize <= 0 || ! preg_match('/^[a-f0-9]{64}(?:[a-f0-9]{64})?$/i', $contentHash)) {
-            throw new FinancialDomainException('E-ATTACHMENT-INVALID', 'Evidence must be a supported image/PDF with positive size and SHA-256/SHA-512 hash.');
+            throw new FinancialDomainException('E-ATTACHMENT-INVALID', 'Evidence must be a supported image/PDF/Excel file with positive size and SHA-256/SHA-512 hash.');
         }
         if (! in_array($evidenceType, ['receipt', 'invoice', 'transfer_proof', 'statement', 'cash_count', 'approval', 'policy', 'other'], true)) {
             throw new FinancialDomainException('E-ATTACHMENT-TYPE', 'Evidence type is not in the approved evidence taxonomy.');

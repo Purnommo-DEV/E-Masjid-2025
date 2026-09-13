@@ -33,6 +33,7 @@ use App\Http\Controllers\Admin\SlideMotivasiController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZakatController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\FinancialV2\BankMutationController;
 use App\Http\Controllers\FinancialV2\DistributionController;
 use App\Http\Controllers\FinancialV2\FinancialControlController;
 use App\Http\Controllers\FinancialV2\FinancialMasterDataController;
@@ -378,6 +379,22 @@ Route::middleware(['auth'])->group(function () {
     // or transaction table participates in this workflow.
     Route::prefix('admin/keuangan-v2')->name('financial-v2.')->group(function () {
         Route::get('/', [OperationalFinancialController::class, 'dashboard'])->name('dashboard');
+        Route::prefix('mutasi-bank')->name('bank-mutations.')->group(function () {
+            Route::get('/', [BankMutationController::class, 'index'])->name('index');
+            Route::get('/baru', [BankMutationController::class, 'create'])->name('create');
+            Route::post('/', [BankMutationController::class, 'store'])->name('store');
+            Route::post('/pratinjau-saldo', [BankMutationController::class, 'preview'])->name('preview');
+            Route::get('/batch/{batch}/ubah', [BankMutationController::class, 'editBatch'])->name('batches.edit');
+            Route::put('/batch/{batch}', [BankMutationController::class, 'updateBatch'])->name('batches.update');
+            Route::delete('/batch/{batch}', [BankMutationController::class, 'destroyBatch'])->name('batches.destroy');
+            Route::get('/{transaction}/ubah', [BankMutationController::class, 'edit'])->name('edit');
+            Route::put('/{transaction}', [BankMutationController::class, 'update'])->name('update');
+            Route::delete('/{transaction}', [BankMutationController::class, 'destroy'])->name('destroy');
+            Route::post('/{transaction}/ajukan', [BankMutationController::class, 'submit'])->name('submit');
+            Route::post('/{transaction}/periksa', [BankMutationController::class, 'verify'])->name('verify');
+            Route::post('/{transaction}/setujui', [BankMutationController::class, 'approve'])->name('approve');
+            Route::post('/{transaction}/catat', [BankMutationController::class, 'post'])->name('post');
+        });
         Route::get('/riwayat', [OperationalFinancialController::class, 'history'])->name('transactions.index');
         // Financial V2 reports are isolated from legacy /admin/keuangan
         // reporting and read only the immutable Posted V2 ledger/journals.
