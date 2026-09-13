@@ -348,15 +348,14 @@ test('payment UX translates restricted fund rejection without creating a financi
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'fund_id' => $restrictedFund->id,
         'category_id' => $context['paymentCategory']->id,
-    ])->assertOk()
-        ->assertJsonPath('ok', true)
-        ->assertJsonPath('allowed', false)
-        ->assertJsonPath('message', 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.');
+    ])->assertStatus(422)
+        ->assertJsonPath('ok', false)
+        ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'Konfigurasi pencatatan belum tersedia'));
 
-    $created = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'payment'), $payload)->assertOk();
-    $this->actingAs($user)->postJson(route('financial-v2.transactions.post', $created->json('transaction_id')))
-        ->assertStatus(422)->assertJsonPath('message', 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.');
-    expect(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'payment'), $payload)
+        ->assertStatus(422)->assertJsonPath('code', 'E-CONFIGURATION-MISSING');
+    expect(FinancialTransaction::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
+        ->and(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
         ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0);
 });
 
@@ -382,10 +381,9 @@ test('restricted fund preview fails closed when its operational transaction type
         'operation' => 'receipt',
         'date' => now()->toDateString(),
         'fund_id' => $fund->id,
-    ])->assertOk()
-        ->assertJsonPath('ok', true)
-        ->assertJsonPath('allowed', false)
-        ->assertJsonPath('message', 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.');
+    ])->assertStatus(422)
+        ->assertJsonPath('ok', false)
+        ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'Konfigurasi pencatatan belum tersedia'));
 });
 
 test('treasury transfer UX preserves fund and never creates income or expense impact', function () {

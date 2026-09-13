@@ -182,7 +182,7 @@ test('retains failed posting diagnostics and allows a same-key retry after corre
     expect(fn () => app(PostingEngine::class)->post($context['transaction']->id, $key, $fingerprint))->toThrow(FinancialPostingException::class);
     expect(PostingAttempt::where('transaction_id', $context['transaction']->id)->sole())
         ->status->toBe('failed')
-        ->and(PostingAttempt::where('transaction_id', $context['transaction']->id)->sole()->failure_code)->toBe('E-JOURNAL-UNBALANCED')
+        ->and(PostingAttempt::where('transaction_id', $context['transaction']->id)->sole()->failure_code)->toBe('E-CONFIGURATION-MISSING')
         ->and(IdempotencyKey::where('key_value', $key)->sole()->status)->toBe('failed')
         ->and(AuditEvent::where('target_id', $context['transaction']->id)->where('event_type', 'posting_failed')->count())->toBe(1)
         ->and(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)

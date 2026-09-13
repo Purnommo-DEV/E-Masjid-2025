@@ -7,19 +7,18 @@
         $rupiah = fn ($amount) => 'Rp'.number_format((float) $amount, 2, ',', '.');
         $statusLabel = fn ($status) => ['draft'=>'Draft','submitted'=>'Diajukan','verified'=>'Diperiksa','approved'=>'Disetujui','posted'=>'Dicatat resmi','cancelled'=>'Dihapus','reversed'=>'Dibalik','rejected'=>'Ditolak'][$status] ?? ucfirst($status);
         $years = range(2026, max(2027, (int) now()->format('Y') + 1));
-        $isTargetEntity = $entity && $configurationStatus['entity_id'] === $entity->id;
     @endphp
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div><h1 class="text-2xl font-bold">Mutasi Bank</h1><p class="mt-1 text-sm text-base-content/65">Input mutasi rekening melalui alur pemeriksaan dan pencatatan Financial V2.</p></div>
-        @if($isTargetEntity && $configurationStatus['active'])<a class="btn btn-primary" href="{{ route('financial-v2.bank-mutations.create', ['entity' => $entity->id]) }}">+ Tambah Mutasi</a>@endif
+        @if($entity)<a class="btn btn-primary" href="{{ route('financial-v2.bank-mutations.create', ['entity' => $entity->id]) }}">+ Tambah Mutasi</a>@endif
     </div>
 
     <section class="mb-5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-950 shadow-sm sm:p-5" data-bank-configuration>
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <h2 class="font-bold">Konfigurasi Mutasi Bank</h2>
-                    <span class="badge {{ $configurationStatus['active'] ? 'badge-success' : 'badge-warning' }}">{{ $configurationStatus['active'] ? 'Aktif' : 'Belum aktif' }}</span>
+                    <h2 class="font-bold">Status Konfigurasi</h2>
+                    <span class="badge {{ $configurationStatus['active'] ? 'badge-success' : 'badge-warning' }}">{{ $configurationStatus['active'] ? '● Siap digunakan' : '● Sebagian belum tersedia' }}</span>
                 </div>
                 <dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
                     <div><dt class="text-xs text-sky-900/65">Rekening</dt><dd class="font-semibold">BNI ZISWAF</dd></div>
@@ -29,34 +28,11 @@
                 </dl>
                 <p class="mt-3 text-xs leading-5 text-sky-900/70">Kategori: Jasa Giro/Bunga, PPH, Biaya Administrasi Rekening, Biaya Administrasi Kartu, dan Biaya Transfer Bank.</p>
             </div>
-            @if($isTargetEntity && ! $configurationStatus['active'])
-                <button type="button" class="btn btn-primary shrink-0" onclick="document.getElementById('bank-mutation-config-modal').showModal()">Aktifkan Konfigurasi</button>
-            @endif
         </div>
     </section>
 
-    @if($isTargetEntity && ! $configurationStatus['active'])
-        <dialog id="bank-mutation-config-modal" class="modal">
-            <div class="modal-box max-w-lg">
-                <h3 class="text-lg font-bold">Aktifkan Konfigurasi Mutasi Bank</h3>
-                <p class="mt-4 leading-7">Aktifkan konfigurasi Mutasi Bank untuk BNI ZISWAF dengan Dana Infaq &amp; Tromol?</p>
-                <p class="mt-3 rounded-xl bg-base-200 p-3 text-sm">Perubahan hanya pada configuration. Tidak ada transaksi keuangan yang dibuat.</p>
-                <div class="modal-action">
-                    <form method="dialog"><button class="btn btn-ghost">Batal</button></form>
-                    <form method="POST" action="{{ route('financial-v2.bank-mutations.configure') }}">
-                        @csrf
-                        <button class="btn btn-primary">Aktifkan</button>
-                    </form>
-                </div>
-            </div>
-            <form method="dialog" class="modal-backdrop"><button aria-label="Tutup dialog">close</button></form>
-        </dialog>
-    @endif
-
     @if(!$entity)
         <div class="alert alert-warning">Pilih entitas keuangan aktif terlebih dahulu.</div>
-    @elseif(!$isTargetEntity || ! $configurationStatus['active'])
-        <div class="alert alert-warning items-start"><span>Policy Mutasi Bank belum aktif. Sistem menahan input sampai konfigurasi rekening, Dana, kategori, rule, bukti, dan approval lengkap.</span></div>
     @else
         <form method="GET" class="mb-5 rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300">
             <input type="hidden" name="entity" value="{{ $entity->id }}">

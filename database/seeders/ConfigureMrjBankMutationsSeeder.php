@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Domain\FinancialV2\ConfigureMrjBankMutationsService;
+use App\Domain\FinancialV2\ConfigureFinancialV2DefaultsService;
 use Illuminate\Database\Seeder;
 
 final class ConfigureMrjBankMutationsSeeder extends Seeder
 {
     public function run(): void
     {
-        app(ConfigureMrjBankMutationsService::class)->configure();
+        app(ConfigureFinancialV2DefaultsService::class)->configureMrjBankMutations();
     }
 }

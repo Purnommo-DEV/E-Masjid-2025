@@ -11,6 +11,7 @@ use App\Domain\FinancialV2\DraftTransactionReadService;
 use App\Domain\FinancialV2\EvidenceService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialPostingException;
+use App\Domain\FinancialV2\FinancialTransactionConfigurationResolver;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use App\Domain\FinancialV2\RealizationDraftReadService;
@@ -29,12 +30,8 @@ use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Fund;
-use App\Models\FinancialV2\FundPolicyRule;
-use App\Models\FinancialV2\FundPolicyVersion;
 use App\Models\FinancialV2\Journal;
 use App\Models\FinancialV2\LedgerEntry;
-use App\Models\FinancialV2\PostingRuleLine;
-use App\Models\FinancialV2\PostingRuleVersion;
 use App\Models\FinancialV2\Program;
 use App\Models\FinancialV2\Reconciliation;
 use App\Models\FinancialV2\TransactionType;
@@ -77,6 +74,7 @@ final class OperationalFinancialController
         private readonly FundHistoryReadService $fundHistory,
         private readonly RealizationDraftReadService $realizationDrafts,
         private readonly DraftTransactionReadService $draftTransactions,
+        private readonly FinancialTransactionConfigurationResolver $configurationResolver,
     ) {}
 
     public function dashboard(Request $request)
@@ -191,7 +189,7 @@ final class OperationalFinancialController
                 'today' => $transaction->accounting_date->toDateString(),
                 'selectedAllocationVersionId' => null,
             ]);
-        } catch (FinancialDomainException $exception) {
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
             return $this->failure($request, $exception);
         }
     }
@@ -221,13 +219,22 @@ final class OperationalFinancialController
             }
             $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
             $category = $this->category($entity, $input['category_id'], $type->id);
-            $counterparty = $operation === 'receipt'
-                ? null
-                : $this->counterpartyFromInput($entity, $input, $actorId, $operation === 'realization' ? 'beneficiary' : 'supplier');
             $this->fund($entity, $fundId);
             $this->program($entity, $programId);
             $amount = $this->amount($input['amount']);
-            $splitAccountId = $this->operationalSplitAccount($entity, $type, $input['date'], $financialAccount->account_id);
+            $resolved = $this->configurationResolver->resolve([
+                'accounting_entity_id' => $entity->id,
+                'transaction_type_id' => $type->id,
+                'date' => $input['date'],
+                'financial_account_id' => $financialAccount->id,
+                'fund_ids' => collect($fundingSources ?? [['fund_id' => $fundId]])->pluck('fund_id')->all(),
+                'category_id' => $category->id,
+                'program_id' => $programId,
+            ]);
+            $splitAccountId = $resolved->businessAccountId;
+            $counterparty = $operation === 'receipt'
+                ? null
+                : $this->counterpartyFromInput($entity, $input, $actorId, $operation === 'realization' ? 'beneficiary' : 'supplier');
 
             $this->lifecycle->updateDraft($transaction->id, [
                 'business_date' => $input['date'],
@@ -380,7 +387,7 @@ final class OperationalFinancialController
             $this->lifecycle->submit($transaction->id, $request->user()?->id);
 
             return $this->success($request, 'Draft transaksi telah diajukan untuk pemeriksaan.', route('financial-v2.transactions.show', $transaction), ['transaction_id' => $transaction->id]);
-        } catch (FinancialDomainException $exception) {
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
             return $this->failure($request, $exception);
         }
     }
@@ -421,7 +428,11 @@ final class OperationalFinancialController
             'period' => ['nullable', 'regex:/^\d{4}-\d{2}$/'],
             'type' => ['nullable', 'in:RCV,PAY,TRF,IFT'],
             'financial_account_id' => ['nullable', 'uuid'],
+            'source_financial_account_id' => ['nullable', 'uuid'],
+            'destination_financial_account_id' => ['nullable', 'uuid'],
             'fund_id' => ['nullable', 'uuid'],
+            'source_fund_id' => ['nullable', 'uuid'],
+            'destination_fund_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
             'status' => ['nullable', 'in:all,draft,submitted,verified,approved,posted,rejected,cancelled,reversed'],
@@ -909,45 +920,45 @@ final class OperationalFinancialController
             'operation' => ['required', 'in:receipt,payment,transfer,interfund,realization'],
             'date' => ['required', 'date'],
             'financial_account_id' => ['nullable', 'uuid'],
+            'source_financial_account_id' => ['nullable', 'uuid'],
+            'destination_financial_account_id' => ['nullable', 'uuid'],
             'fund_id' => ['nullable', 'uuid'],
+            'source_fund_id' => ['nullable', 'uuid'],
+            'destination_fund_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
         ], $this->validationMessages());
 
         try {
             $definition = $this->operation($data['operation']);
-            $fund = $this->fund($entity, $data['fund_id'] ?? null);
-            try {
-                $type = $this->transactionType($entity, $definition['code']);
-            } catch (FinancialDomainException $exception) {
-                if (
-                    $exception->failureCode === 'E-UX-TRANSACTION-TYPE'
-                    && $fund
-                    && in_array($fund->type?->classification, ['restricted', 'perpetual_restricted', 'custodial', 'syariah'], true)
-                ) {
-                    return response()->json([
-                        'ok' => true,
-                        'allowed' => false,
-                        'message' => 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.',
-                        'financial_account_balance' => null,
-                    ]);
-                }
-
-                throw $exception;
-            }
-            $program = $this->program($entity, $data['program_id'] ?? null);
-            $category = $this->category($entity, $data['category_id'] ?? null, $type->id);
-            $account = isset($data['financial_account_id']) ? $this->financialAccount($entity, $data['financial_account_id']) : null;
-            $allowed = $this->previewFundUsage($fund, $type, $category, $program, $data['date']);
+            $type = $this->transactionType($entity, $definition['code']);
+            $fundIds = $data['operation'] === 'interfund'
+                ? array_values(array_filter([$data['source_fund_id'] ?? null, $data['destination_fund_id'] ?? null]))
+                : array_values(array_filter([$data['fund_id'] ?? null]));
+            $resolved = $this->configurationResolver->resolve([
+                'accounting_entity_id' => $entity->id,
+                'transaction_type_id' => $type->id,
+                'date' => $data['date'],
+                'financial_account_id' => $data['financial_account_id'] ?? null,
+                'source_financial_account_id' => $data['source_financial_account_id'] ?? null,
+                'destination_financial_account_id' => $data['destination_financial_account_id'] ?? null,
+                'fund_ids' => $fundIds,
+                'source_fund_id' => $data['source_fund_id'] ?? null,
+                'destination_fund_id' => $data['destination_fund_id'] ?? null,
+                'program_id' => $data['program_id'] ?? null,
+                'category_id' => $data['category_id'] ?? null,
+            ]);
+            $accountId = $data['financial_account_id'] ?? $data['source_financial_account_id'] ?? null;
+            $account = $accountId ? $this->financialAccount($entity, $accountId) : null;
             $balance = $account ? $this->balances->financialAccountBalance($entity->id, $account->id, $data['date'])['balance'] : null;
 
             return response()->json([
                 'ok' => true,
-                'allowed' => $allowed,
-                'message' => $allowed
-                    ? 'Kombinasi master dapat digunakan. Pemeriksaan akhir tetap dilakukan saat pencatatan resmi.'
-                    : 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.',
+                'allowed' => true,
+                'message' => 'Konfigurasi pencatatan tersedia untuk kombinasi dan tanggal ini.',
                 'financial_account_balance' => $balance,
+                'required_approval_steps' => $resolved->requiredApprovalSteps,
+                'required_evidence' => $resolved->evidenceRequirements->pluck('evidence_type')->values(),
             ]);
         } catch (FinancialDomainException|FinancialPostingException|InvalidArgumentException $exception) {
             return response()->json(['ok' => false, 'message' => $this->humanMessage($exception)], 422);
@@ -1164,7 +1175,16 @@ final class OperationalFinancialController
         $program = $this->program($entity, $input['program_id'] ?? null);
         $category = $this->category($entity, $input['category_id'], $type->id);
         $amount = $this->amount($input['amount']);
-        $splitAccountId = $this->operationalSplitAccount($entity, $type, $input['date'], $financialAccount->account_id);
+        $resolved = $this->configurationResolver->resolve([
+            'accounting_entity_id' => $entity->id,
+            'transaction_type_id' => $type->id,
+            'date' => $input['date'],
+            'financial_account_id' => $financialAccount->id,
+            'fund_id' => $fund->id,
+            'category_id' => $category->id,
+            'program_id' => $program?->id,
+        ]);
+        $splitAccountId = $resolved->businessAccountId;
 
         return $this->lifecycle->createReceipt(array_merge($this->transactionInput($entity, $type, $input, $sourceKey), [
             'primary_financial_account_id' => $financialAccount->id,
@@ -1208,9 +1228,18 @@ final class OperationalFinancialController
         $fund = $this->fund($entity, $fundId);
         $program = $this->program($entity, $programId);
         $category = $this->category($entity, $input['category_id'], $type->id);
-        $counterparty = $this->counterpartyFromInput($entity, $input, $actorId, $counterpartyType);
         $amount = $this->amount($input['amount']);
-        $splitAccountId = $this->operationalSplitAccount($entity, $type, $input['date'], $financialAccount->account_id);
+        $resolved = $this->configurationResolver->resolve([
+            'accounting_entity_id' => $entity->id,
+            'transaction_type_id' => $type->id,
+            'date' => $input['date'],
+            'financial_account_id' => $financialAccount->id,
+            'fund_ids' => collect($fundingSources ?? [['fund_id' => $fund->id]])->pluck('fund_id')->all(),
+            'category_id' => $category->id,
+            'program_id' => $program?->id,
+        ]);
+        $splitAccountId = $resolved->businessAccountId;
+        $counterparty = $this->counterpartyFromInput($entity, $input, $actorId, $counterpartyType);
 
         return [
             'input' => $this->transactionInput($entity, $type, $input, $sourceKey) + [
@@ -1238,6 +1267,14 @@ final class OperationalFinancialController
         $destination = $this->financialAccount($entity, $input['destination_financial_account_id']);
         $fund = $this->fund($entity, $input['fund_id']);
         $amount = $this->amount($input['amount']);
+        $this->configurationResolver->resolve([
+            'accounting_entity_id' => $entity->id,
+            'transaction_type_id' => $type->id,
+            'date' => $input['date'],
+            'source_financial_account_id' => $source->id,
+            'destination_financial_account_id' => $destination->id,
+            'fund_id' => $fund->id,
+        ]);
 
         return $this->lifecycle->createTreasuryTransfer($this->transactionInput($entity, $type, $input, $sourceKey) + [
             'source_financial_account_id' => $source->id,
@@ -1255,6 +1292,15 @@ final class OperationalFinancialController
         $source = $this->fund($entity, $input['source_fund_id']);
         $destination = $this->fund($entity, $input['destination_fund_id']);
         $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
+        $this->configurationResolver->resolve([
+            'accounting_entity_id' => $entity->id,
+            'transaction_type_id' => $type->id,
+            'date' => $input['date'],
+            'financial_account_id' => $financialAccount->id,
+            'fund_ids' => [$source->id, $destination->id],
+            'source_fund_id' => $source->id,
+            'destination_fund_id' => $destination->id,
+        ]);
 
         return $this->lifecycle->createInterfundTransfer($this->transactionInput($entity, $type, $input, $sourceKey) + [
             'primary_financial_account_id' => $financialAccount->id,
@@ -1402,25 +1448,6 @@ final class OperationalFinancialController
         }
 
         return $type;
-    }
-
-    private function operationalSplitAccount(AccountingEntity $entity, TransactionType $type, string $date, string $fallbackAccountId): string
-    {
-        $version = PostingRuleVersion::query()
-            ->where('accounting_entity_id', $entity->id)
-            ->where('status', 'effective')
-            ->where('effective_from', '<=', $date)
-            ->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
-            ->whereHas('rule', fn (Builder $query) => $query->where('transaction_type_id', $type->id)->where('status', 'active'))
-            ->orderByDesc('effective_from')
-            ->first();
-        if (! $version) {
-            throw new FinancialDomainException('E-RULE-NOT-EFFECTIVE', 'Aturan pencatatan untuk transaksi ini belum aktif.');
-        }
-        $lines = PostingRuleLine::query()->where('posting_rule_version_id', $version->id)->with('account')->orderBy('line_no')->get();
-        $businessLine = $lines->first(fn (PostingRuleLine $line) => $line->account && ! $line->account->is_liquidity_account);
-
-        return $businessLine?->account_id ?? $lines->first()?->account_id ?? $fallbackAccountId;
     }
 
     /** @return array{0: string, 1: ?string, 2: string} */
@@ -1780,23 +1807,6 @@ final class OperationalFinancialController
         return ['accounts' => [], 'funds' => [], 'financialAccounts' => [], 'programs' => []];
     }
 
-    private function previewFundUsage(?Fund $fund, TransactionType $type, ?Category $category, ?Program $program, string $date): bool
-    {
-        if (! $fund || ! in_array($fund->type?->classification, ['restricted', 'perpetual_restricted', 'custodial', 'syariah'], true)) {
-            return true;
-        }
-        $policy = FundPolicyVersion::query()->where('fund_id', $fund->id)->where('status', 'effective')->where('effective_from', '<=', $date)->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))->orderByDesc('effective_from')->first();
-        if (! $policy) {
-            return false;
-        }
-        $rules = FundPolicyRule::query()->where('fund_policy_version_id', $policy->id)->where('transaction_type_id', $type->id)
-            ->where(fn (Builder $query) => $query->whereNull('category_id')->orWhere('category_id', $category?->id))
-            ->where(fn (Builder $query) => $query->whereNull('program_id')->orWhere('program_id', $program?->id))
-            ->pluck('decision');
-
-        return ! $rules->contains('prohibited') && $rules->contains('allowed');
-    }
-
     private function success(Request $request, string $message, string $redirect, array $payload = [])
     {
         if ($request->expectsJson()) {
@@ -1828,7 +1838,8 @@ final class OperationalFinancialController
             'E-PERIOD-CLOSED', 'E-PERIOD-REOPEN-SCOPE' => 'Periode pada tanggal tersebut belum terbuka atau sudah ditutup sehingga transaksi tidak dapat dicatat.',
             'E-EVIDENCE-REQUIRED' => 'Bukti yang diwajibkan oleh aturan pencatatan belum dilampirkan.',
             'E-APPROVAL-REQUIRED' => 'Transaksi menunggu persetujuan yang dikonfigurasi sebelum dapat dicatat resmi.',
-            'E-RULE-NOT-EFFECTIVE', 'E-UX-TRANSACTION-TYPE' => 'Konfigurasi pencatatan untuk transaksi ini belum siap digunakan.',
+            'E-CONFIGURATION-MISSING' => $exception->getMessage(),
+            'E-RULE-NOT-EFFECTIVE', 'E-UX-TRANSACTION-TYPE' => 'Konfigurasi pencatatan belum tersedia untuk kombinasi transaksi ini.',
             'E-UX-POSTED-IMMUTABLE' => 'Transaksi yang sudah dicatat tidak dapat diubah langsung. Gunakan koreksi atau reversal sesuai kewenangan.',
             'E-UX-DUPLICATE', 'E-DUPLICATE-POSTING' => 'Permintaan yang sama sudah diterima. Sistem tidak membuat pencatatan ganda.',
             'E-MASTER-INACTIVE', 'E-UX-FUND', 'E-UX-FINANCIAL-ACCOUNT', 'E-UX-PROGRAM', 'E-UX-COUNTERPARTY', 'E-UX-CATEGORY' => 'Pilihan master tidak aktif, tidak sesuai, atau tidak tersedia untuk transaksi ini.',

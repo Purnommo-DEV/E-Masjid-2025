@@ -3,7 +3,6 @@
 namespace App\Domain\FinancialV2;
 
 use App\Models\FinancialV2\Account;
-use App\Models\FinancialV2\BankMutationPolicy;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\FinancialTransaction;
@@ -20,7 +19,10 @@ final class BankMutationService
         'BANK_TRANSFER_FEE' => 'Biaya Transfer Bank',
     ];
 
-    public function __construct(private readonly FinancialTransactionLifecycleService $lifecycle) {}
+    public function __construct(
+        private readonly FinancialTransactionLifecycleService $lifecycle,
+        private readonly FinancialTransactionConfigurationResolver $configurationResolver,
+    ) {}
 
     /** @param array<string, mixed> $input */
     public function create(array $input, ?int $actorUserId = null): FinancialTransaction
@@ -189,36 +191,32 @@ final class BankMutationService
         return array_key_exists((string) $code, self::CATEGORY_CODES);
     }
 
-    /** @param array<string, mixed> $input @return array{policy: BankMutationPolicy, category: Category, type: mixed, account: Account, counterparty: ?Counterparty} */
+    /** @param array<string, mixed> $input @return array{policy: \App\Models\FinancialV2\BankMutationPolicy, category: Category, type: mixed, account: Account, counterparty: ?Counterparty} */
     private function resolveContext(array $input): array
     {
-        $policy = BankMutationPolicy::query()
-            ->with(['category', 'transactionType'])
-            ->where('accounting_entity_id', $input['accounting_entity_id'])
-            ->where('financial_account_id', $input['financial_account_id'])
-            ->where('fund_id', $input['fund_id'])
-            ->where('category_id', $input['category_id'])
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $input['date'])
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $input['date']))
-            ->first();
-        if (! $policy || ! $policy->category || ! $policy->transactionType || $policy->category->status !== 'active') {
-            throw new FinancialDomainException('E-BANK-MUTATION-POLICY', 'Kombinasi rekening, Dana, jenis mutasi, dan tanggal belum memiliki policy aktif.');
-        }
-        $accountId = $policy->postingRuleVersion?->lines()->whereHas('account', fn ($query) => $query->where('is_liquidity_account', false))->value('account_id');
-        $account = $accountId ? Account::query()->find($accountId) : null;
+        $category = Category::query()->where('accounting_entity_id', $input['accounting_entity_id'])->find($input['category_id']);
+        $resolved = $this->configurationResolver->resolve([
+            'accounting_entity_id' => $input['accounting_entity_id'],
+            'transaction_type_id' => $category?->transaction_type_id,
+            'date' => $input['date'],
+            'financial_account_id' => $input['financial_account_id'],
+            'fund_id' => $input['fund_id'],
+            'category_id' => $input['category_id'],
+        ]);
+        $policy = $resolved->bankMutationPolicy;
+        $account = Account::query()->find($resolved->businessAccountId);
         if (! $account) {
             throw new FinancialDomainException('E-BANK-MUTATION-RULE', 'Posting rule Mutasi Bank belum lengkap.');
         }
         $counterparty = null;
-        if ($policy->transactionType->code === TransactionTypeCode::Payment->value) {
+        if ($resolved->transactionType->code === TransactionTypeCode::Payment->value) {
             $counterparty = Counterparty::query()->where('accounting_entity_id', $input['accounting_entity_id'])->where('code', 'BANK-BNI')->where('status', 'active')->first();
             if (! $counterparty) {
                 throw new FinancialDomainException('E-BANK-MUTATION-COUNTERPARTY', 'Master counterparty bank belum tersedia.');
             }
         }
 
-        return ['policy' => $policy, 'category' => $policy->category, 'type' => $policy->transactionType, 'account' => $account, 'counterparty' => $counterparty];
+        return ['policy' => $policy, 'category' => $category, 'type' => $resolved->transactionType, 'account' => $account, 'counterparty' => $counterparty];
     }
 
     /** @param array<string, mixed> $input @param array<string, mixed> $context @return array<string, mixed> */

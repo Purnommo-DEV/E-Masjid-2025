@@ -44,8 +44,6 @@
             <select name="entity" class="select select-bordered grow" required><option value="">Pilih entitas</option>@foreach($entities as $available)<option value="{{ $available->id }}">{{ $available->name }}</option>@endforeach</select>
             <button class="btn btn-primary">Pilih</button>
         </form>
-    @elseif ($configurationStatus['entity_id'] !== $entity->id || ! $configurationStatus['active'])
-        <div class="alert alert-warning items-start"><span>Master policy Mutasi Bank belum dikonfigurasi. Form tetap fail-closed sampai konfigurasi rekening, Dana, kategori, rule, bukti, dan approval disahkan.</span></div>
     @else
         <form method="POST"
               action="{{ $isEdit ? route('financial-v2.bank-mutations.batches.update', ['batch' => $batchId]) : route('financial-v2.bank-mutations.store') }}"
@@ -92,7 +90,7 @@
 
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <a class="btn btn-ghost" href="{{ route('financial-v2.bank-mutations.index', ['entity' => $entity->id]) }}">Batal</a>
-                    <button class="btn btn-primary">{{ $isEdit ? 'Simpan perubahan batch' : 'Simpan batch sebagai draft' }}</button>
+                    <button class="btn btn-primary" data-bank-submit disabled>{{ $isEdit ? 'Simpan perubahan batch' : 'Simpan batch sebagai draft' }}</button>
                 </div>
             </div>
 
@@ -106,11 +104,11 @@
                         <div class="flex justify-between gap-3"><dt class="text-base-content/60">Net mutasi</dt><dd class="text-right font-semibold" data-preview-net>Rp0,00</dd></div>
                         <div class="flex justify-between gap-3 border-t border-base-300 pt-3"><dt class="font-semibold">Saldo setelah</dt><dd class="text-right font-bold text-emerald-700" data-preview-closing>—</dd></div>
                     </dl>
-                    <p class="mt-3 text-xs leading-5 text-base-content/55" data-preview-note>Pratinjau selalu mengikuti nilai form saat ini.</p>
+                    <p class="mt-3 text-xs leading-5 text-base-content/55" data-preview-note aria-live="polite">Lengkapi baris mutasi untuk memeriksa konfigurasi dan pratinjau saldo.</p>
                 </section>
                 <section class="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
-                    <h2 class="font-bold">Konfigurasi Mutasi Bank</h2>
-                    <p class="mt-2 text-xs leading-5">Validasi berasal dari Financial Account, Fund Policy, Category, Posting Rule, Approval, dan Evidence. Operator tidak mengubah policy dari form transaksi.</p>
+                    <h2 class="font-bold">Status Konfigurasi</h2>
+                    <p class="mt-2 text-xs leading-5">Sistem memilih konfigurasi yang berlaku dari rekening, Dana, jenis mutasi, dan tanggal. Draft hanya dapat disimpan setelah kombinasi tersebut dinyatakan siap.</p>
                 </section>
             </aside>
         </form>
@@ -146,6 +144,7 @@
     const template = document.querySelector('[data-mutation-template]');
     const initialRows = @json($initialRows);
     const defaultFundId = @json($options['defaultFundId']);
+    const submit = form.querySelector('[data-bank-submit]');
     const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
     const suffixes = { BANK_INTEREST: 'JASA-GIRO', BANK_WHT_PPH: 'PPH', BANK_ACCOUNT_FEE: 'ADM-REK', BANK_CARD_FEE: 'ADM-KARTU', BANK_TRANSFER_FEE: 'TRANSFER-FEE' };
     let nextIndex = 0;
@@ -226,13 +225,23 @@
         if (!accountId || !date) {
             baseBalance = null;
             postedMovement = 0;
+            submit.disabled = true;
             form.querySelector('[data-preview-opening]').textContent = '—';
+            form.querySelector('[data-preview-note]').textContent = 'Pilih rekening dan tanggal untuk memeriksa konfigurasi.';
             renderCurrentState();
             return;
         }
 
+        baseBalance = null;
+        postedMovement = 0;
+        form.querySelector('[data-preview-opening]').textContent = '—';
+        submit.disabled = true;
+        form.querySelector('[data-preview-note]').textContent = 'Memeriksa konfigurasi yang berlaku pada tanggal transaksi…';
+        renderCurrentState();
+
         timer = setTimeout(async () => {
             const validEntries = currentEntries().filter((entry) => entry.category_id && entry.fund_id && entry.amount > 0);
+            const configurationComplete = validEntries.length === rows().length;
             const loading = form.querySelector('[data-preview-loading]');
             loading?.classList.remove('hidden');
             try {
@@ -253,11 +262,19 @@
                 baseBalance = Number(data.opening);
                 postedMovement = Number(data.posted_movement);
                 form.querySelector('[data-preview-opening]').textContent = money(baseBalance);
-                form.querySelector('[data-preview-note]').textContent = 'Pratinjau tervalidasi dari ledger posted dan nilai form saat ini.';
+                submit.disabled = !configurationComplete;
+                form.querySelector('[data-preview-note]').textContent = configurationComplete
+                    ? '● Konfigurasi siap digunakan. Pratinjau mengikuti ledger posted dan nilai form saat ini.'
+                    : 'Lengkapi jenis, Dana, dan nominal setiap baris. Movement kembali Rp0 saat nominal dikosongkan.';
                 renderCurrentState();
             } catch (error) {
                 if (version !== requestVersion) return;
+                baseBalance = null;
+                postedMovement = 0;
+                submit.disabled = true;
+                form.querySelector('[data-preview-opening]').textContent = '—';
                 form.querySelector('[data-preview-note]').textContent = error.message;
+                renderCurrentState();
             } finally {
                 if (version === requestVersion) loading?.classList.add('hidden');
             }

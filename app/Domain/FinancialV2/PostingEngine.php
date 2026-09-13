@@ -51,6 +51,7 @@ final class PostingEngine
     public function __construct(
         private readonly FinancialV2TransactionRunner $transactions,
         private readonly FundFinancialAccountCompositionReadService $fundFinancialAccounts,
+        private readonly FinancialTransactionConfigurationResolver $configurationResolver,
     ) {}
 
     public function post(string $transactionId, string $idempotencyKey, string $fingerprint, ?int $actorUserId = null): PostingResult
@@ -68,7 +69,9 @@ final class PostingEngine
                 }
                 $this->lockEntity($transaction->accounting_entity_id);
                 $period = $this->eligiblePeriodFor($transaction);
-                $version = $this->resolveRuleVersion($transaction);
+                $version = $this->configurationResolver->supports($transaction->type?->code)
+                    ? $this->configurationResolver->resolveTransaction($transaction)->postingRuleVersion
+                    : $this->resolveRuleVersion($transaction);
                 $this->validateTransactionType($transaction, $version);
                 $this->validateOperationalTransaction($transaction);
                 $this->validateSplits($transaction);
@@ -336,20 +339,19 @@ final class PostingEngine
         throw new FinancialPostingException('E-PERIOD-CLOSED', 'The accounting date is not eligible for this posting.');
     }
 
+    /** Non-operational transaction types retain their dedicated rule selection. */
     private function resolveRuleVersion(FinancialTransaction $transaction): PostingRuleVersion
     {
-        $date = $transaction->accounting_date;
         $version = PostingRuleVersion::query()
             ->where('accounting_entity_id', $transaction->accounting_entity_id)
             ->where(fn ($query) => $query->where('status', 'effective')->orWhere(fn ($historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
-            ->where('effective_from', '<=', $date)
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
+            ->where('effective_from', '<=', $transaction->accounting_date)
+            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
             ->whereHas('rule', fn ($query) => $query->where('transaction_type_id', $transaction->transaction_type_id)->where('status', 'active'))
             ->when($transaction->category?->default_posting_rule_id, fn ($query, $ruleId) => $query->where('posting_rule_id', $ruleId))
             ->orderByDesc('effective_from')
             ->orderByDesc('version_no')
             ->first();
-
         if (! $version) {
             throw new FinancialPostingException('E-RULE-NOT-EFFECTIVE', 'No effective posting rule version exists for this transaction type.');
         }

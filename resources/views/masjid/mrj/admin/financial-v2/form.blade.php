@@ -113,10 +113,13 @@
                     <p class="mt-2 text-xs text-base-content/55">Draft dapat menambah atau melepas bukti dengan audit. Bukti transaksi yang sudah diajukan/posted tidak dihapus.</p>
                 </section>
 
-                @if (in_array($operation, ['receipt', 'payment', 'realization'], true))
-                    <div class="mt-4"><button type="button" data-financial-preview class="btn btn-ghost btn-sm">Periksa kombinasi dana</button><p data-preview-output class="hidden"></p></div>
+                @if ($operation !== 'realization')
+                    <div class="mt-4 rounded-xl border border-base-300 bg-base-200/40 px-3 py-3 text-sm" data-financial-configuration aria-live="polite">
+                        <div class="flex items-center gap-2"><span class="loading loading-spinner loading-xs hidden" data-configuration-loading></span><strong>Status konfigurasi</strong></div>
+                        <p class="mt-1 text-xs text-base-content/60" data-configuration-message>Lengkapi kombinasi transaksi untuk memeriksa konfigurasi.</p>
+                    </div>
                 @endif
-                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ $backUrl }}">Batal</a><button type="submit" class="btn btn-primary" @if($operation === 'realization') data-realization-funding-submit @endif>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ $backUrl }}">Batal</a><button type="submit" class="btn btn-primary" @if($operation === 'realization') data-realization-funding-submit @else data-configuration-submit disabled @endif>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>
             </section>
 
             <aside class="space-y-4">

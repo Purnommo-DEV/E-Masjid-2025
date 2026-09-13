@@ -204,27 +204,67 @@
                     }
                 });
             });
-            document.querySelectorAll('[data-financial-preview]').forEach((button) => {
-                button.addEventListener('click', async () => {
-                    const form = button.closest('form');
-                    const output = form.querySelector('[data-preview-output]');
-                    const data = new FormData(form);
-                    data.set('operation', form.dataset.operation);
-                    try {
-                        const response = await fetch(form.dataset.previewUrl, {
-                            method: 'POST',
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                            body: data,
-                        });
-                        const payload = await response.json();
-                        output.className = `mt-3 rounded-xl px-3 py-2 text-sm ${payload.ok && payload.allowed ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`;
-                        output.textContent = payload.message;
-                    } catch (_) {
-                        output.className = 'mt-3 rounded-xl bg-base-200 px-3 py-2 text-sm';
-                        output.textContent = 'Pratinjau belum tersedia. Pemeriksaan akhir tetap dilakukan saat pencatatan resmi.';
+            document.querySelectorAll('[data-financial-configuration]').forEach((status) => {
+                const form = status.closest('form');
+                const submit = form?.querySelector('[data-configuration-submit]');
+                const message = status.querySelector('[data-configuration-message]');
+                const loading = status.querySelector('[data-configuration-loading]');
+                const requiredByOperation = {
+                    receipt: ['date', 'financial_account_id', 'fund_id', 'category_id'],
+                    payment: ['date', 'financial_account_id', 'fund_id', 'category_id'],
+                    transfer: ['date', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id'],
+                    interfund: ['date', 'financial_account_id', 'source_fund_id', 'destination_fund_id'],
+                };
+                if (!form || !submit || !message) return;
+                let timer;
+                let requestVersion = 0;
+                let controller;
+                const paint = (state, text) => {
+                    const tones = {
+                        ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+                        missing: 'border-amber-200 bg-amber-50 text-amber-950',
+                        pending: 'border-base-300 bg-base-200/40',
+                    };
+                    status.className = `mt-4 rounded-xl border px-3 py-3 text-sm ${tones[state]}`;
+                    message.textContent = text;
+                    submit.disabled = state !== 'ready';
+                    form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
+                };
+                const resolve = () => {
+                    clearTimeout(timer);
+                    controller?.abort();
+                    const fields = requiredByOperation[form.dataset.operation] || [];
+                    if (fields.some((name) => !form.elements[name]?.value)) {
+                        loading?.classList.add('hidden');
+                        paint('pending', 'Lengkapi kombinasi transaksi untuk memeriksa konfigurasi.');
+                        return;
                     }
-                });
+                    const version = ++requestVersion;
+                    paint('pending', 'Memeriksa konfigurasi yang berlaku pada tanggal transaksi…');
+                    loading?.classList.remove('hidden');
+                    timer = setTimeout(async () => {
+                        controller = new AbortController();
+                        const data = new FormData(form);
+                        data.set('operation', form.dataset.operation);
+                        try {
+                            const response = await fetch(form.dataset.previewUrl, {
+                                method: 'POST', credentials: 'same-origin', signal: controller.signal,
+                                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, body: data,
+                            });
+                            const payload = await response.json();
+                            if (version !== requestVersion) return;
+                            paint(response.ok && payload.ok && payload.allowed ? 'ready' : 'missing', payload.message || 'Konfigurasi pencatatan belum tersedia untuk kombinasi ini.');
+                        } catch (error) {
+                            if (error.name === 'AbortError' || version !== requestVersion) return;
+                            paint('missing', 'Status konfigurasi belum dapat diperiksa. Coba lagi.');
+                        } finally {
+                            if (version === requestVersion) loading?.classList.add('hidden');
+                        }
+                    }, 200);
+                };
+                form.addEventListener('input', resolve);
+                form.addEventListener('change', resolve);
+                resolve();
             });
             const parseMoney = (raw) => {
                 const value = String(raw || '').replace(/[^\d,.-]/g, '');

@@ -4,14 +4,19 @@ namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\BalanceInquiryService;
 use App\Domain\FinancialV2\BankMutationService;
-use App\Domain\FinancialV2\ConfigureMrjBankMutationsService;
+use App\Domain\FinancialV2\ConfigureFinancialV2DefaultsService;
 use App\Domain\FinancialV2\DecimalAmount;
+use App\Domain\FinancialV2\FinancialDomainException;
+use App\Domain\FinancialV2\FinancialPostingException;
+use App\Domain\FinancialV2\FinancialTransactionConfigurationResolver;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\BankMutationPolicy;
+use App\Models\FinancialV2\Category;
+use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Fund;
 use Carbon\CarbonImmutable;
@@ -32,7 +37,8 @@ final class BankMutationController extends Controller
         private readonly FinancialTransactionLifecycleService $lifecycle,
         private readonly TransactionEvidenceUploadService $uploads,
         private readonly BalanceInquiryService $balances,
-        private readonly ConfigureMrjBankMutationsService $configuration,
+        private readonly ConfigureFinancialV2DefaultsService $configuration,
+        private readonly FinancialTransactionConfigurationResolver $configurationResolver,
     ) {}
 
     public function index(Request $request): View
@@ -40,7 +46,7 @@ final class BankMutationController extends Controller
         [$entities, $entity] = $this->entityContext($request);
         $filters = $request->only(['year', 'month', 'financial_account_id', 'fund_id', 'category_id', 'status']);
         $options = $entity ? $this->options($entity->id) : $this->emptyOptions();
-        $configurationStatus = $this->configuration->status();
+        $configurationStatus = $this->configuration->mrjBankMutationStatus();
         $transactions = null;
         $editableBatchIds = collect();
         if ($entity) {
@@ -101,19 +107,19 @@ final class BankMutationController extends Controller
             'batchTransactions' => collect(),
             'batchId' => (string) Str::uuid(),
             'today' => now()->toDateString(),
-            'configurationStatus' => $this->configuration->status(),
+            'configurationStatus' => $this->configuration->mrjBankMutationStatus(),
         ]);
     }
 
     public function configure(Request $request): RedirectResponse
     {
         try {
-            $result = $this->configuration->configure($request->user()->id);
+            $result = $this->configuration->configureMrjBankMutations($request->user()->id);
         } catch (Throwable $exception) {
             report($exception);
             $detail = $exception instanceof RuntimeException ? ' '.$exception->getMessage() : '';
 
-            return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $this->configuration->status()['entity_id']])
+            return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $this->configuration->mrjBankMutationStatus()['entity_id']])
                 ->withErrors(['configuration' => 'Tidak dapat mengaktifkan konfigurasi Mutasi Bank.'.$detail]);
         }
 
@@ -124,6 +130,11 @@ final class BankMutationController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $input = $this->validatedBatch($request, proofRequired: true);
+        try {
+            $this->resolveBatch($input['common'], $input['mutations']);
+        } catch (FinancialPostingException $exception) {
+            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
+        }
         $result = DB::transaction(function () use ($input, $request): array {
             $result = $this->bankMutations->createBatch(
                 $input['common'],
@@ -179,7 +190,7 @@ final class BankMutationController extends Controller
             'batchTransactions' => $transactions,
             'batchId' => $batch,
             'today' => now()->toDateString(),
-            'configurationStatus' => $this->configuration->status(),
+            'configurationStatus' => $this->configuration->mrjBankMutationStatus(),
         ]);
     }
 
@@ -187,6 +198,11 @@ final class BankMutationController extends Controller
     {
         abort_unless(Str::isUuid($batch), 404);
         $input = $this->validatedBatch($request, proofRequired: false, expectedBatchId: $batch);
+        try {
+            $this->resolveBatch($input['common'], $input['mutations']);
+        } catch (FinancialPostingException $exception) {
+            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
+        }
         $transactions = DB::transaction(function () use ($input, $batch, $request) {
             $existingTransactionIds = $this->bankMutations
                 ->batchTransactions($input['common']['accounting_entity_id'], $batch)
@@ -241,7 +257,11 @@ final class BankMutationController extends Controller
     {
         $this->assertBankMutation($transaction, $request);
         $input = $this->validated($request, proofRequired: false, transaction: $transaction);
-        $updated = $this->bankMutations->updateDraft($transaction->id, $input, $request->user()?->id);
+        try {
+            $updated = $this->bankMutations->updateDraft($transaction->id, $input, $request->user()?->id);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
+        }
         if ($request->hasFile('proof')) {
             $this->uploads->attach($input['accounting_entity_id'], $updated->id, $request->file('proof'), 'statement', $request->user()?->id);
         }
@@ -264,7 +284,11 @@ final class BankMutationController extends Controller
         if (! AttachmentLink::query()->where('target_type', 'transaction')->where('target_id', $transaction->id)->where('evidence_type', 'statement')->where('status', 'active')->exists()) {
             return back()->withErrors(['financial' => 'Rekening koran wajib tersedia sebelum draft diajukan.']);
         }
-        $this->lifecycle->submit($transaction->id, $request->user()?->id);
+        try {
+            $this->lifecycle->submit($transaction->id, $request->user()?->id);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return back()->withErrors(['financial' => $exception->getMessage()]);
+        }
 
         return back()->with('success', 'Mutasi Bank diajukan untuk pemeriksaan.');
     }
@@ -280,14 +304,18 @@ final class BankMutationController extends Controller
     public function approve(Request $request, FinancialTransaction $transaction): RedirectResponse
     {
         $this->assertBankMutation($transaction, $request);
-        $policy = $this->policyFor($transaction);
-        $required = $policy->required_approval_steps;
-        for ($step = 1; $step <= $required; $step++) {
-            if (! DB::table('financial_v2_approval_decisions')->where('transaction_id', $transaction->id)->where('step_no', $step)->where('decision', 'approved')->exists()) {
-                $this->lifecycle->recordApprovalDecision($transaction->id, $step, 'approved', $request->user()?->id, 'Persetujuan Mutasi Bank');
+        try {
+            $policy = $this->policyFor($transaction);
+            $required = $policy->required_approval_steps;
+            for ($step = 1; $step <= $required; $step++) {
+                if (! DB::table('financial_v2_approval_decisions')->where('transaction_id', $transaction->id)->where('step_no', $step)->where('decision', 'approved')->exists()) {
+                    $this->lifecycle->recordApprovalDecision($transaction->id, $step, 'approved', $request->user()?->id, 'Persetujuan Mutasi Bank');
+                }
             }
+            $this->lifecycle->approve($transaction->id, $request->user()?->id);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return back()->withErrors(['financial' => $exception->getMessage()]);
         }
-        $this->lifecycle->approve($transaction->id, $request->user()?->id);
 
         return back()->with('success', 'Mutasi Bank disetujui dan siap dicatat resmi.');
     }
@@ -296,7 +324,11 @@ final class BankMutationController extends Controller
     {
         $this->assertBankMutation($transaction, $request);
         $fingerprint = hash('sha256', implode('|', [$transaction->id, $transaction->source_reference, $transaction->gross_amount, $transaction->accounting_date->toDateString()]));
-        $this->lifecycle->post($transaction->id, 'bank-post:'.$transaction->source_reference, $fingerprint, $request->user()?->id);
+        try {
+            $this->lifecycle->post($transaction->id, 'bank-post:'.$transaction->source_reference, $fingerprint, $request->user()?->id);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return back()->withErrors(['financial' => $exception->getMessage()]);
+        }
 
         return back()->with('success', 'Mutasi Bank dicatat resmi melalui PostingEngine.');
     }
@@ -317,16 +349,18 @@ final class BankMutationController extends Controller
         ]);
         $category = DB::table('financial_v2_categories')->where('accounting_entity_id', $data['entity'])->where('id', $data['category_id'])->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))->first();
         abort_unless($category, 422, 'Jenis mutasi tidak valid.');
-        $policyExists = BankMutationPolicy::query()
-            ->where('accounting_entity_id', $data['entity'])
-            ->where('financial_account_id', $data['financial_account_id'])
-            ->where('fund_id', $data['fund_id'])
-            ->where('category_id', $data['category_id'])
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $data['date'])
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $data['date']))
-            ->exists();
-        abort_unless($policyExists, 422, 'Kombinasi rekening, Dana, jenis mutasi, dan tanggal belum memiliki policy aktif.');
+        try {
+            $this->configurationResolver->resolve([
+                'accounting_entity_id' => $data['entity'],
+                'transaction_type_id' => $category->transaction_type_id,
+                'date' => $data['date'],
+                'financial_account_id' => $data['financial_account_id'],
+                'fund_id' => $data['fund_id'],
+                'category_id' => $data['category_id'],
+            ]);
+        } catch (FinancialPostingException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
         $previousDate = CarbonImmutable::parse($data['date'])->subDay()->toDateString();
         $opening = $this->balances->financialAccountBalance($data['entity'], $data['financial_account_id'], $previousDate)['balance'];
         $postedMovement = $this->balances->financialAccountMovement($data['entity'], $data['financial_account_id'], $data['date'], $data['date']);
@@ -367,7 +401,18 @@ final class BankMutationController extends Controller
             $category = DB::table('financial_v2_categories')->where('accounting_entity_id', $data['entity'])->where('id', $mutation['category_id'])->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))->first();
             abort_unless($category, 422, 'Jenis mutasi tidak valid.');
             abort_unless(DB::table('financial_v2_funds')->where('accounting_entity_id', $data['entity'])->where('id', $mutation['fund_id'])->where('status', 'active')->exists(), 422, 'Dana tidak valid.');
-            abort_unless($this->policyExists($data['entity'], $data['financial_account_id'], $mutation['fund_id'], $mutation['category_id'], $data['date']), 422, 'Kombinasi rekening, Dana, jenis mutasi, dan tanggal belum memiliki policy aktif.');
+            try {
+                $this->configurationResolver->resolve([
+                    'accounting_entity_id' => $data['entity'],
+                    'transaction_type_id' => $category->transaction_type_id,
+                    'date' => $data['date'],
+                    'financial_account_id' => $data['financial_account_id'],
+                    'fund_id' => $mutation['fund_id'],
+                    'category_id' => $mutation['category_id'],
+                ]);
+            } catch (FinancialPostingException $exception) {
+                return response()->json(['message' => $exception->getMessage()], 422);
+            }
 
             $amount = DecimalAmount::normalize($mutation['amount']);
             $isCredit = $category->code === 'BANK_INTEREST';
@@ -460,30 +505,28 @@ final class BankMutationController extends Controller
 
     private function policyFor(FinancialTransaction $transaction): BankMutationPolicy
     {
-        $fundId = $transaction->splits()->whereNotNull('fund_id')->value('fund_id');
+        $policy = $this->configurationResolver->resolveTransaction($transaction)->bankMutationPolicy;
+        if (! $policy) {
+            throw new FinancialPostingException('E-CONFIGURATION-MISSING', 'Konfigurasi pencatatan belum tersedia untuk kombinasi Mutasi Bank ini.');
+        }
 
-        return BankMutationPolicy::query()
-            ->where('accounting_entity_id', $transaction->accounting_entity_id)
-            ->where('financial_account_id', $transaction->primary_financial_account_id)
-            ->where('category_id', $transaction->category_id)
-            ->where('fund_id', $fundId)
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $transaction->accounting_date)
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
-            ->firstOrFail();
+        return $policy;
     }
 
-    private function policyExists(string $entityId, string $financialAccountId, string $fundId, string $categoryId, string $date): bool
+    /** @param array<string, mixed> $common @param array<int, array<string, mixed>> $mutations */
+    private function resolveBatch(array $common, array $mutations): void
     {
-        return BankMutationPolicy::query()
-            ->where('accounting_entity_id', $entityId)
-            ->where('financial_account_id', $financialAccountId)
-            ->where('fund_id', $fundId)
-            ->where('category_id', $categoryId)
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $date)
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
-            ->exists();
+        foreach ($mutations as $mutation) {
+            $category = DB::table('financial_v2_categories')->where('accounting_entity_id', $common['accounting_entity_id'])->find($mutation['category_id']);
+            $this->configurationResolver->resolve([
+                'accounting_entity_id' => $common['accounting_entity_id'],
+                'transaction_type_id' => $category?->transaction_type_id,
+                'date' => $common['date'],
+                'financial_account_id' => $common['financial_account_id'],
+                'fund_id' => $mutation['fund_id'],
+                'category_id' => $mutation['category_id'],
+            ]);
+        }
     }
 
     /** @return array{0: mixed, 1: ?AccountingEntity} */
@@ -503,8 +546,8 @@ final class BankMutationController extends Controller
 
         return [
             'policies' => $policies,
-            'categories' => $policies->pluck('category')->filter()->unique('id')->sortBy('name')->values(),
-            'financialAccounts' => $policies->pluck('financialAccount')->filter()->unique('id')->sortBy('name')->values(),
+            'categories' => Category::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))->orderBy('name')->get(),
+            'financialAccounts' => FinancialAccount::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('name')->get(),
             'funds' => Fund::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('name')->get(),
             'defaultFundId' => Fund::query()->where('accounting_entity_id', $entityId)->where('code', 'INFAQ-TROMOL')->where('status', 'active')->value('id'),
         ];

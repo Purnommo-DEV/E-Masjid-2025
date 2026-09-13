@@ -26,9 +26,8 @@ test('UAT-001 through UAT-002: governed Friday receipt enforces evidence, preser
     ]);
 
     $missingEvidence = UatFinancialFixture::receipt($context, '10.00', null, null, $context['program']->id, $actor->id);
-    UatFinancialFixture::advance($missingEvidence, $actor->id);
-    expect(fn () => UatFinancialFixture::post($missingEvidence, 'uat-missing-evidence', $actor->id))
-        ->toThrow(FinancialPostingException::class, 'Required evidence is missing');
+    expect(fn () => UatFinancialFixture::advance($missingEvidence, $actor->id))
+        ->toThrow(\App\Domain\FinancialV2\FinancialDomainException::class, 'Configured evidence requirements are incomplete');
     expect(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
         ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0);
 
@@ -66,9 +65,8 @@ test('UAT-001 through UAT-002: governed Friday receipt enforces evidence, preser
     ]);
     $invalidProgram = UatFinancialFixture::receipt($context, '1.00', null, null, $inactiveProgram->id, $actor->id);
     UatFinancialFixture::attachReceiptEvidence($context, $invalidProgram, $actor->id);
-    UatFinancialFixture::advance($invalidProgram, $actor->id);
-    expect(fn () => UatFinancialFixture::post($invalidProgram, 'uat-inactive-program', $actor->id))
-        ->toThrow(FinancialPostingException::class, 'program_id is inactive');
+    expect(fn () => UatFinancialFixture::advance($invalidProgram, $actor->id))
+        ->toThrow(FinancialPostingException::class, 'Konfigurasi pencatatan belum tersedia untuk program');
     expect(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(1)
         ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(2);
 });
@@ -99,10 +97,9 @@ test('UAT-003: six ZISWAF fixture funds are policy-controlled and do not mix wit
 
     $prohibited = UatFinancialFixture::restrictedFund($context, 'ZKTBLK', 'Zakat Maal Prohibited', false);
     $blocked = UatFinancialFixture::receipt($context, '1.00', $prohibited->id);
-    UatFinancialFixture::advance($blocked);
     $factsBefore = [Journal::where('accounting_entity_id', $context['entity']->id)->count(), LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count()];
-    expect(fn () => UatFinancialFixture::post($blocked, 'uat-ziswaf-prohibited'))
-        ->toThrow(FinancialPostingException::class, 'fail-closed');
+    expect(fn () => UatFinancialFixture::advance($blocked))
+        ->toThrow(FinancialPostingException::class, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut');
     expect([Journal::where('accounting_entity_id', $context['entity']->id)->count(), LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count()])->toBe($factsBefore);
 });
 
@@ -242,9 +239,8 @@ test('UAT-004 through UAT-009: payment, transfers, allocation, realization, and 
     $restricted = UatFinancialFixture::restrictedFund($context, 'PAYBLK', 'Restricted Payment', false);
     $restrictedPayment = UatFinancialFixture::payment($context, '1.00', $restricted->id);
     UatFinancialFixture::attachTransactionEvidence($context, $restrictedPayment, 'invoice');
-    UatFinancialFixture::advance($restrictedPayment);
-    expect(fn () => UatFinancialFixture::post($restrictedPayment, 'uat-restricted-payment'))
-        ->toThrow(FinancialPostingException::class, 'fail-closed');
+    expect(fn () => UatFinancialFixture::advance($restrictedPayment))
+        ->toThrow(FinancialPostingException::class, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut');
 });
 
 test('UAT-017: performance smoke posts 100 then 1,000 transactions and 10,000 ledger lines through the canonical engine', function () {

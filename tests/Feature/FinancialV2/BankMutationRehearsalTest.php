@@ -3,7 +3,8 @@
 use App\Domain\FinancialV2\BalanceInquiryService;
 use App\Domain\FinancialV2\BankMutationService;
 use App\Domain\FinancialV2\EvidenceService;
-use App\Domain\FinancialV2\FinancialDomainException;
+use App\Domain\FinancialV2\FinancialPostingException;
+use App\Domain\FinancialV2\FinancialTransactionConfigurationResolver;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\ReconciliationService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
@@ -21,6 +22,7 @@ use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\Journal;
 use App\Models\FinancialV2\JournalLine;
 use App\Models\FinancialV2\LedgerEntry;
+use App\Models\FinancialV2\PostingRuleVersion;
 use App\Models\FinancialV2\Reconciliation;
 use App\Models\FinancialV2\Voucher;
 use App\Models\User;
@@ -43,6 +45,60 @@ function bankMutationOpeningFiles(): array
 
     return [$source, $evidence];
 }
+
+test('all governed bank mutation categories resolve automatically for their historical date without creating financial facts', function () {
+    Storage::fake('local');
+    [$source, $openingEvidence] = bankMutationOpeningFiles();
+    $this->artisan('financial-v2:onboard-mrj-ziswaf', ['source' => $source, 'evidence' => $openingEvidence, '--allow-testing' => true])->assertExitCode(0);
+    $this->artisan('financial-v2:provision-mrj-operational-master', ['--allow-testing' => true])->assertExitCode(0);
+    $this->artisan('financial-v2:configure-mrj-bank-mutations', ['--apply' => true])->assertExitCode(0);
+
+    $entity = AccountingEntity::query()->where('code', 'MRJ-ACTUAL')->sole();
+    $bni = FinancialAccount::query()->where('accounting_entity_id', $entity->id)->where('code', 'BNI-ZISWAF')->sole();
+    $infaq = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'INFAQ-TROMOL')->sole();
+    $counts = fn (): array => [
+        FinancialTransaction::query()->count(),
+        Journal::query()->count(),
+        JournalLine::query()->count(),
+        LedgerEntry::query()->count(),
+        Voucher::query()->count(),
+    ];
+    $before = $counts();
+    $resolver = app(FinancialTransactionConfigurationResolver::class);
+    $resolved = collect(array_keys(BankMutationService::CATEGORY_CODES))->map(function (string $categoryCode) use ($resolver, $entity, $bni, $infaq) {
+        $category = Category::query()->where('accounting_entity_id', $entity->id)->where('code', $categoryCode)->sole();
+
+        return $resolver->resolve([
+            'accounting_entity_id' => $entity->id,
+            'transaction_type_id' => $category->transaction_type_id,
+            'date' => '2026-06-30',
+            'financial_account_id' => $bni->id,
+            'fund_id' => $infaq->id,
+            'category_id' => $category->id,
+        ]);
+    });
+
+    $historical = $resolved->first();
+    PostingRuleVersion::query()->whereKey($historical->postingRuleVersion->id)->update([
+        'status' => 'superseded',
+        'approved_at' => now(),
+        'effective_to' => '2026-07-31',
+    ]);
+    $historicalAgain = $resolver->resolve([
+        'accounting_entity_id' => $entity->id,
+        'transaction_type_id' => $historical->transactionType->id,
+        'date' => '2026-06-30',
+        'financial_account_id' => $bni->id,
+        'fund_id' => $infaq->id,
+        'category_id' => $historical->bankMutationPolicy->category_id,
+    ]);
+
+    expect($resolved)->toHaveCount(5)
+        ->and($resolved->every(fn ($configuration): bool => $configuration->bankMutationPolicy !== null))->toBeTrue()
+        ->and($historicalAgain->postingRuleVersion->id)->toBe($historical->postingRuleVersion->id)
+        ->and($historicalAgain->postingRuleVersion->status)->toBe('superseded')
+        ->and($counts())->toBe($before);
+});
 
 test('four June BNI mutations post canonically and reconcile to zero in the isolated database', function () {
     Storage::fake('local');
@@ -202,7 +258,7 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
     $this->post(route('financial-v2.bank-mutations.configure'))->assertRedirect(route('login'));
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.configure'))->assertStatus(405);
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
-        ->assertOk()->assertSee('Aktifkan Konfigurasi')->assertSee('Tidak ada transaksi keuangan yang dibuat.');
+        ->assertOk()->assertSee('Status Konfigurasi')->assertSee('Sebagian belum tersedia')->assertSee('+ Tambah Mutasi')->assertDontSee('Aktifkan Konfigurasi');
     expect(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->count())->toBe(0);
 
     $this->seed(ConfigureMrjBankMutationsSeeder::class);
@@ -230,9 +286,9 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
 
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
         ->assertOk()->assertSee('Mutasi Bank')->assertSee('Tahun')->assertSee('Bulan')->assertSee('Rekening')->assertSee('Dana')->assertSee('Jenis')->assertSee('Status')
-        ->assertSee('Konfigurasi Mutasi Bank')->assertSee('Aktif')->assertDontSee('Aktifkan Konfigurasi');
+        ->assertSee('Status Konfigurasi')->assertSee('Siap digunakan')->assertDontSee('Aktifkan Konfigurasi');
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.create', ['entity' => $entity->id]))
-        ->assertOk()->assertSee('Jasa Giro/Bunga')->assertSee('PPH')->assertSee('Biaya Transfer Bank')->assertSee('Dana Zakat Maal')->assertSee('Source Reference')->assertSee('Pratinjau Batch')->assertSee('Konfigurasi Mutasi Bank')
+        ->assertOk()->assertSee('Jasa Giro/Bunga')->assertSee('PPH')->assertSee('Biaya Transfer Bank')->assertSee('Dana Zakat Maal')->assertSee('Source Reference')->assertSee('Pratinjau Batch')->assertSee('Status Konfigurasi')
         ->assertDontSee('Journal')->assertDontSee('Ledger')->assertDontSee('Debit')->assertDontSee('Kredit');
 
     $previewRows = [
@@ -301,7 +357,7 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
         ['category_id' => $interest->id, 'fund_id' => $zakat->id, 'amount' => '1.00', 'description' => 'INVALID FUND ROW', 'source_reference' => 'BNI-20260630-ATOMIC-INVALID'],
     ];
     expect(fn () => app(BankMutationService::class)->createBatch($common, $invalidRows, $atomicBatchId, $user->id))
-        ->toThrow(FinancialDomainException::class, 'belum memiliki policy aktif');
+        ->toThrow(FinancialPostingException::class, 'Konfigurasi pencatatan belum tersedia');
     expect(FinancialTransaction::query()->where('correlation_id', $atomicBatchId)->count())->toBe(0);
 
     $transaction = FinancialTransaction::query()->where('source_reference', 'BNI-20260630-JASA-GIRO-UI-QA')->sole();

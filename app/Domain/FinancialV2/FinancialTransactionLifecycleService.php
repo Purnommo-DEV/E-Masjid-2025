@@ -6,6 +6,7 @@ use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\ApprovalDecision;
 use App\Models\FinancialV2\ApprovalRequirement;
+use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\InterfundTransfer;
@@ -24,6 +25,7 @@ final class FinancialTransactionLifecycleService
     public function __construct(
         private readonly AuditTrailService $auditTrail,
         private readonly FinancialV2TransactionRunner $transactions,
+        private readonly FinancialTransactionConfigurationResolver $configurationResolver,
     ) {}
 
     /** @param array<string, mixed> $input @param array<int, array<string, mixed>> $splits */
@@ -203,6 +205,22 @@ final class FinancialTransactionLifecycleService
 
     public function submit(string $transactionId, ?int $actorUserId = null): FinancialTransaction
     {
+        $transaction = FinancialTransaction::query()->with('type')->findOrFail($transactionId);
+        if ($this->configurationResolver->supports($transaction->type?->code)) {
+            $resolved = $this->configurationResolver->resolveTransaction($transaction);
+            foreach ($resolved->evidenceRequirements as $requirement) {
+                $count = AttachmentLink::query()
+                    ->where('target_type', 'transaction')
+                    ->where('target_id', $transaction->id)
+                    ->where('evidence_type', $requirement->evidence_type)
+                    ->where('status', 'active')
+                    ->count();
+                if ($count < $requirement->minimum_count) {
+                    throw new FinancialDomainException('E-EVIDENCE-REQUIRED', 'Configured evidence requirements are incomplete.');
+                }
+            }
+        }
+
         return $this->transition($transactionId, 'draft', 'submitted', 'transaction_submitted', $actorUserId);
     }
 
@@ -218,15 +236,19 @@ final class FinancialTransactionLifecycleService
             if ($transaction->status !== 'verified') {
                 throw new FinancialDomainException('E-TRANSACTION-STATE', 'Only Verified transactions may be approved.');
             }
+            $resolvedRequiredSteps = 0;
+            if ($this->configurationResolver->supports($transaction->type?->code)) {
+                $resolvedRequiredSteps = $this->configurationResolver->resolveTransaction($transaction)->requiredApprovalSteps;
+            }
             $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
-            $required = ApprovalRequirement::query()
+            $required = max($resolvedRequiredSteps, (int) (ApprovalRequirement::query()
                 ->where('accounting_entity_id', $transaction->accounting_entity_id)
                 ->where('transaction_type_id', $transaction->transaction_type_id)
                 ->where('status', 'active')
                 ->where('effective_from', '<=', $transaction->accounting_date)
                 ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
-                ->max('required_steps') ?? 0;
+                ->max('required_steps') ?? 0));
             if (ApprovalDecision::query()->where('transaction_id', $transaction->id)->where('decision', 'approved')->count() < $required) {
                 throw new FinancialDomainException('E-APPROVAL-REQUIRED', 'Configured approval requirements are incomplete.');
             }

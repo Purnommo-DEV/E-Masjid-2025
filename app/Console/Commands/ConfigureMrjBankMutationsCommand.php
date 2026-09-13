@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\FinancialV2\ConfigureFinancialV2DefaultsService;
 use App\Domain\FinancialV2\ConfigureMrjBankMutationsService;
 use Illuminate\Console\Command;
 use Throwable;
@@ -15,7 +16,7 @@ final class ConfigureMrjBankMutationsCommand extends Command
 
     protected $description = 'Provision governed RCV/PAY bank-mutation categories and historical policy without posting transactions.';
 
-    public function __construct(private readonly ConfigureMrjBankMutationsService $configuration)
+    public function __construct(private readonly ConfigureFinancialV2DefaultsService $configuration)
     {
         parent::__construct();
     }
@@ -30,7 +31,7 @@ final class ConfigureMrjBankMutationsCommand extends Command
 
         $this->scopeTable();
         if (! $this->option('apply')) {
-            $status = $this->configuration->status();
+            $status = $this->configuration->mrjBankMutationStatus();
             $this->line('Status: '.($status['active'] ? 'ACTIVE' : 'BELUM LENGKAP'));
             if (! $status['active']) {
                 $this->warn('Belum tersedia: '.implode(', ', $status['missing']));
@@ -42,7 +43,7 @@ final class ConfigureMrjBankMutationsCommand extends Command
 
         try {
             $actor = $this->option('actor') !== null ? (int) $this->option('actor') : null;
-            $result = $this->configuration->configure($actor);
+            $result = $this->configuration->configureMrjBankMutations($actor);
         } catch (Throwable $exception) {
             report($exception);
             $this->error('Konfigurasi Mutasi Bank gagal: '.$exception->getMessage());

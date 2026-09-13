@@ -238,9 +238,8 @@ test('Phase 10.2: Zakat, Qurban, Ramadhan, Social, and Hall Rental remain separa
 
     $factsBeforeRejectedUse = [Journal::count(), LedgerEntry::count()];
     $prohibitedUse = phase102Payment($context, '5000000.00', $zakat->id, $operationalProgram->id, $context['today']);
-    UatFinancialFixture::advance($prohibitedUse);
-    expect(fn () => UatFinancialFixture::post($prohibitedUse, 'phase102-zakat-prohibited'))
-        ->toThrow(FinancialPostingException::class, 'fail-closed');
+    expect(fn () => UatFinancialFixture::advance($prohibitedUse))
+        ->toThrow(FinancialPostingException::class, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut');
     expect([Journal::count(), LedgerEntry::count()])->toBe($factsBeforeRejectedUse);
 
     $allowedUse = phase102Payment($context, '5000000.00', $zakat->id, $zakatProgram->id, $context['today']);

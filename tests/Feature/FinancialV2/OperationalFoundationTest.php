@@ -227,14 +227,12 @@ test('receipt rejects inactive Fund and a non-posting Account before an official
     $context = operationalV2Context();
     $context['fund']->update(['status' => 'suspended']);
     $receipt = operationalReceipt($context);
-    operationalAdvance($receipt);
-    expect(fn () => app(FinancialTransactionLifecycleService::class)->post($receipt->id, 'inactive-fund', hash('sha256', 'inactive-fund')))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'Fund is inactive');
+    expect(fn () => app(FinancialTransactionLifecycleService::class)->submit($receipt->id))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'Konfigurasi pencatatan belum tersedia untuk Dana');
 
     $context = operationalV2Context();
     $context['revenue']->update(['is_posting_account' => false]);
     $receipt = operationalReceipt($context);
-    operationalAdvance($receipt);
-    expect(fn () => app(FinancialTransactionLifecycleService::class)->post($receipt->id, 'inactive-account', hash('sha256', 'inactive-account')))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'inactive or non-posting');
+    expect(fn () => app(FinancialTransactionLifecycleService::class)->submit($receipt->id))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'Aturan pencatatan belum memiliki baris akun yang lengkap');
 });
 
 test('payment applies Fund restriction, fund liquidity, and period controls', function () {
@@ -252,8 +250,7 @@ test('payment applies Fund restriction, fund liquidity, and period controls', fu
     FundPolicyVersion::create(['accounting_entity_id' => $context['entity']->id, 'fund_id' => $restrictedFund->id, 'version_no' => 1, 'effective_from' => now()->subDay(), 'policy_document_ref' => 'policy', 'allowed_matrix_ref' => 'matrix', 'exception_approval_level' => 'test', 'status' => 'effective']);
     $restrictedPayment = operationalPayment($context, '1.00');
     $restrictedPayment->splits()->update(['fund_id' => $restrictedFund->id]);
-    operationalAdvance($restrictedPayment);
-    expect(fn () => app(FinancialTransactionLifecycleService::class)->post($restrictedPayment->id, 'payment-restricted', hash('sha256', 'payment-restricted')))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'fail-closed');
+    expect(fn () => app(FinancialTransactionLifecycleService::class)->submit($restrictedPayment->id))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut');
 
     $overspend = operationalPayment($context, '80.00');
     operationalAdvance($overspend);
@@ -330,8 +327,7 @@ test('interfund transfer is separate, policy-checked, and never moves a Financia
     $blocked = app(FinancialTransactionLifecycleService::class)->createInterfundTransfer([
         'accounting_entity_id' => $context['entity']->id, 'transaction_type_id' => $context['interfundType']->id, 'business_date' => $context['today'], 'accounting_date' => $context['today'], 'gross_amount' => '1.00', 'source_reference' => 'IFT-'.Str::uuid(), 'idempotency_key' => 'source-'.Str::uuid(), 'primary_financial_account_id' => $context['sourceFinancialAccount']->id, 'source_fund_id' => $restrictedFund->id, 'destination_fund_id' => $context['destinationFund']->id, 'policy_basis_ref' => 'GOV-IFT-RESTRICTED', 'reason' => 'Must fail closed', 'description' => 'Blocked transfer',
     ]);
-    operationalAdvance($blocked);
-    expect(fn () => app(FinancialTransactionLifecycleService::class)->post($blocked->id, 'ift-blocked', hash('sha256', 'ift-blocked')))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'fail-closed');
+    expect(fn () => app(FinancialTransactionLifecycleService::class)->submit($blocked->id))->toThrow(\App\Domain\FinancialV2\FinancialPostingException::class, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut');
 });
 
 test('budget allocation has no Journal and realization derives actual only from the linked posted payment', function () {
