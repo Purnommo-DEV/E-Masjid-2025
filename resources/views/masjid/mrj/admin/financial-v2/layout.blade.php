@@ -233,13 +233,13 @@
                 const resolve = () => {
                     clearTimeout(timer);
                     controller?.abort();
+                    const version = ++requestVersion;
                     const fields = requiredByOperation[form.dataset.operation] || [];
                     if (fields.some((name) => !form.elements[name]?.value)) {
                         loading?.classList.add('hidden');
-                        paint('pending', 'Lengkapi kombinasi transaksi untuk memeriksa konfigurasi.');
+                        paint('pending', 'Lengkapi data transaksi untuk memeriksa konfigurasi.');
                         return;
                     }
-                    const version = ++requestVersion;
                     paint('pending', 'Memeriksa konfigurasi yang berlaku pada tanggal transaksi…');
                     loading?.classList.remove('hidden');
                     timer = setTimeout(async () => {
@@ -253,7 +253,10 @@
                             });
                             const payload = await response.json();
                             if (version !== requestVersion) return;
-                            paint(response.ok && payload.ok && payload.allowed ? 'ready' : 'missing', payload.message || 'Konfigurasi pencatatan belum tersedia untuk kombinasi ini.');
+                            const state = payload.state === 'ready' && response.ok && payload.ok && payload.allowed
+                                ? 'ready'
+                                : (payload.state === 'incomplete' ? 'pending' : 'missing');
+                            paint(state, payload.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.');
                         } catch (error) {
                             if (error.name === 'AbortError' || version !== requestVersion) return;
                             paint('missing', 'Status konfigurasi belum dapat diperiksa. Coba lagi.');

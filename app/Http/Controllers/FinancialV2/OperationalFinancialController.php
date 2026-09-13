@@ -36,6 +36,7 @@ use App\Models\FinancialV2\Program;
 use App\Models\FinancialV2\Reconciliation;
 use App\Models\FinancialV2\TransactionType;
 use App\Models\FinancialV2\Voucher;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -113,7 +114,7 @@ final class OperationalFinancialController
             'entity' => $context['entity'],
             'operation' => $operation,
             'definition' => self::OPERATIONS[$operation],
-            'options' => $context['entity'] ? $this->formOptions($context['entity'], self::OPERATIONS[$operation]['code']) : $this->emptyOptions(),
+            'options' => $context['entity'] ? $this->formOptions($context['entity'], self::OPERATIONS[$operation]['code'], $operation === 'realization') : $this->emptyOptions(),
             'transaction' => null,
             'submissionKey' => old('submission_key', (string) Str::uuid()),
             'today' => now()->toDateString(),
@@ -183,7 +184,7 @@ final class OperationalFinancialController
                 'entity' => $context['entity'],
                 'operation' => $operation,
                 'definition' => self::OPERATIONS[$operation],
-                'options' => $this->formOptions($transaction->accounting_entity_id),
+                'options' => $this->formOptions($transaction->accounting_entity_id, null, $operation === 'realization'),
                 'transaction' => $transaction,
                 'submissionKey' => Str::afterLast($transaction->idempotency_key, ':'),
                 'today' => $transaction->accounting_date->toDateString(),
@@ -918,7 +919,7 @@ final class OperationalFinancialController
         $entity = $this->requiredEntity($request);
         $data = $request->validate([
             'operation' => ['required', 'in:receipt,payment,transfer,interfund,realization'],
-            'date' => ['required', 'date'],
+            'date' => ['nullable', 'date'],
             'financial_account_id' => ['nullable', 'uuid'],
             'source_financial_account_id' => ['nullable', 'uuid'],
             'destination_financial_account_id' => ['nullable', 'uuid'],
@@ -928,6 +929,15 @@ final class OperationalFinancialController
             'program_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
         ], $this->validationMessages());
+
+        if (! $this->hasConfigurationPreviewInput($data)) {
+            return response()->json([
+                'ok' => true,
+                'allowed' => false,
+                'state' => 'incomplete',
+                'message' => 'Lengkapi data transaksi untuk memeriksa konfigurasi.',
+            ]);
+        }
 
         try {
             $definition = $this->operation($data['operation']);
@@ -948,21 +958,73 @@ final class OperationalFinancialController
                 'program_id' => $data['program_id'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
             ]);
-            $accountId = $data['financial_account_id'] ?? $data['source_financial_account_id'] ?? null;
-            $account = $accountId ? $this->financialAccount($entity, $accountId) : null;
-            $balance = $account ? $this->balances->financialAccountBalance($entity->id, $account->id, $data['date'])['balance'] : null;
 
             return response()->json([
                 'ok' => true,
                 'allowed' => true,
-                'message' => 'Konfigurasi pencatatan tersedia untuk kombinasi dan tanggal ini.',
-                'financial_account_balance' => $balance,
+                'state' => 'ready',
+                'message' => '● Siap digunakan',
                 'required_approval_steps' => $resolved->requiredApprovalSteps,
                 'required_evidence' => $resolved->evidenceRequirements->pluck('evidence_type')->values(),
             ]);
         } catch (FinancialDomainException|FinancialPostingException|InvalidArgumentException $exception) {
-            return response()->json(['ok' => false, 'message' => $this->humanMessage($exception)], 422);
+            return response()->json([
+                'ok' => false,
+                'allowed' => false,
+                'state' => 'missing',
+                'message' => $this->configurationPreviewMessage($entity, $data),
+            ], 422);
         }
+    }
+
+    /** @param array<string, mixed> $data */
+    private function hasConfigurationPreviewInput(array $data): bool
+    {
+        $required = match ($data['operation']) {
+            'receipt', 'payment' => ['date', 'financial_account_id', 'fund_id', 'category_id'],
+            'transfer' => ['date', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id'],
+            'interfund' => ['date', 'financial_account_id', 'source_fund_id', 'destination_fund_id'],
+            'realization' => ['date', 'financial_account_id', 'category_id'],
+        };
+
+        return collect($required)->every(fn (string $field): bool => filled($data[$field] ?? null));
+    }
+
+    /** @param array<string, mixed> $data */
+    private function configurationPreviewMessage(AccountingEntity $entity, array $data): string
+    {
+        $accountIds = collect([
+            $data['financial_account_id'] ?? null,
+            $data['source_financial_account_id'] ?? null,
+            $data['destination_financial_account_id'] ?? null,
+        ])->filter()->unique()->values();
+        $fundIds = collect([
+            $data['fund_id'] ?? null,
+            $data['source_fund_id'] ?? null,
+            $data['destination_fund_id'] ?? null,
+        ])->filter()->unique()->values();
+        $accounts = FinancialAccount::query()
+            ->where('accounting_entity_id', $entity->id)
+            ->whereIn('id', $accountIds)
+            ->orderBy('name')
+            ->pluck('name');
+        $funds = Fund::query()
+            ->where('accounting_entity_id', $entity->id)
+            ->whereIn('id', $fundIds)
+            ->orderBy('name')
+            ->pluck('name');
+        $category = filled($data['category_id'] ?? null)
+            ? Category::query()->where('accounting_entity_id', $entity->id)->whereKey($data['category_id'])->value('name')
+            : null;
+
+        $details = collect([
+            'Tanggal: '.CarbonImmutable::parse((string) $data['date'])->format('d/m/Y'),
+            $accounts->isNotEmpty() ? 'Rekening: '.$accounts->join(' → ') : null,
+            $funds->isNotEmpty() ? 'Dana: '.$funds->join(' → ') : null,
+            $category ? 'Kategori: '.$category : null,
+        ])->filter()->join(' · ');
+
+        return '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini. '.$details;
     }
 
     public function downloadAttachment(Request $request, Attachment $attachment)
@@ -1038,24 +1100,27 @@ final class OperationalFinancialController
     }
 
     /** @return array<string, mixed> */
-    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null): array
+    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true): array
     {
         $entityId = $entity instanceof AccountingEntity ? $entity->id : $entity;
         $today = now()->toDateString();
         $transactionTypeId = $transactionTypeCode
             ? TransactionType::query()->where('accounting_entity_id', $entityId)->where('code', $transactionTypeCode)->value('id')
             : null;
-        $allocationVersions = BudgetAllocationVersion::query()
-            ->with(['allocation', 'fundings.fund'])
-            ->where('accounting_entity_id', $entityId)
-            ->where('status', 'approved')
-            ->whereHas('allocation', fn (Builder $query) => $query->where('status', 'approved'))
-            ->orderByDesc('effective_from')
-            ->get();
-        $allocationVersions->each(function (BudgetAllocationVersion $version): void {
-            $version->setAttribute('availability', $this->budgetAllocations->availability($version->id));
-            $version->setAttribute('funding_availability', $this->budgetAllocations->fundingAvailability($version->id));
-        });
+        $allocationVersions = collect();
+        if ($includeAllocationVersions) {
+            $allocationVersions = BudgetAllocationVersion::query()
+                ->with(['allocation', 'fundings.fund'])
+                ->where('accounting_entity_id', $entityId)
+                ->where('status', 'approved')
+                ->whereHas('allocation', fn (Builder $query) => $query->where('status', 'approved'))
+                ->orderByDesc('effective_from')
+                ->get();
+            $allocationVersions->each(function (BudgetAllocationVersion $version): void {
+                $version->setAttribute('availability', $this->budgetAllocations->availability($version->id));
+                $version->setAttribute('funding_availability', $this->budgetAllocations->fundingAvailability($version->id));
+            });
+        }
 
         return [
             'financialAccounts' => FinancialAccount::query()

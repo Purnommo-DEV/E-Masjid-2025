@@ -363,11 +363,66 @@ test('fund usage preview is sent as a CSRF-protected POST request', function () 
     $context = uxOperationalContext();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $context['entity']->id]))
-        ->assertOk()
+    $response = $this->actingAs($user)->get(route('financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $context['entity']->id]));
+    $response->assertOk()
         ->assertSee("method: 'POST'", false)
         ->assertSee("credentials: 'same-origin'", false)
+        ->assertSee('Lengkapi data transaksi untuk memeriksa konfigurasi.')
+        ->assertDontSee('Konfigurasi pencatatan belum tersedia untuk kategori dan tanggal yang dipilih.')
+        ->assertSee("form.addEventListener('input', resolve)", false)
+        ->assertSee("form.addEventListener('change', resolve)", false)
         ->assertDontSee("previewUrl + '?'", false);
+
+    $html = $response->getContent();
+    expect(strpos($html, 'const version = ++requestVersion;'))->toBeLessThan(strpos($html, 'fields.some((name) => !form.elements[name]?.value)'));
+});
+
+test('receipt configuration preview distinguishes incomplete ready and missing states without creating financial facts', function () {
+    $context = uxOperationalContext();
+    $user = User::factory()->create();
+    $base = [
+        'entity' => $context['entity']->id,
+        'operation' => 'receipt',
+        'date' => $context['today'],
+    ];
+
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), $base)
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('state', 'incomplete')
+        ->assertJsonPath('message', 'Lengkapi data transaksi untuk memeriksa konfigurasi.');
+
+    $valid = $base + [
+        'financial_account_id' => $context['sourceFinancialAccount']->id,
+        'fund_id' => $context['fund']->id,
+        'category_id' => $context['receiptCategory']->id,
+    ];
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), $valid)
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('allowed', true)
+        ->assertJsonPath('state', 'ready')
+        ->assertJsonPath('message', '● Siap digunakan');
+
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), array_replace($valid, [
+        'category_id' => $context['paymentCategory']->id,
+    ]))->assertStatus(422)
+        ->assertJsonPath('ok', false)
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('state', 'missing')
+        ->assertJsonPath('message', fn (string $message): bool => str_contains($message, '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.')
+            && str_contains($message, 'Rekening: Kas Operasional')
+            && str_contains($message, 'Dana: Dana Operasional')
+            && str_contains($message, 'Kategori: Listrik')
+            && ! str_contains($message, 'JournalLine')
+            && ! str_contains($message, 'Ledger'));
+
+    expect(FinancialTransaction::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
+        ->and(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
+        ->and(JournalLine::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
+        ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
+        ->and(Voucher::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0);
 });
 
 test('restricted fund preview fails closed when its operational transaction type is not configured', function () {
@@ -380,7 +435,9 @@ test('restricted fund preview fails closed when its operational transaction type
         'entity' => $entity->id,
         'operation' => 'receipt',
         'date' => now()->toDateString(),
+        'financial_account_id' => (string) Str::uuid(),
         'fund_id' => $fund->id,
+        'category_id' => (string) Str::uuid(),
     ])->assertStatus(422)
         ->assertJsonPath('ok', false)
         ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'Konfigurasi pencatatan belum tersedia'));
