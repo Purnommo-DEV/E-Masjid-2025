@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\PendaftaranAnakYatimDhuafa;
+use App\Models\SantunanParticipation;
+use App\Models\SantunanPerson;
+use App\Services\SantunanIdentityMatcher;
 use App\Services\SantunanRamadhanExportService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -15,225 +18,84 @@ use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Throwable;
 
 class ExcelYatimDhuafaController extends Controller
 {
-    public function import(Request $request)
+    public function import(Request $request, SantunanIdentityMatcher $matcher): JsonResponse
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls',
+        $validated = $request->validate([
+            'file' => ['required', 'mimes:xlsx,xls'],
+            'tahun_program' => ['required', 'integer', 'min:2000', 'max:2100'],
         ]);
-
-        DB::beginTransaction();
+        $targetYear = (int) $validated['tahun_program'];
 
         try {
+            $sheet = IOFactory::load($request->file('file'))->getActiveSheet();
+        } catch (Throwable $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File Excel tidak bisa dibaca atau format rusak.',
+                'error' => $exception->getMessage(),
+            ], 422);
+        }
 
-            $spreadsheet = IOFactory::load($request->file('file'));
-            $sheet = $spreadsheet->getActiveSheet();
-            $highestRow = $sheet->getHighestRow();
+        DB::beginTransaction();
+        $created = 0;
+        $reused = 0;
+        $errors = [];
+        $review = [];
 
-            $jumlah = 0;
-            $errors = [];
-
-            // mulai dari baris 2 (baris 1 = header)
-            for ($i = 2; $i <= $highestRow; $i++) {
-
-                $barisExcel = $i;
-
-                // =========================
-                // AMBIL DATA DARI EXCEL
-                // =========================
-                $kategori = strtolower(trim((string) $sheet->getCell('A'.$i)->getFormattedValue()));
-                $nama = trim((string) $sheet->getCell('B'.$i)->getFormattedValue());
-                $nama_panggilan = trim((string) $sheet->getCell('C'.$i)->getFormattedValue());
-                $jenis_kelamin = strtoupper(trim((string) $sheet->getCell('D'.$i)->getFormattedValue()));
-                $tanggal_lahir_cell = $sheet->getCell('E'.$i)->getValue();
-                $umur_excel = trim((string) $sheet->getCell('F'.$i)->getFormattedValue());
-                $satuan_excel = strtolower(trim((string) $sheet->getCell('G'.$i)->getFormattedValue()));
-                $nama_ortu = trim((string) $sheet->getCell('H'.$i)->getFormattedValue());
-                $pekerjaan_ortu = trim((string) $sheet->getCell('I'.$i)->getFormattedValue());
-                $alamat = trim((string) $sheet->getCell('J'.$i)->getFormattedValue());
-                $no_wa = trim((string) $sheet->getCell('K'.$i)->getValue());
-                $sumber = trim((string) $sheet->getCell('L'.$i)->getFormattedValue());
-                $catatan = trim((string) $sheet->getCell('M'.$i)->getFormattedValue());
-                $rt = trim((string) $sheet->getCell('N'.$i)->getFormattedValue());
-                $rw = trim((string) $sheet->getCell('O'.$i)->getFormattedValue());
-                $namaRt = trim((string) $sheet->getCell('P'.$i)->getFormattedValue());
-
-                // =========================
-                // PERBAIKAN NOMOR WA (EXCEL BUG FIX)
-                // =========================
-                if (! empty($no_wa) && ! str_starts_with($no_wa, '08')) {
-                    $no_wa = '0'.$no_wa;
+        try {
+            for ($rowNumber = 2; $rowNumber <= $sheet->getHighestRow(); $rowNumber++) {
+                if ($this->rowIsBlank($sheet, $rowNumber)) {
+                    continue;
                 }
 
-                if (! empty($no_wa) && ! preg_match('/^08[0-9]{8,12}$/', $no_wa)) {
-                    $errors[] = "Baris {$barisExcel} — {$nama} : Nomor WA tidak valid";
+                $row = $this->readImportRow($sheet, $rowNumber, $targetYear, $errors);
+                if ($row === null) {
+                    continue;
+                }
+
+                $match = $matcher->match($row);
+                if ($match['status'] === 'ambiguous') {
+                    $errors[] = "Baris {$rowNumber} — {$row['nama_lengkap']}: identitas ambigu dan memerlukan review";
+                    $review[] = ['row' => $rowNumber, 'input' => $row, 'candidates' => $match['candidates']];
 
                     continue;
                 }
 
-                // =========================
-                // VALIDASI DASAR
-                // =========================
-                if (empty($nama)) {
-                    $errors[] = "Baris {$barisExcel} : Nama lengkap kosong";
-
-                    continue;
-                }
-
-                if (empty($alamat)) {
-                    $errors[] = "Baris {$barisExcel} — {$nama} : Alamat wajib diisi";
-
-                    continue;
-                }
-
-                if (! in_array($kategori, ['yatim_dhuafa', 'dhuafa'])) {
-                    $errors[] = "Baris {$barisExcel} — {$nama} : Kategori harus yatim_dhuafa atau dhuafa";
-
-                    continue;
-                }
-
-                if (! in_array($jenis_kelamin, ['L', 'P'])) {
-                    $errors[] = "Baris {$barisExcel} — {$nama} : Jenis kelamin harus L atau P";
-
-                    continue;
-                }
-
-                if (strlen($rt) > 5 || strlen($rw) > 5) {
-                    $errors[] = "Baris {$barisExcel} — {$nama} : RT dan RW maksimal 5 karakter";
-
-                    continue;
-                }
-
-                if (strlen($namaRt) > 150) {
-                    $errors[] = "Baris {$barisExcel} — {$nama} : Nama RT maksimal 150 karakter";
-
-                    continue;
-                }
-
-                // =========================
-                // LOGIKA UMUR
-                // =========================
-                $tglLahir = null;
-                $umur = null;
-                $satuan = null;
-
-                /*
-                ==========================================
-                MODE 1 — PAKAI TANGGAL LAHIR
-                ==========================================
-                */
-                if (! empty($tanggal_lahir_cell)) {
-
-                    try {
-                        if (is_numeric($tanggal_lahir_cell)) {
-                            $tglLahir = Carbon::instance(
-                                ExcelDate::excelToDateTimeObject($tanggal_lahir_cell)
-                            );
-                        } else {
-                            $tglLahir = Carbon::createFromFormat('d/m/Y', $tanggal_lahir_cell);
-                        }
-                    } catch (\Exception $e) {
-                        $errors[] = "Baris {$barisExcel} — {$nama} : Format tanggal salah (gunakan dd/mm/yyyy)";
-
-                        continue;
-                    }
-
-                    if ($tglLahir->isFuture()) {
-                        $errors[] = "Baris {$barisExcel} — {$nama} : Tanggal lahir di masa depan";
-
-                        continue;
-                    }
-
-                    $diff = $tglLahir->diff(now());
-
-                    // Batas maksimal 13 tahun 11 bulan 30 hari
-                    if ($diff->y >= 14) {
-                        $errors[] = "Baris {$barisExcel} — {$nama} usia {$diff->y} tahun {$diff->m} bulan {$diff->d} hari (MELEBIHI BATAS 13 TAHUN)";
-
-                        continue;
-                    }
-
-                    if ($diff->y > 0) {
-                        $umur = $diff->y;
-                        $satuan = 'tahun';
-                    } elseif ($diff->m > 0) {
-                        $umur = $diff->m;
-                        $satuan = 'bulan';
-                    } else {
-                        $umur = max($diff->d, 1);
-                        $satuan = 'hari';
-                    }
-                }
-
-                /*
-                ==========================================
-                MODE 2 — UMUR MANUAL
-                ==========================================
-                */
-                else {
-
-                    if (empty($umur_excel) || empty($satuan_excel)) {
-                        $errors[] = "Baris {$barisExcel} — {$nama} : Isi tanggal lahir ATAU umur + satuan";
-
-                        continue;
-                    }
-
-                    $umur = (int) $umur_excel;
-
-                    if ($satuan_excel == 'tahun' && $umur > 13) {
-                        $errors[] = "Baris {$barisExcel} — {$nama} : umur lebih dari 13 tahun";
-
-                        continue;
-                    }
-
-                    if (! in_array($satuan_excel, ['tahun', 'bulan', 'hari'])) {
-                        $errors[] = "Baris {$barisExcel} — {$nama} : satuan umur tidak valid";
-
-                        continue;
-                    }
-
-                    $satuan = $satuan_excel;
-                }
-
-                // =========================
-                // SIMPAN DATA
-                // =========================
-                PendaftaranAnakYatimDhuafa::create([
-                    'kategori' => $kategori,
-                    'nama_lengkap' => $nama,
-                    'nama_panggilan' => $nama_panggilan,
-                    'tanggal_lahir' => $tglLahir,
-                    'umur' => $umur,
-                    'umur_satuan' => $satuan,
-                    'jenis_kelamin' => $jenis_kelamin,
-                    'alamat' => $alamat,
-                    'rt' => $rt !== '' ? $rt : null,
-                    'rw' => $rw !== '' ? $rw : null,
-                    'nama_rt' => $namaRt !== '' ? $namaRt : null,
-                    'nama_orang_tua' => $nama_ortu,
-                    'pekerjaan_orang_tua' => $pekerjaan_ortu,
-                    'no_wa' => $no_wa,
-                    'sumber_informasi' => $sumber,
-                    'catatan_tambahan' => $catatan,
-                    'tahun_program' => now()->year,
-                    'ip_address' => $request->ip(),
+                $person = $match['person'] ?: SantunanPerson::query()->create([
+                    'nama_lengkap' => $row['nama_lengkap'],
+                    'nama_panggilan' => $row['nama_panggilan'],
+                    'tanggal_lahir' => $row['tanggal_lahir'],
+                    'jenis_kelamin' => $row['jenis_kelamin'],
                 ]);
 
-                $jumlah++;
+                if (SantunanParticipation::query()->where('person_id', $person->id)->where('tahun_program', $targetYear)->exists()) {
+                    $errors[] = "Baris {$rowNumber} — {$row['nama_lengkap']}: orang ini sudah terdaftar pada tahun {$targetYear}";
+
+                    continue;
+                }
+
+                SantunanParticipation::query()->create(collect($row)->except([
+                    'nama_lengkap', 'nama_panggilan', 'tanggal_lahir', 'jenis_kelamin',
+                ])->all() + [
+                    'person_id' => $person->id,
+                    'ip_address' => $request->ip(),
+                ]);
+                $created++;
+                $reused += $match['status'] === 'matched' ? 1 : 0;
             }
 
-            // =========================
-            // JIKA ADA ERROR → BATAL SEMUA
-            // =========================
-            if (count($errors) > 0) {
+            if ($errors !== []) {
                 DB::rollBack();
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Import dibatalkan karena ada data tidak valid',
+                    'message' => 'Import dibatalkan karena ada data tidak valid atau duplikat.',
                     'detail' => $errors,
+                    'review' => $review,
                 ], 422);
             }
 
@@ -241,28 +103,22 @@ class ExcelYatimDhuafaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Berhasil mengimport {$jumlah} data anak",
+                'message' => "Berhasil mengimport {$created} participation untuk tahun {$targetYear}.",
+                'created' => $created,
+                'identities_reused' => $reused,
+                'tahun_program' => $targetYear,
             ]);
-
-        } catch (\Exception $e) {
-
+        } catch (Throwable $exception) {
             DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'File Excel tidak bisa dibaca / format rusak',
-                'error' => $e->getMessage(),
-            ], 500);
+            throw $exception;
         }
     }
 
     public function export(Request $request, SantunanRamadhanExportService $exporter)
     {
-        if ($request->input('export_mode') === 'all') {
-            return $this->exportAll($request, $exporter);
-        }
-
-        return $this->exportBySumber($request, $exporter);
+        return $request->input('export_mode') === 'all'
+            ? $this->exportAll($request, $exporter)
+            : $this->exportBySumber($request, $exporter);
     }
 
     public function downloadTemplate()
@@ -270,61 +126,26 @@ class ExcelYatimDhuafaController extends Controller
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Pendaftaran');
-
         $headers = [
-            'Kategori',
-            'Nama Lengkap',
-            'Nama Panggilan',
-            'Jenis Kelamin',
-            'Tanggal Lahir',
-            'Umur',
-            'Satuan Umur',
-            'Nama Orang Tua / Wali',
-            'Pekerjaan Orang Tua / Wali',
-            'Alamat',
-            'No WA',
-            'Sumber Informasi',
-            'Catatan Tambahan',
-            'RT (Opsional)',
-            'RW (Opsional)',
-            'Nama RT (Opsional)',
+            'Kategori', 'Nama Lengkap', 'Nama Panggilan', 'Jenis Kelamin', 'Tanggal Lahir', 'Umur',
+            'Satuan Umur', 'Nama Orang Tua / Wali', 'Pekerjaan Orang Tua / Wali', 'Alamat', 'No WA',
+            'Sumber Informasi', 'Catatan Tambahan', 'RT (Opsional)', 'RW (Opsional)', 'Nama RT (Opsional)',
         ];
-
         $sheet->fromArray($headers, null, 'A1');
         $sheet->fromArray([
-            'yatim_dhuafa',
-            'Ahmad Fulan',
-            'Ahmad',
-            'L',
-            '',
-            '10',
-            'tahun',
-            'Bapak Fulan',
-            'Pedagang',
-            'Jl. Contoh No. 1',
-            '081234567890',
-            'Pengurus RT',
-            '',
-            '006',
-            '007',
-            'Bapak Ketua RT',
+            'yatim_dhuafa', 'Ahmad Fulan', 'Ahmad', 'L', '', '10', 'tahun', 'Bapak Fulan', 'Pedagang',
+            'Jl. Contoh No. 1', '081234567890', 'Pengurus RT', '', '006', '007', 'Bapak Ketua RT',
         ], null, 'A2');
-
         $sheet->getStyle('A1:P1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:P1')->getFill()
-            ->setFillType(Fill::FILL_SOLID)
-            ->getStartColor()->setARGB('FFD1FAE5');
-
+        $sheet->getStyle('A1:P1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD1FAE5');
         foreach (range('A', 'P') as $column) {
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
-
         $sheet->getStyle('N2:O1000')->getNumberFormat()->setFormatCode('@');
         $sheet->freezePane('A2');
 
-        return response()->streamDownload(function () use ($spreadsheet) {
-            $writer = new Xlsx($spreadsheet);
-            $writer->save('php://output');
+        return response()->streamDownload(function () use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save('php://output');
         }, 'Template Import Yatim Dhuafa.xlsx', [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Cache-Control' => 'max-age=0',
@@ -334,23 +155,44 @@ class ExcelYatimDhuafaController extends Controller
     public function exportBySumber(Request $request, SantunanRamadhanExportService $exporter)
     {
         $validated = $request->validate([
-            'sumber_informasi' => ['required', 'string', 'max:255', Rule::exists('pendaftaran_anak_yatim_dhuafa', 'sumber_informasi')],
+            'tahun_program' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'sumber_informasi' => [
+                'required', 'string', 'max:255',
+                Rule::exists('santunan_participations', 'sumber_informasi')
+                    ->where(fn ($query) => $query->where('tahun_program', $request->integer('tahun_program'))),
+            ],
         ], [
             'sumber_informasi.required' => 'Silakan pilih sumber informasi terlebih dahulu.',
-            'sumber_informasi.exists' => 'Sumber informasi yang dipilih tidak memiliki data.',
+            'sumber_informasi.exists' => 'Sumber informasi tidak memiliki data pada tahun yang dipilih.',
         ]);
 
-        $export = $exporter->create($validated['sumber_informasi']);
+        $export = $exporter->create($validated['sumber_informasi'], (int) $validated['tahun_program']);
 
         if ($export['record_count'] === 0) {
-            throw ValidationException::withMessages([
-                'sumber_informasi' => 'Sumber informasi yang dipilih tidak memiliki data.',
-            ]);
+            throw ValidationException::withMessages(['sumber_informasi' => 'Sumber informasi tidak memiliki data pada tahun yang dipilih.']);
         }
 
-        return response()->streamDownload(function () use ($export) {
-            $writer = new Xlsx($export['spreadsheet']);
-            $writer->save('php://output');
+        return $this->downloadExport($export);
+    }
+
+    public function exportAll(Request $request, SantunanRamadhanExportService $exporter)
+    {
+        $validated = $request->validate([
+            'tahun_program' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ]);
+        $export = $exporter->createAll((int) $validated['tahun_program']);
+
+        if ($export['record_count'] === 0) {
+            throw ValidationException::withMessages(['export_mode' => 'Belum ada data pada tahun yang dipilih.']);
+        }
+
+        return $this->downloadExport($export);
+    }
+
+    private function downloadExport(array $export)
+    {
+        return response()->streamDownload(function () use ($export): void {
+            (new Xlsx($export['spreadsheet']))->save('php://output');
             $export['spreadsheet']->disconnectWorksheets();
         }, $export['filename'], [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -359,28 +201,87 @@ class ExcelYatimDhuafaController extends Controller
         ]);
     }
 
-    public function exportAll(Request $request, SantunanRamadhanExportService $exporter)
+    private function readImportRow($sheet, int $rowNumber, int $targetYear, array &$errors): ?array
     {
-        $validated = $request->validate([
-            'tahun_program' => ['nullable', 'integer', 'min:2000', 'max:2100'],
-        ]);
+        $value = fn (string $column) => trim((string) $sheet->getCell($column.$rowNumber)->getFormattedValue());
+        $kategori = strtolower($value('A'));
+        $nama = $value('B');
+        $gender = strtoupper($value('D'));
+        $alamat = $value('J');
+        $phone = trim((string) $sheet->getCell('K'.$rowNumber)->getValue());
+        $rt = $value('N');
+        $rw = $value('O');
+        $coordinator = $value('P');
 
-        $export = $exporter->createAll($validated['tahun_program'] ?? null);
+        if ($phone !== '' && ! str_starts_with($phone, '08')) {
+            $phone = '0'.$phone;
+        }
+        if ($nama === '' || $alamat === '' || ! in_array($kategori, SantunanParticipation::CATEGORIES, true)
+            || ! in_array($gender, ['L', 'P'], true) || strlen($rt) > 5 || strlen($rw) > 5
+            || strlen($coordinator) > 150 || ($phone !== '' && ! preg_match('/^08[0-9]{8,12}$/', $phone))) {
+            $errors[] = "Baris {$rowNumber} — {$nama}: data wajib, kategori, JK, wilayah, atau nomor WA tidak valid";
 
-        if ($export['record_count'] === 0) {
-            throw ValidationException::withMessages([
-                'export_mode' => 'Belum ada data Santunan Ramadhan yang dapat diekspor.',
-            ]);
+            return null;
         }
 
-        return response()->streamDownload(function () use ($export) {
-            $writer = new Xlsx($export['spreadsheet']);
-            $writer->save('php://output');
-            $export['spreadsheet']->disconnectWorksheets();
-        }, $export['filename'], [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Cache-Control' => 'max-age=0',
-            'Pragma' => 'public',
-        ]);
+        $birth = null;
+        $birthCell = $sheet->getCell('E'.$rowNumber)->getValue();
+        if (filled($birthCell)) {
+            try {
+                $birth = is_numeric($birthCell)
+                    ? Carbon::instance(ExcelDate::excelToDateTimeObject($birthCell))
+                    : Carbon::createFromFormat('d/m/Y', (string) $birthCell);
+            } catch (Throwable) {
+                $errors[] = "Baris {$rowNumber} — {$nama}: format tanggal salah (gunakan dd/mm/yyyy)";
+
+                return null;
+            }
+            if ($birth->isFuture() || $birth->diff(now())->y >= 14) {
+                $errors[] = "Baris {$rowNumber} — {$nama}: tanggal lahir atau usia tidak valid";
+
+                return null;
+            }
+            $diff = $birth->diff(now());
+            [$age, $unit] = $diff->y > 0 ? [$diff->y, 'tahun'] : ($diff->m > 0 ? [$diff->m, 'bulan'] : [max($diff->d, 1), 'hari']);
+        } else {
+            $age = (int) $value('F');
+            $unit = strtolower($value('G'));
+            if ($age < 0 || ! in_array($unit, ['tahun', 'bulan', 'hari'], true) || ($unit === 'tahun' && $age > 13)) {
+                $errors[] = "Baris {$rowNumber} — {$nama}: isi tanggal lahir atau umur dan satuan yang valid";
+
+                return null;
+            }
+        }
+
+        return [
+            'tahun_program' => $targetYear,
+            'kategori' => $kategori,
+            'nama_lengkap' => $nama,
+            'nama_panggilan' => $value('C') ?: null,
+            'tanggal_lahir' => $birth?->toDateString(),
+            'umur' => $age,
+            'umur_satuan' => $unit,
+            'jenis_kelamin' => $gender,
+            'alamat' => $alamat,
+            'rt' => $rt ?: null,
+            'rw' => $rw ?: null,
+            'nama_rt' => $coordinator ?: null,
+            'nama_orang_tua' => $value('H'),
+            'pekerjaan_orang_tua' => $value('I') ?: null,
+            'no_wa' => $phone ?: null,
+            'sumber_informasi' => $value('L') ?: null,
+            'catatan_tambahan' => $value('M') ?: null,
+        ];
+    }
+
+    private function rowIsBlank($sheet, int $rowNumber): bool
+    {
+        foreach (range('A', 'P') as $column) {
+            if (trim((string) $sheet->getCell($column.$rowNumber)->getValue()) !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

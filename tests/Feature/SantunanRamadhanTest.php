@@ -1,6 +1,7 @@
 <?php
 
-use App\Models\PendaftaranAnakYatimDhuafa;
+use App\Models\SantunanParticipation;
+use App\Models\SantunanPerson;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -23,6 +24,7 @@ function santunanPayload(array $overrides = []): array
         'pekerjaan_orang_tua' => 'Pedagang',
         'sumber_informasi' => 'Pengurus RT',
         'catatan_tambahan' => null,
+        'tahun_program' => now()->year,
     ], $overrides);
 }
 
@@ -62,9 +64,21 @@ function santunanWorkbook(array $row, bool $withRegionColumns): UploadedFile
     );
 }
 
-function groupedSantunan(array $overrides = []): PendaftaranAnakYatimDhuafa
+function createSantunanParticipation(array $overrides = []): SantunanParticipation
 {
-    return PendaftaranAnakYatimDhuafa::create(array_merge(santunanPayload(), [
+    $data = array_merge(santunanPayload(), $overrides);
+    $person = SantunanPerson::query()->create(collect($data)->only([
+        'nama_lengkap', 'nama_panggilan', 'tanggal_lahir', 'jenis_kelamin',
+    ])->all());
+
+    return SantunanParticipation::query()->create(collect($data)->except([
+        'nama_lengkap', 'nama_panggilan', 'tanggal_lahir', 'jenis_kelamin',
+    ])->all() + ['person_id' => $person->id]);
+}
+
+function groupedSantunan(array $overrides = []): SantunanParticipation
+{
+    return createSantunanParticipation(array_merge([
         'tahun_program' => now()->year,
         'sumber_informasi' => 'Pak Indra',
         'kategori' => 'yatim_dhuafa',
@@ -128,7 +142,7 @@ it('creates records without optional RT fields', function () {
         ->assertOk()
         ->assertJsonPath('success', true);
 
-    $record = PendaftaranAnakYatimDhuafa::sole();
+    $record = SantunanParticipation::with('person')->sole();
 
     expect($record->rt)->toBeNull()
         ->and($record->rw)->toBeNull()
@@ -144,7 +158,7 @@ it('creates records with RT fields and preserves leading zeroes', function () {
         'nama_rt' => 'Bapak Ketua RT',
     ]))->assertOk();
 
-    $record = PendaftaranAnakYatimDhuafa::sole();
+    $record = SantunanParticipation::with('person')->sole();
 
     expect($record->rt)->toBe('006')
         ->and($record->rw)->toBe('007')
@@ -164,12 +178,12 @@ it('rejects oversized RT fields', function (string $field, string $value) {
 ]);
 
 it('updates and clears optional RT fields to null', function () {
-    $record = PendaftaranAnakYatimDhuafa::create(array_merge(santunanPayload(), [
+    $record = createSantunanParticipation([
         'tahun_program' => now()->year,
         'rt' => '006',
         'rw' => '007',
         'nama_rt' => 'Ketua Lama',
-    ]));
+    ]);
 
     $this->putJson(route('santunan-ramadhan.update', $record), santunanPayload([
         'nama_lengkap' => $record->nama_lengkap,
@@ -194,9 +208,10 @@ it('imports the old template without optional columns', function () {
 
     $this->post(route('santunan-ramadhan.import'), [
         'file' => santunanWorkbook($row, false),
+        'tahun_program' => now()->year,
     ])->assertOk()->assertJsonPath('success', true);
 
-    $record = PendaftaranAnakYatimDhuafa::sole();
+    $record = SantunanParticipation::with('person')->sole();
     expect($record->rt)->toBeNull()->and($record->rw)->toBeNull()->and($record->nama_rt)->toBeNull();
 });
 
@@ -209,9 +224,10 @@ it('imports optional RT fields and preserves leading zeroes', function () {
 
     $this->post(route('santunan-ramadhan.import'), [
         'file' => santunanWorkbook($row, true),
+        'tahun_program' => now()->year,
     ])->assertOk()->assertJsonPath('success', true);
 
-    $record = PendaftaranAnakYatimDhuafa::sole();
+    $record = SantunanParticipation::with('person')->sole();
     expect($record->rt)->toBe('006')->and($record->rw)->toBe('007')->and($record->nama_rt)->toBe('Ibu Ketua RT');
 });
 
@@ -232,18 +248,18 @@ it('downloads a valid template with optional RT headers', function () {
 });
 
 it('returns RT fields in detail and table data with clear null fallbacks', function () {
-    $filled = PendaftaranAnakYatimDhuafa::create(array_merge(santunanPayload(), [
+    $filled = createSantunanParticipation([
         'tahun_program' => now()->year,
         'rt' => '006',
         'rw' => '007',
         'nama_rt' => 'Ketua RT',
-    ]));
-    PendaftaranAnakYatimDhuafa::create(array_merge(santunanPayload(), [
+    ]);
+    createSantunanParticipation([
         'tahun_program' => now()->year,
         'rt' => null,
         'rw' => null,
         'nama_rt' => null,
-    ]));
+    ]);
 
     $this->getJson(route('santunan-ramadhan.edit', $filled))
         ->assertOk()
@@ -277,6 +293,7 @@ it('requires one valid source before exporting Santunan data', function () {
 
     $this->postJson(route('santunan-ramadhan.exportBySumber'), [
         'sumber_informasi' => 'Sumber Tidak Ada',
+        'tahun_program' => now()->year,
     ])->assertUnprocessable()
         ->assertJsonValidationErrors('sumber_informasi');
 });
@@ -294,19 +311,19 @@ it('exports exactly two category sheets with global coupons grouped tables and n
         groupedSantunan(['sumber_informasi' => $source, 'nama_lengkap' => 'Nanda Putri', 'kategori' => 'yatim_dhuafa', 'rw' => '04', 'rt' => '03', 'nama_rt' => 'Pak Wawang', 'jenis_kelamin' => 'P']),
         groupedSantunan(['sumber_informasi' => $source, 'nama_lengkap' => 'Tegar TCE', 'kategori' => 'dhuafa', 'rw' => '08', 'rt' => 'TCE', 'nama_rt' => 'Pak Indra (TCE)', 'jenis_kelamin' => 'L']),
         groupedSantunan(['sumber_informasi' => $source, 'nama_lengkap' => 'Tanpa Wilayah', 'kategori' => 'yatim_dhuafa', 'rw' => null, 'rt' => null, 'nama_rt' => null, 'jenis_kelamin' => 'P']),
-        groupedSantunan(['sumber_informasi' => $source, 'nama_lengkap' => 'Yatim Tidak Masuk', 'kategori' => 'yatim', 'jenis_kelamin' => 'L']),
     ]);
     groupedSantunan(['sumber_informasi' => 'Sumber Lain', 'nama_lengkap' => 'Tidak Boleh Bocor']);
 
-    $beforeCount = PendaftaranAnakYatimDhuafa::count();
-    $beforeUpdatedAt = PendaftaranAnakYatimDhuafa::orderBy('id')->pluck('updated_at', 'id')->map->toISOString()->all();
-    $beforeCategories = PendaftaranAnakYatimDhuafa::orderBy('id')->pluck('kategori', 'id')->all();
+    $beforeCount = SantunanParticipation::count();
+    $beforeUpdatedAt = SantunanParticipation::orderBy('id')->pluck('updated_at', 'id')->map->toISOString()->all();
+    $beforeCategories = SantunanParticipation::orderBy('id')->pluck('kategori', 'id')->all();
 
     \Illuminate\Support\Facades\DB::flushQueryLog();
     \Illuminate\Support\Facades\DB::enableQueryLog();
 
     $response = $this->post(route('santunan-ramadhan.exportBySumber'), [
         'sumber_informasi' => $source,
+        'tahun_program' => now()->year,
     ])->assertOk()
         ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
@@ -317,10 +334,10 @@ it('exports exactly two category sheets with global coupons grouped tables and n
     expect(substr($contents, 0, 2))->toBe('PK')
         ->and($response->headers->get('content-disposition'))->toContain('Santunan-Ramadhan-'.now()->year.'-pak-indra-tce-laporan-sumber-sangat-panjang.xlsx')
         ->and($queries->filter(fn ($query) => preg_match('/^\s*(insert|update|delete)\s/i', $query['query'])))->toBeEmpty()
-        ->and($queries->filter(fn ($query) => str_contains(strtolower($query['query']), 'pendaftaran_anak_yatim_dhuafa')))->toHaveCount(2)
-        ->and(PendaftaranAnakYatimDhuafa::count())->toBe($beforeCount)
-        ->and(PendaftaranAnakYatimDhuafa::orderBy('id')->pluck('updated_at', 'id')->map->toISOString()->all())->toBe($beforeUpdatedAt)
-        ->and(PendaftaranAnakYatimDhuafa::orderBy('id')->pluck('kategori', 'id')->all())->toBe($beforeCategories);
+        ->and($queries->filter(fn ($query) => str_contains(strtolower($query['query']), 'santunan_participations')))->toHaveCount(2)
+        ->and(SantunanParticipation::count())->toBe($beforeCount)
+        ->and(SantunanParticipation::orderBy('id')->pluck('updated_at', 'id')->map->toISOString()->all())->toBe($beforeUpdatedAt)
+        ->and(SantunanParticipation::orderBy('id')->pluck('kategori', 'id')->all())->toBe($beforeCategories);
 
     $path = tempnam(sys_get_temp_dir(), 'santunan-export-').'.xlsx';
     file_put_contents($path, $contents);
@@ -446,6 +463,7 @@ it('keeps both category sheets when one category has no recipients', function ()
 
     $response = $this->post(route('santunan-ramadhan.exportBySumber'), [
         'sumber_informasi' => $source,
+        'tahun_program' => now()->year,
     ])->assertOk();
 
     $path = tempnam(sys_get_temp_dir(), 'santunan-empty-category-').'.xlsx';
@@ -478,8 +496,8 @@ it('exports every active-year source to its own sheet with one global coupon seq
         'kategori' => 'dhuafa',
     ]);
 
-    $beforeCount = PendaftaranAnakYatimDhuafa::count();
-    $beforeData = PendaftaranAnakYatimDhuafa::orderBy('id')->get()->toJson();
+    $beforeCount = SantunanParticipation::count();
+    $beforeData = SantunanParticipation::orderBy('id')->get()->toJson();
 
     \Illuminate\Support\Facades\DB::flushQueryLog();
     \Illuminate\Support\Facades\DB::enableQueryLog();
@@ -493,9 +511,9 @@ it('exports every active-year source to its own sheet with one global coupon seq
 
     expect($response->headers->get('content-disposition'))->toContain('Santunan-Ramadhan-'.now()->year.'-Semua-Sumber.xlsx')
         ->and($queries->filter(fn ($query) => preg_match('/^\s*(insert|update|delete)\s/i', $query['query'])))->toBeEmpty()
-        ->and($queries->filter(fn ($query) => str_contains(strtolower($query['query']), 'pendaftaran_anak_yatim_dhuafa')))->toHaveCount(1)
-        ->and(PendaftaranAnakYatimDhuafa::count())->toBe($beforeCount)
-        ->and(PendaftaranAnakYatimDhuafa::orderBy('id')->get()->toJson())->toBe($beforeData);
+        ->and($queries->filter(fn ($query) => str_contains(strtolower($query['query']), 'santunan_participations')))->toHaveCount(1)
+        ->and(SantunanParticipation::count())->toBe($beforeCount)
+        ->and(SantunanParticipation::orderBy('id')->get()->toJson())->toBe($beforeData);
 
     $path = tempnam(sys_get_temp_dir(), 'santunan-export-all-').'.xlsx';
     file_put_contents($path, $contents);
@@ -605,10 +623,10 @@ it('creates deterministic unique Excel-safe sheet names for all-source export', 
 
 it('finds duplicate candidates while keeping the response contract', function () {
     foreach (['Ahmad Fauzan', 'Ahmad Fauzan', 'Nama Berbeda'] as $name) {
-        PendaftaranAnakYatimDhuafa::create(array_merge(santunanPayload([
+        createSantunanParticipation([
             'nama_lengkap' => $name,
             'nama_orang_tua' => 'Bapak Fauzan',
-        ]), ['tahun_program' => now()->year]));
+        ]);
     }
 
     $this->getJson(route('santunan-ramadhan.scan-duplikat', ['tahun' => now()->year]))
@@ -623,21 +641,21 @@ it('groups recipients by source category RW RT and coordinator with sorted names
         groupedSantunan(['nama_lengkap' => 'Reyhan Azahlan']),
         groupedSantunan(['nama_lengkap' => 'Muhammad Hamdani']),
         groupedSantunan(['nama_lengkap' => 'Zahra Aulia', 'nama_rt' => 'Pak Zain']),
-        groupedSantunan(['nama_lengkap' => 'Adam Nur', 'kategori' => 'yatim', 'rw' => '04', 'rt' => '03', 'nama_rt' => 'Pak Wawang']),
+        groupedSantunan(['nama_lengkap' => 'Adam Nur', 'kategori' => 'dhuafa', 'rw' => '04', 'rt' => '03', 'nama_rt' => 'Pak Wawang']),
         groupedSantunan(['nama_lengkap' => 'Dian Musyafa', 'kategori' => 'dhuafa']),
-        groupedSantunan(['nama_lengkap' => 'Tanpa Wilayah', 'sumber_informasi' => 'Pak Maman', 'kategori' => 'lainnya', 'rw' => null, 'rt' => null, 'nama_rt' => null]),
+        groupedSantunan(['nama_lengkap' => 'Tanpa Wilayah', 'sumber_informasi' => 'Pak Maman', 'kategori' => 'yatim_dhuafa', 'rw' => null, 'rt' => null, 'nama_rt' => null]),
     ]);
 
     \Illuminate\Support\Facades\DB::flushQueryLog();
     \Illuminate\Support\Facades\DB::enableQueryLog();
 
-    $response = $this->getJson(route('santunan-ramadhan.data-grouped'))
+    $response = $this->getJson(route('santunan-ramadhan.data-grouped', ['tahun' => now()->year]))
         ->assertOk()
         ->assertJsonPath('success', true)
         ->assertJsonPath('total', 6);
 
     $recordQueries = collect(\Illuminate\Support\Facades\DB::getQueryLog())
-        ->filter(fn ($query) => str_contains(strtolower($query['query']), 'pendaftaran_anak_yatim_dhuafa'));
+        ->filter(fn ($query) => str_contains(strtolower($query['query']), 'santunan_participations'));
     \Illuminate\Support\Facades\DB::disableQueryLog();
 
     expect($recordQueries)->toHaveCount(1);
@@ -648,10 +666,10 @@ it('groups recipients by source category RW RT and coordinator with sorted names
     $pakIndra = $groups->first();
     expect($pakIndra['total'])->toBe(5)
         ->and(collect($pakIndra['categories'])->pluck('label')->all())
-        ->toBe(['Yatim', 'Dhuafa', 'Yatim yang Dhuafa'])
+        ->toBe(['DHUAFA', 'YATIM YANG DHUAFA'])
         ->and(collect($pakIndra['categories'])->sum('total'))->toBe($pakIndra['total']);
 
-    $combined = collect($pakIndra['categories'])->firstWhere('label', 'Yatim yang Dhuafa');
+    $combined = collect($pakIndra['categories'])->firstWhere('label', 'YATIM YANG DHUAFA');
     $rw = $combined['rws'][0];
     $rt = $rw['rts'][0];
     $coordinators = collect($rt['coordinators']);
@@ -679,11 +697,11 @@ it('groups recipients by source category RW RT and coordinator with sorted names
     expect($returnedIds->sort()->values()->all())->toBe($records->pluck('id')->sort()->values()->all())
         ->and($returnedIds->duplicates()->isEmpty())->toBeTrue();
 
-    $unknown = $groups->last()['categories'][0];
-    expect($unknown['label'])->toBe('Belum Ditentukan')
-        ->and($unknown['rws'][0]['label'])->toBe('Belum diisi')
-        ->and($unknown['rws'][0]['rts'][0]['label'])->toBe('Belum diisi')
-        ->and($unknown['rws'][0]['rts'][0]['coordinators'][0]['label'])->toBeNull();
+    $withoutRegion = $groups->last()['categories'][0];
+    expect($withoutRegion['label'])->toBe('YATIM YANG DHUAFA')
+        ->and($withoutRegion['rws'][0]['label'])->toBe('Belum diisi')
+        ->and($withoutRegion['rws'][0]['rts'][0]['label'])->toBe('Belum diisi')
+        ->and($withoutRegion['rws'][0]['rts'][0]['coordinators'][0]['label'])->toBeNull();
 });
 
 it('filters grouped recipients without empty parents duplicate records or data loss', function () {

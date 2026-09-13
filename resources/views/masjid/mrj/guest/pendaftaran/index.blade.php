@@ -2,7 +2,7 @@
 @push('head')
 
     {{-- BASIC SEO --}}
-    <title>Pendaftaran Santunan Ramadhan 1447H | Masjid Raudhotul Jannah</title>
+    <title>Pendaftaran Santunan Ramadhan {{ $selectedYear }} | Masjid Raudhotul Jannah</title>
     <meta name="description" content="Masjid Raudhotul Jannah membuka pendaftaran santunan Ramadhan untuk anak yatim dan dhuafa di lingkungan Taman Cipulir Estate. Silakan daftar atau bantu sebarkan.">
 
     {{-- OPEN GRAPH (WA & FB) --}}
@@ -52,7 +52,7 @@
                                 <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-emerald-800 leading-snug mb-5">
                                     Pendataan Santunan Anak Yatim & Anak Dhuafa
                                     <span class="block text-lg sm:text-xl md:text-2xl font-semibold text-emerald-600 mt-1">
-                                        MRJ & MTRJ — Ramadhan 1447 H / 2026
+                                        MRJ & MTRJ — Tahun Program {{ $selectedYear }}
                                     </span>
                                 </h1>
 
@@ -83,7 +83,7 @@
                                 <div class="text-slate-700 italic text-sm sm:text-base text-center space-y-3">
                                     <p class="font-semibold text-emerald-700">
                                         Program Santunan Ramadhan MRJ &amp; MTRJ<br>
-                                        Ramadhan 1447 H / 2026
+                                        Tahun Program {{ $selectedYear }}
                                     </p>
 
                                     <p class="text-slate-600">
@@ -96,6 +96,19 @@
                     </div>
                     <!-- Form -->
                     <form id="form-pendaftaran" class="space-y-7">
+
+                        <div class="form-control">
+                            <label class="label pb-1" for="tahun_program">
+                                <span class="label-text font-semibold text-slate-800">Tahun Program <span class="text-red-500">*</span></span>
+                            </label>
+                            <select id="tahun_program" name="tahun_program" required
+                                    class="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none text-slate-900 bg-white">
+                                @foreach($yearOptions as $year)
+                                    <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
+                                @endforeach
+                            </select>
+                            <p class="mt-1 text-xs text-slate-500">Pendaftaran dibuat sebagai participation pada tahun yang dipilih.</p>
+                        </div>
 
                         <!-- Sumber Informasi -->
                         <div class="form-control">
@@ -132,8 +145,8 @@
                                 <select name="kategori" required
                                         class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
                                     <option value="" disabled selected>Pilih salah satu</option>
-                                    <option value="yatim_dhuafa">Yatim yang Dhuafa</option>
-                                    <option value="dhuafa">Anak Dhuafa</option>
+                                    <option value="yatim_dhuafa">YATIM YANG DHUAFA</option>
+                                    <option value="dhuafa">DHUAFA</option>
                                 </select>
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👶</span>
                                 <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>

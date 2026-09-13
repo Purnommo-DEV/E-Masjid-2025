@@ -1,6 +1,6 @@
 @extends('masjid.master-guest')
 
-@section('title', 'Daftar Anak Yatim & Dhuafa - Santunan Ramadhan 1447 H / 2026')
+@section('title', 'Daftar Anak Yatim & Dhuafa - Santunan Ramadhan '.$selectedYear)
 
 @section('og_title', 'Daftar Penerima Santunan Ramadhan 1447H – Masjid Raudhotul Jannah')
 
@@ -14,8 +14,43 @@
 @section('content')
     <div class="min-h-screen bg-gradient-to-br from-slate-50 to-white py-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-9xl mx-auto">
+            <div id="pageYearActionsHeader" class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-emerald-600">Program Tahunan</p>
+                    <h1 class="mt-1 text-2xl font-extrabold text-slate-900 sm:text-3xl">Santunan Ramadhan</h1>
+                    <p class="mt-1 text-sm text-slate-500">Tahun Program <span id="pageYearContext" class="font-semibold text-slate-700">{{ $selectedYear }}</span></p>
+                </div>
+
+                <div id="yearActionMenu" class="relative w-full sm:w-auto">
+                    <button id="btnYearActions" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="yearActionDropdown"
+                            class="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-3 font-bold text-white shadow-md transition hover:from-indigo-700 hover:to-violet-700 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-200 sm:w-auto sm:justify-center">
+                        <span>Aksi Tahun</span>
+                        <span id="yearActionYear" class="rounded-md bg-white/15 px-2 py-0.5 text-xs font-semibold">{{ $selectedYear }}</span>
+                        <svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div id="yearActionDropdown" role="menu" aria-labelledby="btnYearActions"
+                         class="absolute left-0 right-0 z-40 mt-2 hidden rounded-xl border border-slate-200 bg-white p-2 shadow-xl sm:left-auto sm:w-80">
+                        <button id="btnStartYear" type="button" role="menuitem"
+                                class="flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none">
+                            <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
+                                </svg>
+                            </span>
+                            <span class="min-w-0">
+                                <strong class="block text-sm text-slate-900">Mulai Data Tahun Baru</strong>
+                                <span id="startYearContext" class="mt-0.5 block text-xs text-slate-500">{{ $selectedYear }} → {{ $selectedYear + 1 }}</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Filter Section (UI baru sesuai referensi) -->
-            <div class="bg-white rounded-2xl shadow-lg border border-emerald-100/60 p-6 lg:p-10 mb-10">
+            <div id="filterDataCard" class="bg-white rounded-2xl shadow-lg border border-emerald-100/60 p-6 lg:p-10 mb-10">
                 <div class="mb-6">
                     <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Filter Data</p>
                     <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Cari Data Santunan</h2>
@@ -24,7 +59,15 @@
                     </p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 items-end">
+                    <div class="form-control">
+                        <label class="label pb-1" for="filterTahun"><span class="label-text font-semibold text-slate-800">Tahun Program</span></label>
+                        <select id="filterTahun" class="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
+                            @foreach($yearOptions as $year)
+                                <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="form-control">
                         <label class="label pb-1" for="filterSumber"><span class="label-text font-semibold text-slate-800">Sumber Informasi</span></label>
                         <select id="filterSumber" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
@@ -39,10 +82,9 @@
                         <label class="label pb-1" for="filterKategori"><span class="label-text font-semibold text-slate-800">Kategori</span></label>
                         <select id="filterKategori" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
                             <option value="">Semua kategori</option>
-                            <option value="yatim">Yatim</option>
-                            <option value="dhuafa">Dhuafa</option>
-                            <option value="yatim_dhuafa">Yatim yang Dhuafa</option>
-                            <option value="__undetermined__">Belum Ditentukan</option>
+                            @foreach($categoryList as $category)
+                                <option value="{{ $category }}">{{ $category === 'dhuafa' ? 'DHUAFA' : 'YATIM YANG DHUAFA' }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -83,63 +125,73 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-10">
+            <div id="excelCardsGrid" class="mb-10 grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
 
                 <!-- =======================================
                      CARD IMPORT
                 ======================================== -->
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <div id="importExcelCard" class="flex h-full min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-                    <div class="mb-5">
-                        <h3 class="text-xl font-bold text-slate-800">Import Data Excel</h3>
-                        <p class="text-sm text-slate-500">
-                            Download template terlebih dahulu sebelum upload file.
-                        </p>
+                    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h3 class="text-xl font-bold text-slate-800">Import Data Excel</h3>
+                            <p class="mt-0.5 text-xs text-slate-500">Import participation ke tahun program yang dipilih.</p>
+                        </div>
+                        <a href="{{ route('santunan-ramadhan.template') }}"
+                           class="inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-sky-700 transition hover:text-sky-900">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16" />
+                            </svg>
+                            Download Template
+                        </a>
                     </div>
 
                     <form id="formImportExcel"
                           action="{{ route('santunan-ramadhan.import') }}"
                           method="POST"
                           enctype="multipart/form-data"
-                          class="space-y-4">
+                          class="flex flex-1 flex-col gap-4">
                         @csrf
 
-                        <!-- Download Template -->
-                        <a href="{{ route('santunan-ramadhan.template') }}"
-                           class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
-                            </svg>
-                            Download Template
-                        </a>
+                        <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(150px,0.4fr)_minmax(0,1fr)]">
+                            <div>
+                                <label for="importYear" class="mb-1 block text-xs font-semibold text-slate-700">Tahun Program</label>
+                                <select id="importYear" name="tahun_program" required class="min-h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2.5 text-slate-800">
+                                    @foreach($yearOptions as $year)
+                                        <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                        <!-- File Input -->
-                        <input type="file"
-                               name="file"
-                               id="fileImport"
-                               required
-                               accept=".xlsx,.xls"
-                               class="w-full px-4 py-3 rounded-xl border-2 border-slate-300
-                                      focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200
-                                      outline-none text-slate-900 bg-white">
+                            <div class="min-w-0">
+                                <label for="fileImport" class="mb-1 block text-xs font-semibold text-slate-700">File Excel</label>
+                                <input type="file"
+                                       name="file"
+                                       id="fileImport"
+                                       required
+                                       accept=".xlsx,.xls"
+                                       class="min-h-12 w-full rounded-xl border-2 border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:font-semibold file:text-slate-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200">
+                            </div>
+                        </div>
 
-                        <!-- Import Button -->
-                        <button type="submit"
-                                id="btnImportExcel"
-                                class="w-full flex items-center justify-center gap-2 px-6 py-3
-                                       bg-gradient-to-r from-emerald-600 to-teal-600
-                                       hover:from-emerald-700 hover:to-teal-700
-                                       text-white font-bold rounded-xl shadow-lg transition">
+                        <p class="text-xs text-slate-500">Format XLSX/XLS · Tahun target wajib dipilih.</p>
 
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
-                            </svg>
+                        <div id="importCardAction" class="mt-auto pt-2">
+                            <button type="submit"
+                                    id="btnImportExcel"
+                                    class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 font-bold text-white shadow transition hover:from-emerald-700 hover:to-teal-700">
 
-                            <span id="textImport">Import Data</span>
-                            <span id="loadingImport" class="hidden loading loading-spinner loading-sm"></span>
-                        </button>
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 4v12m0 0l4-4m-4 4l-4-4M4 20h16"/>
+                                </svg>
+
+                                <span id="textImport">Import Data</span>
+                                <span id="loadingImport" class="hidden" aria-hidden="true">
+                                    <span class="loading loading-spinner loading-sm"></span>
+                                </span>
+                            </button>
+                        </div>
                     </form>
                 </div>
 
@@ -147,11 +199,11 @@
                 <!-- =======================================
                      CARD EXPORT
                 ======================================== -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                <div id="exportExcelCard" class="flex h-full min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
 
-                    <div>
+                    <div class="mb-4">
                         <h3 class="text-xl font-bold text-slate-800">Export Excel Santunan</h3>
-                        <p class="text-sm text-slate-500">
+                        <p class="mt-0.5 text-xs text-slate-500">
                             Pilih export satu sumber atau seluruh sumber informasi.
                         </p>
                     </div>
@@ -159,13 +211,13 @@
                     <form id="formExportSantunan"
                           method="POST"
                           action="{{ route('santunan-ramadhan.export') }}"
-                          class="space-y-4">
+                          class="flex flex-1 flex-col gap-4">
                         @csrf
-                        <input type="hidden" name="tahun_program" value="{{ now()->year }}">
+                        <input id="exportYear" type="hidden" name="tahun_program" value="{{ $selectedYear }}">
 
-                        <fieldset class="space-y-3">
-                            <legend class="mb-2 text-sm font-semibold text-slate-700">Mode Export</legend>
-                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+                        <fieldset class="space-y-2">
+                            <legend class="mb-1 text-sm font-semibold text-slate-700">Mode Export</legend>
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3">
                                 <input id="exportModeSelected" type="radio" name="export_mode" value="selected" checked
                                     class="mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500">
                                 <span>
@@ -173,7 +225,7 @@
                                     <span class="block text-sm text-slate-500">Satu sumber ke dua sheet kategori.</span>
                                 </span>
                             </label>
-                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-4">
+                            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3">
                                 <input id="exportModeAll" type="radio" name="export_mode" value="all"
                                     class="mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500">
                                 <span>
@@ -196,24 +248,28 @@
                             </select>
                         </div>
 
-                        <p id="exportHelper" class="text-sm leading-relaxed text-slate-500">
-                            Export satu sumber ke dua sheet kategori.
-                        </p>
-                        <p id="exportValidation" class="text-sm font-semibold text-red-600" role="alert">
-                            Silakan pilih sumber informasi terlebih dahulu.
-                        </p>
+                        <div class="space-y-1">
+                            <p id="exportHelper" class="text-xs leading-relaxed text-slate-500">
+                                Export satu sumber ke dua sheet kategori.
+                            </p>
+                            <p id="exportValidation" class="text-xs font-semibold text-red-600" role="alert">
+                                Silakan pilih sumber informasi terlebih dahulu.
+                            </p>
+                        </div>
 
-                        <button id="btnExportBySumber" type="submit" disabled
-                            class="w-full flex items-center justify-center gap-2 px-6 py-3
-                                   bg-gradient-to-r from-indigo-600 to-purple-600
-                                   hover:from-indigo-700 hover:to-purple-700
-                                   text-white font-bold rounded-xl shadow-lg transition
-                                   disabled:cursor-not-allowed disabled:opacity-50">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
-                            </svg>
-                            Export Excel
-                        </button>
+                        <div id="exportCardAction" class="mt-auto pt-2">
+                            <button id="btnExportBySumber" type="submit" disabled
+                                class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl
+                                       bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-3
+                                       font-bold text-white shadow transition
+                                       hover:from-indigo-700 hover:to-purple-700
+                                       disabled:cursor-not-allowed disabled:opacity-50">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/>
+                                </svg>
+                                Export Excel
+                            </button>
+                        </div>
                     </form>
 
                 </div>
@@ -245,36 +301,40 @@
                     </p>
                 </div>
             </div>
-            <div class="mb-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-                <span class="text-sm font-semibold text-slate-700">Tampilan:</span>
-                <div class="inline-flex overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm" role="tablist" aria-label="Pilih tampilan data">
-                    <button id="btnViewTable" type="button" role="tab" aria-selected="true"
-                            class="flex-1 bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition sm:flex-none">
-                        Tabel
-                    </button>
-                    <button id="btnViewGrouped" type="button" role="tab" aria-selected="false"
-                            class="flex-1 bg-white px-6 py-3 text-sm font-bold text-slate-700 transition hover:bg-emerald-50 sm:flex-none">
-                        Grouping
-                    </button>
-                </div>
-            </div>
+            <div id="dataViewControls" class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <section id="viewSelectionCard" class="min-w-0 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm" aria-labelledby="viewSwitcherLabel">
+                    <h2 id="viewSwitcherLabel" class="text-base font-bold text-slate-800">Tampilan</h2>
+                    <p class="mt-0.5 text-sm text-slate-500">Pilih cara menampilkan data peserta.</p>
+                    <div class="mt-3 inline-flex w-full min-w-0 overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm sm:w-auto" role="tablist" aria-labelledby="viewSwitcherLabel">
+                        <button id="btnViewTable" type="button" role="tab" aria-selected="true" aria-controls="tableViewPanel" tabindex="0"
+                                class="min-h-11 flex-1 bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700 sm:flex-none">
+                            Tabel
+                        </button>
+                        <button id="btnViewGrouped" type="button" role="tab" aria-selected="false" aria-controls="groupedViewPanel" tabindex="-1"
+                                class="min-h-11 flex-1 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-emerald-50 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700 sm:flex-none">
+                            Grouping
+                        </button>
+                    </div>
+                </section>
 
-            <section id="tableViewPanel" role="tabpanel" aria-labelledby="btnViewTable">
-                <div class="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <span class="text-sm font-medium text-slate-600">Mode tabel:</span>
-                    <div class="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <button id="btnModeResponsive" type="button"
-                                class="flex-1 bg-slate-800 px-5 py-2.5 text-xs font-semibold text-white transition sm:flex-none">
+                <section id="tableModeControls" class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-labelledby="tableModeLabel" aria-hidden="false">
+                    <h2 id="tableModeLabel" class="text-base font-bold text-slate-800">Mode Tabel</h2>
+                    <p class="mt-0.5 text-sm text-slate-500">Pilih perilaku tabel peserta.</p>
+                    <div class="mt-3 flex w-full min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:inline-flex sm:w-auto sm:flex-row" role="group" aria-labelledby="tableModeLabel">
+                        <button id="btnModeResponsive" type="button" aria-pressed="true" aria-controls="tabelYatimDhuafa"
+                                class="min-h-11 flex-1 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-white transition focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-700 sm:flex-none">
                             Responsive
                         </button>
-                        <button id="btnModeFull" type="button"
-                                class="flex-1 bg-white px-5 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex-none">
+                        <button id="btnModeFull" type="button" aria-pressed="false" aria-controls="tabelYatimDhuafa"
+                                class="min-h-11 flex-1 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-700 sm:flex-none">
                             Full Scroll
                         </button>
                     </div>
-                </div>
+                </section>
+            </div>
 
-                <div class="rounded-3xl border border-emerald-100/60 bg-white p-4 shadow-2xl sm:p-6 lg:p-10">
+            <section id="tableViewPanel" role="tabpanel" aria-labelledby="btnViewTable">
+                <div class="min-w-0 max-w-full overflow-x-auto rounded-3xl border border-emerald-100/60 bg-white p-4 shadow-2xl sm:p-6 lg:p-10">
                     <table id="tabelYatimDhuafa" class="table table-zebra w-full text-slate-900">
                         <thead></thead>
                         <tbody></tbody>
@@ -315,7 +375,7 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Scan Duplikat ({{ now()->year }})
+                    Scan Duplikat (<span id="scanYearLabel">{{ $selectedYear }}</span>)
                 </button>
             </div>
             <!-- Hasil Scan -->
@@ -355,7 +415,7 @@
             <!-- CTA Daftar Baru -->
             <div class="text-center mt-10">
                 @if($registrationOpen)
-                    <a href="{{ route('santunan-ramadhan.form') }}"
+                    <a href="{{ route('santunan-ramadhan.form', ['tahun' => $selectedYear]) }}"
                        class="inline-block px-10 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base">
                         Daftar Anak Baru
                     </a>
@@ -416,6 +476,7 @@
                 @csrf
                 <input type="hidden" name="_method" value="PUT">
                 <input type="hidden" id="editId" name="id">
+                <input type="hidden" id="editYear" name="tahun_program">
 
                 <div class="modal-header flex items-center justify-between">
                     <h3 class="text-xl font-bold text-slate-900">Edit Data Pendaftaran</h3>
@@ -459,8 +520,8 @@
                             <select name="kategori" required id="editKategori"
                                     class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none text-slate-900 bg-white appearance-none">
                                 <option value="" disabled selected>Pilih salah satu</option>
-                                <option value="yatim_dhuafa">Yatim yang Dhuafa</option>
-                                <option value="dhuafa">Anak Dhuafa</option>
+                                <option value="yatim_dhuafa">YATIM YANG DHUAFA</option>
+                                <option value="dhuafa">DHUAFA</option>
                             </select>
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">👶</span>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">▼</span>
@@ -672,6 +733,55 @@
             </form>
         </div>
     </dialog>
+
+    <dialog id="startYearModal" class="modal" aria-labelledby="startYearModalTitle">
+        <div class="modal-box max-h-[90vh] w-[calc(100%-2rem)] max-w-4xl overflow-y-auto p-5 text-slate-800 sm:w-full sm:p-7">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h3 id="startYearModalTitle" class="text-xl font-bold text-slate-900 sm:text-2xl">Mulai Data Tahun Baru</h3>
+                    <p id="startYearModalContext" class="mt-1 text-sm text-slate-500">Mulai dari data {{ $selectedYear }} → {{ $selectedYear + 1 }}</p>
+                </div>
+                <button id="closeStartYearModal" type="button" class="rounded-lg p-2 text-2xl leading-none text-slate-500 transition hover:bg-slate-100 hover:text-slate-800" aria-label="Tutup workflow">✕</button>
+            </div>
+            <form id="startYearForm" class="mt-6 space-y-5">
+                @csrf
+                <input id="startSourceYear" name="source_year" type="hidden" value="{{ $selectedYear }}">
+                <input id="startTargetYear" name="target_year" type="hidden" value="{{ $selectedYear + 1 }}">
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Tahun sumber</span>
+                        <strong id="startSourceYearDisplay" class="mt-1 block text-xl text-slate-900">{{ $selectedYear }}</strong>
+                    </div>
+                    <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                        <span class="block text-xs font-semibold uppercase tracking-wide text-indigo-600">Tahun baru</span>
+                        <strong id="startTargetYearDisplay" class="mt-1 block text-xl text-indigo-900">{{ $selectedYear + 1 }}</strong>
+                    </div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <span class="block text-xs font-semibold uppercase tracking-wide text-slate-500">Peserta sumber</span>
+                        <strong id="startCandidateCount" class="mt-1 block text-xl text-slate-900">Memuat…</strong>
+                    </div>
+                </div>
+
+                <p id="startYearExplanation" class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900">
+                    Peserta yang dipilih akan dibuat sebagai participation baru pada tahun <strong id="startTargetYearInExplanation">{{ $selectedYear + 1 }}</strong>.
+                    Data tahun <strong id="startSourceYearInExplanation">{{ $selectedYear }}</strong> tidak akan diubah.
+                </p>
+
+                <label class="flex items-center gap-3 rounded-xl bg-slate-50 p-3 font-semibold">
+                    <input id="selectAllYearCandidates" type="checkbox" class="h-5 w-5"> Pilih semua peserta
+                </label>
+                <div id="yearCandidatesLoading" class="py-8 text-center">Memuat peserta…</div>
+                <div id="yearCandidates" class="max-h-72 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3"></div>
+
+                <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                    <button id="cancelStartYear" type="button" class="min-h-12 rounded-xl border border-slate-300 bg-white px-6 py-3 font-bold text-slate-700 transition hover:bg-slate-50">Batal</button>
+                    <button id="startYearContinue" type="submit" disabled class="min-h-12 rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">Lanjutkan</button>
+                </div>
+            </form>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
 @endsection
 
 @push('scripts')
@@ -730,81 +840,81 @@
         setTimeout(() => $('#exportLoading').addClass('hidden'), 1500);
     });
 
-    $('#importFile').on('change', function () {
-        const fileName = this.files[0]?.name || 'Pilih file Excel (.xlsx)';
-        $('#fileLabel').text(fileName);
-    });
+    let importSubmitting = false;
 
-    $('#btnImportExcel').prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+    function syncImportButton() {
+        const hasFile = ($('#fileImport')[0]?.files?.length || 0) > 0;
+        $('#btnImportExcel')
+            .prop('disabled', importSubmitting || !hasFile)
+            .toggleClass('opacity-50 cursor-not-allowed', importSubmitting || !hasFile);
+    }
 
-    $('#fileImport').on('change', function(){
-        if(this.files.length > 0){
-            $('#btnImportExcel').prop('disabled', false)
-                .removeClass('opacity-50 cursor-not-allowed');
+    function setImportSubmitting(submitting) {
+        importSubmitting = submitting;
+        $('#loadingImport').toggleClass('hidden', !submitting);
+        $('#textImport').text(submitting ? 'Mengimpor...' : 'Import Data');
+        syncImportButton();
+    }
+
+    syncImportButton();
+
+    $('#fileImport').off('change.santunanImport').on('change.santunanImport', syncImportButton);
+
+    $('#formImportExcel').off('submit.santunanImport').on('submit.santunanImport', function (event) {
+        event.preventDefault();
+
+        if (importSubmitting) {
+            return;
         }
-    });
 
-    $('#formImportExcel').on('submit', function(e){
-        e.preventDefault();
-
-        let formData = new FormData(this);
-
-        $('#btnImportExcel').prop('disabled', true);
-        $('#loadingImport').removeClass('hidden');
-        $('#textImport').text('Mengupload...');
-
-        $('#importOverlay').removeClass('hidden');
+        const form = this;
+        const targetYear = $('#importYear').val();
+        const formData = new FormData(form);
+        setImportSubmitting(true);
 
         $.ajax({
-            url: $(this).attr('action'),
+            url: $(form).attr('action'),
             type: 'POST',
             data: formData,
             processData: false,
             contentType: false,
-            timeout: 0,
-
-            success: function(res){
-
-                $('#importOverlay').addClass('hidden');
-
+            timeout: 120000,
+        })
+            .done(function (response) {
                 Swal.fire({
-                    icon:'success',
-                    title:'Import Berhasil',
-                    text:res.message,
-                    confirmButtonColor:'#059669'
+                    icon: 'success',
+                    title: 'Import Berhasil',
+                    text: response.message,
+                    confirmButtonColor: '#059669',
                 });
 
                 refreshDataViews();
-                $('#formImportExcel')[0].reset();
+                form.reset();
+                $('#importYear').val(targetYear);
+            })
+            .fail(function (xhr, textStatus) {
+                let message = escapeHtml(xhr.responseJSON?.message || 'Import gagal. Silakan periksa file dan coba kembali.');
 
-                $('#btnImportExcel').prop('disabled', true)
-                    .addClass('opacity-50 cursor-not-allowed');
-            },
+                if (textStatus === 'timeout') {
+                    message = 'Import melewati batas waktu. Silakan periksa koneksi dan coba kembali.';
+                } else if (xhr.status === 0) {
+                    message = 'Import gagal karena koneksi terputus. Silakan coba kembali.';
+                }
 
-            error: function(xhr){
-
-                $('#importOverlay').addClass('hidden');
-
-                let msg = xhr.responseJSON?.message || 'Import gagal';
-
-                if(xhr.responseJSON?.detail){
-                    msg += '<br><br><b>Detail:</b><br>' +
-                        xhr.responseJSON.detail.join('<br>');
+                if (xhr.responseJSON?.detail) {
+                    message += '<br><br><b>Detail:</b><br>' + xhr.responseJSON.detail.map(escapeHtml).join('<br>');
                 }
 
                 Swal.fire({
-                    icon:'error',
-                    title:'Import Dibatalkan',
-                    html:msg,
-                    width:600
+                    icon: 'error',
+                    title: 'Import Dibatalkan',
+                    html: message,
+                    width: 600,
                 });
-            },
-
-            complete:function(){
-                $('#loadingImport').addClass('hidden');
-                $('#textImport').text('Import');
-            }
-        });
+            })
+            .always(function () {
+                setImportSubmitting(false);
+            });
     });
 
     
@@ -813,6 +923,7 @@
 
     function currentFilterData() {
         return {
+            tahun: Number($('#filterTahun').val()),
             sumber_informasi: $('#filterSumber').val() || null,
             kategori: $('#filterKategori').val() || null,
             rw: $('#filterRw').val() || null,
@@ -864,6 +975,10 @@
     }
 
     function initTable(mode = 'responsive') {
+        if (table && tableMode === mode) {
+            return;
+        }
+
         if (table) {
             table.destroy();
         }
@@ -932,11 +1047,13 @@
         tableMode = mode;
         tableDirty = false;
         $('#btnModeResponsive')
+            .attr('aria-pressed', mode === 'responsive')
             .toggleClass('bg-slate-800 text-white', mode === 'responsive')
-            .toggleClass('bg-white text-slate-700', mode !== 'responsive');
+            .toggleClass('bg-white text-slate-700 hover:bg-slate-50', mode !== 'responsive');
         $('#btnModeFull')
+            .attr('aria-pressed', mode === 'full')
             .toggleClass('bg-slate-800 text-white', mode === 'full')
-            .toggleClass('bg-white text-slate-700', mode !== 'full');
+            .toggleClass('bg-white text-slate-700 hover:bg-slate-50', mode !== 'full');
     }
 
     function escapeHtml(value) {
@@ -1087,12 +1204,17 @@
 
         $('#btnViewTable')
             .attr('aria-selected', tableActive)
+            .attr('tabindex', tableActive ? '0' : '-1')
             .toggleClass('bg-emerald-600 text-white', tableActive)
             .toggleClass('bg-white text-slate-700 hover:bg-emerald-50', !tableActive);
         $('#btnViewGrouped')
             .attr('aria-selected', !tableActive)
+            .attr('tabindex', tableActive ? '-1' : '0')
             .toggleClass('bg-emerald-600 text-white', !tableActive)
             .toggleClass('bg-white text-slate-700 hover:bg-emerald-50', tableActive);
+        $('#tableModeControls')
+            .toggleClass('hidden', !tableActive)
+            .attr('aria-hidden', String(!tableActive));
     }
 
     function setDataView(view) {
@@ -1133,15 +1255,91 @@
         loadGroupedData();
     }
 
-    $('#btnViewTable').on('click', () => setDataView('table'));
-    $('#btnViewGrouped').on('click', () => setDataView('grouped'));
-    $('#btnModeResponsive').on('click', () => initTable('responsive'));
-    $('#btnModeFull').on('click', () => initTable('full'));
+    $('#btnViewTable').off('click.santunanView').on('click.santunanView', () => setDataView('table'));
+    $('#btnViewGrouped').off('click.santunanView').on('click.santunanView', () => setDataView('grouped'));
+    $('#btnModeResponsive').off('click.santunanView').on('click.santunanView', () => initTable('responsive'));
+    $('#btnModeFull').off('click.santunanView').on('click.santunanView', () => initTable('full'));
+
+    $('[role="tab"][aria-controls$="ViewPanel"]').off('keydown.santunanView').on('keydown.santunanView', function (event) {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+            return;
+        }
+
+        event.preventDefault();
+        const nextView = $(this).attr('id') === 'btnViewTable' ? 'grouped' : 'table';
+        setDataView(nextView);
+        $(nextView === 'table' ? '#btnViewTable' : '#btnViewGrouped').trigger('focus');
+    });
     $('#btnApplyFilter').on('click', refreshDataViews);
 
     $('#filterSumber, #filterKategori, #filterRw, #filterRt').on('change', function () {
         tableDirty = true;
         groupedDirty = true;
+    });
+
+    function replaceOptions(selector, placeholder, values, labeler = value => value) {
+        const select = $(selector);
+        select.empty().append($('<option>', { value: '', text: placeholder }));
+        values.forEach(value => select.append($('<option>', { value, text: labeler(value) })));
+    }
+
+    function updateStartYearContext(sourceYear) {
+        const targetYear = sourceYear + 1;
+        $('#pageYearContext, #yearActionYear').text(sourceYear);
+        $('#startYearContext').text(`${sourceYear} → ${targetYear}`);
+        $('#startYearModalContext').text(`Mulai dari data ${sourceYear} → ${targetYear}`);
+        $('#startSourceYear').val(sourceYear);
+        $('#startTargetYear').val(targetYear);
+        $('#startSourceYearDisplay, #startSourceYearInExplanation').text(sourceYear);
+        $('#startTargetYearDisplay, #startTargetYearInExplanation').text(targetYear);
+    }
+
+    function closeYearActionMenu() {
+        $('#yearActionDropdown').addClass('hidden');
+        $('#btnYearActions').attr('aria-expanded', 'false');
+    }
+
+    $('#btnYearActions').off('click.santunanYearAction').on('click.santunanYearAction', function (event) {
+        event.stopPropagation();
+        const willOpen = $('#yearActionDropdown').hasClass('hidden');
+        $('#yearActionDropdown').toggleClass('hidden', !willOpen);
+        $(this).attr('aria-expanded', String(willOpen));
+    });
+
+    $(document).off('click.santunanYearAction').on('click.santunanYearAction', function (event) {
+        if (!$(event.target).closest('#yearActionMenu').length) {
+            closeYearActionMenu();
+        }
+    });
+
+    $(document).off('keydown.santunanYearAction').on('keydown.santunanYearAction', function (event) {
+        if (event.key === 'Escape') {
+            closeYearActionMenu();
+        }
+    });
+
+    $('#filterTahun').on('change', function () {
+        const year = Number($(this).val());
+        const url = new URL(window.location.href);
+        url.searchParams.set('tahun', year);
+        window.history.replaceState({}, '', url);
+        $('#exportYear').val(year);
+        $('#importYear').val(year);
+        $('#scanYearLabel').text(year);
+        updateStartYearContext(year);
+
+        $.get('{{ route("santunan-ramadhan.filter-options") }}', { tahun: year })
+            .done(function (response) {
+                replaceOptions('#filterSumber', 'Semua sumber', response.sources);
+                replaceOptions('#filterSumberExport', 'Pilih Sumber Informasi', response.sources);
+                replaceOptions('#filterKategori', 'Semua kategori', response.categories, value => value === 'dhuafa' ? 'DHUAFA' : 'YATIM YANG DHUAFA');
+                replaceOptions('#filterRw', 'Semua RW', response.rws);
+                replaceOptions('#filterRt', 'Semua RT', response.rts);
+                $('#globalSearch').val('');
+                syncExportMode();
+                refreshDataViews();
+            })
+            .fail(xhr => Swal.fire('Gagal', xhr.responseJSON?.message || 'Pilihan filter tahun tidak dapat dimuat.', 'error'));
     });
 
     $('#globalSearch').on('input', function () {
@@ -1177,6 +1375,7 @@
                 $.ajax({
                     url: '{{ route("santunan-ramadhan.destroy", ":id") }}'.replace(':id', id),
                     method: 'DELETE',
+                    data: { tahun_program: Number($('#filterTahun').val()) },
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
@@ -1344,7 +1543,7 @@
                     tanggalLahir = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
 
-                const kategori = row.kategori === 'yatim_dhuafa' ? 'Yatim yang Dhuafa' : 'Dhuafa';
+                const kategori = row.kategori === 'yatim_dhuafa' ? 'YATIM YANG DHUAFA' : 'DHUAFA';
                 const jenisKelamin = row.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
                 const umur = row.umur && row.umur_satuan ? `${row.umur} ${row.umur_satuan}` : 'Belum diisi';
 
@@ -1383,6 +1582,7 @@
             method: 'GET',
             success: function(row) {
                 $('#editId').val(row.id);
+                $('#editYear').val(row.tahun_program);
                 $('#editNamaLengkap').val(row.nama_lengkap || '');
                 $('#editNamaPanggilan').val(row.nama_panggilan || '');
                 $('#editKategori').val(row.kategori || '');
@@ -1479,7 +1679,7 @@
         $.ajax({
             url: '{{ route("santunan-ramadhan.scan-duplikat") }}',
             method: 'GET',
-            data: { tahun: {{ now()->year }} },
+            data: { tahun: Number($('#filterTahun').val()) },
             success: function(response) {
                 $('#duplikatLoading').addClass('hidden');
 
@@ -1593,6 +1793,95 @@
 
     $('#hideDuplikat').on('click', function() {
         $('#duplikatSection').addClass('hidden');
+    });
+
+    function syncStartYearContinueState() {
+        $('#startYearContinue').prop('disabled', $('.year-candidate:checked').length === 0);
+    }
+
+    function closeStartYearWorkflow() {
+        document.getElementById('startYearModal').close();
+        $('#startYearForm')[0].reset();
+        $('#yearCandidates').empty();
+        $('#startCandidateCount').text('Memuat…');
+        $('#startYearContinue').prop('disabled', true).text('Lanjutkan');
+    }
+
+    $('#closeStartYearModal, #cancelStartYear').off('click.santunanStartYear').on('click.santunanStartYear', closeStartYearWorkflow);
+
+    $('#btnStartYear').off('click.santunanStartYear').on('click.santunanStartYear', function () {
+        const sourceYear = Number($('#filterTahun').val());
+        closeYearActionMenu();
+        updateStartYearContext(sourceYear);
+        $('#selectAllYearCandidates').prop('checked', false);
+        $('#yearCandidates').empty();
+        $('#startCandidateCount').text('Memuat…');
+        $('#startYearContinue').prop('disabled', true).text('Lanjutkan');
+        $('#yearCandidatesLoading').removeClass('hidden');
+        document.getElementById('startYearModal').showModal();
+
+        $.get('{{ route("santunan-ramadhan.year-candidates") }}', { tahun: sourceYear })
+            .done(function (response) {
+                const rows = response.records || [];
+                $('#startCandidateCount').text(rows.length);
+                const html = rows.map(row => `
+                    <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 p-3">
+                        <input type="checkbox" name="participation_ids[]" value="${Number(row.id)}" class="year-candidate mt-1 h-4 w-4">
+                        <span>
+                            <strong>${escapeHtml(row.nama_lengkap)}</strong>
+                            <span class="block text-xs text-slate-500">${escapeHtml(row.sumber_informasi || 'Sumber belum diisi')} · RT ${escapeHtml(row.rt || '-')} / RW ${escapeHtml(row.rw || '-')}</span>
+                        </span>
+                    </label>`).join('');
+                $('#yearCandidates').html(html || '<p class="p-4 text-center text-slate-500">Tidak ada peserta pada tahun sumber.</p>');
+            })
+            .fail(function (xhr) {
+                $('#startCandidateCount').text('Gagal');
+                $('#yearCandidates').html(`<p class="p-4 text-red-600">${escapeHtml(xhr.responseJSON?.message || 'Data tidak dapat dimuat.')}</p>`);
+            })
+            .always(() => $('#yearCandidatesLoading').addClass('hidden'));
+    });
+
+    $('#selectAllYearCandidates').off('change.santunanStartYear').on('change.santunanStartYear', function () {
+        $('.year-candidate').prop('checked', this.checked);
+        syncStartYearContinueState();
+    });
+
+    $('#yearCandidates').off('change.santunanStartYear').on('change.santunanStartYear', '.year-candidate', function () {
+        const candidates = $('.year-candidate');
+        const checked = $('.year-candidate:checked');
+        $('#selectAllYearCandidates').prop('checked', candidates.length > 0 && candidates.length === checked.length);
+        syncStartYearContinueState();
+    });
+
+    $('#startYearForm').off('submit.santunanStartYear').on('submit.santunanStartYear', function (event) {
+        event.preventDefault();
+        if ($('.year-candidate:checked').length === 0) {
+            Swal.fire('Pilih peserta', 'Pilih minimal satu peserta yang dilanjutkan.', 'warning');
+            return;
+        }
+
+        const continueButton = $('#startYearContinue');
+        continueButton.prop('disabled', true).text('Memproses…');
+
+        $.post('{{ route("santunan-ramadhan.start-year") }}', $(this).serialize())
+            .done(function (response) {
+                document.getElementById('startYearModal').close();
+                const targetYear = Number($('#startTargetYear').val());
+                const skipped = Number(response.alreadyExists || 0);
+                const message = skipped > 0
+                    ? `${response.created} peserta dibuat. ${skipped} peserta dilewati karena data tahun ${targetYear} sudah tersedia.`
+                    : response.message;
+                Swal.fire(skipped > 0 ? 'Selesai dengan peringatan' : 'Sukses', message, skipped > 0 ? 'warning' : 'success');
+                if (!$('#filterTahun option[value="' + targetYear + '"]').length) {
+                    $('#filterTahun').prepend($('<option>', { value: targetYear, text: targetYear }));
+                    $('#importYear').prepend($('<option>', { value: targetYear, text: targetYear }));
+                }
+            })
+            .fail(xhr => Swal.fire('Gagal', Object.values(xhr.responseJSON?.errors || {}).flat().join('<br>') || xhr.responseJSON?.message || 'Tahun baru tidak dapat dibuat.', 'error'))
+            .always(function () {
+                continueButton.text('Lanjutkan');
+                syncStartYearContinueState();
+            });
     });
 </script>
 

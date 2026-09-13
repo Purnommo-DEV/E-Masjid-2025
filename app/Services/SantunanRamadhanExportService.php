@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\PendaftaranAnakYatimDhuafa;
+use App\Models\SantunanParticipation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -27,10 +27,12 @@ class SantunanRamadhanExportService
     /**
      * @return array{spreadsheet: Spreadsheet, filename: string, record_count: int}
      */
-    public function create(string $source): array
+    public function create(string $source, int $year): array
     {
-        $records = PendaftaranAnakYatimDhuafa::query()
-            ->where('sumber_informasi', $source)
+        $records = $this->recordsQuery()
+            ->where('santunan_participations.tahun_program', $year)
+            ->where('santunan_participations.sumber_informasi', $source)
+            ->whereIn('santunan_participations.kategori', array_keys(self::SHEETS))
             ->get();
 
         $spreadsheet = new Spreadsheet;
@@ -77,13 +79,13 @@ class SantunanRamadhanExportService
     public function createAll(?int $year = null): array
     {
         $year ??= now()->year;
-        $records = PendaftaranAnakYatimDhuafa::query()
-            ->where('tahun_program', $year)
-            ->whereIn('kategori', array_keys(self::SHEETS))
-            ->whereNotNull('sumber_informasi')
-            ->where('sumber_informasi', '!=', '')
-            ->orderByRaw('CASE WHEN sumber_informasi = ? THEN 0 ELSE 1 END', ['Pak Indra'])
-            ->orderBy('sumber_informasi')
+        $records = $this->recordsQuery()
+            ->where('santunan_participations.tahun_program', $year)
+            ->whereIn('santunan_participations.kategori', array_keys(self::SHEETS))
+            ->whereNotNull('santunan_participations.sumber_informasi')
+            ->where('santunan_participations.sumber_informasi', '!=', '')
+            ->orderByRaw('CASE WHEN santunan_participations.sumber_informasi = ? THEN 0 ELSE 1 END', ['Pak Indra'])
+            ->orderBy('santunan_participations.sumber_informasi')
             ->get();
 
         $spreadsheet = new Spreadsheet;
@@ -462,13 +464,26 @@ class SantunanRamadhanExportService
         return filled($value) ? $value : 'Belum diisi';
     }
 
-    private function formatAge(PendaftaranAnakYatimDhuafa $record): string
+    private function formatAge(SantunanParticipation $record): string
     {
         if ($record->umur !== null && filled($record->umur_satuan)) {
             return $record->umur.' '.Str::title($record->umur_satuan);
         }
 
         return 'Belum diisi';
+    }
+
+    private function recordsQuery()
+    {
+        return SantunanParticipation::query()
+            ->join('santunan_persons', 'santunan_persons.id', '=', 'santunan_participations.person_id')
+            ->select([
+                'santunan_participations.*',
+                'santunan_persons.nama_lengkap',
+                'santunan_persons.nama_panggilan',
+                'santunan_persons.tanggal_lahir',
+                'santunan_persons.jenis_kelamin',
+            ]);
     }
 
     private function uniqueSheetName(string $source, array &$usedNames): string
