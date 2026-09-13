@@ -382,6 +382,7 @@ Route::middleware(['auth'])->group(function () {
         Route::prefix('mutasi-bank')->name('bank-mutations.')->group(function () {
             Route::get('/', [BankMutationController::class, 'index'])->name('index');
             Route::get('/baru', [BankMutationController::class, 'create'])->name('create');
+            Route::post('/configure', [BankMutationController::class, 'configure'])->name('configure');
             Route::post('/', [BankMutationController::class, 'store'])->name('store');
             Route::post('/pratinjau-saldo', [BankMutationController::class, 'preview'])->name('preview');
             Route::get('/batch/{batch}/ubah', [BankMutationController::class, 'editBatch'])->name('batches.edit');

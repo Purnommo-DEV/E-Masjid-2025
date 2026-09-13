@@ -44,7 +44,7 @@
             <select name="entity" class="select select-bordered grow" required><option value="">Pilih entitas</option>@foreach($entities as $available)<option value="{{ $available->id }}">{{ $available->name }}</option>@endforeach</select>
             <button class="btn btn-primary">Pilih</button>
         </form>
-    @elseif ($options['policies']->isEmpty())
+    @elseif ($configurationStatus['entity_id'] !== $entity->id || ! $configurationStatus['active'])
         <div class="alert alert-warning items-start"><span>Master policy Mutasi Bank belum dikonfigurasi. Form tetap fail-closed sampai konfigurasi rekening, Dana, kategori, rule, bukti, dan approval disahkan.</span></div>
     @else
         <form method="POST"

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\BalanceInquiryService;
 use App\Domain\FinancialV2\BankMutationService;
+use App\Domain\FinancialV2\ConfigureMrjBankMutationsService;
 use App\Domain\FinancialV2\DecimalAmount;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 final class BankMutationController extends Controller
 {
@@ -29,6 +32,7 @@ final class BankMutationController extends Controller
         private readonly FinancialTransactionLifecycleService $lifecycle,
         private readonly TransactionEvidenceUploadService $uploads,
         private readonly BalanceInquiryService $balances,
+        private readonly ConfigureMrjBankMutationsService $configuration,
     ) {}
 
     public function index(Request $request): View
@@ -36,6 +40,7 @@ final class BankMutationController extends Controller
         [$entities, $entity] = $this->entityContext($request);
         $filters = $request->only(['year', 'month', 'financial_account_id', 'fund_id', 'category_id', 'status']);
         $options = $entity ? $this->options($entity->id) : $this->emptyOptions();
+        $configurationStatus = $this->configuration->status();
         $transactions = null;
         $editableBatchIds = collect();
         if ($entity) {
@@ -80,7 +85,7 @@ final class BankMutationController extends Controller
             }
         }
 
-        return view('masjid.mrj.admin.financial-v2.bank-mutations.index', compact('entities', 'entity', 'filters', 'options', 'transactions', 'editableBatchIds'));
+        return view('masjid.mrj.admin.financial-v2.bank-mutations.index', compact('entities', 'entity', 'filters', 'options', 'transactions', 'editableBatchIds', 'configurationStatus'));
     }
 
     public function create(Request $request): View
@@ -96,7 +101,24 @@ final class BankMutationController extends Controller
             'batchTransactions' => collect(),
             'batchId' => (string) Str::uuid(),
             'today' => now()->toDateString(),
+            'configurationStatus' => $this->configuration->status(),
         ]);
+    }
+
+    public function configure(Request $request): RedirectResponse
+    {
+        try {
+            $result = $this->configuration->configure($request->user()->id);
+        } catch (Throwable $exception) {
+            report($exception);
+            $detail = $exception instanceof RuntimeException ? ' '.$exception->getMessage() : '';
+
+            return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $this->configuration->status()['entity_id']])
+                ->withErrors(['configuration' => 'Tidak dapat mengaktifkan konfigurasi Mutasi Bank.'.$detail]);
+        }
+
+        return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $result['entity_id']])
+            ->with('success', $result['changed'] ? 'Konfigurasi Mutasi Bank berhasil diaktifkan.' : 'Konfigurasi Mutasi Bank sudah aktif.');
     }
 
     public function store(Request $request): RedirectResponse
@@ -157,6 +179,7 @@ final class BankMutationController extends Controller
             'batchTransactions' => $transactions,
             'batchId' => $batch,
             'today' => now()->toDateString(),
+            'configurationStatus' => $this->configuration->status(),
         ]);
     }
 

@@ -12,6 +12,7 @@ use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\ApprovalDecision;
 use App\Models\FinancialV2\AttachmentLink;
+use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\BankMutationPolicy;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\FinancialAccount;
@@ -23,6 +24,7 @@ use App\Models\FinancialV2\LedgerEntry;
 use App\Models\FinancialV2\Reconciliation;
 use App\Models\FinancialV2\Voucher;
 use App\Models\User;
+use Database\Seeders\ConfigureMrjBankMutationsSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -180,19 +182,55 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
     [$source, $openingEvidence] = bankMutationOpeningFiles();
     $this->artisan('financial-v2:onboard-mrj-ziswaf', ['source' => $source, 'evidence' => $openingEvidence, '--allow-testing' => true])->assertExitCode(0);
     $this->artisan('financial-v2:provision-mrj-operational-master', ['--allow-testing' => true])->assertExitCode(0);
-    $this->artisan('financial-v2:configure-mrj-bank-mutations', ['--apply' => true])->assertExitCode(0);
     $entity = AccountingEntity::query()->where('code', 'MRJ-ACTUAL')->sole();
     $bni = FinancialAccount::query()->where('accounting_entity_id', $entity->id)->where('code', 'BNI-ZISWAF')->sole();
     $infaq = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'INFAQ-TROMOL')->sole();
     $zakat = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'ZAKAT-MAAL')->sole();
+    $user = User::factory()->create();
+    $factCounts = fn (): array => [
+        FinancialTransaction::query()->count(),
+        Journal::query()->count(),
+        JournalLine::query()->count(),
+        LedgerEntry::query()->count(),
+        Voucher::query()->count(),
+    ];
+    $factsBeforeConfiguration = $factCounts();
+    $configurationRoute = app('router')->getRoutes()->getByName('financial-v2.bank-mutations.configure');
+    expect($configurationRoute->methods())->toBe(['POST'])
+        ->and($configurationRoute->gatherMiddleware())->toContain('web', 'auth')
+        ->and(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->count())->toBe(0);
+    $this->post(route('financial-v2.bank-mutations.configure'))->assertRedirect(route('login'));
+    $this->actingAs($user)->get(route('financial-v2.bank-mutations.configure'))->assertStatus(405);
+    $this->actingAs($user)->get(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
+        ->assertOk()->assertSee('Aktifkan Konfigurasi')->assertSee('Tidak ada transaksi keuangan yang dibuat.');
+    expect(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->count())->toBe(0);
+
+    $this->seed(ConfigureMrjBankMutationsSeeder::class);
+    expect(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->where('status', 'active')->count())->toBe(5)
+        ->and($factCounts())->toBe($factsBeforeConfiguration);
+    BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->delete();
+
+    $this->actingAs($user)->post(route('financial-v2.bank-mutations.configure'), [
+        'entity' => (string) Str::uuid(),
+        'actor' => 999999,
+    ])->assertRedirect(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
+        ->assertSessionHas('success', 'Konfigurasi Mutasi Bank berhasil diaktifkan.');
+    expect(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->where('status', 'active')->count())->toBe(5)
+        ->and(AuditEvent::query()->where('accounting_entity_id', $entity->id)->where('event_type', 'bank_mutation_configuration_activated')->where('actor_user_id', $user->id)->exists())->toBeTrue()
+        ->and($factCounts())->toBe($factsBeforeConfiguration);
+    $this->actingAs($user)->post(route('financial-v2.bank-mutations.configure'))->assertRedirect()
+        ->assertSessionHas('success', 'Konfigurasi Mutasi Bank sudah aktif.');
+    expect(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->count())->toBe(5)
+        ->and($factCounts())->toBe($factsBeforeConfiguration);
+
     $interest = Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'BANK_INTEREST')->sole();
     $withholding = Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'BANK_WHT_PPH')->sole();
     $accountFee = Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'BANK_ACCOUNT_FEE')->sole();
     $cardFee = Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'BANK_CARD_FEE')->sole();
-    $user = User::factory()->create();
 
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
-        ->assertOk()->assertSee('Mutasi Bank')->assertSee('Tahun')->assertSee('Bulan')->assertSee('Rekening')->assertSee('Dana')->assertSee('Jenis')->assertSee('Status');
+        ->assertOk()->assertSee('Mutasi Bank')->assertSee('Tahun')->assertSee('Bulan')->assertSee('Rekening')->assertSee('Dana')->assertSee('Jenis')->assertSee('Status')
+        ->assertSee('Konfigurasi Mutasi Bank')->assertSee('Aktif')->assertDontSee('Aktifkan Konfigurasi');
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.create', ['entity' => $entity->id]))
         ->assertOk()->assertSee('Jasa Giro/Bunga')->assertSee('PPH')->assertSee('Biaya Transfer Bank')->assertSee('Dana Zakat Maal')->assertSee('Source Reference')->assertSee('Pratinjau Batch')->assertSee('Konfigurasi Mutasi Bank')
         ->assertDontSee('Journal')->assertDontSee('Ledger')->assertDontSee('Debit')->assertDontSee('Kredit');
