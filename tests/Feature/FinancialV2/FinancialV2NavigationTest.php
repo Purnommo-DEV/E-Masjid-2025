@@ -35,6 +35,7 @@ test('Financial V2 navigation uses the requested grouped order without duplicate
             'data-nav-item="transfer"',
             'data-nav-item="funds"',
             'data-nav-item="allocations"',
+            'data-nav-item="drafts"',
             'data-nav-item="realization"',
             'data-nav-item="history"',
             'data-nav-item="distributions"',
@@ -54,6 +55,7 @@ test('Financial V2 navigation uses the requested grouped order without duplicate
         ->assertSee('data-nav-item="receipt"', false)
         ->assertSee('data-nav-item="payment"', false)
         ->assertSee('data-nav-item="transfer"', false)
+        ->assertSee('data-nav-item="drafts"', false)
         ->assertSee('data-nav-item="realization"', false)
         ->assertSee('data-nav-item="history"', false)
         ->assertSee('data-nav-item="funds"', false)
@@ -89,6 +91,7 @@ test('authenticated user without granular permissions can open every Financial V
         ['financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $entity], 'finance', 'receipt'],
         ['financial-v2.transactions.create', ['operation' => 'payment', 'entity' => $entity], 'finance', 'payment'],
         ['financial-v2.transactions.create', ['operation' => 'transfer', 'entity' => $entity], 'finance', 'transfer'],
+        ['financial-v2.transactions.drafts', ['entity' => $entity], 'finance', 'drafts'],
         ['financial-v2.realizations.drafts', ['entity' => $entity], 'finance', 'realization'],
         ['financial-v2.transactions.index', ['entity' => $entity], 'finance', 'history'],
         ['financial-v2.funds.index', ['entity' => $entity], 'finance', 'funds'],

@@ -32,6 +32,12 @@
             @php
                 $isTransactionCreate = request()->routeIs('financial-v2.transactions.create');
                 $transactionOperation = request()->route('operation');
+                $isTransactionDetail = request()->routeIs('financial-v2.transactions.show', 'financial-v2.transactions.edit');
+                $isGenericDraftDetail = $isTransactionDetail
+                    && isset($transaction)
+                    && $transaction
+                    && ($operation ?? null) !== 'realization'
+                    && ! in_array($transaction->status, ['posted', 'reversed'], true);
                 $navGroups = [
                     [
                         'key' => 'finance',
@@ -43,8 +49,9 @@
                             ['key' => 'bank-mutations', 'label' => 'Mutasi Bank', 'url' => route('financial-v2.bank-mutations.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.bank-mutations.*')],
                             ['key' => 'funds', 'label' => 'Dana', 'url' => route('financial-v2.funds.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.funds.*')],
                             ['key' => 'allocations', 'label' => 'Alokasi Dana', 'url' => route('financial-v2.allocations.create', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.allocations.*')],
+                            ['key' => 'drafts', 'label' => 'Draft Transaksi', 'url' => route('financial-v2.transactions.drafts', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.transactions.drafts') || $isGenericDraftDetail],
                             ['key' => 'realization', 'label' => 'Draft Realisasi', 'url' => route('financial-v2.realizations.drafts', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.realizations.*') || ($isTransactionCreate && $transactionOperation === 'realization')],
-                            ['key' => 'history', 'label' => 'Riwayat Transaksi', 'url' => route('financial-v2.transactions.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.transactions.index', 'financial-v2.transactions.show', 'financial-v2.transactions.edit')],
+                            ['key' => 'history', 'label' => 'Riwayat Transaksi', 'url' => route('financial-v2.transactions.index', ['entity' => $entityId]), 'active' => request()->routeIs('financial-v2.transactions.index') || ($isTransactionDetail && ! $isGenericDraftDetail && ($operation ?? null) !== 'realization')],
                         ],
                     ],
                     [

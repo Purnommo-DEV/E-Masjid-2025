@@ -144,6 +144,93 @@ test('operational receipt UX is idempotent, retains evidence, and posts through 
         ->and(FinancialTransaction::findOrFail($transactionId)->status)->toBe('posted');
 });
 
+test('generic draft discovery keeps receipt drafts findable, scoped, editable, and submittable', function () {
+    $this->travelTo(\Carbon\Carbon::parse('2026-07-13 10:00:00'));
+    $context = uxOperationalContext();
+    $otherContext = uxOperationalContext();
+    $user = User::factory()->create();
+    $payload = uxReceiptPayload($context, (string) Str::uuid());
+    $payload['date'] = '2026-07-13';
+    $payload['amount'] = '50000.00';
+    $payload['description'] = 'Penerimaan Rp50.000 yang harus mudah ditemukan';
+
+    $factsBefore = [Journal::count(), JournalLine::count(), LedgerEntry::count(), Voucher::count()];
+    $response = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'receipt'), $payload)
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('message', 'Draft tersimpan. Penerimaan dapat dilanjutkan dari halaman ini.');
+    $transaction = FinancialTransaction::findOrFail($response->json('transaction_id'));
+    $response->assertJsonPath('redirect', route('financial-v2.transactions.show', $transaction));
+
+    expect($transaction->status)->toBe('draft')
+        ->and([Journal::count(), JournalLine::count(), LedgerEntry::count(), Voucher::count()])->toBe($factsBefore);
+
+    $draftUrl = route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2026]);
+    $this->actingAs($user)->get($draftUrl)
+        ->assertOk()
+        ->assertSee('Draft Transaksi')
+        ->assertSee('13/07/2026')
+        ->assertSee('Rp50.000,00')
+        ->assertSee($context['sourceFinancialAccount']->name)
+        ->assertSee($context['fund']->name)
+        ->assertSee($context['receiptCategory']->name)
+        ->assertSee('Ubah draft')
+        ->assertSee('Ajukan');
+
+    foreach ([$transaction->source_reference, 'Rp50.000 yang harus mudah', $context['sourceFinancialAccount']->name, $context['fund']->name, $context['receiptCategory']->name] as $search) {
+        $this->actingAs($user)->get(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2026, 'search' => $search]))
+            ->assertOk()
+            ->assertSee('Penerimaan Rp50.000 yang harus mudah ditemukan');
+    }
+
+    $this->actingAs($user)->get(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2027]))
+        ->assertOk()->assertDontSee('Penerimaan Rp50.000 yang harus mudah ditemukan');
+    $this->actingAs($user)->get(route('financial-v2.transactions.drafts', ['entity' => $otherContext['entity']->id, 'year' => 2026]))
+        ->assertOk()
+        ->assertDontSee('Penerimaan Rp50.000 yang harus mudah ditemukan')
+        ->assertSee('Tidak ada draft transaksi.')
+        ->assertSee('Buat Penerimaan')
+        ->assertSee('Buat Pengeluaran')
+        ->assertSee('Buat Mutasi Bank');
+
+    $this->actingAs($user)->get(route('financial-v2.transactions.show', $transaction))
+        ->assertOk()
+        ->assertSee('← Kembali ke Draft Transaksi')
+        ->assertSee(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2026, 'status' => 'draft']))
+        ->assertSee('Ubah draft')
+        ->assertSee('Ajukan');
+    $this->actingAs($user)->get(route('financial-v2.transactions.edit', $transaction))
+        ->assertOk()
+        ->assertSee('value="Infak Jumat"', false)
+        ->assertSee('Penerimaan Rp50.000 yang harus mudah ditemukan')
+        ->assertSee('← Kembali ke Draft Transaksi');
+
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.submit', $transaction), ['entity' => $otherContext['entity']->id])
+        ->assertNotFound();
+    expect($transaction->fresh()->status)->toBe('draft');
+
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.submit', $transaction), ['entity' => $context['entity']->id])
+        ->assertOk()
+        ->assertJsonPath('ok', true);
+    expect($transaction->fresh()->status)->toBe('submitted')
+        ->and([Journal::count(), JournalLine::count(), LedgerEntry::count(), Voucher::count()])->toBe($factsBefore);
+    $this->actingAs($user)->get(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2026, 'status' => 'submitted']))
+        ->assertOk()->assertSee('Penerimaan Rp50.000 yang harus mudah ditemukan');
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.cancel', $transaction), [
+        'reason' => 'Draft dibatalkan dalam QA discovery.',
+    ])->assertOk();
+    expect($transaction->fresh()->status)->toBe('cancelled')
+        ->and([Journal::count(), JournalLine::count(), LedgerEntry::count(), Voucher::count()])->toBe($factsBefore);
+    $this->actingAs($user)->get(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2026, 'status' => 'cancelled']))
+        ->assertOk()->assertSee('Penerimaan Rp50.000 yang harus mudah ditemukan')->assertSee('Dibatalkan');
+
+    $postedResponse = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'receipt'), uxReceiptPayload($context, (string) Str::uuid()))->assertOk();
+    $posted = FinancialTransaction::findOrFail($postedResponse->json('transaction_id'));
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.post', $posted))->assertOk();
+    $this->actingAs($user)->get(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'status' => 'all']))
+        ->assertOk()->assertDontSee('Penerimaan uji UX');
+});
+
 test('draft realization accepts multiple evidence files, converts images to readable WebP, and preserves PDF and source metadata', function () {
     Storage::fake('local');
     $context = uxOperationalContext();

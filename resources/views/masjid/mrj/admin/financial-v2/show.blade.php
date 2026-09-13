@@ -16,7 +16,15 @@
         $realizationVersion = $transaction->realization?->budgetAllocationVersion;
         $realizationAllocation = $realizationVersion?->allocation;
         $realizationParentInactive = $isRealization && ($realizationVersion?->status !== 'approved' || $realizationAllocation?->status !== 'approved');
-        $canEdit = ! $realizationParentInactive && $transaction->status === 'draft' && in_array($operation, ['receipt', 'payment', 'realization'], true);
+        $canEdit = ! $isBankMutation && ! $realizationParentInactive && $transaction->status === 'draft' && in_array($operation, ['receipt', 'payment', 'realization'], true);
+        $canEditBankMutation = $isBankMutation && $transaction->status === 'draft';
+        $isGenericDraftPage = ! $isRealization && ! in_array($transaction->status, ['posted', 'reversed'], true);
+        $backUrl = $isGenericDraftPage
+            ? route('financial-v2.transactions.drafts', ['entity' => $entity->id, 'year' => $transaction->accounting_date->year, 'status' => $transaction->status])
+            : ($isRealization && ! in_array($transaction->status, ['posted', 'reversed', 'cancelled'], true)
+                ? route('financial-v2.realizations.drafts', ['entity' => $entity->id])
+                : route('financial-v2.transactions.index', ['entity' => $entity->id]));
+        $backLabel = $isGenericDraftPage ? 'Draft Transaksi' : ($isRealization && ! in_array($transaction->status, ['posted', 'reversed', 'cancelled'], true) ? 'Draft Realisasi' : 'riwayat');
         $financialAccountLabel = match ($operation) {
             'receipt' => 'Masuk ke',
             'payment', 'realization' => 'Dibayar dari',
@@ -25,7 +33,7 @@
         };
     @endphp
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div><a class="link text-sm text-base-content/60" href="{{ route('financial-v2.transactions.index', ['entity' => $entity->id]) }}">← Kembali ke riwayat</a><p class="mt-3 text-sm font-medium text-emerald-700">{{ $transaction->type?->name }}</p><h1 class="mt-1 text-3xl font-bold">{{ $rupiah($transaction->gross_amount) }}</h1><p class="mt-2 text-sm text-base-content/65">{{ $transaction->accounting_date->translatedFormat('d F Y') }}</p></div>
+        <div><a class="link text-sm text-base-content/60" href="{{ $backUrl }}">← Kembali ke {{ $backLabel }}</a><p class="mt-3 text-sm font-medium text-emerald-700">{{ $isBankMutation ? 'Mutasi Bank' : $transaction->type?->name }}</p><h1 class="mt-1 text-3xl font-bold">{{ $rupiah($transaction->gross_amount) }}</h1><p class="mt-2 text-sm text-base-content/65">{{ $transaction->accounting_date->translatedFormat('d F Y') }}</p></div>
         <span @class(['badge badge-lg', 'badge-success' => $transaction->status === 'posted', 'badge-warning' => in_array($transaction->status, ['draft', 'submitted', 'verified']), 'badge-error' => in_array($transaction->status, ['reversed', 'rejected', 'cancelled'])])>{{ $statusLabel }}</span>
     </div>
 
@@ -72,7 +80,16 @@
         <aside class="space-y-4">
             <div class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300"><p class="text-xs text-base-content/55">Nomor bukti</p><p class="mt-1 break-all font-mono text-sm font-semibold">{{ $voucher?->voucher_number ?? 'Akan diterbitkan saat Posted' }}</p><p class="mt-3 text-xs text-base-content/55">Status</p><p class="mt-1 text-sm font-semibold">{{ $statusLabel }}</p></div>
             @if ($canEdit)<a class="btn btn-outline w-full" href="{{ route('financial-v2.transactions.edit', $transaction) }}">Ubah draft</a>@endif
-            @if (! $realizationParentInactive && $isRealization && $transaction->status === 'draft')
+            @if ($canEditBankMutation)<a class="btn btn-outline w-full" href="{{ route('financial-v2.bank-mutations.edit', ['transaction' => $transaction, 'entity' => $entity->id]) }}">Ubah draft</a>@endif
+            @if ($isBankMutation && $transaction->status === 'draft')
+                <form method="POST" action="{{ route('financial-v2.bank-mutations.submit', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf<button class="btn btn-primary w-full">Ajukan</button></form>
+            @elseif ($isBankMutation && $transaction->status === 'submitted')
+                <form method="POST" action="{{ route('financial-v2.bank-mutations.verify', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf<button class="btn btn-primary w-full">Periksa Mutasi Bank</button></form>
+            @elseif ($isBankMutation && $transaction->status === 'verified')
+                <form method="POST" action="{{ route('financial-v2.bank-mutations.approve', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf<button class="btn btn-primary w-full">Setujui Mutasi Bank</button></form>
+            @elseif ($isBankMutation && $transaction->status === 'approved')
+                <form method="POST" action="{{ route('financial-v2.bank-mutations.post', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf<button class="btn btn-primary w-full">Catat Resmi</button></form>
+            @elseif (! $realizationParentInactive && $isRealization && $transaction->status === 'draft')
                 <form method="POST" action="{{ route('financial-v2.realizations.submit', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Ajukan Realisasi</button></form>
             @elseif (! $realizationParentInactive && $isRealization && $transaction->status === 'submitted')
                 <form method="POST" action="{{ route('financial-v2.realizations.verify', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Verifikasi Realisasi</button></form>
@@ -80,10 +97,14 @@
                 <form method="POST" action="{{ route('financial-v2.realizations.approve', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Setujui Realisasi</button></form>
             @elseif (! $realizationParentInactive && $isRealization && $transaction->status === 'approved')
                 <form method="POST" action="{{ route('financial-v2.transactions.post', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Catat Resmi</button></form>
-            @elseif (! $realizationParentInactive && ! $isRealization && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
+            @elseif (! $realizationParentInactive && ! $isRealization && ! $isBankMutation && $transaction->status === 'draft')
+                <form method="POST" action="{{ route('financial-v2.transactions.submit', $transaction) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-primary w-full">Ajukan</button></form>
+            @elseif (! $realizationParentInactive && ! $isRealization && ! $isBankMutation && in_array($transaction->status, ['submitted', 'verified', 'approved'], true))
                 <form method="POST" action="{{ route('financial-v2.transactions.post', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Catat resmi</button></form>
             @endif
-            @if (! $realizationParentInactive && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
+            @if ($isBankMutation && $transaction->status === 'draft')
+                <form method="POST" action="{{ route('financial-v2.bank-mutations.destroy', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf @method('DELETE')<button class="btn btn-ghost btn-sm w-full text-error">Batalkan draft</button></form>
+            @elseif (! $isBankMutation && ! $realizationParentInactive && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
                 <form method="POST" action="{{ route('financial-v2.transactions.cancel', $transaction) }}" data-financial-ajax class="rounded-2xl border border-base-300 p-3">@csrf<label class="form-control"><span class="label-text text-xs">Alasan pembatalan</span><input name="reason" class="input input-bordered input-sm" placeholder="Wajib diisi" required></label><button class="btn btn-ghost btn-sm mt-2 w-full text-error">Batalkan draft</button></form>
             @endif
         </aside>

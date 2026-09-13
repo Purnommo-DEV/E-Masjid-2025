@@ -396,6 +396,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{transaction}/setujui', [BankMutationController::class, 'approve'])->name('approve');
             Route::post('/{transaction}/catat', [BankMutationController::class, 'post'])->name('post');
         });
+        Route::get('/draft-transaksi', [OperationalFinancialController::class, 'draftTransactions'])->name('transactions.drafts');
         Route::get('/riwayat', [OperationalFinancialController::class, 'history'])->name('transactions.index');
         // Financial V2 reports are isolated from legacy /admin/keuangan
         // reporting and read only the immutable Posted V2 ledger/journals.
@@ -512,6 +513,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/transaksi/{transaction}/ajukan-realisasi', [OperationalFinancialController::class, 'submitRealization'])->name('realizations.submit');
         Route::post('/transaksi/{transaction}/verifikasi-realisasi', [OperationalFinancialController::class, 'verifyRealization'])->name('realizations.verify');
         Route::post('/transaksi/{transaction}/setujui-realisasi', [OperationalFinancialController::class, 'approveRealization'])->name('realizations.approve');
+        Route::post('/transaksi/{transaction}/ajukan', [OperationalFinancialController::class, 'submit'])->name('transactions.submit');
         Route::post('/transaksi/{transaction}/catat', [OperationalFinancialController::class, 'post'])->name('transactions.post');
         Route::post('/transaksi/{transaction}/batalkan', [OperationalFinancialController::class, 'cancel'])->name('transactions.cancel');
         Route::get('/transaksi/{transaction}', [OperationalFinancialController::class, 'show'])->name('transactions.show');

@@ -20,10 +20,14 @@
                 ? $transaction->splits->map(fn ($item) => ['fund_id' => $item->fund_id, 'amount' => $item->split_amount, 'note' => $item->purpose_note, 'source_reference' => $item->source_reference])->values()->all()
                 : [];
         }
+        $backUrl = $operation === 'realization'
+            ? route('financial-v2.realizations.drafts', ['entity' => $entity?->id])
+            : route('financial-v2.transactions.drafts', ['entity' => $entity?->id, 'year' => $transaction?->accounting_date?->year]);
+        $backLabel = $operation === 'realization' ? 'Draft Realisasi' : 'Draft Transaksi';
     @endphp
     <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <a class="link text-sm text-base-content/60" href="{{ route('financial-v2.transactions.index', ['entity' => $entity?->id]) }}">← Kembali ke riwayat</a>
+            <a class="link text-sm text-base-content/60" href="{{ $backUrl }}">← Kembali ke {{ $backLabel }}</a>
             <h1 class="mt-2 text-2xl font-bold">{{ $isEdit ? 'Ubah draft' : 'Tambah' }} {{ $definition['label'] }}</h1>
             <p class="mt-1 text-sm text-base-content/65">Isi kejadian yang terjadi. Sistem menerjemahkannya ke pencatatan keuangan secara otomatis.</p>
         </div>
@@ -112,11 +116,11 @@
                 @if (in_array($operation, ['receipt', 'payment', 'realization'], true))
                     <div class="mt-4"><button type="button" data-financial-preview class="btn btn-ghost btn-sm">Periksa kombinasi dana</button><p data-preview-output class="hidden"></p></div>
                 @endif
-                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ route('financial-v2.transactions.index', ['entity' => $entity->id]) }}">Batal</a><button type="submit" class="btn btn-primary" @if($operation === 'realization') data-realization-funding-submit @endif>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ $backUrl }}">Batal</a><button type="submit" class="btn btn-primary" @if($operation === 'realization') data-realization-funding-submit @endif>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>
             </section>
 
             <aside class="space-y-4">
-                <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-950"><p class="font-bold">Cara kerja pencatatan</p><ol class="mt-2 list-decimal space-y-1 pl-5 text-xs leading-5"><li>Simpan dulu sebagai draft.</li><li>Periksa data dan lampiran bukti.</li><li>Pilih “catat resmi” dari detail transaksi.</li></ol></div>
+                <div class="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-950"><p class="font-bold">Cara kerja pencatatan</p><ol class="mt-2 list-decimal space-y-1 pl-5 text-xs leading-5"><li>Simpan dulu sebagai draft.</li><li>Periksa data dan lampiran bukti.</li><li>Ajukan draft dari detail transaksi saat datanya siap.</li></ol></div>
                 <div class="rounded-2xl bg-base-100 p-4 text-sm shadow-sm ring-1 ring-base-300"><p class="font-bold">Status transaksi</p><dl class="mt-3 space-y-2 text-xs"><div><dt class="font-semibold">Draft</dt><dd class="text-base-content/60">Masih dapat diperiksa dan diubah.</dd></div><div><dt class="font-semibold">Diajukan / Disetujui</dt><dd class="text-base-content/60">Sedang melalui pemeriksaan atau persetujuan yang berlaku.</dd></div><div><dt class="font-semibold">Dicatat resmi</dt><dd class="text-base-content/60">Sudah dicatat secara resmi dan tidak dapat diubah langsung.</dd></div></dl></div>
             </aside>
         </form>

@@ -4,8 +4,10 @@ namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\AllocationHistoryReadService;
 use App\Domain\FinancialV2\BalanceInquiryService;
+use App\Domain\FinancialV2\BankMutationService;
 use App\Domain\FinancialV2\BudgetAllocationService;
 use App\Domain\FinancialV2\DecimalAmount;
+use App\Domain\FinancialV2\DraftTransactionReadService;
 use App\Domain\FinancialV2\EvidenceService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialPostingException;
@@ -74,6 +76,7 @@ final class OperationalFinancialController
         private readonly FundGroupingReadService $fundGroups,
         private readonly FundHistoryReadService $fundHistory,
         private readonly RealizationDraftReadService $realizationDrafts,
+        private readonly DraftTransactionReadService $draftTransactions,
     ) {}
 
     public function dashboard(Request $request)
@@ -154,7 +157,7 @@ final class OperationalFinancialController
 
             $this->attachUploadIfPresent($request, $entity, $transaction, $definition['evidence'], $actorId);
 
-            return $this->success($request, 'Draft '.$definition['label'].' berhasil disimpan.', route('financial-v2.transactions.show', $transaction), ['transaction_id' => $transaction->id]);
+            return $this->success($request, 'Draft tersimpan. '.$definition['label'].' dapat dilanjutkan dari halaman ini.', route('financial-v2.transactions.show', $transaction), ['transaction_id' => $transaction->id]);
         } catch (FinancialDomainException|FinancialPostingException|InvalidArgumentException $exception) {
             return $this->failure($request, $exception);
         } catch (QueryException $exception) {
@@ -362,6 +365,53 @@ final class OperationalFinancialController
         }
     }
 
+    public function submit(Request $request, FinancialTransaction $transaction)
+    {
+        $data = $request->validate(['entity' => ['required', 'uuid']]);
+
+        try {
+            $transaction->loadMissing(['type', 'category', 'realization']);
+            $entity = $this->activeEntity($data['entity']);
+            abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+            if ($transaction->realization || array_key_exists((string) $transaction->category?->code, BankMutationService::CATEGORY_CODES)) {
+                throw new FinancialDomainException('E-TRANSACTION-STATE', 'Gunakan alur pengajuan khusus untuk transaksi ini.');
+            }
+
+            $this->lifecycle->submit($transaction->id, $request->user()?->id);
+
+            return $this->success($request, 'Draft transaksi telah diajukan untuk pemeriksaan.', route('financial-v2.transactions.show', $transaction), ['transaction_id' => $transaction->id]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function draftTransactions(Request $request)
+    {
+        $context = $this->context($request);
+        $entity = $context['entity'];
+        $filters = $request->validate([
+            'entity' => ['nullable', 'uuid'],
+            'year' => ['nullable', 'integer', 'min:2000', 'max:2200'],
+            'type' => ['nullable', 'in:receipt,payment,transfer,bank_mutation'],
+            'financial_account_id' => ['nullable', 'uuid'],
+            'status' => ['nullable', 'in:all,draft,submitted,verified,approved,rejected,cancelled'],
+            'search' => ['nullable', 'string', 'max:160'],
+        ]);
+        $filters['status'] = filled($filters['status'] ?? null) ? $filters['status'] : 'draft';
+        $filters['year'] = filled($filters['year'] ?? null) ? (int) $filters['year'] : (int) now()->year;
+        $years = $entity ? $this->draftTransactions->years($entity->id) : collect([(int) now()->year]);
+        $years = $years->push($filters['year'])->unique()->sortDesc()->values();
+
+        return view('masjid.mrj.admin.financial-v2.drafts.index', [
+            'entities' => $context['entities'],
+            'entity' => $entity,
+            'options' => $entity ? $this->formOptions($entity) : $this->emptyOptions(),
+            'filters' => $filters,
+            'years' => $years,
+            'transactions' => $entity ? $this->draftTransactions->page($entity->id, $filters) : null,
+        ]);
+    }
+
     public function history(Request $request)
     {
         $context = $this->context($request);
@@ -426,6 +476,7 @@ final class OperationalFinancialController
             'options' => $this->formOptions($entity),
             'transaction' => $transaction,
             'operation' => $this->operationForTransaction($transaction),
+            'isBankMutation' => array_key_exists((string) $transaction->category?->code, BankMutationService::CATEGORY_CODES),
             'journal' => $journal,
             'voucher' => $voucher,
             'ledgerReferences' => $ledgerReferences,
@@ -1115,12 +1166,12 @@ final class OperationalFinancialController
         $amount = $this->amount($input['amount']);
         $splitAccountId = $this->operationalSplitAccount($entity, $type, $input['date'], $financialAccount->account_id);
 
-        return $this->lifecycle->createReceipt($this->transactionInput($entity, $type, $input, $sourceKey) + [
+        return $this->lifecycle->createReceipt(array_merge($this->transactionInput($entity, $type, $input, $sourceKey), [
             'primary_financial_account_id' => $financialAccount->id,
             'category_id' => $category->id,
             'description' => $this->description($input['source'], $input['description'] ?? null),
             'gross_amount' => $amount,
-        ], [[
+        ]), [[
             'account_id' => $splitAccountId,
             'split_amount' => $amount,
             'fund_id' => $fund->id,
@@ -1749,6 +1800,8 @@ final class OperationalFinancialController
     private function success(Request $request, string $message, string $redirect, array $payload = [])
     {
         if ($request->expectsJson()) {
+            $request->session()->flash('success', $message);
+
             return response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect] + $payload);
         }
 

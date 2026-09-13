@@ -278,6 +278,16 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
     expect($batchTransactions)->toHaveCount(4)
         ->and($links)->toHaveCount(4)
         ->and($links->pluck('attachment_id')->unique())->toHaveCount(1);
+    $this->actingAs($user)->get(route('financial-v2.transactions.drafts', [
+        'entity' => $entity->id,
+        'year' => 2026,
+        'type' => 'bank_mutation',
+    ]))->assertOk()
+        ->assertSee('JASA GIRO/BUNGA UI QA')
+        ->assertSee('PPH UI QA')
+        ->assertSee('Mutasi Bank')
+        ->assertSee('Ubah draft')
+        ->assertSee(route('financial-v2.bank-mutations.edit', ['transaction' => $batchTransactions->first(), 'entity' => $entity->id]));
 
     $payload['proof'] = UploadedFile::fake()->createWithContent('statement-ui.pdf', "%PDF-1.4\n% UI fixture\n");
     $this->actingAs($user)->post(route('financial-v2.bank-mutations.store'), $payload)->assertRedirect();
