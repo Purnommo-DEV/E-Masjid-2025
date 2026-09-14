@@ -30,6 +30,26 @@
             @endforeach
         </section>
 
+        @if ($fidyahAllocationStatus)
+            @include('masjid.mrj.admin.financial-v2.masters._configuration-provision', ['provision' => [
+                'title' => 'Konfigurasi Alokasi Fidyah',
+                'status' => $fidyahAllocationStatus,
+                'summary' => '22/08/2026 · PAY · Penyaluran Fidyah · Dana Fidyah + Dana Infaq & Tromol · Tanpa Program.',
+                'info' => 'Perubahan hanya pada configuration. Tidak membuat transaksi keuangan.',
+                'button_label' => 'Provision Konfigurasi Alokasi Fidyah',
+                'active_label' => 'Konfigurasi Alokasi Fidyah Sudah Aktif',
+                'modal_id' => 'provision-fidyah-allocation',
+                'modal_title' => 'Provision konfigurasi Alokasi Fidyah?',
+                'action' => route('financial-v2.configuration.provision-fidyah-allocation'),
+                'details' => [
+                    'Tanggal' => '22/08/2026',
+                    'Kategori' => 'Penyaluran Fidyah',
+                    'Sumber' => "Fidyah\nInfaq & Tromol",
+                    'Program' => 'Tanpa Program',
+                ],
+            ]])
+        @endif
+
         @if ($historicalDhuafaStatus)
             <section class="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 shadow-sm">
                 <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">

@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Domain\FinancialV2\ConfigureMrjFidyahAllocationService;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Artisan;
-use RuntimeException;
 
 /**
  * Terminal-capable hosting command:
@@ -14,16 +13,7 @@ final class ConfigureMrjFidyahAllocationSeeder extends Seeder
 {
     public function run(): void
     {
-        $arguments = ['--apply' => true];
-        if (app()->environment('testing')) {
-            $arguments['--allow-testing'] = true;
-        }
-
-        $exitCode = Artisan::call('financial-v2:configure-mrj-fidyah-allocation', $arguments);
-        if ($exitCode !== 0) {
-            throw new RuntimeException('Konfigurasi alokasi Fidyah gagal: '.trim(Artisan::output()));
-        }
-
-        $this->command?->line(Artisan::output());
+        $result = app(ConfigureMrjFidyahAllocationService::class)->configure(null, 'DATABASE_SEEDER_PROVISION');
+        $this->command?->line(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 }

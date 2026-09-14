@@ -3,6 +3,7 @@
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FundPolicyCompatibilityService;
 use App\Models\FinancialV2\AccountingEntity;
+use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\BudgetAllocation;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\FinancialTransaction;
@@ -59,10 +60,27 @@ test('approved Fidyah allocation configuration readies only FIDYAH and INFAQ-TRO
     $funds = Fund::query()->where('accounting_entity_id', $entity->id)->whereIn('code', ['FIDYAH', 'INFAQ-TROMOL', 'ZAKAT-MAAL'])->get()->keyBy('code');
     $payment = TransactionType::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY')->sole();
     $factsBefore = fidyahAllocationFacts($entity->id);
+    $user = User::factory()->create();
+    $route = app('router')->getRoutes()->getByName('financial-v2.configuration.provision-fidyah-allocation');
+
+    expect($route->methods())->toBe(['POST'])
+        ->and($route->gatherMiddleware())->toContain('web', 'auth');
+    $this->post(route('financial-v2.configuration.provision-fidyah-allocation'), ['entity' => $entity->id])
+        ->assertRedirect(route('login'));
+
+    $this->actingAs($user)
+        ->get(route('financial-v2.configuration.index', ['entity' => $entity->id]))
+        ->assertOk()
+        ->assertSee('Provision Konfigurasi Alokasi Fidyah')
+        ->assertSee('Perubahan hanya pada configuration. Tidak membuat transaksi keuangan.');
 
     $this->artisan('financial-v2:configure-mrj-fidyah-allocation', ['--allow-testing' => true])->assertExitCode(0);
     expect(Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY-FIDYAH')->exists())->toBeFalse()
         ->and(fidyahAllocationFacts($entity->id))->toBe($factsBefore);
+
+    $this->actingAs($user)
+        ->post(route('financial-v2.configuration.provision-fidyah-allocation'), ['entity' => $entity->id])
+        ->assertRedirect(route('financial-v2.configuration.index', ['entity' => $entity->id]));
 
     $this->seed(\Database\Seeders\ConfigureMrjFidyahAllocationSeeder::class);
 
@@ -70,6 +88,11 @@ test('approved Fidyah allocation configuration readies only FIDYAH and INFAQ-TRO
     expect($category->name)->toBe('Penyaluran Fidyah')
         ->and($category->transaction_type_id)->toBe($payment->id)
         ->and($category->valid_from->toDateString())->toBe('2026-08-22')
+        ->and(AuditEvent::query()
+            ->where('event_type', 'fidyah_allocation_configuration_provisioned')
+            ->where('actor_user_id', $user->id)
+            ->where('after_summary', 'like', '%ADMIN_CONFIGURATION_PROVISION%')
+            ->exists())->toBeTrue()
         ->and(fidyahAllocationFacts($entity->id))->toBe($factsBefore);
 
     foreach (['FIDYAH', 'INFAQ-TROMOL'] as $fundCode) {
@@ -110,6 +133,30 @@ test('approved Fidyah allocation configuration readies only FIDYAH and INFAQ-TRO
         Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY-FIDYAH')->count(),
         FundPolicyVersion::query()->whereIn('fund_id', [$funds['FIDYAH']->id, $funds['INFAQ-TROMOL']->id])->count(),
     ])->toBe($configurationCounts)
+        ->and(fidyahAllocationFacts($entity->id))->toBe($factsBefore);
+
+    $this->actingAs($user)
+        ->get(route('financial-v2.configuration.index', ['entity' => $entity->id]))
+        ->assertOk()
+        ->assertSee('Konfigurasi Alokasi Fidyah Sudah Aktif')
+        ->assertDontSee('>Provision Konfigurasi Alokasi Fidyah<', false);
+
+    $configurationFacts = [
+        Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY-FIDYAH')->count(),
+        FundPolicyVersion::query()->whereIn('fund_id', [$funds['FIDYAH']->id, $funds['INFAQ-TROMOL']->id])->count(),
+        FundPolicyRule::query()->whereIn('fund_policy_version_id', FundPolicyVersion::query()->whereIn('fund_id', [$funds['FIDYAH']->id, $funds['INFAQ-TROMOL']->id])->pluck('id'))->count(),
+    ];
+    $category->update(['name' => 'Konfigurasi Tidak Sesuai']);
+    $this->actingAs($user)
+        ->from(route('financial-v2.configuration.index', ['entity' => $entity->id]))
+        ->post(route('financial-v2.configuration.provision-fidyah-allocation'), ['entity' => $entity->id])
+        ->assertRedirect(route('financial-v2.configuration.index', ['entity' => $entity->id]))
+        ->assertSessionHasErrors(['configuration' => 'Konfigurasi production berbeda dari configuration yang diharapkan. Perlu pemeriksaan administrator.']);
+    expect([
+        Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY-FIDYAH')->count(),
+        FundPolicyVersion::query()->whereIn('fund_id', [$funds['FIDYAH']->id, $funds['INFAQ-TROMOL']->id])->count(),
+        FundPolicyRule::query()->whereIn('fund_policy_version_id', FundPolicyVersion::query()->whereIn('fund_id', [$funds['FIDYAH']->id, $funds['INFAQ-TROMOL']->id])->pluck('id'))->count(),
+    ])->toBe($configurationFacts)
         ->and(fidyahAllocationFacts($entity->id))->toBe($factsBefore);
 });
 

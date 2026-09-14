@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\FinancialV2;
 
+use App\Domain\FinancialV2\ConfigureMrjFidyahAllocationService;
 use App\Domain\FinancialV2\ConfigureMrjHistoricalDhuafaReceiptService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
@@ -40,6 +41,7 @@ final class FinancialMasterDataController
         private readonly MasterDataGovernanceService $governance,
         private readonly FundPolicyVersionDeletionService $policyDeletion,
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
+        private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
     ) {}
 
     public function configuration(Request $request)
@@ -74,7 +76,36 @@ final class FinancialMasterDataController
                 ->get() : collect(),
             'fundPolicyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
             'historicalDhuafaStatus' => $context['entity']?->code === ConfigureMrjHistoricalDhuafaReceiptService::ENTITY_CODE ? $this->historicalDhuafa->status() : null,
+            'fidyahAllocationStatus' => $context['entity']?->code === ConfigureMrjFidyahAllocationService::ENTITY_CODE ? $this->fidyahAllocation->status() : null,
         ]);
+    }
+
+    public function provisionFidyahAllocation(Request $request)
+    {
+        $entity = $this->requiredEntity($request);
+        abort_unless($entity->code === ConfigureMrjFidyahAllocationService::ENTITY_CODE, 404, 'Provisioning hanya tersedia untuk MRJ-ACTUAL.');
+
+        try {
+            $result = $this->fidyahAllocation->configure($request->user()?->id, ConfigureMrjFidyahAllocationService::ORIGIN_ADMIN);
+        } catch (Throwable $exception) {
+            report($exception);
+            $message = str_contains($exception->getMessage(), 'Konfigurasi production berbeda')
+                ? $exception->getMessage()
+                : 'Konfigurasi Alokasi Fidyah gagal dan seluruh perubahan dibatalkan. '.$exception->getMessage();
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : back()->withErrors(['configuration' => $message]);
+        }
+
+        $message = $result['changed']
+            ? 'Konfigurasi Alokasi Fidyah berhasil diprovision. Financial fact tidak berubah.'
+            : 'Konfigurasi Alokasi Fidyah sudah aktif. Seluruh konfigurasi digunakan kembali tanpa duplikasi.';
+        $redirect = route('financial-v2.configuration.index', ['entity' => $entity->id]);
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect, 'result' => $result])
+            : redirect($redirect)->with('success', $message);
     }
 
     public function provisionHistoricalDhuafa(Request $request)
