@@ -210,6 +210,51 @@
                     }
                 });
             });
+            document.querySelectorAll('[data-program-options-url]').forEach((form) => {
+                const program = form.elements.program_id;
+                const entity = form.elements.entity;
+                const watched = ['date', 'financial_account_id', 'fund_id', 'category_id']
+                    .map((name) => form.elements[name])
+                    .filter(Boolean);
+                if (!program || !entity || !form.dataset.typeCode) return;
+                let timer;
+                let requestVersion = 0;
+                let controller;
+                const refresh = () => {
+                    clearTimeout(timer);
+                    controller?.abort();
+                    const version = ++requestVersion;
+                    timer = setTimeout(async () => {
+                        controller = new AbortController();
+                        const selected = program.value;
+                        const params = new URLSearchParams({
+                            entity: entity.value,
+                            type: form.dataset.typeCode,
+                            date: form.elements.date?.value || '',
+                            financial_account_id: form.elements.financial_account_id?.value || '',
+                            fund_id: form.elements.fund_id?.value || '',
+                            category_id: form.elements.category_id?.value || '',
+                        });
+                        try {
+                            const response = await fetch(`${form.dataset.programOptionsUrl}?${params}`, {
+                                credentials: 'same-origin',
+                                signal: controller.signal,
+                                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                            });
+                            const payload = await response.json();
+                            if (!response.ok || !payload.ok || version !== requestVersion) return;
+                            program.replaceChildren(new Option('Tanpa program', ''));
+                            payload.programs.forEach((item) => program.add(new Option(item.name, item.id)));
+                            program.value = [...program.options].some((option) => option.value === selected) ? selected : '';
+                            if (program.value !== selected) program.dispatchEvent(new Event('change', { bubbles: true }));
+                        } catch (error) {
+                            if (error.name !== 'AbortError') console.warn('Program options could not be refreshed.', error);
+                        }
+                    }, 150);
+                };
+                watched.forEach((field) => field.addEventListener('change', refresh));
+                refresh();
+            });
             document.querySelectorAll('[data-financial-configuration]').forEach((status) => {
                 if (status.dataset.initialized === 'true') return;
                 status.dataset.initialized = 'true';

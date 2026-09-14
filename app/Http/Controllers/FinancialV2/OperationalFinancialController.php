@@ -184,7 +184,7 @@ final class OperationalFinancialController
                 'entity' => $context['entity'],
                 'operation' => $operation,
                 'definition' => self::OPERATIONS[$operation],
-                'options' => $this->formOptions($transaction->accounting_entity_id, null, $operation === 'realization'),
+                'options' => $this->formOptions($transaction->accounting_entity_id, null, $operation === 'realization', $transaction->accounting_date->toDateString()),
                 'transaction' => $transaction,
                 'submissionKey' => Str::afterLast($transaction->idempotency_key, ':'),
                 'today' => $transaction->accounting_date->toDateString(),
@@ -901,17 +901,39 @@ final class OperationalFinancialController
     public function options(Request $request)
     {
         $entity = $this->requiredEntity($request);
-        $typeCode = $request->string('type')->toString();
+        $data = $request->validate([
+            'type' => ['nullable', 'string', 'max:10'],
+            'date' => ['nullable', 'date'],
+            'financial_account_id' => ['nullable', 'uuid'],
+            'fund_id' => ['nullable', 'uuid'],
+            'category_id' => ['nullable', 'uuid'],
+        ]);
+        $typeCode = (string) ($data['type'] ?? '');
         $type = $typeCode === '' ? null : $this->transactionType($entity, $typeCode);
-        $options = $this->formOptions($entity);
+        $date = (string) ($data['date'] ?? now()->toDateString());
+        $options = $this->formOptions($entity, $typeCode ?: null, false, $date);
         if ($type) {
             $options['categories'] = $options['categories']->filter(fn (Category $category) => ! $category->transaction_type_id || $category->transaction_type_id === $type->id)->values();
+        }
+        $programs = $options['programs'];
+        $configurationFiltered = $type && $this->configurationResolver->supports($type->code)
+            && collect(['financial_account_id', 'fund_id', 'category_id'])->every(fn (string $field): bool => filled($data[$field] ?? null));
+        if ($configurationFiltered) {
+            $programs = $this->configurationResolver->availablePrograms([
+                'accounting_entity_id' => $entity->id,
+                'transaction_type_id' => $type->id,
+                'date' => $date,
+                'financial_account_id' => $data['financial_account_id'],
+                'fund_id' => $data['fund_id'],
+                'category_id' => $data['category_id'],
+            ]);
         }
 
         return response()->json([
             'ok' => true,
             'categories' => $options['categories']->map(fn (Category $category) => ['id' => $category->id, 'name' => $category->name])->values(),
-            'programs' => $options['programs']->map(fn (Program $program) => ['id' => $program->id, 'name' => $program->name])->values(),
+            'programs' => $programs->map(fn (Program $program) => ['id' => $program->id, 'name' => $program->name])->values(),
+            'configuration_filtered' => $configurationFiltered,
         ]);
     }
 
@@ -1137,10 +1159,10 @@ final class OperationalFinancialController
     }
 
     /** @return array<string, mixed> */
-    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true): array
+    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true, ?string $date = null): array
     {
         $entityId = $entity instanceof AccountingEntity ? $entity->id : $entity;
-        $today = now()->toDateString();
+        $date ??= now()->toDateString();
         $transactionTypeId = $transactionTypeCode
             ? TransactionType::query()->where('accounting_entity_id', $entityId)->where('code', $transactionTypeCode)->value('id')
             : null;
@@ -1163,10 +1185,10 @@ final class OperationalFinancialController
             'financialAccounts' => FinancialAccount::query()
                 ->where('accounting_entity_id', $entityId)
                 ->where('status', 'active')
-                ->where(fn (Builder $query) => $query->whereNull('closing_date')->orWhere('closing_date', '>=', $today))
+                ->where(fn (Builder $query) => $query->whereNull('closing_date')->orWhere('closing_date', '>=', $date))
                 ->orderBy('name')->get(),
             'funds' => Fund::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('name')->get(),
-            'programs' => Program::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('name')->get(),
+            'programs' => Program::query()->where('accounting_entity_id', $entityId)->businessActiveOn($date)->orderBy('name')->get(),
             'categories' => Category::query()
                 ->where('accounting_entity_id', $entityId)
                 ->where('status', 'active')

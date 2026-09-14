@@ -5,7 +5,7 @@
 @section('content')
     @include('masjid.mrj.admin.financial-v2.masters._header', [
         'title' => 'Program',
-        'subtitle' => 'Program adalah tujuan atau kegiatan penggunaan Dana, bukan rekening, Dana, atau saldo kas. Kelayakan Dana terhadap Program ditentukan oleh Aturan Dana yang dikonfigurasi, bukan hubungan permanen yang dihardcode.',
+        'subtitle' => 'Program adalah tujuan atau kegiatan penggunaan Dana. Tanggal Program menunjukkan lifecycle bisnis; tanggal mulai pencatatan Financial V2 ditentukan terpisah oleh versi konfigurasi dan Aturan Dana.',
     ])
 
     @if ($entity)
@@ -17,8 +17,8 @@
                 <div class="mt-5 grid gap-4 sm:grid-cols-2">
                     <label class="form-control"><span class="label-text text-sm">Nama Program</span><input required name="name" maxlength="160" class="input input-bordered" placeholder="Nama kegiatan atau tujuan"></label>
                     <label class="form-control"><span class="label-text text-sm">Kode Program</span><input required name="code" maxlength="40" class="input input-bordered" placeholder="PRG-001"></label>
-                    <label class="form-control"><span class="label-text text-sm">Tanggal mulai <span class="text-base-content/45">(opsional)</span></span><input type="date" name="start_date" class="input input-bordered"></label>
-                    <label class="form-control"><span class="label-text text-sm">Tanggal selesai <span class="text-base-content/45">(opsional)</span></span><input type="date" name="end_date" class="input input-bordered"></label>
+                    <label class="form-control"><span class="label-text text-sm">Mulai berlaku secara bisnis <span class="text-base-content/45">(opsional)</span></span><input type="date" name="start_date" class="input input-bordered"><span class="label-text-alt">Kosongkan untuk Program legacy yang tanggal mulai bisnisnya tidak diketahui.</span></label>
+                    <label class="form-control"><span class="label-text text-sm">Selesai secara bisnis <span class="text-base-content/45">(opsional)</span></span><input type="date" name="end_date" class="input input-bordered"></label>
                     <label class="form-control"><span class="label-text text-sm">Cost center <span class="text-base-content/45">(opsional)</span></span><select name="cost_center_id" class="select select-bordered"><option value="">Tidak ditetapkan</option>@foreach ($costCenters as $costCenter)<option value="{{ $costCenter->id }}">{{ $costCenter->code }} — {{ $costCenter->name }}</option>@endforeach</select></label>
                     <label class="form-control"><span class="label-text text-sm">Referensi penanggung jawab <span class="text-base-content/45">(opsional)</span></span><input name="program_owner_reference" maxlength="100" class="input input-bordered" placeholder="Referensi internal"></label>
                 </div>
@@ -31,7 +31,7 @@
                     @forelse ($programs as $program)
                         <article class="p-5">
                             <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $program->name }}</p><p class="text-sm text-base-content/60">{{ $program->code }}@if($program->costCenter) · {{ $program->costCenter->name }}@endif</p></div><span class="badge {{ $program->status === 'active' ? 'badge-success' : 'badge-ghost' }}">{{ ucfirst($program->status) }}</span></div>
-                            <p class="mt-2 text-sm text-base-content/65">{{ $program->start_date?->translatedFormat('d M Y') ?? 'Mulai belum ditetapkan' }} — {{ $program->end_date?->translatedFormat('d M Y') ?? 'Berjalan sampai ditutup' }}</p>
+                            <p class="mt-2 text-sm text-base-content/65">{{ $program->start_date?->translatedFormat('d M Y') ?? 'Mulai bisnis tidak dibatasi' }} — {{ $program->end_date?->translatedFormat('d M Y') ?? 'Berjalan sampai ditutup' }}</p>
                             <div class="mt-4 flex flex-wrap gap-2">
                                 @if ($program->status !== 'active' && $program->status !== 'closed')<form method="post" action="{{ route('financial-v2.masters.programs.activate', $program) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-success btn-sm">Aktifkan</button></form>@endif
                                 @if ($program->status === 'active')<form method="post" action="{{ route('financial-v2.masters.programs.deactivate', $program) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-outline btn-sm">Nonaktifkan</button></form>@endif

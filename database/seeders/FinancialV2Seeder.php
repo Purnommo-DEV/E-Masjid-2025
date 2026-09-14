@@ -107,7 +107,29 @@ final class FinancialV2Seeder extends Seeder
             throw new RuntimeException('Financial V2 snapshot must return an array.');
         }
 
-        return self::applyPhase126CashTromolSourceSemantics($snapshot);
+        $snapshot = self::applyPhase126CashTromolSourceSemantics($snapshot);
+
+        return self::applyLegacyProgramLifecycleSemantics($snapshot);
+    }
+
+    /**
+     * The Phase 12 capture used the Financial V2 configuration cutover as the
+     * business start for every Program. Santunan Anak Yatim Bulanan is an
+     * established legacy Program, so null is the accurate unbounded/unknown
+     * historical start. Rule and policy versions retain their own dates.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    private static function applyLegacyProgramLifecycleSemantics(array $snapshot): array
+    {
+        foreach ($snapshot['tables']['financial_v2_programs'] ?? [] as $index => $program) {
+            if (($program['code'] ?? null) === 'SANTUNAN-YATIM-BULANAN') {
+                $snapshot['tables']['financial_v2_programs'][$index]['start_date'] = null;
+            }
+        }
+
+        return $snapshot;
     }
 
     /**

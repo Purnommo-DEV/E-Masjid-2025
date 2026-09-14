@@ -40,7 +40,7 @@
             <form method="GET" class="mt-4 flex max-w-md gap-2"><select name="entity" class="select select-bordered grow"><option value="">Pilih entitas</option>@foreach($entities as $availableEntity)<option value="{{ $availableEntity->id }}">{{ $availableEntity->name }}</option>@endforeach</select><button class="btn btn-primary">Pilih</button></form>
         @endif
     @else
-        <form method="POST" action="{{ $isEdit ? route('financial-v2.transactions.update', $transaction) : route('financial-v2.transactions.store', $operation) }}" enctype="multipart/form-data" data-financial-ajax data-operation="{{ $operation }}" data-preview-url="{{ route('financial-v2.preview') }}" class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <form method="POST" action="{{ $isEdit ? route('financial-v2.transactions.update', $transaction) : route('financial-v2.transactions.store', $operation) }}" enctype="multipart/form-data" data-financial-ajax data-operation="{{ $operation }}" data-type-code="{{ $definition['code'] }}" data-preview-url="{{ route('financial-v2.preview') }}" data-program-options-url="{{ route('financial-v2.options') }}" class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
             @csrf
             @if ($isEdit) @method('PUT') @endif
             <input type="hidden" name="entity" value="{{ $entity->id }}">

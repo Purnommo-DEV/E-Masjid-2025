@@ -43,6 +43,35 @@ final class FinancialTransactionConfigurationResolver
         return $transactionTypeCode !== null && array_key_exists($transactionTypeCode, self::RULE_FAMILIES);
     }
 
+    /**
+     * Return Programs whose business lifecycle and effective transaction
+     * configuration both permit the supplied transaction context.
+     *
+     * @param  array<string, mixed>  $input
+     * @return Collection<int, Program>
+     */
+    public function availablePrograms(array $input): Collection
+    {
+        $date = CarbonImmutable::parse((string) ($input['date'] ?? ''))->toDateString();
+        $entityId = (string) ($input['accounting_entity_id'] ?? '');
+
+        return Program::query()
+            ->where('accounting_entity_id', $entityId)
+            ->businessActiveOn($date)
+            ->orderBy('name')
+            ->get()
+            ->filter(function (Program $program) use ($input): bool {
+                try {
+                    $this->resolve(array_merge($input, ['program_id' => $program->id]));
+
+                    return true;
+                } catch (FinancialPostingException) {
+                    return false;
+                }
+            })
+            ->values();
+    }
+
     /** @param array<string, mixed> $input */
     public function resolve(array $input): ResolvedFinancialTransactionConfiguration
     {
@@ -315,8 +344,8 @@ final class FinancialTransactionConfigurationResolver
         if (! $programId) {
             return null;
         }
-        $program = Program::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->find($programId);
-        if (! $program || ($program->start_date && $program->start_date->gt($date)) || ($program->end_date && $program->end_date->lt($date))) {
+        $program = Program::query()->where('accounting_entity_id', $entityId)->find($programId);
+        if (! $program || ! $program->isBusinessActiveOn($date)) {
             throw new FinancialPostingException('E-CONFIGURATION-MISSING', 'Konfigurasi pencatatan belum tersedia untuk program dan tanggal yang dipilih.');
         }
 

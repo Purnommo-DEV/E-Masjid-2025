@@ -97,7 +97,7 @@ final class ProvisionMrjOperationalMasterCommand extends Command
             $this->ensureOperationalAccounts($audit);
             $this->ensureTransactionTypesAndSequences($audit);
             $this->ensureFinancialAccounts($masters, $governance);
-            $this->ensurePrograms($masters, $governance);
+            $this->ensurePrograms($masters, $governance, $audit);
             $this->ensureCategories($masters);
             $this->ensurePostingRules($governance, $audit);
             $this->linkCategoryPostingRules($masters);
@@ -235,7 +235,7 @@ final class ProvisionMrjOperationalMasterCommand extends Command
         }
     }
 
-    private function ensurePrograms(FinancialMasterDataService $masters, MasterDataGovernanceService $governance): void
+    private function ensurePrograms(FinancialMasterDataService $masters, MasterDataGovernanceService $governance, AuditTrailService $audit): void
     {
         $definitions = [
             'OPERASIONAL-JUMAT' => 'Operasional Jumat', 'OPERASIONAL-HARIAN' => 'Operasional Harian Masjid',
@@ -245,9 +245,21 @@ final class ProvisionMrjOperationalMasterCommand extends Command
             'BANTUAN-DHUAFA' => 'Bantuan Dhuafa', 'PEMELIHARAAN-MASJID' => 'Pemeliharaan Masjid',
         ];
         foreach ($definitions as $code => $name) {
+            // Program dates describe the business lifecycle. Financial V2
+            // configuration dates belong to policy/rule versions. This legacy
+            // Program was already running before the Phase 12 cutover, so its
+            // unknown historical start is represented by null.
+            $businessStartDate = $code === 'SANTUNAN-YATIM-BULANAN' ? null : self::EFFECTIVE_DATE;
             $program = Program::query()->where('accounting_entity_id', $this->entity->id)->where('code', $code)->first();
             if (! $program) {
-                $program = $masters->createProgram($this->entity->id, ['cost_center_id' => null, 'code' => $code, 'name' => $name, 'start_date' => self::EFFECTIVE_DATE, 'end_date' => null, 'program_owner_reference' => 'Konfigurasi operasional MRJ Phase 12'], $this->actorUserId);
+                $program = $masters->createProgram($this->entity->id, ['cost_center_id' => null, 'code' => $code, 'name' => $name, 'start_date' => $businessStartDate, 'end_date' => null, 'program_owner_reference' => 'Konfigurasi operasional MRJ Phase 12'], $this->actorUserId);
+            } elseif ($code === 'SANTUNAN-YATIM-BULANAN'
+                && $program->start_date?->toDateString() === self::EFFECTIVE_DATE
+                && $program->end_date === null
+                && $program->program_owner_reference === 'Konfigurasi operasional MRJ Phase 12') {
+                $before = ['start_date' => self::EFFECTIVE_DATE];
+                $program->update(['start_date' => null, 'updated_by_user_id' => $this->actorUserId]);
+                $audit->record($this->entity->id, 'legacy_program_lifecycle_corrected', 'program', $program->id, (string) Str::uuid(), $this->actorUserId, $before, ['start_date' => null]);
             }
             if ($program->status === 'draft') {
                 $governance->activateProgram($program->id, $this->actorUserId);
@@ -307,7 +319,9 @@ final class ProvisionMrjOperationalMasterCommand extends Command
 
     private function ensureEvidenceRequirements(PostingRuleVersion $version, string $typeCode, AuditTrailService $audit): void
     {
-        $types = match ($typeCode) { 'PAY' => ['invoice'], 'TRF' => ['transfer_proof'], default => [] };
+        $types = match ($typeCode) {
+            'PAY' => ['invoice'], 'TRF' => ['transfer_proof'], default => []
+        };
         foreach ($types as $type) {
             $requirement = EvidenceRequirement::query()->firstOrCreate(
                 ['posting_rule_version_id' => $version->id, 'evidence_type' => $type],

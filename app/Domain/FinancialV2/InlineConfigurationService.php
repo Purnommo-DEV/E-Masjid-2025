@@ -143,8 +143,8 @@ final class InlineConfigurationService
         if ($funds->contains(fn (Fund $fund) => $fund->status !== 'active' || ($fund->valid_from && $fund->valid_from->gt($transactionDate)) || ($fund->valid_to && $fund->valid_to->lt($transactionDate)))) {
             throw new FinancialDomainException('E-MASTER-LIFECYCLE', 'Dana tidak dapat digunakan pada tanggal transaksi.');
         }
-        $program = filled($input['program_id'] ?? null) ? Program::query()->forEntity($entity->id)->where('status', 'active')->findOrFail($input['program_id']) : null;
-        if ($program && (($program->start_date && $program->start_date->gt($transactionDate)) || ($program->end_date && $program->end_date->lt($transactionDate)))) {
+        $program = filled($input['program_id'] ?? null) ? Program::query()->forEntity($entity->id)->findOrFail($input['program_id']) : null;
+        if ($program && ! $program->isBusinessActiveOn($transactionDate)) {
             throw new FinancialDomainException('E-MASTER-LIFECYCLE', 'Program tidak dapat digunakan pada tanggal transaksi.');
         }
         $validShape = match ($operation) {

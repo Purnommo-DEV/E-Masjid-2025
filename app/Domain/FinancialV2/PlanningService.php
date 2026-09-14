@@ -237,7 +237,7 @@ final class PlanningService
             throw new FinancialDomainException('E-PLANNING-PERIOD', 'Tanggal akhir Planning tidak boleh sebelum tanggal mulai.');
         }
         $programId = filled($input['program_id'] ?? null) ? (string) $input['program_id'] : null;
-        if ($programId && ! Program::query()->whereKey($programId)->where('accounting_entity_id', $entityId)->where('status', 'active')->where(fn ($query) => $query->whereNull('start_date')->orWhere('start_date', '<=', $start->toDateString()))->where(fn ($query) => $query->whereNull('end_date')->orWhere('end_date', '>=', $end->toDateString()))->exists()) {
+        if ($programId && ! Program::query()->whereKey($programId)->where('accounting_entity_id', $entityId)->businessActiveThroughout($start->toDateString(), $end->toDateString())->exists()) {
             throw new FinancialDomainException('E-PLANNING-PROGRAM', 'Program harus aktif, satu entitas, dan berlaku selama periode Planning.');
         }
         $total = DecimalAmount::normalize($input['total_amount']);
