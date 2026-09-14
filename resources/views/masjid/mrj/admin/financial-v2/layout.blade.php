@@ -217,6 +217,7 @@
                 const submit = form?.querySelector('[data-configuration-submit]');
                 const message = status.querySelector('[data-configuration-message]');
                 const loading = status.querySelector('[data-configuration-loading]');
+                const missingAction = status.querySelector('[data-configuration-missing-action]');
                 const requiredByOperation = {
                     receipt: ['date', 'financial_account_id', 'fund_id', 'category_id'],
                     payment: ['date', 'financial_account_id', 'fund_id', 'category_id'],
@@ -235,6 +236,7 @@
                     };
                     status.className = `mt-4 rounded-xl border px-3 py-3 text-sm ${tones[state]}`;
                     message.textContent = text;
+                    missingAction?.classList.toggle('hidden', state !== 'missing');
                     submit.disabled = state !== 'ready';
                     form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
                 };
@@ -276,6 +278,69 @@
                 form.addEventListener('input', resolve);
                 form.addEventListener('change', resolve);
                 resolve();
+            });
+            document.querySelectorAll('[data-configuration-missing-action]').forEach((action) => {
+                if (action.dataset.initialized === 'true' || action.dataset.canManage !== 'true') return;
+                action.dataset.initialized = 'true';
+                const parentForm = action.closest('form');
+                const dialog = action.querySelector('[data-inline-configuration-dialog]');
+                const open = action.querySelector('[data-inline-configuration-open]');
+                const modalForm = action.querySelector('[data-inline-configuration-form]');
+                const error = action.querySelector('[data-inline-configuration-error]');
+                const contextList = action.querySelector('[data-inline-configuration-context]');
+                const postingRule = action.querySelector('[data-inline-posting-rule]');
+                const postingRuleHelp = action.querySelector('[data-inline-posting-rule-help]');
+                let context = null;
+                const currentContext = () => {
+                    if (parentForm._inlineConfigurationContext) return parentForm._inlineConfigurationContext;
+                    const data = new FormData(parentForm);
+                    return Object.fromEntries(['entity', 'date', 'financial_account_id', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id', 'source_fund_id', 'destination_fund_id', 'category_id', 'program_id'].map((key) => [key, data.get(key) || '']).concat([['operation', parentForm.dataset.operation]]));
+                };
+                const showError = (message) => { error.textContent = message; error.classList.remove('hidden'); };
+                open?.addEventListener('click', async () => {
+                    error.classList.add('hidden');
+                    context = currentContext();
+                    try {
+                        const response = await fetch(`${action.dataset.showUrl}?${new URLSearchParams(context)}`, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                        const payload = await response.json();
+                        if (!response.ok || !payload.ok) throw new Error(payload.message || 'Form konfigurasi belum dapat dibuka.');
+                        const labels = [['Entity', payload.context.entity], ['Jenis Transaksi', payload.context.transaction_type], ['Tanggal Transaksi', payload.context.date], ['Rekening', payload.context.financial_accounts.join(' → ') || 'Tidak berlaku'], ['Dana', payload.context.funds.join(' → ') || 'Tidak berlaku'], ['Kategori', payload.context.category], ['Program', payload.context.program]];
+                        contextList.replaceChildren(...labels.flatMap(([term, value]) => {
+                            const wrapper = document.createElement('div');
+                            const dt = document.createElement('dt'); dt.className = 'text-xs text-base-content/55'; dt.textContent = term;
+                            const dd = document.createElement('dd'); dd.className = 'font-semibold'; dd.textContent = value;
+                            wrapper.append(dt, dd); return [wrapper];
+                        }));
+                        postingRule.innerHTML = '<option value="">Pilih Posting Rule</option>';
+                        payload.posting_rules.forEach((rule) => postingRule.add(new Option(rule.label, rule.id, false, rule.id === payload.selected_posting_rule_version_id)));
+                        postingRule.disabled = payload.posting_rules.length === 0 || payload.state === 'ready';
+                        postingRuleHelp.textContent = payload.message;
+                        modalForm.elements.effective_from.value = context.date;
+                        modalForm.elements.required_approval_steps.value = payload.required_approval_steps;
+                        modalForm.querySelector('[data-inline-configuration-save]').disabled = postingRule.disabled;
+                        dialog.showModal();
+                    } catch (exception) { showError(exception.message || 'Form konfigurasi belum dapat dibuka.'); dialog.showModal(); }
+                });
+                action.querySelector('[data-inline-configuration-cancel]')?.addEventListener('click', () => dialog.close());
+                modalForm?.addEventListener('submit', async (event) => {
+                    event.preventDefault(); error.classList.add('hidden');
+                    const save = modalForm.querySelector('[data-inline-configuration-save]');
+                    save.disabled = true;
+                    const body = new FormData(modalForm);
+                    Object.entries(context || {}).forEach(([key, value]) => body.set(key, value));
+                    try {
+                        const response = await fetch(action.dataset.storeUrl, { method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }, body });
+                        const payload = await response.json();
+                        if (!response.ok || !payload.ok) throw new Error(payload.message || Object.values(payload.errors || {})[0]?.[0] || 'Draft konfigurasi belum dapat disimpan.');
+                        dialog.close();
+                        action.classList.add('hidden');
+                        const status = action.closest('[data-financial-configuration], [data-bank-configuration]');
+                        const output = status?.querySelector('[data-configuration-message], [data-bank-configuration-message]');
+                        if (output) output.textContent = '○ Konfigurasi menunggu aktivasi/approval.';
+                        parentForm.dispatchEvent(new CustomEvent('configuration-draft-created', { detail: payload }));
+                    } catch (exception) { showError(exception.message || 'Draft konfigurasi belum dapat disimpan.'); }
+                    finally { save.disabled = false; }
+                });
             });
             const parseMoney = (raw) => {
                 const value = String(raw || '').replace(/[^\d,.-]/g, '');

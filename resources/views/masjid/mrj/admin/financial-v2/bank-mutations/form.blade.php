@@ -109,6 +109,7 @@
                 <section class="rounded-2xl border border-base-300 bg-base-200/40 p-4 text-sm" data-bank-configuration aria-live="polite">
                     <h2 class="font-bold">Status Konfigurasi</h2>
                     <p class="mt-2 text-xs leading-5" data-bank-configuration-message>Lengkapi data transaksi untuk memeriksa konfigurasi.</p>
+                    @include('masjid.mrj.admin.financial-v2.components.configuration-missing-action')
                 </section>
             </aside>
         </form>
@@ -219,6 +220,7 @@
 
     const paintConfiguration = (state, message) => {
         const status = form.querySelector('[data-bank-configuration]');
+        const missingAction = status.querySelector('[data-configuration-missing-action]');
         const tones = {
             ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
             missing: 'border-amber-200 bg-amber-50 text-amber-950',
@@ -226,6 +228,7 @@
         };
         status.className = `rounded-2xl border p-4 text-sm ${tones[state]}`;
         status.querySelector('[data-bank-configuration-message]').textContent = message;
+        missingAction?.classList.toggle('hidden', state !== 'missing');
         submit.disabled = state !== 'ready';
         form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
     };
@@ -238,6 +241,12 @@
         const accountId = form.elements.financial_account_id?.value;
         const date = form.elements.date?.value;
         const validEntries = currentEntries().filter((entry) => entry.category_id && entry.fund_id && entry.amount > 0);
+        const firstEntry = validEntries[0];
+        form._inlineConfigurationContext = firstEntry ? {
+            operation: 'bank_mutation', entity: form.elements.entity.value, date,
+            financial_account_id: accountId, fund_id: firstEntry.fund_id,
+            category_id: firstEntry.category_id, program_id: '',
+        } : null;
         const configurationComplete = !!accountId && !!date && rows().length > 0 && validEntries.length === rows().length;
         if (!configurationComplete) {
             baseBalance = null;

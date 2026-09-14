@@ -117,6 +117,7 @@
                     <div class="mt-4 rounded-xl border border-base-300 bg-base-200/40 px-3 py-3 text-sm" data-financial-configuration aria-live="polite">
                         <div class="flex items-center gap-2"><span class="loading loading-spinner loading-xs hidden" data-configuration-loading></span><strong>Status konfigurasi</strong></div>
                         <p class="mt-1 text-xs text-base-content/60" data-configuration-message>Lengkapi data transaksi untuk memeriksa konfigurasi.</p>
+                        @include('masjid.mrj.admin.financial-v2.components.configuration-missing-action')
                     </div>
                 @endif
                 <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ $backUrl }}">Batal</a><button type="submit" class="btn btn-primary" @if($operation === 'realization') data-realization-funding-submit @else data-configuration-submit disabled @endif>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>

@@ -492,6 +492,8 @@ Route::middleware(['auth'])->group(function () {
             Route::put('/aturan-dana/rule/{policyRule}', [FinancialMasterDataController::class, 'updatePolicyRule'])->name('policy-rules.update');
         });
         Route::get('/alokasi-dana/riwayat', [OperationalFinancialController::class, 'allocationHistory'])->name('allocations.history');
+        Route::get('/konfigurasi-inline', [\App\Http\Controllers\FinancialV2\InlineConfigurationController::class, 'show'])->name('configuration.inline.show');
+        Route::post('/konfigurasi-inline', [\App\Http\Controllers\FinancialV2\InlineConfigurationController::class, 'store'])->name('configuration.inline.store');
         Route::get('/alokasi-dana/baru', [OperationalFinancialController::class, 'allocationForm'])->name('allocations.create');
         Route::post('/alokasi-dana', [OperationalFinancialController::class, 'storeAllocation'])->name('allocations.store');
         Route::get('/alokasi-dana/{allocation}/ubah', [OperationalFinancialController::class, 'editAllocation'])->name('allocations.edit');
