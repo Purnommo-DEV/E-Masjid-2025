@@ -30,6 +30,30 @@
             @endforeach
         </section>
 
+        @if ($historicalDhuafaStatus)
+            <section class="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 shadow-sm">
+                <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="font-bold">Konfigurasi Historis DHUAFA</h2>
+                            <span class="badge badge-sm {{ $historicalDhuafaStatus['ready'] ? 'badge-success' : 'badge-warning' }}">
+                                {{ $historicalDhuafaStatus['ready'] ? 'Siap digunakan' : 'Belum diprovision' }}
+                            </span>
+                        </div>
+                        <p class="mt-2 text-sm leading-6">11/07/2026 · Penerimaan · BNI ZISWAF · Dana Dhuafa &amp; Anak Yatim · Donasi · Tanpa Program.</p>
+                        <p class="text-xs leading-5 opacity-75">Provisioning hanya menambah konfigurasi accounting dan audit trail. Tidak membuat transaksi, jurnal, ledger, atau voucher.</p>
+                    </div>
+                    @unless ($historicalDhuafaStatus['ready'])
+                        <form method="post" action="{{ route('financial-v2.configuration.provision-historical-dhuafa') }}" onsubmit="return confirm('Ini hanya mengaktifkan konfigurasi accounting.\nTidak membuat transaksi keuangan.')">
+                            @csrf
+                            <input type="hidden" name="entity" value="{{ $entity->id }}">
+                            <button class="btn btn-warning whitespace-nowrap">Provision Konfigurasi Historis DHUAFA</button>
+                        </form>
+                    @endunless
+                </div>
+            </section>
+        @endif
+
         <section class="mt-5 rounded-2xl border border-base-300 bg-base-100 shadow-sm">
             <div class="border-b border-base-300 p-5"><h2 class="text-lg font-bold">Aturan Pencatatan dan Bukti</h2><p class="mt-1 text-sm text-base-content/65">Versi dipilih dari tanggal transaksi. Versi superseded yang disetujui tetap tersedia untuk periode historisnya.</p></div>
             <div class="overflow-x-auto">
@@ -68,9 +92,9 @@
 
             <div class="rounded-2xl border border-base-300 bg-base-100 shadow-sm">
                 <div class="border-b border-base-300 p-5"><div class="flex items-center justify-between gap-3"><div><h2 class="font-bold">Aturan Dana</h2><p class="mt-1 text-sm text-base-content/65">Perubahan dilakukan sebagai versi baru agar riwayat tetap utuh.</p></div><a class="btn btn-outline btn-sm" href="{{ route('financial-v2.masters.policies.index', ['entity' => $entity->id]) }}">Kelola</a></div></div>
-                <div class="overflow-x-auto"><table class="table table-sm"><thead><tr><th>Dana</th><th>Versi</th><th>Periode</th><th>Aturan</th><th>Status</th></tr></thead><tbody>
-                    @forelse ($fundPolicyVersions as $version)<tr><td>{{ $version->fund?->name ?? '—' }}</td><td>{{ $version->version_no }}</td><td class="whitespace-nowrap">{{ $version->effective_from?->format('d/m/Y') }} — {{ $version->effective_to?->format('d/m/Y') ?? 'seterusnya' }}</td><td>{{ $version->rules->count() }}</td><td><span class="badge badge-sm {{ $statusBadge($version->status) }}">{{ ucfirst($version->status) }}</span></td></tr>
-                    @empty<tr><td colspan="5" class="py-8 text-center text-base-content/55">Belum ada versi Aturan Dana.</td></tr>@endforelse
+                <div class="overflow-x-auto"><table class="table table-sm"><thead><tr><th>Dana</th><th>Versi</th><th>Periode</th><th>Aturan</th><th>Status</th><th>Penggunaan</th></tr></thead><tbody>
+                    @forelse ($fundPolicyVersions as $version)<tr><td>{{ $version->fund?->name ?? '—' }}</td><td>{{ $version->version_no }}</td><td class="whitespace-nowrap">{{ $version->effective_from?->format('d/m/Y') }} — {{ $version->effective_to?->format('d/m/Y') ?? 'seterusnya' }}</td><td>{{ $version->rules->count() }}</td><td><span class="badge badge-sm {{ $statusBadge($version->status) }}">{{ ucfirst($version->status) }}</span></td><td class="text-xs">{{ $fundPolicyUsage->get($version->id)['message'] ?? 'Versi digunakan — tidak dapat dihapus' }}</td></tr>
+                    @empty<tr><td colspan="6" class="py-8 text-center text-base-content/55">Belum ada versi Aturan Dana.</td></tr>@endforelse
                 </tbody></table></div>
             </div>
         </section>

@@ -380,6 +380,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/keuangan-v2')->name('financial-v2.')->group(function () {
         Route::get('/', [OperationalFinancialController::class, 'dashboard'])->name('dashboard');
         Route::get('/konfigurasi', [FinancialMasterDataController::class, 'configuration'])->name('configuration.index');
+        // Temporary production-safe provisioning endpoint. Remove after the
+        // historical DHUAFA configuration has been verified in production.
+        Route::post('/configuration/provision-historical-dhuafa', [FinancialMasterDataController::class, 'provisionHistoricalDhuafa'])->name('configuration.provision-historical-dhuafa');
         Route::prefix('mutasi-bank')->name('bank-mutations.')->group(function () {
             Route::get('/', [BankMutationController::class, 'index'])->name('index');
             Route::get('/baru', [BankMutationController::class, 'create'])->name('create');
@@ -484,6 +487,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/aturan-dana', [FinancialMasterDataController::class, 'storePolicy'])->name('policies.store');
             Route::put('/aturan-dana/{policyVersion}', [FinancialMasterDataController::class, 'updatePolicy'])->name('policies.update');
             Route::post('/aturan-dana/{policyVersion}/berlakukan', [FinancialMasterDataController::class, 'makePolicyEffective'])->name('policies.effective');
+            Route::delete('/aturan-dana/{policyVersion}', [FinancialMasterDataController::class, 'destroyPolicy'])->name('policies.destroy');
             Route::post('/aturan-dana/{policyVersion}/aturan', [FinancialMasterDataController::class, 'storePolicyRule'])->name('policy-rules.store');
             Route::put('/aturan-dana/rule/{policyRule}', [FinancialMasterDataController::class, 'updatePolicyRule'])->name('policy-rules.update');
         });

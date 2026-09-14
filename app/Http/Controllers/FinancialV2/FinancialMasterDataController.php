@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\FinancialV2;
 
+use App\Domain\FinancialV2\ConfigureMrjHistoricalDhuafaReceiptService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
+use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
 use App\Domain\FinancialV2\MasterDataGovernanceService;
 use App\Models\FinancialV2\Account;
 use App\Models\FinancialV2\AccountingEntity;
@@ -22,6 +24,7 @@ use App\Models\FinancialV2\TransactionType;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 /**
  * UI adapter for governed Financial V2 master configuration.
@@ -35,6 +38,8 @@ final class FinancialMasterDataController
     public function __construct(
         private readonly FinancialMasterDataService $masters,
         private readonly MasterDataGovernanceService $governance,
+        private readonly FundPolicyVersionDeletionService $policyDeletion,
+        private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
     ) {}
 
     public function configuration(Request $request)
@@ -67,7 +72,35 @@ final class FinancialMasterDataController
                 ->orderByDesc('effective_from')
                 ->orderByDesc('version_no')
                 ->get() : collect(),
+            'fundPolicyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
+            'historicalDhuafaStatus' => $context['entity']?->code === ConfigureMrjHistoricalDhuafaReceiptService::ENTITY_CODE ? $this->historicalDhuafa->status() : null,
         ]);
+    }
+
+    public function provisionHistoricalDhuafa(Request $request)
+    {
+        $entity = $this->requiredEntity($request);
+        abort_unless($entity->code === ConfigureMrjHistoricalDhuafaReceiptService::ENTITY_CODE, 404, 'Provisioning hanya tersedia untuk MRJ-ACTUAL.');
+
+        try {
+            $result = $this->historicalDhuafa->configure($request->user()?->id);
+        } catch (Throwable $exception) {
+            report($exception);
+            $message = 'Konfigurasi historis DHUAFA gagal dan seluruh perubahan dibatalkan. '.$exception->getMessage();
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : back()->withErrors(['configuration' => $message]);
+        }
+
+        $message = $result['changed']
+            ? 'Konfigurasi historis DHUAFA berhasil diprovision. Financial fact tidak berubah.'
+            : 'Konfigurasi historis DHUAFA sudah siap. Tidak ada duplikasi atau perubahan financial fact.';
+        $redirect = route('financial-v2.configuration.index', ['entity' => $entity->id]);
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect, 'result' => $result])
+            : redirect($redirect)->with('success', $message);
     }
 
     public function accounts(Request $request)
@@ -224,6 +257,7 @@ final class FinancialMasterDataController
             'accounts' => $entityId ? Account::query()->forEntity($entityId)->where('status', 'active')->orderBy('code')->get() : collect(),
             'categories' => $entityId ? Category::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
             'programs' => $entityId ? Program::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
+            'policyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
         ]);
     }
 
@@ -252,6 +286,16 @@ final class FinancialMasterDataController
             $version = $this->governance->makeFundPolicyVersionEffective($policyVersion, $request->user()?->id);
 
             return ['Versi Aturan Dana kini berlaku. Perubahan berikutnya harus dibuat sebagai versi baru.', ['fund_policy_version_id' => $version->id]];
+        });
+    }
+
+    public function destroyPolicy(Request $request, string $policyVersion)
+    {
+        return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request, $policyVersion) {
+            $this->ensureScoped(FundPolicyVersion::class, $entity->id, $policyVersion);
+            $this->policyDeletion->delete($entity->id, $policyVersion, $request->user()?->id);
+
+            return ['Versi Aturan Dana yang belum pernah digunakan berhasil dihapus. Financial fact tidak berubah.', []];
         });
     }
 
