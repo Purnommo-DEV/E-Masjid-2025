@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" class="!overflow-x-hidden">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -106,6 +106,12 @@
                     </details>
                 @endforeach
                 @php $controlActive = request()->routeIs('financial-v2.controls.*'); @endphp
+                @php $configurationActive = request()->routeIs('financial-v2.configuration.*', 'financial-v2.masters.*'); @endphp
+                <a href="{{ route('financial-v2.configuration.index', ['entity' => $entityId]) }}" data-nav-item="configuration" data-active="{{ $configurationActive ? 'true' : 'false' }}" @if ($configurationActive) aria-current="page" @endif @class([
+                    'btn btn-ghost btn-sm whitespace-nowrap rounded-full font-semibold',
+                    'bg-emerald-100 text-emerald-900 hover:bg-emerald-200' => $configurationActive,
+                    'text-base-content/75 hover:bg-base-300' => ! $configurationActive,
+                ])>Konfigurasi</a>
                 <a href="{{ route('financial-v2.controls.index', ['entity' => $entityId]) }}" data-nav-item="controls" data-active="{{ $controlActive ? 'true' : 'false' }}" @if ($controlActive) aria-current="page" @endif @class([
                     'btn btn-ghost btn-sm whitespace-nowrap rounded-full font-semibold',
                     'bg-emerald-100 text-emerald-900 hover:bg-emerald-200' => $controlActive,
@@ -205,6 +211,8 @@
                 });
             });
             document.querySelectorAll('[data-financial-configuration]').forEach((status) => {
+                if (status.dataset.initialized === 'true') return;
+                status.dataset.initialized = 'true';
                 const form = status.closest('form');
                 const submit = form?.querySelector('[data-configuration-submit]');
                 const message = status.querySelector('[data-configuration-message]');

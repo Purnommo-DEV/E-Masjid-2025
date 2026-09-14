@@ -497,6 +497,7 @@ final class OperationalFinancialController
                 ? $this->budgetAllocations->availability($transaction->realization->budget_allocation_version_id)
                 : null,
             'labels' => $journal ? $this->journalLabels($journal) : $this->emptyJournalLabels(),
+            'configurationStatus' => $this->configurationStatusForTransaction($entity, $transaction),
         ]);
     }
 
@@ -1016,15 +1017,51 @@ final class OperationalFinancialController
         $category = filled($data['category_id'] ?? null)
             ? Category::query()->where('accounting_entity_id', $entity->id)->whereKey($data['category_id'])->value('name')
             : null;
+        $program = filled($data['program_id'] ?? null)
+            ? Program::query()->where('accounting_entity_id', $entity->id)->whereKey($data['program_id'])->value('name')
+            : null;
+        $operationLabel = self::OPERATIONS[$data['operation'] ?? '']['label'] ?? ($data['transaction_type_label'] ?? null);
 
         $details = collect([
             'Tanggal: '.CarbonImmutable::parse((string) $data['date'])->format('d/m/Y'),
+            $operationLabel ? 'Jenis transaksi: '.$operationLabel : null,
             $accounts->isNotEmpty() ? 'Rekening: '.$accounts->join(' → ') : null,
             $funds->isNotEmpty() ? 'Dana: '.$funds->join(' → ') : null,
             $category ? 'Kategori: '.$category : null,
+            $program ? 'Program: '.$program : null,
         ])->filter()->join(' · ');
 
         return '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini. '.$details;
+    }
+
+    /** @return array{state: string, message: string} */
+    private function configurationStatusForTransaction(AccountingEntity $entity, FinancialTransaction $transaction): array
+    {
+        try {
+            if ($this->configurationResolver->supports($transaction->type?->code)) {
+                $this->configurationResolver->resolveTransaction($transaction);
+            } else {
+                $this->configurationResolver->resolvePostingRuleVersionForTransaction($transaction);
+            }
+
+            return ['state' => 'ready', 'message' => '● Siap digunakan'];
+        } catch (FinancialDomainException|FinancialPostingException|InvalidArgumentException) {
+            $programIds = $transaction->splits->pluck('program_id')->filter()->unique();
+            $data = [
+                'date' => $transaction->accounting_date->toDateString(),
+                'transaction_type_label' => $transaction->type?->name,
+                'financial_account_id' => $transaction->primary_financial_account_id,
+                'source_financial_account_id' => $transaction->treasuryTransfer?->source_financial_account_id,
+                'destination_financial_account_id' => $transaction->treasuryTransfer?->destination_financial_account_id,
+                'fund_id' => $transaction->splits->pluck('fund_id')->filter()->unique()->first(),
+                'source_fund_id' => $transaction->interfundTransfer?->source_fund_id,
+                'destination_fund_id' => $transaction->interfundTransfer?->destination_fund_id,
+                'category_id' => $transaction->category_id,
+                'program_id' => $programIds->count() === 1 ? $programIds->first() : null,
+            ];
+
+            return ['state' => 'missing', 'message' => $this->configurationPreviewMessage($entity, $data)];
+        }
     }
 
     public function downloadAttachment(Request $request, Attachment $attachment)

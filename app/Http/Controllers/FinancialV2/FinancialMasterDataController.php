@@ -7,6 +7,8 @@ use App\Domain\FinancialV2\FinancialMasterDataService;
 use App\Domain\FinancialV2\MasterDataGovernanceService;
 use App\Models\FinancialV2\Account;
 use App\Models\FinancialV2\AccountingEntity;
+use App\Models\FinancialV2\ApprovalRequirement;
+use App\Models\FinancialV2\BankMutationPolicy;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\CostCenter;
 use App\Models\FinancialV2\FinancialAccount;
@@ -34,6 +36,39 @@ final class FinancialMasterDataController
         private readonly FinancialMasterDataService $masters,
         private readonly MasterDataGovernanceService $governance,
     ) {}
+
+    public function configuration(Request $request)
+    {
+        $context = $this->context($request->query('entity'));
+        $entityId = $context['entity']?->id;
+
+        return view('masjid.mrj.admin.financial-v2.masters.configuration', [
+            'entities' => $context['entities'],
+            'entity' => $context['entity'],
+            'transactionTypes' => $entityId ? TransactionType::query()->forEntity($entityId)->orderBy('name')->get() : collect(),
+            'financialAccounts' => $entityId ? FinancialAccount::query()->forEntity($entityId)->orderBy('name')->get() : collect(),
+            'funds' => $entityId ? Fund::query()->forEntity($entityId)->orderBy('name')->get() : collect(),
+            'categories' => $entityId ? Category::query()->forEntity($entityId)->orderBy('name')->get() : collect(),
+            'programs' => $entityId ? Program::query()->forEntity($entityId)->orderBy('name')->get() : collect(),
+            'postingRules' => $entityId ? PostingRule::query()
+                ->forEntity($entityId)
+                ->with(['transactionType', 'versions' => fn ($query) => $query->with('evidenceRequirements')->orderByDesc('effective_from')->orderByDesc('version_no')])
+                ->orderBy('name')
+                ->get() : collect(),
+            'approvalRequirements' => $entityId ? ApprovalRequirement::query()->forEntity($entityId)->orderByDesc('effective_from')->get() : collect(),
+            'bankPolicies' => $entityId ? BankMutationPolicy::query()
+                ->where('accounting_entity_id', $entityId)
+                ->with(['transactionType', 'financialAccount', 'fund', 'category', 'postingRuleVersion'])
+                ->orderByDesc('effective_from')
+                ->get() : collect(),
+            'fundPolicyVersions' => $entityId ? FundPolicyVersion::query()
+                ->forEntity($entityId)
+                ->with(['fund', 'rules'])
+                ->orderByDesc('effective_from')
+                ->orderByDesc('version_no')
+                ->get() : collect(),
+        ]);
+    }
 
     public function accounts(Request $request)
     {

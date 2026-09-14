@@ -80,13 +80,7 @@ final class FinancialTransactionConfigurationResolver
             ?? $lines->first()?->account_id);
         $this->validateLineFinancialAccounts($entity->id, $lines, $accounts, $funds, $category, $date);
         $fundPolicies = $this->fundPoliciesForLines($entity->id, $lines, $funds, $type, $category, $program, $bankPolicy, $date, $accounts, $input);
-        $approvalSteps = (int) (ApprovalRequirement::query()
-            ->where('accounting_entity_id', $entity->id)
-            ->where('transaction_type_id', $type->id)
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $date)
-            ->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
-            ->max('required_steps') ?? 0);
+        $approvalSteps = $this->approvalSteps($entity->id, $type->id, $date, $accounts, $funds, $category);
         $approvalSteps = max($approvalSteps, (int) ($bankPolicy?->required_approval_steps ?? 0));
         $evidenceRequirements = EvidenceRequirement::query()->where('posting_rule_version_id', $version->id)->orderBy('evidence_type')->get();
         if ($bankPolicy && ! $evidenceRequirements->contains(fn (EvidenceRequirement $requirement): bool => $requirement->evidence_type === $bankPolicy->evidence_type && $requirement->minimum_count > 0)) {
@@ -132,6 +126,139 @@ final class FinancialTransactionConfigurationResolver
             'category_id' => $transaction->category_id,
             'program_id' => $programIds->first(),
         ]);
+    }
+
+    /**
+     * Resolve the effective posting rule for every Financial V2 transaction.
+     * Operational transactions use the full configuration contract; governed
+     * system transactions use the same historical version selector here.
+     */
+    public function resolvePostingRuleVersionForTransaction(FinancialTransaction $transaction): PostingRuleVersion
+    {
+        $transaction->loadMissing(['type', 'category']);
+        if ($this->supports($transaction->type?->code)) {
+            return $this->resolveTransaction($transaction)->postingRuleVersion;
+        }
+
+        $date = $transaction->accounting_date->toDateString();
+        $query = PostingRuleVersion::query()
+            ->with('rule')
+            ->where('accounting_entity_id', $transaction->accounting_entity_id)
+            ->where(fn (Builder $builder) => $builder->where('status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
+            ->where('effective_from', '<=', $date)
+            ->where(fn (Builder $builder) => $builder->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
+            ->whereHas('rule', fn (Builder $builder) => $builder->where('transaction_type_id', $transaction->transaction_type_id)->where('status', 'active'))
+            ->when($transaction->category?->default_posting_rule_id, fn (Builder $builder, string $ruleId) => $builder->where('posting_rule_id', $ruleId))
+            ->orderByDesc('effective_from')
+            ->orderByDesc('version_no');
+        $versions = $query->limit(2)->get();
+        if ($versions->count() > 1) {
+            throw new FinancialPostingException('E-RULE-AMBIGUOUS', 'Lebih dari satu konfigurasi pencatatan berlaku pada tanggal transaksi.');
+        }
+
+        return $versions->first()
+            ?? throw new FinancialPostingException('E-RULE-NOT-EFFECTIVE', 'Konfigurasi pencatatan belum tersedia pada tanggal transaksi.');
+    }
+
+    public function requiredApprovalStepsForTransaction(FinancialTransaction $transaction): int
+    {
+        if ($this->supports($transaction->type?->code)) {
+            return $this->resolveTransaction($transaction)->requiredApprovalSteps;
+        }
+
+        return $this->approvalSteps(
+            $transaction->accounting_entity_id,
+            $transaction->transaction_type_id,
+            $transaction->accounting_date->toDateString(),
+            collect(),
+            collect(),
+            $transaction->category,
+        );
+    }
+
+    /** @return Collection<int, EvidenceRequirement> */
+    public function evidenceRequirementsForVersion(PostingRuleVersion $version): Collection
+    {
+        return EvidenceRequirement::query()
+            ->where('accounting_entity_id', $version->accounting_entity_id)
+            ->where('posting_rule_version_id', $version->id)
+            ->orderBy('evidence_type')
+            ->get();
+    }
+
+    /** @param array<string, mixed> $line */
+    public function resolveFundPolicyForPostingLine(FinancialTransaction $transaction, array $line): FundPolicyVersion|BankMutationPolicy|null
+    {
+        $transaction->loadMissing(['type', 'category', 'treasuryTransfer']);
+        $date = $transaction->accounting_date->toDateString();
+        $funds = $this->funds($transaction->accounting_entity_id, ['fund_id' => $line['fund_id'] ?? null], $date);
+        $accounts = $this->financialAccounts($transaction->accounting_entity_id, [
+            'financial_account_id' => $transaction->primary_financial_account_id,
+            'source_financial_account_id' => $transaction->treasuryTransfer?->source_financial_account_id,
+            'destination_financial_account_id' => $transaction->treasuryTransfer?->destination_financial_account_id,
+        ], $date);
+        $bankPolicy = $this->bankMutationPolicy(
+            $transaction->accounting_entity_id,
+            $transaction->transaction_type_id,
+            $transaction->primary_financial_account_id,
+            $transaction->category,
+            $funds,
+            $date,
+        );
+
+        return $this->fundPolicy(
+            $funds->first(),
+            $transaction->type,
+            (string) ($line['account_id'] ?? ''),
+            $line['category_id'] ?? null,
+            $line['program_id'] ?? null,
+            $line['cost_center_id'] ?? null,
+            $transaction->category,
+            $bankPolicy,
+            $date,
+            $accounts,
+            $funds,
+        );
+    }
+
+    public function bankMutationPolicyForTransaction(FinancialTransaction $transaction, ?string $fundId = null): ?BankMutationPolicy
+    {
+        $transaction->loadMissing(['type', 'category', 'splits']);
+        $date = $transaction->accounting_date->toDateString();
+        $resolvedFundId = $fundId ?? $transaction->splits->pluck('fund_id')->filter()->unique()->first();
+        if (! $resolvedFundId || ! $transaction->category || ! array_key_exists($transaction->category->code, BankMutationService::CATEGORY_CODES)) {
+            return null;
+        }
+        $funds = $this->funds($transaction->accounting_entity_id, ['fund_id' => $resolvedFundId], $date);
+
+        return $this->bankMutationPolicy(
+            $transaction->accounting_entity_id,
+            $transaction->transaction_type_id,
+            $transaction->primary_financial_account_id,
+            $transaction->category,
+            $funds,
+            $date,
+        );
+    }
+
+    /** @param iterable<string> $fundIds */
+    public function assertFundPolicyCompatibility(string $entityId, iterable $fundIds, string $date, ?string $accountId, ?string $categoryId, ?string $programId): void
+    {
+        $type = TransactionType::query()
+            ->where('accounting_entity_id', $entityId)
+            ->where('code', TransactionTypeCode::Payment->value)
+            ->where('status', 'active')
+            ->first();
+        if (! $type) {
+            throw new FinancialPostingException('E-CONFIGURATION-MISSING', 'Jenis transaksi pengeluaran yang aktif belum tersedia.');
+        }
+
+        $funds = $this->funds($entityId, ['fund_ids' => collect($fundIds)->filter()->unique()->values()->all()], $date);
+        $category = $this->category($entityId, $type->id, $categoryId, $date);
+        $program = $this->program($entityId, $programId, $date);
+        foreach ($funds as $fund) {
+            $this->fundPolicy($fund, $type, (string) $accountId, $category?->id, $program?->id, null, $category, null, $date, collect(), $funds);
+        }
     }
 
     /** @param array<string, mixed> $input */
@@ -218,7 +345,7 @@ final class FinancialTransactionConfigurationResolver
             return null;
         }
         $fund = $funds->count() === 1 ? $funds->first() : null;
-        $policy = $accountId && $fund ? BankMutationPolicy::query()
+        $policies = $accountId && $fund ? BankMutationPolicy::query()
             ->with('postingRuleVersion.rule')
             ->where('accounting_entity_id', $entityId)
             ->where('transaction_type_id', $typeId)
@@ -228,7 +355,11 @@ final class FinancialTransactionConfigurationResolver
             ->where('status', 'active')
             ->where('effective_from', '<=', $date)
             ->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
-            ->orderByDesc('effective_from')->first() : null;
+            ->orderByDesc('effective_from')->limit(2)->get() : collect();
+        if ($policies->count() > 1) {
+            throw $this->missing($date, collect(['primary' => FinancialAccount::find($accountId)])->filter(), $funds, $category, 'Lebih dari satu kebijakan Mutasi Bank berlaku pada tanggal tersebut.');
+        }
+        $policy = $policies->first();
         if (! $policy) {
             throw $this->missing($date, collect(['primary' => $accountId ? FinancialAccount::find($accountId) : null])->filter(), $funds, $category);
         }
@@ -257,7 +388,11 @@ final class FinancialTransactionConfigurationResolver
             } else {
                 $query->whereHas('rule', fn (Builder $builder) => $builder->where('rule_family', self::RULE_FAMILIES[$type->code]));
             }
-            $version = $query->orderByDesc('effective_from')->orderByDesc('version_no')->first();
+            $versions = $query->orderByDesc('effective_from')->orderByDesc('version_no')->limit(2)->get();
+            if ($versions->count() > 1) {
+                throw $this->missing($date, $accounts, $funds, $category, 'Lebih dari satu aturan pencatatan berlaku pada tanggal tersebut.');
+            }
+            $version = $versions->first();
             $valid = (bool) $version;
         }
         if (! $valid) {
@@ -391,12 +526,16 @@ final class FinancialTransactionConfigurationResolver
         if (! in_array($fund->type?->classification, ['restricted', 'perpetual_restricted', 'custodial', 'syariah'], true)) {
             return null;
         }
-        $policy = FundPolicyVersion::query()
+        $policies = FundPolicyVersion::query()
             ->where('fund_id', $fund->id)
             ->where(fn (Builder $query) => $query->where('status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
             ->where('effective_from', '<=', $date)
             ->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
-            ->orderByDesc('effective_from')->orderByDesc('version_no')->first();
+            ->orderByDesc('effective_from')->orderByDesc('version_no')->limit(2)->get();
+        if ($policies->count() > 1) {
+            throw $this->missing($date, $accounts, $funds, $selectedCategory, 'Lebih dari satu Aturan Dana berlaku pada tanggal tersebut.');
+        }
+        $policy = $policies->first();
         $decisions = $policy ? FundPolicyRule::query()
             ->where('fund_policy_version_id', $policy->id)
             ->where('transaction_type_id', $type->id)
@@ -406,10 +545,31 @@ final class FinancialTransactionConfigurationResolver
             ->where(fn (Builder $query) => $query->whereNull('cost_center_id')->orWhere('cost_center_id', $costCenterId))
             ->pluck('decision') : collect();
         if ($decisions->contains('prohibited') || (! $decisions->contains('allowed') && ! $bankPolicy)) {
-            throw $this->missing($date, $accounts, $funds, $selectedCategory, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut.');
+            throw new FinancialPostingException(
+                'E-CONFIGURATION-MISSING',
+                "Dana {$fund->name} tidak dapat digunakan untuk kombinasi tersebut. Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut.",
+            );
         }
 
         return $decisions->contains('allowed') ? $policy : $bankPolicy;
+    }
+
+    private function approvalSteps(string $entityId, string $typeId, string $date, Collection $accounts, Collection $funds, ?Category $category): int
+    {
+        $requirements = ApprovalRequirement::query()
+            ->where('accounting_entity_id', $entityId)
+            ->where('transaction_type_id', $typeId)
+            ->where('status', 'active')
+            ->where('effective_from', '<=', $date)
+            ->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
+            ->orderByDesc('effective_from')
+            ->limit(2)
+            ->get();
+        if ($requirements->count() > 1) {
+            throw $this->missing($date, $accounts, $funds, $category, 'Lebih dari satu aturan persetujuan berlaku pada tanggal tersebut.');
+        }
+
+        return (int) ($requirements->first()?->required_steps ?? 0);
     }
 
     private function missing(string $date, Collection $accounts, Collection $funds, ?Category $category, ?string $reason = null): FinancialPostingException

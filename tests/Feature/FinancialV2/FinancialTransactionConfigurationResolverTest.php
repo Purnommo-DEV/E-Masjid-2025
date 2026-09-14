@@ -58,6 +58,50 @@ test('canonical resolver automatically resolves valid RCV PAY TRF and IFT config
         ->and($interfund->postingRuleVersion->id)->toBe($context['interfundVersion']->id);
 });
 
+test('canonical preview endpoint reports ready for RCV PAY TRF and IFT and incomplete after a required field is cleared', function () {
+    $context = UatFinancialFixture::context();
+    $user = User::factory()->create();
+    $base = ['entity' => $context['entity']->id, 'date' => $context['today']];
+    $payloads = [
+        'receipt' => [
+            'financial_account_id' => $context['accountA']->id,
+            'fund_id' => $context['fund']->id,
+            'category_id' => $context['receiptCategory']->id,
+            'program_id' => $context['program']->id,
+        ],
+        'payment' => [
+            'financial_account_id' => $context['accountA']->id,
+            'fund_id' => $context['fund']->id,
+            'category_id' => $context['paymentCategory']->id,
+        ],
+        'transfer' => [
+            'source_financial_account_id' => $context['accountA']->id,
+            'destination_financial_account_id' => $context['accountB']->id,
+            'fund_id' => $context['fund']->id,
+        ],
+        'interfund' => [
+            'financial_account_id' => $context['accountA']->id,
+            'source_fund_id' => $context['fund']->id,
+            'destination_fund_id' => $context['destinationFund']->id,
+        ],
+    ];
+
+    foreach ($payloads as $operation => $dimensions) {
+        $this->actingAs($user)->postJson(route('financial-v2.preview'), $base + ['operation' => $operation] + $dimensions)
+            ->assertOk()
+            ->assertJsonPath('state', 'ready')
+            ->assertJsonPath('message', '● Siap digunakan');
+    }
+
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), $base + [
+        'operation' => 'interfund',
+        'financial_account_id' => $context['accountA']->id,
+        'source_fund_id' => $context['fund']->id,
+    ])->assertOk()
+        ->assertJsonPath('state', 'incomplete')
+        ->assertJsonPath('message', 'Lengkapi data transaksi untuk memeriksa konfigurasi.');
+});
+
 test('resolver selects a superseded approved version when its date range covers the transaction', function () {
     $context = UatFinancialFixture::context();
     $historicalDate = now()->subDays(2)->toDateString();
@@ -90,6 +134,30 @@ test('resolver selects a superseded approved version when its date range covers 
 
     expect($resolved->postingRuleVersion->id)->toBe($context['receiptVersion']->id)
         ->and($resolved->postingRuleVersion->status)->toBe('superseded');
+});
+
+test('resolver rejects overlapping effective posting-rule versions instead of selecting one silently', function () {
+    $context = UatFinancialFixture::context();
+    PostingRuleVersion::create([
+        'accounting_entity_id' => $context['entity']->id,
+        'posting_rule_id' => $context['receiptVersion']->posting_rule_id,
+        'version_no' => 2,
+        'effective_from' => now()->subDay()->toDateString(),
+        'input_contract_ref' => 'overlap-test',
+        'journal_template_ref' => 'overlap-test',
+        'business_rule_refs' => 'BR-OVERLAP',
+        'status' => 'effective',
+        'approved_at' => now(),
+    ]);
+
+    expect(fn () => app(FinancialTransactionConfigurationResolver::class)->resolve([
+        'accounting_entity_id' => $context['entity']->id,
+        'transaction_type_id' => $context['receiptType']->id,
+        'date' => $context['today'],
+        'financial_account_id' => $context['accountA']->id,
+        'fund_id' => $context['fund']->id,
+        'category_id' => $context['receiptCategory']->id,
+    ]))->toThrow(FinancialPostingException::class, 'Lebih dari satu aturan pencatatan berlaku');
 });
 
 test('resolver validates every fund-bearing posting line against the policy matrix', function () {

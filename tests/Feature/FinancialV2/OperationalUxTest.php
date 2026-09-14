@@ -196,6 +196,8 @@ test('generic draft discovery keeps receipt drafts findable, scoped, editable, a
     $this->actingAs($user)->get(route('financial-v2.transactions.show', $transaction))
         ->assertOk()
         ->assertSee('← Kembali ke Draft Transaksi')
+        ->assertSee('Status konfigurasi')
+        ->assertSee('● Siap digunakan')
         ->assertSee(route('financial-v2.transactions.drafts', ['entity' => $context['entity']->id, 'year' => 2026, 'status' => 'draft']))
         ->assertSee('Ubah draft')
         ->assertSee('Ajukan');
@@ -377,6 +379,31 @@ test('fund usage preview is sent as a CSRF-protected POST request', function () 
     expect(strpos($html, 'const version = ++requestVersion;'))->toBeLessThan(strpos($html, 'fields.some((name) => !form.elements[name]?.value)'));
 });
 
+test('all operational configuration-aware forms start incomplete and share the canonical configuration UI', function () {
+    $context = uxOperationalContext();
+    $user = User::factory()->create();
+    $factsBefore = [FinancialTransaction::count(), Journal::count(), JournalLine::count(), LedgerEntry::count(), Voucher::count()];
+
+    foreach (['receipt', 'payment', 'transfer', 'interfund'] as $operation) {
+        $this->actingAs($user)->get(route('financial-v2.transactions.create', ['operation' => $operation, 'entity' => $context['entity']->id]))
+            ->assertOk()
+            ->assertSee('Status konfigurasi')
+            ->assertSee('Lengkapi data transaksi untuk memeriksa konfigurasi.');
+    }
+
+    $this->actingAs($user)->get(route('financial-v2.configuration.index', ['entity' => $context['entity']->id]))
+        ->assertOk()
+        ->assertSee('Konfigurasi Financial V2')
+        ->assertSee('Aturan Pencatatan dan Bukti')
+        ->assertSee('Persetujuan')
+        ->assertSee('Aturan Dana')
+        ->assertSee('Kebijakan Mutasi Bank')
+        ->assertSee(route('financial-v2.masters.accounts.index', ['entity' => $context['entity']->id]))
+        ->assertSee(route('financial-v2.masters.policies.index', ['entity' => $context['entity']->id]));
+
+    expect([FinancialTransaction::count(), Journal::count(), JournalLine::count(), LedgerEntry::count(), Voucher::count()])->toBe($factsBefore);
+});
+
 test('receipt configuration preview distinguishes incomplete ready and missing states without creating financial facts', function () {
     $context = uxOperationalContext();
     $user = User::factory()->create();
@@ -397,6 +424,7 @@ test('receipt configuration preview distinguishes incomplete ready and missing s
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'fund_id' => $context['fund']->id,
         'category_id' => $context['receiptCategory']->id,
+        'program_id' => $context['program']->id,
     ];
     $this->actingAs($user)->postJson(route('financial-v2.preview'), $valid)
         ->assertOk()
@@ -415,6 +443,8 @@ test('receipt configuration preview distinguishes incomplete ready and missing s
             && str_contains($message, 'Rekening: Kas Operasional')
             && str_contains($message, 'Dana: Dana Operasional')
             && str_contains($message, 'Kategori: Listrik')
+            && str_contains($message, 'Jenis transaksi: Penerimaan')
+            && str_contains($message, 'Program: Program Operasional')
             && ! str_contains($message, 'JournalLine')
             && ! str_contains($message, 'Ledger'));
 

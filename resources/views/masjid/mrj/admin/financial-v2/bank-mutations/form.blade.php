@@ -104,11 +104,11 @@
                         <div class="flex justify-between gap-3"><dt class="text-base-content/60">Net mutasi</dt><dd class="text-right font-semibold" data-preview-net>Rp0,00</dd></div>
                         <div class="flex justify-between gap-3 border-t border-base-300 pt-3"><dt class="font-semibold">Saldo setelah</dt><dd class="text-right font-bold text-emerald-700" data-preview-closing>—</dd></div>
                     </dl>
-                    <p class="mt-3 text-xs leading-5 text-base-content/55" data-preview-note aria-live="polite">Lengkapi baris mutasi untuk memeriksa konfigurasi dan pratinjau saldo.</p>
+                    <p class="mt-3 text-xs leading-5 text-base-content/55" data-preview-note>Pratinjau saldo tersedia setelah data transaksi lengkap.</p>
                 </section>
-                <section class="rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+                <section class="rounded-2xl border border-base-300 bg-base-200/40 p-4 text-sm" data-bank-configuration aria-live="polite">
                     <h2 class="font-bold">Status Konfigurasi</h2>
-                    <p class="mt-2 text-xs leading-5">Sistem memilih konfigurasi yang berlaku dari rekening, Dana, jenis mutasi, dan tanggal. Draft hanya dapat disimpan setelah kombinasi tersebut dinyatakan siap.</p>
+                    <p class="mt-2 text-xs leading-5" data-bank-configuration-message>Lengkapi data transaksi untuk memeriksa konfigurasi.</p>
                 </section>
             </aside>
         </form>
@@ -150,6 +150,7 @@
     let nextIndex = 0;
     let timer;
     let requestVersion = 0;
+    let controller;
     let baseBalance = null;
     let postedMovement = 0;
 
@@ -216,18 +217,34 @@
         form.querySelector('[data-preview-closing]').textContent = baseBalance === null ? '—' : money(baseBalance + net);
     };
 
+    const paintConfiguration = (state, message) => {
+        const status = form.querySelector('[data-bank-configuration]');
+        const tones = {
+            ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+            missing: 'border-amber-200 bg-amber-50 text-amber-950',
+            pending: 'border-base-300 bg-base-200/40',
+        };
+        status.className = `rounded-2xl border p-4 text-sm ${tones[state]}`;
+        status.querySelector('[data-bank-configuration-message]').textContent = message;
+        submit.disabled = state !== 'ready';
+        form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
+    };
+
     const refresh = () => {
         const version = ++requestVersion;
+        controller?.abort();
         renderCurrentState();
         clearTimeout(timer);
         const accountId = form.elements.financial_account_id?.value;
         const date = form.elements.date?.value;
-        if (!accountId || !date) {
+        const validEntries = currentEntries().filter((entry) => entry.category_id && entry.fund_id && entry.amount > 0);
+        const configurationComplete = !!accountId && !!date && rows().length > 0 && validEntries.length === rows().length;
+        if (!configurationComplete) {
             baseBalance = null;
             postedMovement = 0;
-            submit.disabled = true;
             form.querySelector('[data-preview-opening]').textContent = '—';
-            form.querySelector('[data-preview-note]').textContent = 'Pilih rekening dan tanggal untuk memeriksa konfigurasi.';
+            form.querySelector('[data-preview-note]').textContent = 'Pratinjau saldo tersedia setelah data transaksi lengkap.';
+            paintConfiguration('pending', 'Lengkapi data transaksi untuk memeriksa konfigurasi.');
             renderCurrentState();
             return;
         }
@@ -235,20 +252,20 @@
         baseBalance = null;
         postedMovement = 0;
         form.querySelector('[data-preview-opening]').textContent = '—';
-        submit.disabled = true;
-        form.querySelector('[data-preview-note]').textContent = 'Memeriksa konfigurasi yang berlaku pada tanggal transaksi…';
+        paintConfiguration('pending', 'Memeriksa konfigurasi yang berlaku pada tanggal transaksi…');
+        form.querySelector('[data-preview-note]').textContent = 'Memuat pratinjau saldo…';
         renderCurrentState();
 
         timer = setTimeout(async () => {
-            const validEntries = currentEntries().filter((entry) => entry.category_id && entry.fund_id && entry.amount > 0);
-            const configurationComplete = validEntries.length === rows().length;
             const loading = form.querySelector('[data-preview-loading]');
             loading?.classList.remove('hidden');
+            controller = new AbortController();
             try {
                 const response = await fetch(form.dataset.previewUrl, {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                    signal: controller.signal,
                     body: JSON.stringify({
                         entity: form.elements.entity.value,
                         financial_account_id: accountId,
@@ -257,23 +274,27 @@
                     }),
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message || 'Pratinjau belum tersedia.');
+                if (!response.ok || data.state !== 'ready') {
+                    const message = data.state === 'missing' && String(data.message || '').startsWith('○ Konfigurasi pencatatan belum tersedia')
+                        ? data.message
+                        : 'Status konfigurasi belum dapat diperiksa. Coba lagi.';
+                    throw new Error(message);
+                }
                 if (version !== requestVersion) return;
-                baseBalance = Number(data.opening);
+                baseBalance = data.balance_preview_available === false ? null : Number(data.opening);
                 postedMovement = Number(data.posted_movement);
-                form.querySelector('[data-preview-opening]').textContent = money(baseBalance);
-                submit.disabled = !configurationComplete;
-                form.querySelector('[data-preview-note]').textContent = configurationComplete
-                    ? '● Konfigurasi siap digunakan. Pratinjau mengikuti ledger posted dan nilai form saat ini.'
-                    : 'Lengkapi jenis, Dana, dan nominal setiap baris. Movement kembali Rp0 saat nominal dikosongkan.';
+                form.querySelector('[data-preview-opening]').textContent = baseBalance === null ? '—' : money(baseBalance);
+                paintConfiguration('ready', '● Siap digunakan');
+                form.querySelector('[data-preview-note]').textContent = data.preview_message || 'Pratinjau mengikuti ledger posted dan nilai form saat ini.';
                 renderCurrentState();
             } catch (error) {
+                if (error.name === 'AbortError') return;
                 if (version !== requestVersion) return;
                 baseBalance = null;
                 postedMovement = 0;
-                submit.disabled = true;
                 form.querySelector('[data-preview-opening]').textContent = '—';
-                form.querySelector('[data-preview-note]').textContent = error.message;
+                form.querySelector('[data-preview-note]').textContent = 'Pratinjau saldo belum tersedia.';
+                paintConfiguration('missing', error.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.');
                 renderCurrentState();
             } finally {
                 if (version === requestVersion) loading?.classList.add('hidden');

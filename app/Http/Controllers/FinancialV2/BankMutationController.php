@@ -46,7 +46,6 @@ final class BankMutationController extends Controller
         [$entities, $entity] = $this->entityContext($request);
         $filters = $request->only(['year', 'month', 'financial_account_id', 'fund_id', 'category_id', 'status']);
         $options = $entity ? $this->options($entity->id) : $this->emptyOptions();
-        $configurationStatus = $this->configuration->mrjBankMutationStatus();
         $transactions = null;
         $editableBatchIds = collect();
         if ($entity) {
@@ -91,7 +90,7 @@ final class BankMutationController extends Controller
             }
         }
 
-        return view('masjid.mrj.admin.financial-v2.bank-mutations.index', compact('entities', 'entity', 'filters', 'options', 'transactions', 'editableBatchIds', 'configurationStatus'));
+        return view('masjid.mrj.admin.financial-v2.bank-mutations.index', compact('entities', 'entity', 'filters', 'options', 'transactions', 'editableBatchIds'));
     }
 
     public function create(Request $request): View
@@ -107,7 +106,6 @@ final class BankMutationController extends Controller
             'batchTransactions' => collect(),
             'batchId' => (string) Str::uuid(),
             'today' => now()->toDateString(),
-            'configurationStatus' => $this->configuration->mrjBankMutationStatus(),
         ]);
     }
 
@@ -190,7 +188,6 @@ final class BankMutationController extends Controller
             'batchTransactions' => $transactions,
             'batchId' => $batch,
             'today' => now()->toDateString(),
-            'configurationStatus' => $this->configuration->mrjBankMutationStatus(),
         ]);
     }
 
@@ -341,12 +338,15 @@ final class BankMutationController extends Controller
 
         $data = $request->validate([
             'entity' => ['required', 'uuid'],
-            'financial_account_id' => ['required', 'uuid'],
-            'fund_id' => ['required', 'uuid'],
-            'date' => ['required', 'date'],
-            'category_id' => ['required', 'uuid'],
-            'amount' => ['required', 'numeric', 'gt:0'],
+            'financial_account_id' => ['nullable', 'uuid'],
+            'fund_id' => ['nullable', 'uuid'],
+            'date' => ['nullable', 'date'],
+            'category_id' => ['nullable', 'uuid'],
+            'amount' => ['nullable', 'numeric', 'gt:0'],
         ]);
+        if (collect(['financial_account_id', 'fund_id', 'date', 'category_id', 'amount'])->contains(fn (string $field): bool => blank($data[$field] ?? null))) {
+            return response()->json(['ok' => true, 'allowed' => false, 'state' => 'incomplete', 'message' => 'Lengkapi data transaksi untuk memeriksa konfigurasi.']);
+        }
         $category = DB::table('financial_v2_categories')->where('accounting_entity_id', $data['entity'])->where('id', $data['category_id'])->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))->first();
         abort_unless($category, 422, 'Jenis mutasi tidak valid.');
         try {
@@ -358,21 +358,29 @@ final class BankMutationController extends Controller
                 'fund_id' => $data['fund_id'],
                 'category_id' => $data['category_id'],
             ]);
-        } catch (FinancialPostingException $exception) {
-            return response()->json(['message' => $exception->getMessage()], 422);
+        } catch (FinancialPostingException) {
+            return response()->json(['ok' => false, 'allowed' => false, 'state' => 'missing', 'message' => $this->configurationMessage($data['entity'], $data['date'], $data['financial_account_id'], $data['fund_id'], $data['category_id'])], 422);
         }
-        $previousDate = CarbonImmutable::parse($data['date'])->subDay()->toDateString();
-        $opening = $this->balances->financialAccountBalance($data['entity'], $data['financial_account_id'], $previousDate)['balance'];
-        $postedMovement = $this->balances->financialAccountMovement($data['entity'], $data['financial_account_id'], $data['date'], $data['date']);
+        [$opening, $postedMovement, $balancePreviewAvailable] = $this->balancePreview(
+            $data['entity'],
+            $data['financial_account_id'],
+            $data['date'],
+        );
         $proposed = $category->code === 'BANK_INTEREST' ? DecimalAmount::normalize($data['amount']) : DecimalAmount::subtract('0.00', $data['amount']);
         $net = DecimalAmount::add($postedMovement, $proposed);
 
         return response()->json([
+            'ok' => true,
+            'allowed' => true,
+            'state' => 'ready',
+            'message' => '● Siap digunakan',
+            'balance_preview_available' => $balancePreviewAvailable,
+            'preview_message' => $balancePreviewAvailable ? null : 'Pratinjau saldo belum tersedia. Konfigurasi tetap siap digunakan.',
             'opening' => $opening,
             'posted_movement' => $postedMovement,
             'proposed_movement' => $proposed,
             'net_movement' => $net,
-            'closing' => DecimalAmount::add($opening, $net),
+            'closing' => $opening === null ? null : DecimalAmount::add($opening, $net),
         ]);
     }
 
@@ -380,19 +388,30 @@ final class BankMutationController extends Controller
     {
         $data = $request->validate([
             'entity' => ['required', 'uuid'],
-            'financial_account_id' => ['required', 'uuid'],
-            'date' => ['required', 'date'],
+            'financial_account_id' => ['nullable', 'uuid'],
+            'date' => ['nullable', 'date'],
             'mutations' => ['present', 'array', 'max:50'],
-            'mutations.*.category_id' => ['required', 'uuid'],
-            'mutations.*.fund_id' => ['required', 'uuid'],
-            'mutations.*.amount' => ['required', 'numeric', 'min:0'],
+            'mutations.*.category_id' => ['nullable', 'uuid'],
+            'mutations.*.fund_id' => ['nullable', 'uuid'],
+            'mutations.*.amount' => ['nullable', 'numeric', 'min:0'],
         ]);
+        $incomplete = blank($data['financial_account_id'] ?? null)
+            || blank($data['date'] ?? null)
+            || empty($data['mutations'])
+            || collect($data['mutations'])->contains(fn (array $mutation): bool => blank($mutation['category_id'] ?? null)
+                || blank($mutation['fund_id'] ?? null)
+                || DecimalAmount::compare($mutation['amount'] ?? 0, '0.00') <= 0);
+        if ($incomplete) {
+            return response()->json(['ok' => true, 'allowed' => false, 'state' => 'incomplete', 'message' => 'Lengkapi data transaksi untuk memeriksa konfigurasi.']);
+        }
         abort_unless(DB::table('financial_v2_financial_accounts')->where('accounting_entity_id', $data['entity'])->where('id', $data['financial_account_id'])->where('status', 'active')->exists(), 422, 'Rekening tidak valid.');
 
-        $previousDate = CarbonImmutable::parse($data['date'])->subDay()->toDateString();
-        $opening = $this->balances->financialAccountBalance($data['entity'], $data['financial_account_id'], $previousDate)['balance'];
-        $postedMovement = $this->balances->financialAccountMovement($data['entity'], $data['financial_account_id'], $data['date'], $data['date']);
-        $running = DecimalAmount::add($opening, $postedMovement);
+        [$opening, $postedMovement, $balancePreviewAvailable] = $this->balancePreview(
+            $data['entity'],
+            $data['financial_account_id'],
+            $data['date'],
+        );
+        $running = $opening === null ? null : DecimalAmount::add($opening, $postedMovement);
         $totalCredit = '0.00';
         $totalDebit = '0.00';
         $rowPreviews = [];
@@ -410,8 +429,13 @@ final class BankMutationController extends Controller
                     'fund_id' => $mutation['fund_id'],
                     'category_id' => $mutation['category_id'],
                 ]);
-            } catch (FinancialPostingException $exception) {
-                return response()->json(['message' => $exception->getMessage()], 422);
+            } catch (FinancialPostingException) {
+                return response()->json([
+                    'ok' => false,
+                    'allowed' => false,
+                    'state' => 'missing',
+                    'message' => $this->configurationMessage($data['entity'], $data['date'], $data['financial_account_id'], $mutation['fund_id'], $mutation['category_id']),
+                ], 422);
             }
 
             $amount = DecimalAmount::normalize($mutation['amount']);
@@ -422,13 +446,21 @@ final class BankMutationController extends Controller
             } else {
                 $totalDebit = DecimalAmount::add($totalDebit, $amount);
             }
-            $running = DecimalAmount::add($running, $signed);
+            if ($running !== null) {
+                $running = DecimalAmount::add($running, $signed);
+            }
             $rowPreviews[] = ['movement' => $signed, 'balance' => $running];
         }
 
         $proposedNet = DecimalAmount::subtract($totalCredit, $totalDebit);
 
         return response()->json([
+            'ok' => true,
+            'allowed' => true,
+            'state' => 'ready',
+            'message' => '● Siap digunakan',
+            'balance_preview_available' => $balancePreviewAvailable,
+            'preview_message' => $balancePreviewAvailable ? null : 'Pratinjau saldo belum tersedia. Konfigurasi tetap siap digunakan.',
             'opening' => $opening,
             'posted_movement' => $postedMovement,
             'total_credit' => $totalCredit,
@@ -542,10 +574,7 @@ final class BankMutationController extends Controller
     /** @return array<string, mixed> */
     private function options(string $entityId): array
     {
-        $policies = BankMutationPolicy::query()->with(['category', 'financialAccount', 'fund'])->where('accounting_entity_id', $entityId)->where('status', 'active')->get();
-
         return [
-            'policies' => $policies,
             'categories' => Category::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))->orderBy('name')->get(),
             'financialAccounts' => FinancialAccount::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('name')->get(),
             'funds' => Fund::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('name')->get(),
@@ -556,6 +585,38 @@ final class BankMutationController extends Controller
     /** @return array<string, mixed> */
     private function emptyOptions(): array
     {
-        return ['policies' => collect(), 'categories' => collect(), 'financialAccounts' => collect(), 'funds' => collect(), 'defaultFundId' => null];
+        return ['categories' => collect(), 'financialAccounts' => collect(), 'funds' => collect(), 'defaultFundId' => null];
+    }
+
+    private function configurationMessage(string $entityId, string $date, string $accountId, string $fundId, string $categoryId): string
+    {
+        $account = FinancialAccount::query()->where('accounting_entity_id', $entityId)->whereKey($accountId)->value('name');
+        $fund = Fund::query()->where('accounting_entity_id', $entityId)->whereKey($fundId)->value('name');
+        $category = Category::query()->where('accounting_entity_id', $entityId)->whereKey($categoryId)->value('name');
+
+        return '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini. '
+            .'Tanggal: '.CarbonImmutable::parse($date)->format('d/m/Y')
+            .' · Jenis transaksi: Mutasi Bank'
+            .' · Rekening: '.($account ?: 'Belum dipilih')
+            .' · Dana: '.($fund ?: 'Belum dipilih')
+            .' · Kategori: '.($category ?: 'Belum dipilih');
+    }
+
+    /** @return array{0: ?string, 1: string, 2: bool} */
+    private function balancePreview(string $entityId, string $financialAccountId, string $date): array
+    {
+        try {
+            $previousDate = CarbonImmutable::parse($date)->subDay()->toDateString();
+
+            return [
+                $this->balances->financialAccountBalance($entityId, $financialAccountId, $previousDate)['balance'],
+                $this->balances->financialAccountMovement($entityId, $financialAccountId, $date, $date),
+                true,
+            ];
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return [null, '0.00', false];
+        }
     }
 }

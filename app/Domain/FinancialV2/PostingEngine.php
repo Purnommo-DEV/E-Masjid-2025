@@ -8,20 +8,15 @@ use App\Models\FinancialV2\AccountDimensionRule;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\ApprovalDecision;
-use App\Models\FinancialV2\ApprovalRequirement;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\BankAccountDetail;
-use App\Models\FinancialV2\BankMutationPolicy;
 use App\Models\FinancialV2\BudgetAllocationVersion;
 use App\Models\FinancialV2\CashAccountDetail;
 use App\Models\FinancialV2\DocumentSequence;
-use App\Models\FinancialV2\EvidenceRequirement;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Fund;
-use App\Models\FinancialV2\FundPolicyRule;
-use App\Models\FinancialV2\FundPolicyVersion;
 use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\IdempotencyKey;
 use App\Models\FinancialV2\Journal;
@@ -69,13 +64,15 @@ final class PostingEngine
                 }
                 $this->lockEntity($transaction->accounting_entity_id);
                 $period = $this->eligiblePeriodFor($transaction);
-                $version = $this->configurationResolver->supports($transaction->type?->code)
-                    ? $this->configurationResolver->resolveTransaction($transaction)->postingRuleVersion
-                    : $this->resolveRuleVersion($transaction);
+                $resolvedConfiguration = $this->configurationResolver->supports($transaction->type?->code)
+                    ? $this->configurationResolver->resolveTransaction($transaction)
+                    : null;
+                $version = $resolvedConfiguration?->postingRuleVersion
+                    ?? $this->configurationResolver->resolvePostingRuleVersionForTransaction($transaction);
                 $this->validateTransactionType($transaction, $version);
                 $this->validateOperationalTransaction($transaction);
                 $this->validateSplits($transaction);
-                $this->validateApprovalsAndEvidence($transaction, $version);
+                $this->validateApprovalsAndEvidence($transaction, $version, $resolvedConfiguration);
                 $this->validateCorrectionTransaction($transaction);
 
                 $originalJournal = $this->reversalOriginalJournal($transaction);
@@ -83,7 +80,7 @@ final class PostingEngine
                     ? $this->compileReversalLines($transaction, $originalJournal)
                     : $this->compileLines($transaction, $version);
 
-                $lines = $this->validateLines($transaction, $lines);
+                $lines = $this->validateLines($transaction, $lines, $resolvedConfiguration);
                 $this->validateOperationalLines($transaction, $lines);
                 $this->validateFundLiquidityBalances($transaction, $lines);
                 $this->validateFundRealization($transaction);
@@ -167,7 +164,7 @@ final class PostingEngine
                 'created_by_user_id' => $actorUserId,
                 'updated_by_user_id' => $actorUserId,
             ]);
-            $version = $this->resolveRuleVersion($transaction);
+            $version = $this->configurationResolver->resolvePostingRuleVersionForTransaction($transaction);
             $lines = $batch->lines->sortBy('line_no')->map(fn ($line) => [
                 'accounting_entity_id' => $batch->accounting_entity_id,
                 'account_id' => $line->account_id,
@@ -339,26 +336,6 @@ final class PostingEngine
         throw new FinancialPostingException('E-PERIOD-CLOSED', 'The accounting date is not eligible for this posting.');
     }
 
-    /** Non-operational transaction types retain their dedicated rule selection. */
-    private function resolveRuleVersion(FinancialTransaction $transaction): PostingRuleVersion
-    {
-        $version = PostingRuleVersion::query()
-            ->where('accounting_entity_id', $transaction->accounting_entity_id)
-            ->where(fn ($query) => $query->where('status', 'effective')->orWhere(fn ($historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
-            ->where('effective_from', '<=', $transaction->accounting_date)
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
-            ->whereHas('rule', fn ($query) => $query->where('transaction_type_id', $transaction->transaction_type_id)->where('status', 'active'))
-            ->when($transaction->category?->default_posting_rule_id, fn ($query, $ruleId) => $query->where('posting_rule_id', $ruleId))
-            ->orderByDesc('effective_from')
-            ->orderByDesc('version_no')
-            ->first();
-        if (! $version) {
-            throw new FinancialPostingException('E-RULE-NOT-EFFECTIVE', 'No effective posting rule version exists for this transaction type.');
-        }
-
-        return $version;
-    }
-
     private function validateSplits(FinancialTransaction $transaction): void
     {
         if ($transaction->type?->code === TransactionTypeCode::InterfundTransfer->value) {
@@ -415,27 +392,22 @@ final class PostingEngine
         $type = $transaction->type;
         $date = $transaction->accounting_date->toDateString();
         $outsideMasterDates = $type && (($type->valid_from && $type->valid_from->gt($date)) || ($type->valid_to && $type->valid_to->lt($date)));
-        if (! $type || $type->status !== 'active' || ($outsideMasterDates && ! $this->bankMutationPolicy($transaction, $version))) {
+        if (! $type || $type->status !== 'active' || ($outsideMasterDates && ! $this->configurationResolver->bankMutationPolicyForTransaction($transaction))) {
             throw new FinancialPostingException('E-MASTER-INACTIVE', 'Transaction type is inactive or ineffective on the accounting date.');
         }
     }
 
-    private function validateApprovalsAndEvidence(FinancialTransaction $transaction, PostingRuleVersion $version): void
+    private function validateApprovalsAndEvidence(FinancialTransaction $transaction, PostingRuleVersion $version, ?ResolvedFinancialTransactionConfiguration $resolved): void
     {
-        $required = ApprovalRequirement::query()
-            ->where('accounting_entity_id', $transaction->accounting_entity_id)
-            ->where('transaction_type_id', $transaction->transaction_type_id)
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $transaction->accounting_date)
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
-            ->max('required_steps') ?? 0;
-        $bankPolicy = $this->bankMutationPolicy($transaction, $version);
-        $required = max((int) $required, (int) ($bankPolicy?->required_approval_steps ?? 0));
+        $required = $resolved?->requiredApprovalSteps
+            ?? $this->configurationResolver->requiredApprovalStepsForTransaction($transaction);
         if (ApprovalDecision::query()->where('transaction_id', $transaction->id)->where('decision', 'approved')->count() < $required) {
             throw new FinancialPostingException('E-APPROVAL-REQUIRED', 'Required approval steps are incomplete.');
         }
 
-        foreach (EvidenceRequirement::query()->where('posting_rule_version_id', $version->id)->get() as $requirement) {
+        $evidenceRequirements = $resolved?->evidenceRequirements
+            ?? $this->configurationResolver->evidenceRequirementsForVersion($version);
+        foreach ($evidenceRequirements as $requirement) {
             if (AttachmentLink::query()->where('target_type', 'transaction')->where('target_id', $transaction->id)->where('evidence_type', $requirement->evidence_type)->where('status', 'active')->count() < $requirement->minimum_count) {
                 throw new FinancialPostingException('E-EVIDENCE-REQUIRED', 'Required evidence is missing.');
             }
@@ -570,7 +542,7 @@ final class PostingEngine
     }
 
     /** @param array<int, array<string, mixed>> $lines @return array<int, array<string, mixed>> */
-    private function validateLines(FinancialTransaction $transaction, array $lines): array
+    private function validateLines(FinancialTransaction $transaction, array $lines, ?ResolvedFinancialTransactionConfiguration $resolved = null): array
     {
         if (count($lines) < 2 || ! DecimalAmount::equals(DecimalAmount::sum(array_column($lines, 'debit_amount')), DecimalAmount::sum(array_column($lines, 'credit_amount')))) {
             throw new FinancialPostingException('E-JOURNAL-UNBALANCED', 'Journal debit and credit totals differ.');
@@ -609,7 +581,7 @@ final class PostingEngine
                 }
             }
             if ($line['fund_id'] && ! $isReversal) {
-                $policy = $this->validateFund($transaction, $line);
+                $policy = $this->validateFund($transaction, $line, $resolved);
                 if ($policy) {
                     $line['policy_version_ref'] = $policy->id;
                 }
@@ -621,59 +593,25 @@ final class PostingEngine
     }
 
     /** @param array<string, mixed> $line */
-    private function validateFund(FinancialTransaction $transaction, array $line): FundPolicyVersion|BankMutationPolicy|null
+    private function validateFund(FinancialTransaction $transaction, array $line, ?ResolvedFinancialTransactionConfiguration $resolved): ?\Illuminate\Database\Eloquent\Model
     {
         $fund = Fund::query()->with('type')->findOrFail($line['fund_id']);
         if ($fund->accounting_entity_id !== $transaction->accounting_entity_id || $fund->status !== 'active' || ($fund->valid_from && $fund->valid_from->gt($transaction->accounting_date)) || ($fund->valid_to && $fund->valid_to->lt($transaction->accounting_date))) {
             throw new FinancialPostingException('E-MASTER-INACTIVE', 'Fund is inactive or outside the accounting entity.');
         }
 
-        if (! in_array($fund->type->classification, ['restricted', 'perpetual_restricted', 'custodial', 'syariah'], true)) {
-            return null;
+        if ($resolved) {
+            return $resolved->fundPolicies->first(function ($policy) use ($fund): bool {
+                if ($policy instanceof \App\Models\FinancialV2\BankMutationPolicy) {
+                    return $policy->fund_id === $fund->id;
+                }
+
+                return $policy instanceof \App\Models\FinancialV2\FundPolicyVersion
+                    && $policy->fund_id === $fund->id;
+            });
         }
 
-        $policy = FundPolicyVersion::query()->where('fund_id', $fund->id)->where(fn ($query) => $query->where('status', 'effective')->orWhere(fn ($historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))->where('effective_from', '<=', $transaction->accounting_date)->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))->orderByDesc('effective_from')->orderByDesc('version_no')->first();
-        $matchingRules = $policy ? FundPolicyRule::query()
-            ->where('fund_policy_version_id', $policy->id)
-            ->where('transaction_type_id', $transaction->transaction_type_id)
-            ->where(fn ($query) => $query->whereNull('account_id')->orWhere('account_id', $line['account_id']))
-            ->where(fn ($query) => $query->whereNull('category_id')->orWhere('category_id', $line['category_id']))
-            ->where(fn ($query) => $query->whereNull('program_id')->orWhere('program_id', $line['program_id']))
-            ->where(fn ($query) => $query->whereNull('cost_center_id')->orWhere('cost_center_id', $line['cost_center_id']))
-            ->pluck('decision') : collect();
-        if ($matchingRules->contains('prohibited')) {
-            throw new FinancialPostingException('E-FUND-RESTRICTED', 'Restricted Fund is fail-closed without an allowed policy matrix rule.');
-        }
-
-        if (! $matchingRules->contains('allowed')) {
-            $bankPolicy = $this->bankMutationPolicy($transaction, null, $line['fund_id']);
-            if (! $bankPolicy) {
-                throw new FinancialPostingException('E-FUND-RESTRICTED', 'Restricted Fund is fail-closed without an allowed policy matrix rule.');
-            }
-
-            return $bankPolicy;
-        }
-
-        return $policy;
-    }
-
-    private function bankMutationPolicy(FinancialTransaction $transaction, ?PostingRuleVersion $version = null, ?string $fundId = null): ?BankMutationPolicy
-    {
-        if (! $transaction->category_id || ! $transaction->primary_financial_account_id) {
-            return null;
-        }
-
-        return BankMutationPolicy::query()
-            ->where('accounting_entity_id', $transaction->accounting_entity_id)
-            ->where('transaction_type_id', $transaction->transaction_type_id)
-            ->where('category_id', $transaction->category_id)
-            ->where('financial_account_id', $transaction->primary_financial_account_id)
-            ->when($fundId, fn ($query, $id) => $query->where('fund_id', $id))
-            ->when($version, fn ($query, $resolved) => $query->where('posting_rule_version_id', $resolved->id))
-            ->where('status', 'active')
-            ->where('effective_from', '<=', $transaction->accounting_date)
-            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
-            ->first();
+        return $this->configurationResolver->resolveFundPolicyForPostingLine($transaction, $line);
     }
 
     private function hasCompatibleFinancialAccountDetail(FinancialAccount $financialAccount): bool
@@ -877,7 +815,7 @@ final class PostingEngine
                 // Ordinary backdated reductions remain fail-closed. An exact,
                 // effective bank-mutation policy may proceed only after every
                 // later running balance has been proven safe.
-                if (! $this->bankMutationPolicy($transaction, null, $effect['fund_id'])) {
+                if (! $this->configurationResolver->bankMutationPolicyForTransaction($transaction, $effect['fund_id'])) {
                     throw new FinancialPostingException('E-BACKDATED-LIQUIDITY', 'A backdated liquidity reduction is blocked because later posted activity exists for the same Fund and Financial Account.');
                 }
 

@@ -13,24 +13,6 @@
         @if($entity)<a class="btn btn-primary" href="{{ route('financial-v2.bank-mutations.create', ['entity' => $entity->id]) }}">+ Tambah Mutasi</a>@endif
     </div>
 
-    <section class="mb-5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-950 shadow-sm sm:p-5" data-bank-configuration>
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <h2 class="font-bold">Status Konfigurasi</h2>
-                    <span class="badge {{ $configurationStatus['active'] ? 'badge-success' : 'badge-warning' }}">{{ $configurationStatus['active'] ? '● Siap digunakan' : '● Sebagian belum tersedia' }}</span>
-                </div>
-                <dl class="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                    <div><dt class="text-xs text-sky-900/65">Rekening</dt><dd class="font-semibold">BNI ZISWAF</dd></div>
-                    <div><dt class="text-xs text-sky-900/65">Fund</dt><dd class="font-semibold">Infaq &amp; Tromol</dd></div>
-                    <div><dt class="text-xs text-sky-900/65">Effective date</dt><dd class="font-semibold">30/06/2026</dd></div>
-                    <div><dt class="text-xs text-sky-900/65">Kontrol</dt><dd class="font-semibold">Maker + checker · statement min. 1</dd></div>
-                </dl>
-                <p class="mt-3 text-xs leading-5 text-sky-900/70">Kategori: Jasa Giro/Bunga, PPH, Biaya Administrasi Rekening, Biaya Administrasi Kartu, dan Biaya Transfer Bank.</p>
-            </div>
-        </div>
-    </section>
-
     @if(!$entity)
         <div class="alert alert-warning">Pilih entitas keuangan aktif terlebih dahulu.</div>
     @else

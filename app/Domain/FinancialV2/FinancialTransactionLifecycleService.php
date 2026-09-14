@@ -5,7 +5,6 @@ namespace App\Domain\FinancialV2;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\ApprovalDecision;
-use App\Models\FinancialV2\ApprovalRequirement;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\FundRealization;
@@ -236,19 +235,9 @@ final class FinancialTransactionLifecycleService
             if ($transaction->status !== 'verified') {
                 throw new FinancialDomainException('E-TRANSACTION-STATE', 'Only Verified transactions may be approved.');
             }
-            $resolvedRequiredSteps = 0;
-            if ($this->configurationResolver->supports($transaction->type?->code)) {
-                $resolvedRequiredSteps = $this->configurationResolver->resolveTransaction($transaction)->requiredApprovalSteps;
-            }
+            $required = $this->configurationResolver->requiredApprovalStepsForTransaction($transaction);
             $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
-            $required = max($resolvedRequiredSteps, (int) (ApprovalRequirement::query()
-                ->where('accounting_entity_id', $transaction->accounting_entity_id)
-                ->where('transaction_type_id', $transaction->transaction_type_id)
-                ->where('status', 'active')
-                ->where('effective_from', '<=', $transaction->accounting_date)
-                ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $transaction->accounting_date))
-                ->max('required_steps') ?? 0));
             if (ApprovalDecision::query()->where('transaction_id', $transaction->id)->where('decision', 'approved')->count() < $required) {
                 throw new FinancialDomainException('E-APPROVAL-REQUIRED', 'Configured approval requirements are incomplete.');
             }

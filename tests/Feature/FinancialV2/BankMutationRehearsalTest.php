@@ -258,7 +258,7 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
     $this->post(route('financial-v2.bank-mutations.configure'))->assertRedirect(route('login'));
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.configure'))->assertStatus(405);
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
-        ->assertOk()->assertSee('Status Konfigurasi')->assertSee('Sebagian belum tersedia')->assertSee('+ Tambah Mutasi')->assertDontSee('Aktifkan Konfigurasi');
+        ->assertOk()->assertSee('+ Tambah Mutasi')->assertDontSee('Aktifkan Konfigurasi')->assertDontSee('Sebagian belum tersedia');
     expect(BankMutationPolicy::query()->where('accounting_entity_id', $entity->id)->count())->toBe(0);
 
     $this->seed(ConfigureMrjBankMutationsSeeder::class);
@@ -286,7 +286,7 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
 
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.index', ['entity' => $entity->id]))
         ->assertOk()->assertSee('Mutasi Bank')->assertSee('Tahun')->assertSee('Bulan')->assertSee('Rekening')->assertSee('Dana')->assertSee('Jenis')->assertSee('Status')
-        ->assertSee('Status Konfigurasi')->assertSee('Siap digunakan')->assertDontSee('Aktifkan Konfigurasi');
+        ->assertDontSee('Aktifkan Konfigurasi');
     $this->actingAs($user)->get(route('financial-v2.bank-mutations.create', ['entity' => $entity->id]))
         ->assertOk()->assertSee('Jasa Giro/Bunga')->assertSee('PPH')->assertSee('Biaya Transfer Bank')->assertSee('Dana Zakat Maal')->assertSee('Source Reference')->assertSee('Pratinjau Batch')->assertSee('Status Konfigurasi')
         ->assertDontSee('Journal')->assertDontSee('Ledger')->assertDontSee('Debit')->assertDontSee('Kredit');
@@ -298,8 +298,17 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
         ['category_id' => $cardFee->id, 'fund_id' => $infaq->id, 'amount' => '7500.00'],
     ];
     $this->actingAs($user)->postJson(route('financial-v2.bank-mutations.preview'), [
+        'entity' => $entity->id, 'mutations' => [],
+    ])->assertOk()
+        ->assertJsonPath('state', 'incomplete')
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('message', 'Lengkapi data transaksi untuk memeriksa konfigurasi.');
+    $this->actingAs($user)->postJson(route('financial-v2.bank-mutations.preview'), [
         'entity' => $entity->id, 'financial_account_id' => $bni->id, 'date' => '2026-06-30', 'mutations' => $previewRows,
     ])->assertOk()
+        ->assertJsonPath('state', 'ready')
+        ->assertJsonPath('allowed', true)
+        ->assertJsonPath('message', '● Siap digunakan')
         ->assertJsonPath('opening', '123077312.00')
         ->assertJsonPath('total_credit', '6925.00')
         ->assertJsonPath('total_debit', '19885.00')
@@ -312,7 +321,13 @@ test('Mutasi Bank UI exposes guarded lifecycle actions without accounting intern
     $this->actingAs($user)->postJson(route('financial-v2.bank-mutations.preview'), [
         'entity' => $entity->id, 'financial_account_id' => $bni->id, 'date' => '2026-06-30',
         'mutations' => [['category_id' => $interest->id, 'fund_id' => $zakat->id, 'amount' => '6925.00']],
-    ])->assertStatus(422);
+    ])->assertStatus(422)
+        ->assertJsonPath('state', 'missing')
+        ->assertJsonPath('allowed', false)
+        ->assertJsonPath('message', fn (string $message): bool => str_contains($message, '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.')
+            && str_contains($message, 'Jenis transaksi: Mutasi Bank')
+            && str_contains($message, 'Rekening: BNI ZISWAF')
+            && str_contains($message, 'Dana: Dana Zakat Maal'));
 
     $batchId = (string) Str::uuid();
     $payload = [

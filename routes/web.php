@@ -379,6 +379,7 @@ Route::middleware(['auth'])->group(function () {
     // or transaction table participates in this workflow.
     Route::prefix('admin/keuangan-v2')->name('financial-v2.')->group(function () {
         Route::get('/', [OperationalFinancialController::class, 'dashboard'])->name('dashboard');
+        Route::get('/konfigurasi', [FinancialMasterDataController::class, 'configuration'])->name('configuration.index');
         Route::prefix('mutasi-bank')->name('bank-mutations.')->group(function () {
             Route::get('/', [BankMutationController::class, 'index'])->name('index');
             Route::get('/baru', [BankMutationController::class, 'create'])->name('create');

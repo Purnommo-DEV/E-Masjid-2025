@@ -49,6 +49,15 @@
         <div class="alert mb-5 border border-emerald-200 bg-emerald-50 text-emerald-950"><span>Realisasi sudah siap dicatat resmi. Saat dicatat, sistem akan memproses satu pembayaran melalui Posting Engine.</span></div>
     @endif
 
+    <div @class([
+        'mb-5 rounded-2xl border px-4 py-3 text-sm',
+        'border-emerald-200 bg-emerald-50 text-emerald-950' => $configurationStatus['state'] === 'ready',
+        'border-amber-200 bg-amber-50 text-amber-950' => $configurationStatus['state'] === 'missing',
+    ]) data-transaction-configuration="{{ $configurationStatus['state'] }}">
+        <p class="font-semibold">Status konfigurasi</p>
+        <p class="mt-1 text-xs leading-5">{{ $configurationStatus['message'] }}</p>
+    </div>
+
     <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section class="rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
             <h2 class="font-bold">Ringkasan</h2>
