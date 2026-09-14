@@ -523,7 +523,7 @@ final class OperationalFinancialController
         return view('masjid.mrj.admin.financial-v2.allocation-form', [
             'entities' => $context['entities'],
             'entity' => $context['entity'],
-            'options' => $context['entity'] ? $this->formOptions($context['entity']) : $this->emptyOptions(),
+            'options' => $context['entity'] ? $this->formOptions($context['entity'], 'PAY') : $this->emptyOptions(),
             'allocationHistory' => $allocationHistory,
             'submissionKey' => old('submission_key', (string) Str::uuid()),
             'today' => now()->toDateString(),
@@ -541,7 +541,7 @@ final class OperationalFinancialController
         return view('masjid.mrj.admin.financial-v2.allocation-form', [
             'entities' => $context['entities'],
             'entity' => $entity,
-            'options' => $this->formOptions($entity),
+            'options' => $this->formOptions($entity, 'PAY'),
             'allocationHistory' => $history,
             'submissionKey' => Str::afterLast($allocation->idempotency_key, ':'),
             'today' => now()->toDateString(),
