@@ -56,6 +56,46 @@ final class EvidenceService
             if ($attachment->storage_reference !== $storageReference || $attachment->media_type !== $mediaType || (int) $attachment->byte_size !== $byteSize) {
                 throw new FinancialDomainException('E-ATTACHMENT-INTEGRITY', 'A content hash cannot be silently reused with different evidence metadata.');
             }
+            $existingLinks = AttachmentLink::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('attachment_id', $attachment->id)
+                ->where('target_type', 'transaction')
+                ->where('target_id', $transaction->id)
+                ->lockForUpdate()
+                ->get();
+            if ($existingLinks->count() > 1) {
+                throw new FinancialDomainException('E-ATTACHMENT-LINK-CONFLICT', 'The same evidence is already linked to this transaction more than once. Resolve the existing evidence links before retrying.');
+            }
+
+            /** @var AttachmentLink|null $existingLink */
+            $existingLink = $existingLinks->first();
+            if ($existingLink) {
+                if ($existingLink->status === 'active' && $existingLink->evidence_type === $evidenceType) {
+                    return $existingLink;
+                }
+                if ($transaction->status !== 'draft') {
+                    throw new FinancialDomainException('E-ATTACHMENT-IMMUTABLE', 'Evidence type and link status may only be changed while the transaction is Draft.');
+                }
+
+                $before = [
+                    'evidence_type' => $existingLink->evidence_type,
+                    'status' => $existingLink->status,
+                ];
+                $existingLink->update([
+                    'evidence_type' => $evidenceType,
+                    'status' => 'active',
+                    'updated_by_user_id' => $actorUserId,
+                ]);
+                $this->auditTrail->record($entityId, 'attachment_link_updated_on_draft', 'attachment_link', $existingLink->id, $transaction->correlation_id, $actorUserId, $before, [
+                    'transaction_id' => $transaction->id,
+                    'attachment_id' => $attachment->id,
+                    'evidence_type' => $evidenceType,
+                    'status' => 'active',
+                ]);
+
+                return $existingLink->fresh();
+            }
+
             $link = AttachmentLink::create([
                 'accounting_entity_id' => $entityId,
                 'attachment_id' => $attachment->id,
