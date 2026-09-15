@@ -16,6 +16,10 @@ use Throwable;
 /** Corrects one cutover-derived Program lifecycle value without touching facts or policy. */
 final class CorrectMrjLegacyProgramLifecycleService
 {
+    public const ORIGIN_ADMIN = 'ADMIN_CONFIGURATION_PROVISION';
+
+    public const ORIGIN_SEEDER = 'SEEDER_CONFIGURATION_PROVISION';
+
     public const ENTITY_CODE = 'MRJ-ACTUAL';
 
     public const PROGRAM_CODE = 'SANTUNAN-YATIM-BULANAN';
@@ -32,6 +36,7 @@ final class CorrectMrjLegacyProgramLifecycleService
         'journal_lines' => 'financial_v2_journal_lines',
         'ledger_entries' => 'financial_v2_ledger_entries',
         'vouchers' => 'financial_v2_vouchers',
+        'allocations' => 'financial_v2_budget_allocations',
     ];
 
     public function __construct(
@@ -40,12 +45,12 @@ final class CorrectMrjLegacyProgramLifecycleService
     ) {}
 
     /** @return array<string, mixed> */
-    public function correct(?int $actorUserId = null): array
+    public function correct(?int $actorUserId = null, string $origin = self::ORIGIN_SEEDER): array
     {
         $factsBefore = $this->factCounts();
         $changed = false;
 
-        DB::transaction(function () use ($actorUserId, $factsBefore, &$changed): void {
+        DB::transaction(function () use ($actorUserId, $origin, $factsBefore, &$changed): void {
             $entity = AccountingEntity::query()->where('code', self::ENTITY_CODE)->where('status', 'active')->firstOrFail();
             $program = Program::query()
                 ->where('accounting_entity_id', $entity->id)
@@ -71,7 +76,7 @@ final class CorrectMrjLegacyProgramLifecycleService
                 (string) Str::uuid(),
                 $actorUserId,
                 ['start_date' => self::ERRONEOUS_CUTOVER_DATE, 'meaning' => 'Financial V2 cutover incorrectly stored as business lifecycle'],
-                ['start_date' => null, 'meaning' => 'Legacy business start unknown/unbounded'],
+                ['start_date' => null, 'meaning' => 'Legacy business start unknown/unbounded', 'origin' => $origin],
             );
             $changed = true;
 
@@ -91,6 +96,11 @@ final class CorrectMrjLegacyProgramLifecycleService
 
         return [
             'ready' => $program?->isBusinessActiveOn(self::TRANSACTION_DATE) === true,
+            'conflict' => $program !== null && $program->start_date !== null && (
+                $program->start_date->toDateString() !== self::ERRONEOUS_CUTOVER_DATE
+                || $program->end_date !== null
+                || $program->program_owner_reference !== self::PROVISIONING_REFERENCE
+            ),
             'program_start_date' => $program?->start_date?->toDateString(),
             'program_business_active' => $program?->isBusinessActiveOn(self::TRANSACTION_DATE) === true,
             'resolver' => $this->resolverStatus($entity, $program),

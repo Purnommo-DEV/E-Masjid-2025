@@ -27,7 +27,10 @@ final class ConfigureMrjHistoricalDhuafaReceiptCommand extends Command
         }
 
         try {
-            $result = $this->configuration->configure($this->option('actor') !== null ? (int) $this->option('actor') : null);
+            $result = $this->configuration->configure(
+                $this->option('actor') !== null ? (int) $this->option('actor') : null,
+                ConfigureMrjHistoricalDhuafaReceiptService::ORIGIN_ARTISAN,
+            );
         } catch (Throwable $exception) {
             report($exception);
             $this->error($exception->getMessage());

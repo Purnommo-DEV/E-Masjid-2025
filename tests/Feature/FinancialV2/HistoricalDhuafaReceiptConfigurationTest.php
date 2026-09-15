@@ -1,7 +1,6 @@
 <?php
 
 use App\Domain\FinancialV2\ConfigureMrjHistoricalDhuafaReceiptService;
-use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\Category;
@@ -24,6 +23,7 @@ function historicalDhuafaFactCounts(): array
         'journal_lines' => 'financial_v2_journal_lines',
         'ledger_entries' => 'financial_v2_ledger_entries',
         'vouchers' => 'financial_v2_vouchers',
+        'allocations' => 'financial_v2_budget_allocations',
     ])->mapWithKeys(fn (string $table, string $name): array => [$name => DB::table($table)->count()])->all();
 }
 
@@ -42,8 +42,8 @@ test('historical DHUAFA receipt resolves through version 6 after unused version 
         'version_no' => 5,
         'effective_from' => '2026-07-10',
         'effective_to' => '2026-07-10',
-        'policy_document_ref' => 'HISTORICAL-RCV-DHUAFA-V5',
-        'allowed_matrix_ref' => 'RCV-DONASI; SANTUNAN-YATIM-BULANAN',
+        'policy_document_ref' => 'JULI-HISTORI_TRANSAKSI_1789270210045',
+        'allowed_matrix_ref' => '-',
         'exception_approval_level' => 'financial-governance',
         'status' => 'superseded',
         'approved_at' => now(),
@@ -89,11 +89,8 @@ test('historical DHUAFA receipt resolves through version 6 after unused version 
         ->and($result['dates']['2026-07-31']['status'])->toBe('MISSING')
         ->and($result['dates']['2026-08-14']['status'])->toBe('MISSING')
         ->and($result['dates']['2026-08-15'])->toMatchArray(['status' => 'READY', 'posting_rule_version' => 1, 'fund_policy_version' => 2])
+        ->and($result['policy_overlaps'])->toBe([])
         ->and(historicalDhuafaFactCounts())->toBe($factsBefore);
-
-    $deletion = app(FundPolicyVersionDeletionService::class);
-    expect($deletion->usage($version5))->toMatchArray(['status' => 'UNUSED', 'can_delete' => true]);
-    $deletion->delete($entity->id, $version5->id);
 
     foreach (['2026-07-11', '2026-07-15', '2026-07-30', '2026-07-31', '2026-08-14', '2026-08-15'] as $date) {
         $policyCount = FundPolicyVersion::query()
@@ -109,6 +106,11 @@ test('historical DHUAFA receipt resolves through version 6 after unused version 
         ->and(historicalDhuafaFactCounts())->toBe($factsBefore)
         ->and($configuration->configure()['changed'])->toBeFalse()
         ->and(historicalDhuafaFactCounts())->toBe($factsBefore);
+
+    expect(AuditEvent::query()
+        ->where('event_type', 'fund_policy_version_deleted')
+        ->where('target_id', $version5->id)
+        ->exists())->toBeTrue();
 });
 
 test('production UI and seeder provision missing historical DHUAFA configuration by business codes idempotently', function () {

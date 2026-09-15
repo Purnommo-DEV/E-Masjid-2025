@@ -43,9 +43,9 @@ final class FundPolicyVersionDeletionService
         return $this->result('UNUSED', true, 'Belum digunakan', 0, 0);
     }
 
-    public function delete(string $entityId, string $versionId, ?int $actorUserId = null): void
+    public function delete(string $entityId, string $versionId, ?int $actorUserId = null, ?string $origin = null): void
     {
-        DB::transaction(function () use ($entityId, $versionId, $actorUserId): void {
+        DB::transaction(function () use ($entityId, $versionId, $actorUserId, $origin): void {
             $version = FundPolicyVersion::query()->where('accounting_entity_id', $entityId)->lockForUpdate()->findOrFail($versionId);
             $usage = $this->usage($version);
             if (! $usage['can_delete']) {
@@ -61,7 +61,7 @@ final class FundPolicyVersionDeletionService
             $before = $version->only(['fund_id', 'version_no', 'effective_from', 'effective_to', 'policy_document_ref', 'status']);
             FundPolicyRule::query()->where('fund_policy_version_id', $version->id)->delete();
             $version->delete();
-            $this->auditTrail->record($entityId, 'fund_policy_version_deleted', 'fund_policy_version', $versionId, (string) Str::uuid(), $actorUserId, $before, ['deleted' => true, 'usage_status' => 'UNUSED']);
+            $this->auditTrail->record($entityId, 'fund_policy_version_deleted', 'fund_policy_version', $versionId, (string) Str::uuid(), $actorUserId, $before, ['deleted' => true, 'usage_status' => 'UNUSED', 'origin' => $origin]);
         }, 3);
     }
 

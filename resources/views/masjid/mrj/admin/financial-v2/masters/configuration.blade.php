@@ -50,6 +50,26 @@
             ]])
         @endif
 
+        @if ($legacyProgramLifecycleStatus)
+            @include('masjid.mrj.admin.financial-v2.masters._configuration-provision', ['provision' => [
+                'title' => 'Lifecycle Program Legacy',
+                'status' => $legacyProgramLifecycleStatus,
+                'summary' => 'Santunan Anak Yatim Bulanan · tanggal mulai bisnis legacy belum diketahui · tanggal transaksi Financial V2 tidak dipakai sebagai lifecycle Program.',
+                'info' => 'Koreksi hanya mengosongkan tanggal cutover 15/08/2026 yang terbukti berasal dari provisioning Phase 12. Financial fact dan policy tidak berubah.',
+                'button_label' => 'Koreksi Lifecycle Program',
+                'active_label' => 'Lifecycle Program Sudah Benar',
+                'modal_id' => 'correct-legacy-program-lifecycle',
+                'modal_title' => 'Koreksi lifecycle Program legacy?',
+                'action' => route('financial-v2.configuration.correct-legacy-program-lifecycle'),
+                'details' => [
+                    'Program' => 'Santunan Anak Yatim Bulanan',
+                    'Nilai lama' => '15/08/2026 (cutover Financial V2)',
+                    'Nilai benar' => 'Belum diketahui / tanpa batas awal',
+                    'Dampak' => 'Master Program saja',
+                ],
+            ]])
+        @endif
+
         @if ($historicalDhuafaStatus)
             <section class="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950 shadow-sm">
                 <div class="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">

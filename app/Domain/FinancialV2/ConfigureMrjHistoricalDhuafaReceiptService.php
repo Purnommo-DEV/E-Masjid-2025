@@ -22,6 +22,12 @@ use Throwable;
 /** Configuration-only repair for the evidence-backed July 2026 DHUAFA receipt window. */
 final class ConfigureMrjHistoricalDhuafaReceiptService
 {
+    public const ORIGIN_ADMIN = 'ADMIN_CONFIGURATION_PROVISION';
+
+    public const ORIGIN_ARTISAN = 'ARTISAN_CONFIGURATION_PROVISION';
+
+    public const ORIGIN_SEEDER = 'SEEDER_CONFIGURATION_PROVISION';
+
     public const ENTITY_CODE = 'MRJ-ACTUAL';
 
     public const EFFECTIVE_FROM = '2026-07-11';
@@ -32,26 +38,30 @@ final class ConfigureMrjHistoricalDhuafaReceiptService
 
     private const BRIDGE_POLICY_REF = 'OPENING-BALANCE-ONLY|2026-07-31-2026-08-14';
 
+    private const OBSOLETE_POLICY_REF = 'JULI-HISTORI_TRANSAKSI_1789270210045';
+
     private const FACT_TABLES = [
         'transactions' => 'financial_v2_transactions',
         'journals' => 'financial_v2_journals',
         'journal_lines' => 'financial_v2_journal_lines',
         'ledger_entries' => 'financial_v2_ledger_entries',
         'vouchers' => 'financial_v2_vouchers',
+        'allocations' => 'financial_v2_budget_allocations',
     ];
 
     public function __construct(
         private readonly FinancialTransactionConfigurationResolver $resolver,
         private readonly AuditTrailService $auditTrail,
+        private readonly FundPolicyVersionDeletionService $policyDeletion,
     ) {}
 
     /** @return array<string,mixed> */
-    public function configure(?int $actorUserId = null): array
+    public function configure(?int $actorUserId = null, string $origin = self::ORIGIN_SEEDER): array
     {
         $factsBefore = $this->factCounts();
         $changed = false;
 
-        DB::transaction(function () use ($actorUserId, $factsBefore, &$changed): void {
+        DB::transaction(function () use ($actorUserId, $origin, $factsBefore, &$changed): void {
             $entity = AccountingEntity::query()->where('code', self::ENTITY_CODE)->where('status', 'active')->firstOrFail();
             $type = TransactionType::query()->where('accounting_entity_id', $entity->id)->where('code', 'RCV')->where('status', 'active')->firstOrFail();
             $financialAccount = FinancialAccount::query()->where('accounting_entity_id', $entity->id)->where('code', 'BNI-ZISWAF')->where('status', 'active')->firstOrFail();
@@ -148,6 +158,26 @@ final class ConfigureMrjHistoricalDhuafaReceiptService
                 $before = $openingPolicy->effective_to?->toDateString();
                 $openingPolicy->update(['effective_to' => '2026-07-10', 'updated_by_user_id' => $actorUserId]);
                 $this->auditTrail->record($entity->id, 'fund_policy_overlap_corrected', 'fund_policy_version', $openingPolicy->id, (string) Str::uuid(), $actorUserId, ['effective_to' => $before], ['effective_to' => '2026-07-10']);
+                $changed = true;
+            }
+
+            $obsoletePolicies = FundPolicyVersion::query()
+                ->where('fund_id', $fund->id)
+                ->whereKeyNot($openingPolicy->id)
+                ->whereDate('effective_from', '2026-07-10')
+                ->whereDate('effective_to', '2026-07-10')
+                ->where('policy_document_ref', self::OBSOLETE_POLICY_REF)
+                ->lockForUpdate()
+                ->get();
+            if ($obsoletePolicies->count() > 1) {
+                throw new RuntimeException('Terdapat lebih dari satu kandidat Fund Policy DHUAFA lama untuk 10/07/2026.');
+            }
+            if ($obsolete = $obsoletePolicies->first()) {
+                $usage = $this->policyDeletion->usage($obsolete);
+                if (! $usage['can_delete']) {
+                    throw new RuntimeException('Fund Policy DHUAFA lama 10/07/2026 sudah digunakan atau masih diperlukan; cleanup otomatis dibatalkan.');
+                }
+                $this->policyDeletion->delete($entity->id, $obsolete->id, $actorUserId, $origin);
                 $changed = true;
             }
 
@@ -255,9 +285,12 @@ final class ConfigureMrjHistoricalDhuafaReceiptService
             if ($resolved['status'] !== 'READY' || $resolved['fund_policy_version'] !== $julyPolicy->version_no) {
                 throw new RuntimeException('Resolver belum memilih Fund Policy historis DHUAFA pada 11/07/2026.');
             }
+            if ($this->policyOverlaps($fund)->isNotEmpty()) {
+                throw new RuntimeException('Masih terdapat Fund Policy DHUAFA yang overlap; provisioning dibatalkan.');
+            }
 
             if ($changed) {
-                $this->auditTrail->record($entity->id, 'historical_dhuafa_configuration_provisioned', 'accounting_entity', $entity->id, (string) Str::uuid(), $actorUserId, ['facts' => $factsBefore], ['posting_rule_version' => $historicalVersion->version_no, 'fund_policy_version' => $julyPolicy->version_no]);
+                $this->auditTrail->record($entity->id, 'historical_dhuafa_configuration_provisioned', 'accounting_entity', $entity->id, (string) Str::uuid(), $actorUserId, ['facts' => $factsBefore], ['origin' => $origin, 'posting_rule_version' => $historicalVersion->version_no, 'fund_policy_version' => $julyPolicy->version_no]);
             }
         }, 3);
 
@@ -275,12 +308,14 @@ final class ConfigureMrjHistoricalDhuafaReceiptService
         $account = FinancialAccount::query()->where('accounting_entity_id', $entity->id)->where('code', 'BNI-ZISWAF')->first();
         $fund = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'DHUAFA')->first();
         $category = Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'RCV-DONASI')->first();
+        $overlaps = $fund ? $this->policyOverlaps($fund)->all() : [];
         $dates = collect(['2026-07-11', '2026-07-15', '2026-07-30', '2026-07-31', '2026-08-14', '2026-08-15'])
             ->mapWithKeys(fn (string $date): array => [$date => $this->resolve($entity, $type, $account, $fund, $category, $date)])
             ->all();
 
         return [
-            'ready' => ($dates['2026-07-11']['status'] ?? null) === 'READY',
+            'ready' => ($dates['2026-07-11']['status'] ?? null) === 'READY' && $overlaps === [],
+            'policy_overlaps' => $overlaps,
             'entity_id' => $entity->id,
             'configuration' => [
                 'entity' => self::ENTITY_CODE,
@@ -324,6 +359,24 @@ final class ConfigureMrjHistoricalDhuafaReceiptService
         if ($version->posting_rule_id !== $rule->id || $version->effective_from?->toDateString() !== self::EFFECTIVE_FROM || $version->effective_to?->toDateString() !== self::EFFECTIVE_TO || $version->status !== 'superseded' || ! $version->approved_at) {
             throw new RuntimeException('Posting Rule Version historis RCV DHUAFA tidak valid.');
         }
+    }
+
+    /** @return \Illuminate\Support\Collection<int,array{left:int,right:int}> */
+    private function policyOverlaps(Fund $fund): \Illuminate\Support\Collection
+    {
+        $versions = FundPolicyVersion::query()
+            ->where('fund_id', $fund->id)
+            ->where(fn ($query) => $query->where('status', 'effective')->orWhere(fn ($historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
+            ->orderBy('effective_from')
+            ->orderBy('version_no')
+            ->get();
+
+        return $versions->crossJoin($versions)
+            ->filter(fn (array $pair): bool => $pair[0]->version_no < $pair[1]->version_no
+                && $pair[0]->effective_from->lte($pair[1]->effective_to ?? '9999-12-31')
+                && $pair[1]->effective_from->lte($pair[0]->effective_to ?? '9999-12-31'))
+            ->map(fn (array $pair): array => ['left' => $pair[0]->version_no, 'right' => $pair[1]->version_no])
+            ->values();
     }
 
     /** @return array<string,int> */

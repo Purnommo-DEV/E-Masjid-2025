@@ -381,6 +381,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [OperationalFinancialController::class, 'dashboard'])->name('dashboard');
         Route::get('/konfigurasi', [FinancialMasterDataController::class, 'configuration'])->name('configuration.index');
         Route::post('/konfigurasi/provision-fidyah-allocation', [FinancialMasterDataController::class, 'provisionFidyahAllocation'])->name('configuration.provision-fidyah-allocation');
+        Route::post('/konfigurasi/correct-legacy-program-lifecycle', [FinancialMasterDataController::class, 'correctLegacyProgramLifecycle'])->name('configuration.correct-legacy-program-lifecycle');
         // Temporary production-safe provisioning endpoint. Remove after the
         // historical DHUAFA configuration has been verified in production.
         Route::post('/configuration/provision-historical-dhuafa', [FinancialMasterDataController::class, 'provisionHistoricalDhuafa'])->name('configuration.provision-historical-dhuafa');

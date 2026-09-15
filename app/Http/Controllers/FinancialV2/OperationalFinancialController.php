@@ -1168,11 +1168,15 @@ final class OperationalFinancialController
             : null;
         $allocationVersions = collect();
         if ($includeAllocationVersions) {
+            $approvedAllocationIds = BudgetAllocation::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('status', 'approved')
+                ->pluck('id');
             $allocationVersions = BudgetAllocationVersion::query()
                 ->with(['allocation', 'fundings.fund'])
                 ->where('accounting_entity_id', $entityId)
                 ->where('status', 'approved')
-                ->whereHas('allocation', fn (Builder $query) => $query->where('status', 'approved'))
+                ->whereIn('budget_allocation_id', $approvedAllocationIds)
                 ->orderByDesc('effective_from')
                 ->get();
             $allocationVersions->each(function (BudgetAllocationVersion $version): void {

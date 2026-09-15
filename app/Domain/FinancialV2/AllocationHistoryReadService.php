@@ -50,8 +50,8 @@ final class AllocationHistoryReadService
             : FundRealization::query()
                 ->select('financial_v2_fund_realizations.*')
                 ->with(['transaction.type', 'transaction.primaryFinancialAccount', 'transaction.category', 'transaction.splits.fund:id,code,name'])
-                ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'financial_v2_fund_realizations.transaction_id')
-                ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
+                ->join('financial_v2_transactions as transaction', fn ($join) => $join->whereRaw('BINARY `transaction`.`id` = BINARY `financial_v2_fund_realizations`.`transaction_id`'))
+                ->join('financial_v2_journals as journal', fn ($join) => $join->whereRaw('BINARY `journal`.`transaction_id` = BINARY `transaction`.`id`'))
                 ->where('financial_v2_fund_realizations.accounting_entity_id', $entityId)
                 ->whereIn('financial_v2_fund_realizations.budget_allocation_version_id', $versionIds)
                 ->where('financial_v2_fund_realizations.status', 'recorded')
@@ -103,7 +103,7 @@ final class AllocationHistoryReadService
     public function summary(string $entityId, ?string $fundId = null): array
     {
         $latestVersions = DB::table('financial_v2_budget_allocation_versions as candidate')
-            ->join('financial_v2_budget_allocations as candidate_allocation', 'candidate_allocation.id', '=', 'candidate.budget_allocation_id')
+            ->join('financial_v2_budget_allocations as candidate_allocation', fn ($join) => $join->whereRaw('BINARY `candidate_allocation`.`id` = BINARY `candidate`.`budget_allocation_id`'))
             ->where(function ($query): void {
                 $query->where(function ($approved): void {
                     $approved->where('candidate_allocation.status', 'approved')->where('candidate.status', 'approved');
@@ -115,31 +115,31 @@ final class AllocationHistoryReadService
             ->groupBy('budget_allocation_id');
 
         $allocatedQuery = DB::table('financial_v2_budget_allocations as allocation')
-            ->joinSub($latestVersions, 'latest_version', fn ($join) => $join->on('latest_version.budget_allocation_id', '=', 'allocation.id'))
+            ->joinSub($latestVersions, 'latest_version', fn ($join) => $join->whereRaw('BINARY `latest_version`.`budget_allocation_id` = BINARY `allocation`.`id`'))
             ->join('financial_v2_budget_allocation_versions as version', function ($join): void {
-                $join->on('version.budget_allocation_id', '=', 'latest_version.budget_allocation_id')
+                $join->whereRaw('BINARY `version`.`budget_allocation_id` = BINARY `latest_version`.`budget_allocation_id`')
                     ->on('version.version_no', '=', 'latest_version.version_no');
             })
             ->where('allocation.accounting_entity_id', $entityId)
             ->whereNotIn('allocation.status', ['cancelled', 'superseded']);
         if ($fundId) {
             $allocatedQuery
-                ->join('financial_v2_budget_allocation_fundings as funding', 'funding.budget_allocation_version_id', '=', 'version.id')
+                ->join('financial_v2_budget_allocation_fundings as funding', fn ($join) => $join->whereRaw('BINARY `funding`.`budget_allocation_version_id` = BINARY `version`.`id`'))
                 ->where('funding.fund_id', $fundId);
         }
         $allocated = $allocatedQuery->sum($fundId ? 'funding.amount' : 'version.allocated_amount');
 
         $realizedQuery = DB::table('financial_v2_fund_realizations as realization')
-            ->join('financial_v2_budget_allocation_versions as version', 'version.id', '=', 'realization.budget_allocation_version_id')
-            ->join('financial_v2_budget_allocations as allocation', 'allocation.id', '=', 'version.budget_allocation_id')
-            ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'realization.transaction_id')
-            ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
+            ->join('financial_v2_budget_allocation_versions as version', fn ($join) => $join->whereRaw('BINARY `version`.`id` = BINARY `realization`.`budget_allocation_version_id`'))
+            ->join('financial_v2_budget_allocations as allocation', fn ($join) => $join->whereRaw('BINARY `allocation`.`id` = BINARY `version`.`budget_allocation_id`'))
+            ->join('financial_v2_transactions as transaction', fn ($join) => $join->whereRaw('BINARY `transaction`.`id` = BINARY `realization`.`transaction_id`'))
+            ->join('financial_v2_journals as journal', fn ($join) => $join->whereRaw('BINARY `journal`.`transaction_id` = BINARY `transaction`.`id`'))
             ->where('realization.accounting_entity_id', $entityId)
             ->where('realization.status', 'recorded')
             ->where('journal.journal_status', 'posted');
         if ($fundId) {
             $realizedQuery
-                ->join('financial_v2_transaction_splits as split', 'split.transaction_id', '=', 'transaction.id')
+                ->join('financial_v2_transaction_splits as split', fn ($join) => $join->whereRaw('BINARY `split`.`transaction_id` = BINARY `transaction`.`id`'))
                 ->where('split.fund_id', $fundId);
         }
         $realized = $realizedQuery->sum($fundId ? 'split.split_amount' : 'transaction.gross_amount');

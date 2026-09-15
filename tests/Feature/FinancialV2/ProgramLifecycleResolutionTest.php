@@ -24,6 +24,7 @@ function programLifecycleFactCounts(): array
         'journal_lines' => 'financial_v2_journal_lines',
         'ledger_entries' => 'financial_v2_ledger_entries',
         'vouchers' => 'financial_v2_vouchers',
+        'allocations' => 'financial_v2_budget_allocations',
     ])->mapWithKeys(fn (string $table, string $name): array => [$name => DB::table($table)->count()])->all();
 }
 
@@ -40,14 +41,33 @@ test('legacy Program lifecycle is corrected without changing facts and resolves 
     $program->update(['start_date' => '2026-08-15']);
     $factsBefore = programLifecycleFactCounts();
     $correction = app(CorrectMrjLegacyProgramLifecycleService::class);
-    $result = $correction->correct();
+    $user = User::factory()->create();
+    $route = app('router')->getRoutes()->getByName('financial-v2.configuration.correct-legacy-program-lifecycle');
+    expect($route->methods())->toBe(['POST'])
+        ->and($route->gatherMiddleware())->toContain('web', 'auth');
+    $this->post(route('financial-v2.configuration.correct-legacy-program-lifecycle'), ['entity' => $entity->id])
+        ->assertRedirect(route('login'));
+    $this->actingAs($user)
+        ->get(route('financial-v2.configuration.index', ['entity' => $entity->id]))
+        ->assertOk()
+        ->assertSee('Koreksi Lifecycle Program');
+    $result = $this->actingAs($user)
+        ->postJson(route('financial-v2.configuration.correct-legacy-program-lifecycle'), ['entity' => $entity->id])
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->json('result');
 
     expect($result['changed'])->toBeTrue()
         ->and($result['program_start_date'])->toBeNull()
         ->and($result['program_business_active'])->toBeTrue()
         ->and(programLifecycleFactCounts())->toBe($factsBefore)
         ->and($correction->correct()['changed'])->toBeFalse()
-        ->and(programLifecycleFactCounts())->toBe($factsBefore);
+        ->and(programLifecycleFactCounts())->toBe($factsBefore)
+        ->and(\App\Models\FinancialV2\AuditEvent::query()
+            ->where('event_type', 'legacy_program_lifecycle_corrected')
+            ->where('actor_user_id', $user->id)
+            ->where('after_summary', 'like', '%ADMIN_CONFIGURATION_PROVISION%')
+            ->exists())->toBeTrue();
 
     app(ConfigureMrjHistoricalDhuafaReceiptService::class)->configure();
     $status = $correction->status();

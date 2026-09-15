@@ -52,9 +52,10 @@ final class ConfigureMrjFidyahAllocationService
         $entity = AccountingEntity::query()->where('code', self::ENTITY_CODE)->where('status', 'active')->firstOrFail();
         $factsBefore = $this->factCounts($entity->id);
         $created = [];
+        $updated = [];
         $reused = [];
 
-        DB::transaction(function () use ($entity, $actorUserId, $origin, $factsBefore, &$created, &$reused): void {
+        DB::transaction(function () use ($entity, $actorUserId, $origin, $factsBefore, &$created, &$updated, &$reused): void {
             $payment = TransactionType::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY')->where('status', 'active')->lockForUpdate()->firstOrFail();
             $postingRule = PostingRule::query()->where('accounting_entity_id', $entity->id)->where('code', 'MRJ-PAY-STANDARD')->where('status', 'active')->lockForUpdate()->firstOrFail();
             $funds = Fund::query()->where('accounting_entity_id', $entity->id)->whereIn('code', [...array_keys(self::POLICIES), 'ZAKAT-MAAL'])->lockForUpdate()->get()->keyBy('code');
@@ -64,29 +65,23 @@ final class ConfigureMrjFidyahAllocationService
                 }
             }
 
-            $category = Category::query()->where('accounting_entity_id', $entity->id)->where('code', self::CATEGORY_CODE)->lockForUpdate()->first();
-            if (! $category) {
-                $category = $this->masters->createCategory($entity->id, [
-                    'transaction_type_id' => $payment->id,
-                    'default_posting_rule_id' => $postingRule->id,
-                    'code' => self::CATEGORY_CODE,
-                    'name' => 'Penyaluran Fidyah',
-                    'status' => 'active',
-                    'valid_from' => self::EFFECTIVE_FROM,
-                    'valid_to' => null,
-                ], $actorUserId);
+            [$category, $categoryAction] = $this->ensureCategory($entity->id, $payment, $postingRule, $actorUserId);
+            if ($categoryAction === 'created') {
                 $created[] = 'category:'.self::CATEGORY_CODE;
+            } elseif ($categoryAction === 'updated') {
+                $updated[] = 'category:'.self::CATEGORY_CODE;
             } else {
-                $this->assertCategory($category, $payment, $postingRule);
                 $reused[] = 'category:'.self::CATEGORY_CODE;
             }
 
             $versions = [];
             foreach (self::POLICIES as $fundCode => $references) {
-                [$policy, $wasCreated] = $this->ensurePolicy($entity->id, $funds[$fundCode], $payment, $category, $references, $actorUserId);
+                [$policy, $action] = $this->ensurePolicy($entity->id, $funds[$fundCode], $payment, $category, $references, $actorUserId);
                 $versions[$fundCode] = $policy->version_no;
-                if ($wasCreated) {
+                if ($action === 'created') {
                     $created[] = "fund-policy:{$fundCode}:v{$policy->version_no}";
+                } elseif ($action === 'updated') {
+                    $updated[] = "fund-policy:{$fundCode}:v{$policy->version_no}";
                 } else {
                     $reused[] = "fund-policy:{$fundCode}:v{$policy->version_no}";
                 }
@@ -102,7 +97,7 @@ final class ConfigureMrjFidyahAllocationService
 
             $this->auditTrail->record($entity->id, 'fidyah_allocation_configuration_provisioned', 'accounting_entity', $entity->id, (string) Str::uuid(), $actorUserId,
                 ['origin' => $origin, 'facts' => $factsBefore],
-                ['origin' => $origin, 'created' => $created, 'reused' => $reused, 'policy_versions' => $versions, 'resolver' => $resolver]);
+                ['origin' => $origin, 'created' => $created, 'updated' => $updated, 'reused' => $reused, 'policy_versions' => $versions, 'resolver' => $resolver]);
         }, 3);
 
         $factsAfter = $this->factCounts($entity->id);
@@ -110,7 +105,7 @@ final class ConfigureMrjFidyahAllocationService
             throw new FinancialDomainException('E-FIDYAH-ALLOCATION-FACT-MUTATION', 'Provisioning mengubah financial fact.');
         }
 
-        return $this->status() + ['changed' => $created !== [], 'created' => $created, 'reused' => $reused, 'origin' => $origin, 'facts_before' => $factsBefore, 'facts_after' => $factsAfter];
+        return $this->status() + ['changed' => $created !== [] || $updated !== [], 'created' => $created, 'updated' => $updated, 'reused' => $reused, 'origin' => $origin, 'facts_before' => $factsBefore, 'facts_after' => $factsAfter];
     }
 
     /** @return array<string, mixed> */
@@ -132,8 +127,10 @@ final class ConfigureMrjFidyahAllocationService
         }
         if (! $category) {
             $missing[] = 'category:'.self::CATEGORY_CODE;
-        } elseif (! $payment || ! $postingRule || ! $this->categoryMatches($category, $payment, $postingRule)) {
+        } elseif (! $payment || ! $postingRule || ! $this->categoryIdentityMatches($category, $payment) || ($this->categoryHasFinancialUsage($category) && ! $this->categoryMatches($category, $payment, $postingRule))) {
             $conflicts[] = 'category:'.self::CATEGORY_CODE;
+        } elseif (! $this->categoryMatches($category, $payment, $postingRule)) {
+            $missing[] = 'category:'.self::CATEGORY_CODE;
         }
         foreach ([...array_keys(self::POLICIES), 'ZAKAT-MAAL'] as $code) {
             if (! $funds->has($code)) {
@@ -147,14 +144,12 @@ final class ConfigureMrjFidyahAllocationService
                 if (! $funds->has($code)) {
                     continue;
                 }
-                $policy = $this->targetPolicy($funds[$code], $refs);
+                $policy = $this->targetPolicy($funds[$code]);
                 if (! $policy) {
-                    if (FundPolicyVersion::query()->where('fund_id', $funds[$code]->id)->whereDate('effective_from', self::EFFECTIVE_FROM)->exists()) {
-                        $conflicts[] = 'fund-policy:'.$code;
-                    } else {
-                        $missing[] = 'fund-policy:'.$code;
-                    }
-                } elseif (! $this->policyMatches($policy, $payment, $category, $refs) || $this->effectivePolicyCount($funds[$code]) !== 1) {
+                    $missing[] = 'fund-policy:'.$code;
+                } elseif ($policy->status === 'draft' && $this->draftPolicyCanBeCompleted($policy)) {
+                    $missing[] = 'fund-policy:'.$code;
+                } elseif (! $this->policyMatches($policy, $payment, $category) || $this->effectivePolicyCount($funds[$code]) !== 1) {
                     $conflicts[] = 'fund-policy:'.$code;
                 } else {
                     $versions[$code] = $policy->version_no;
@@ -169,14 +164,42 @@ final class ConfigureMrjFidyahAllocationService
             'effective_from' => self::EFFECTIVE_FROM, 'category' => self::CATEGORY_CODE, 'program' => null, 'policy_versions' => $versions, 'resolver' => $resolver];
     }
 
-    /** @param array{document:string,matrix:string} $refs @return array{FundPolicyVersion,bool} */
-    private function ensurePolicy(string $entityId, Fund $fund, TransactionType $payment, Category $category, array $refs, ?int $actor): array
+    /** @return array{Category,string} */
+    private function ensureCategory(string $entityId, TransactionType $payment, PostingRule $postingRule, ?int $actor): array
     {
-        $target = $this->targetPolicy($fund, $refs);
-        if (FundPolicyVersion::query()->where('fund_id', $fund->id)->whereDate('effective_from', self::EFFECTIVE_FROM)->when($target, fn ($q) => $q->whereKeyNot($target->id))->exists()) {
+        $category = Category::query()->where('accounting_entity_id', $entityId)->where('code', self::CATEGORY_CODE)->lockForUpdate()->first();
+        $data = [
+            'transaction_type_id' => $payment->id,
+            'default_posting_rule_id' => $postingRule->id,
+            'code' => self::CATEGORY_CODE,
+            'name' => 'Penyaluran Fidyah',
+            'status' => 'active',
+            'valid_from' => self::EFFECTIVE_FROM,
+            'valid_to' => null,
+        ];
+        if (! $category) {
+            return [$this->masters->createCategory($entityId, $data, $actor), 'created'];
+        }
+        if (! $this->categoryIdentityMatches($category, $payment)
+            || ($this->categoryHasFinancialUsage($category) && ! $this->categoryMatches($category, $payment, $postingRule))) {
             throw $this->conflict();
         }
-        $created = false;
+        if (! $this->categoryMatches($category, $payment, $postingRule)) {
+            return [$this->masters->updateCategory($entityId, $category->id, $data, $actor), 'updated'];
+        }
+
+        return [$category, 'reused'];
+    }
+
+    /** @param array{document:string,matrix:string} $refs @return array{FundPolicyVersion,string} */
+    private function ensurePolicy(string $entityId, Fund $fund, TransactionType $payment, Category $category, array $refs, ?int $actor): array
+    {
+        $targets = FundPolicyVersion::query()->where('fund_id', $fund->id)->whereDate('effective_from', self::EFFECTIVE_FROM)->lockForUpdate()->get();
+        if ($targets->count() > 1) {
+            throw $this->conflict();
+        }
+        $target = $targets->first();
+        $action = 'reused';
         if (! $target) {
             $predecessor = FundPolicyVersion::query()->where('fund_id', $fund->id)->whereIn('status', ['effective', 'superseded'])
                 ->whereDate('effective_from', '<=', '2026-08-21')->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', '2026-08-21'))
@@ -187,20 +210,36 @@ final class ConfigureMrjFidyahAllocationService
             $this->ensureRule($entityId, $target, ['transaction_type_id' => $payment->id, 'account_id' => null, 'category_id' => $category->id, 'program_id' => null,
                 'cost_center_id' => null, 'decision' => 'allowed', 'rationale' => 'Diizinkan untuk alokasi dan penyaluran Fidyah tanpa Program berdasarkan keputusan bisnis tanggal 22 Agustus 2026.'], $actor);
             $target = $this->governance->makeFundPolicyVersionEffective($target->id, $actor);
-            $created = true;
+            $action = 'created';
+        } elseif ($target->status === 'draft') {
+            if (! $this->draftPolicyCanBeCompleted($target)) {
+                throw $this->conflict();
+            }
+            $predecessor = FundPolicyVersion::query()->where('fund_id', $fund->id)->whereIn('status', ['effective', 'superseded'])
+                ->whereDate('effective_from', '<=', '2026-08-21')->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', '2026-08-21'))
+                ->orderByDesc('effective_from')->firstOrFail();
+            $this->copyRules($entityId, $predecessor, $target, $actor);
+            $this->ensureRule($entityId, $target, ['transaction_type_id' => $payment->id, 'account_id' => null, 'category_id' => $category->id, 'program_id' => null,
+                'cost_center_id' => null, 'decision' => 'allowed', 'rationale' => 'Diizinkan untuk alokasi dan penyaluran Fidyah tanpa Program berdasarkan keputusan bisnis tanggal 22 Agustus 2026.'], $actor);
+            $target = $this->governance->makeFundPolicyVersionEffective($target->id, $actor);
+            $action = 'updated';
         }
-        if (! $this->policyMatches($target, $payment, $category, $refs) || $this->effectivePolicyCount($fund) !== 1) {
+        if (! $this->policyMatches($target, $payment, $category) || $this->effectivePolicyCount($fund) !== 1) {
             throw $this->conflict();
         }
 
-        return [$target, $created];
+        return [$target, $action];
     }
 
-    private function assertCategory(Category $category, TransactionType $payment, PostingRule $rule): void
+    private function categoryIdentityMatches(Category $category, TransactionType $payment): bool
     {
-        if (! $this->categoryMatches($category, $payment, $rule)) {
-            throw $this->conflict();
-        }
+        return $category->transaction_type_id === $payment->id && $category->name === 'Penyaluran Fidyah';
+    }
+
+    private function categoryHasFinancialUsage(Category $category): bool
+    {
+        return DB::table('financial_v2_transactions')->where('category_id', $category->id)->exists()
+            || DB::table('financial_v2_budget_allocations')->where('category_id', $category->id)->exists();
     }
 
     private function categoryMatches(Category $c, TransactionType $p, PostingRule $r): bool
@@ -208,9 +247,11 @@ final class ConfigureMrjFidyahAllocationService
         return $c->transaction_type_id === $p->id && $c->default_posting_rule_id === $r->id && $c->name === 'Penyaluran Fidyah' && $c->status === 'active' && $c->valid_from?->toDateString() === self::EFFECTIVE_FROM && $c->valid_to === null;
     }
 
-    private function targetPolicy(Fund $fund, array $refs): ?FundPolicyVersion
+    private function targetPolicy(Fund $fund): ?FundPolicyVersion
     {
-        return FundPolicyVersion::query()->where('fund_id', $fund->id)->whereDate('effective_from', self::EFFECTIVE_FROM)->where('policy_document_ref', $refs['document'])->first();
+        $targets = FundPolicyVersion::query()->where('fund_id', $fund->id)->whereDate('effective_from', self::EFFECTIVE_FROM)->get();
+
+        return $targets->count() === 1 ? $targets->first() : null;
     }
 
     private function effectivePolicyCount(Fund $fund): int
@@ -218,11 +259,18 @@ final class ConfigureMrjFidyahAllocationService
         return FundPolicyVersion::query()->where('fund_id', $fund->id)->where('status', 'effective')->whereDate('effective_from', '<=', self::EFFECTIVE_FROM)->where(fn ($q) => $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', self::EFFECTIVE_FROM))->count();
     }
 
-    private function policyMatches(FundPolicyVersion $p, TransactionType $type, Category $category, array $refs): bool
+    private function draftPolicyCanBeCompleted(FundPolicyVersion $policy): bool
     {
-        return $p->status === 'effective' && $p->effective_from?->toDateString() === self::EFFECTIVE_FROM && $p->effective_to === null
-            && $p->policy_document_ref === $refs['document'] && $p->allowed_matrix_ref === $refs['matrix']
-            && FundPolicyRule::query()->where('fund_policy_version_id', $p->id)->where('transaction_type_id', $type->id)->whereNull('account_id')
+        return $policy->effective_from?->toDateString() === self::EFFECTIVE_FROM
+            && (! $policy->effective_to || $policy->effective_to->gte(self::EFFECTIVE_FROM))
+            && filled($policy->policy_document_ref) && filled($policy->allowed_matrix_ref);
+    }
+
+    private function policyMatches(FundPolicyVersion $policy, TransactionType $type, Category $category): bool
+    {
+        return $policy->status === 'effective' && $policy->effective_from?->lte(self::EFFECTIVE_FROM)
+            && (! $policy->effective_to || $policy->effective_to->gte(self::EFFECTIVE_FROM))
+            && FundPolicyRule::query()->where('fund_policy_version_id', $policy->id)->where('transaction_type_id', $type->id)->whereNull('account_id')
                 ->where('category_id', $category->id)->whereNull('program_id')->whereNull('cost_center_id')->where('decision', 'allowed')->exists();
     }
 

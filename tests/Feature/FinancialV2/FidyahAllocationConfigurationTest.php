@@ -180,4 +180,12 @@ test('Allocation UI lists PAY categories and excludes the RCV Fidyah category', 
         ->assertSee('Penyaluran Fidyah')
         ->assertSee('value="'.$pay->id.'"', false)
         ->assertDontSee('value="'.$receipt->id.'"', false);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('financial-v2.masters.categories.index', ['entity' => $entity->id]))
+        ->assertOk()
+        ->assertSee('PAY-FIDYAH')
+        ->assertSee('Pengeluaran (PAY)')
+        ->assertSee('RCV-FIDYAH')
+        ->assertSee('Penerimaan (RCV)');
 });

@@ -3,8 +3,12 @@
 namespace App\Domain\FinancialV2;
 
 use App\Models\FinancialV2\AttachmentLink;
+use App\Models\FinancialV2\BudgetAllocation;
+use App\Models\FinancialV2\BudgetAllocationVersion;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\FundRealization;
+use App\Models\FinancialV2\TransactionSplit;
+use App\Models\FinancialV2\TransactionType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -24,8 +28,14 @@ final class RealizationDraftReadService
 
     public function activeForAllocationVersion(string $entityId, string $allocationVersionId): ?FinancialTransaction
     {
+        $transactionIds = FundRealization::query()
+            ->where('accounting_entity_id', $entityId)
+            ->where('budget_allocation_version_id', $allocationVersionId)
+            ->where('status', 'draft')
+            ->pluck('transaction_id');
+
         return $this->activeQuery($entityId)
-            ->whereHas('realization', fn (Builder $query) => $query->where('budget_allocation_version_id', $allocationVersionId))
+            ->whereIn('id', $transactionIds)
             ->oldest('created_at')
             ->first();
     }
@@ -41,8 +51,14 @@ final class RealizationDraftReadService
             return collect();
         }
 
+        $transactionIds = FundRealization::query()
+            ->where('accounting_entity_id', $entityId)
+            ->whereIn('budget_allocation_version_id', $ids)
+            ->where('status', 'draft')
+            ->pluck('transaction_id');
+
         return $this->activeQuery($entityId)
-            ->whereHas('realization', fn (Builder $query) => $query->whereIn('budget_allocation_version_id', $ids))
+            ->whereIn('id', $transactionIds)
             ->oldest('created_at')
             ->get()
             ->groupBy(fn (FinancialTransaction $transaction) => $transaction->realization?->budget_allocation_version_id);
@@ -54,9 +70,17 @@ final class RealizationDraftReadService
     public function page(string $entityId, array $filters = []): LengthAwarePaginator
     {
         $perPage = min(100, max(10, (int) ($filters['per_page'] ?? 20)));
-        $drafts = $this->activeQuery($entityId)
-            ->when($filters['fund_id'] ?? null, fn (Builder $query, string $fundId) => $query->whereHas('splits', fn (Builder $splits) => $splits->where('fund_id', $fundId)))
-            ->when($filters['program_id'] ?? null, fn (Builder $query, string $programId) => $query->whereHas('realization.budgetAllocationVersion.allocation', fn (Builder $allocation) => $allocation->where('program_id', $programId)))
+        $query = $this->activeQuery($entityId);
+        if ($fundId = ($filters['fund_id'] ?? null)) {
+            $query->whereIn('id', TransactionSplit::query()->where('fund_id', $fundId)->pluck('transaction_id'));
+        }
+        if ($programId = ($filters['program_id'] ?? null)) {
+            $allocationIds = BudgetAllocation::query()->where('accounting_entity_id', $entityId)->where('program_id', $programId)->pluck('id');
+            $versionIds = BudgetAllocationVersion::query()->whereIn('budget_allocation_id', $allocationIds)->pluck('id');
+            $query->whereIn('id', FundRealization::query()->whereIn('budget_allocation_version_id', $versionIds)->pluck('transaction_id'));
+        }
+
+        $drafts = $query
             ->latest('updated_at')
             ->paginate($perPage, ['*'], 'draft_page')
             ->withQueryString();
@@ -68,6 +92,15 @@ final class RealizationDraftReadService
 
     private function activeQuery(string $entityId): Builder
     {
+        $typeId = TransactionType::query()->where('accounting_entity_id', $entityId)->where('code', 'PAY')->value('id');
+        $allocationIds = BudgetAllocation::query()->where('accounting_entity_id', $entityId)->where('status', 'approved')->pluck('id');
+        $versionIds = BudgetAllocationVersion::query()->whereIn('budget_allocation_id', $allocationIds)->where('status', 'approved')->pluck('id');
+        $transactionIds = FundRealization::query()
+            ->where('accounting_entity_id', $entityId)
+            ->whereIn('budget_allocation_version_id', $versionIds)
+            ->where('status', 'draft')
+            ->pluck('transaction_id');
+
         return FinancialTransaction::query()
             ->with([
                 'type:id,code,name',
@@ -81,12 +114,8 @@ final class RealizationDraftReadService
             ])
             ->where('accounting_entity_id', $entityId)
             ->whereIn('status', self::ACTIVE_TRANSACTION_STATUSES)
-            ->whereHas('type', fn (Builder $query) => $query->where('code', 'PAY'))
-            ->whereHas('realization', fn (Builder $query) => $query
-                ->where('status', 'draft')
-                ->whereHas('budgetAllocationVersion', fn (Builder $version) => $version
-                    ->where('status', 'approved')
-                    ->whereHas('allocation', fn (Builder $allocation) => $allocation->where('status', 'approved'))));
+            ->where('transaction_type_id', $typeId)
+            ->whereIn('id', $transactionIds);
     }
 
     /** @param Collection<int, FinancialTransaction> $transactions */
@@ -112,8 +141,8 @@ final class RealizationDraftReadService
         $recordedByVersion = $versionIds->isEmpty()
             ? collect()
             : FundRealization::query()
-                ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'financial_v2_fund_realizations.transaction_id')
-                ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
+                ->join('financial_v2_transactions as transaction', fn ($join) => $join->whereRaw('BINARY `transaction`.`id` = BINARY `financial_v2_fund_realizations`.`transaction_id`'))
+                ->join('financial_v2_journals as journal', fn ($join) => $join->whereRaw('BINARY `journal`.`transaction_id` = BINARY `transaction`.`id`'))
                 ->whereIn('financial_v2_fund_realizations.budget_allocation_version_id', $versionIds)
                 ->where('financial_v2_fund_realizations.status', 'recorded')
                 ->where('journal.journal_status', 'posted')

@@ -321,8 +321,8 @@ final class BudgetAllocationService
     {
         $version = BudgetAllocationVersion::query()->findOrFail($budgetAllocationVersionId);
         $actual = DB::table('financial_v2_fund_realizations as realization')
-            ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'realization.transaction_id')
-            ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
+            ->join('financial_v2_transactions as transaction', fn ($join) => $join->whereRaw('BINARY `transaction`.`id` = BINARY `realization`.`transaction_id`'))
+            ->join('financial_v2_journals as journal', fn ($join) => $join->whereRaw('BINARY `journal`.`transaction_id` = BINARY `transaction`.`id`'))
             ->where('realization.budget_allocation_version_id', $version->id)
             ->where('realization.status', 'recorded')
             ->where('journal.journal_status', 'posted')
@@ -338,9 +338,9 @@ final class BudgetAllocationService
     {
         $version = BudgetAllocationVersion::query()->with('fundings.fund')->findOrFail($budgetAllocationVersionId);
         $actualByFund = DB::table('financial_v2_fund_realizations as realization')
-            ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'realization.transaction_id')
-            ->join('financial_v2_transaction_splits as split', 'split.transaction_id', '=', 'transaction.id')
-            ->join('financial_v2_journals as journal', 'journal.transaction_id', '=', 'transaction.id')
+            ->join('financial_v2_transactions as transaction', fn ($join) => $join->whereRaw('BINARY `transaction`.`id` = BINARY `realization`.`transaction_id`'))
+            ->join('financial_v2_transaction_splits as split', fn ($join) => $join->whereRaw('BINARY `split`.`transaction_id` = BINARY `transaction`.`id`'))
+            ->join('financial_v2_journals as journal', fn ($join) => $join->whereRaw('BINARY `journal`.`transaction_id` = BINARY `transaction`.`id`'))
             ->where('realization.budget_allocation_version_id', $version->id)
             ->where('realization.status', 'recorded')
             ->where('journal.journal_status', 'posted')

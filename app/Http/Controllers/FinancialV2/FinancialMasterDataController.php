@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\ConfigureMrjFidyahAllocationService;
 use App\Domain\FinancialV2\ConfigureMrjHistoricalDhuafaReceiptService;
+use App\Domain\FinancialV2\CorrectMrjLegacyProgramLifecycleService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
 use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
@@ -42,6 +43,7 @@ final class FinancialMasterDataController
         private readonly FundPolicyVersionDeletionService $policyDeletion,
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
         private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
+        private readonly CorrectMrjLegacyProgramLifecycleService $legacyProgramLifecycle,
     ) {}
 
     public function configuration(Request $request)
@@ -77,6 +79,7 @@ final class FinancialMasterDataController
             'fundPolicyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
             'historicalDhuafaStatus' => $context['entity']?->code === ConfigureMrjHistoricalDhuafaReceiptService::ENTITY_CODE ? $this->historicalDhuafa->status() : null,
             'fidyahAllocationStatus' => $context['entity']?->code === ConfigureMrjFidyahAllocationService::ENTITY_CODE ? $this->fidyahAllocation->status() : null,
+            'legacyProgramLifecycleStatus' => $context['entity']?->code === CorrectMrjLegacyProgramLifecycleService::ENTITY_CODE ? $this->legacyProgramLifecycle->status() : null,
         ]);
     }
 
@@ -114,7 +117,7 @@ final class FinancialMasterDataController
         abort_unless($entity->code === ConfigureMrjHistoricalDhuafaReceiptService::ENTITY_CODE, 404, 'Provisioning hanya tersedia untuk MRJ-ACTUAL.');
 
         try {
-            $result = $this->historicalDhuafa->configure($request->user()?->id);
+            $result = $this->historicalDhuafa->configure($request->user()?->id, ConfigureMrjHistoricalDhuafaReceiptService::ORIGIN_ADMIN);
         } catch (Throwable $exception) {
             report($exception);
             $message = 'Konfigurasi historis DHUAFA gagal dan seluruh perubahan dibatalkan. '.$exception->getMessage();
@@ -127,6 +130,32 @@ final class FinancialMasterDataController
         $message = $result['changed']
             ? 'Konfigurasi historis DHUAFA berhasil diprovision. Financial fact tidak berubah.'
             : 'Konfigurasi historis DHUAFA sudah siap. Tidak ada duplikasi atau perubahan financial fact.';
+        $redirect = route('financial-v2.configuration.index', ['entity' => $entity->id]);
+
+        return $request->expectsJson()
+            ? response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect, 'result' => $result])
+            : redirect($redirect)->with('success', $message);
+    }
+
+    public function correctLegacyProgramLifecycle(Request $request)
+    {
+        $entity = $this->requiredEntity($request);
+        abort_unless($entity->code === CorrectMrjLegacyProgramLifecycleService::ENTITY_CODE, 404, 'Koreksi hanya tersedia untuk MRJ-ACTUAL.');
+
+        try {
+            $result = $this->legacyProgramLifecycle->correct($request->user()?->id, CorrectMrjLegacyProgramLifecycleService::ORIGIN_ADMIN);
+        } catch (Throwable $exception) {
+            report($exception);
+            $message = 'Koreksi lifecycle Program gagal dan seluruh perubahan dibatalkan. '.$exception->getMessage();
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : back()->withErrors(['configuration' => $message]);
+        }
+
+        $message = $result['changed']
+            ? 'Lifecycle Program legacy berhasil dikoreksi. Financial fact tidak berubah.'
+            : 'Lifecycle Program legacy sudah benar. Tidak ada perubahan financial fact.';
         $redirect = route('financial-v2.configuration.index', ['entity' => $entity->id]);
 
         return $request->expectsJson()
