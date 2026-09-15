@@ -200,6 +200,14 @@
                         });
                         const payload = await response.json();
                         if (!response.ok || !payload.ok) throw new Error(payload.message || 'Data belum dapat diproses.');
+                        if (payload.reused) {
+                            showMessage(payload.message, 'success');
+                            if (submit) {
+                                submit.disabled = false;
+                                submit.textContent = submit.dataset.originalText || 'Simpan';
+                            }
+                            return;
+                        }
                         window.location.assign(payload.redirect);
                     } catch (error) {
                         showMessage(error.message || 'Data belum dapat diproses.');
@@ -300,6 +308,7 @@
                     timer = setTimeout(async () => {
                         controller = new AbortController();
                         const data = new FormData(form);
+                        data.delete('_method');
                         data.set('operation', form.dataset.operation);
                         try {
                             const response = await fetch(form.dataset.previewUrl, {
@@ -381,7 +390,7 @@
                         action.classList.add('hidden');
                         const status = action.closest('[data-financial-configuration], [data-bank-configuration]');
                         const output = status?.querySelector('[data-configuration-message], [data-bank-configuration-message]');
-                        if (output) output.textContent = '○ Konfigurasi menunggu aktivasi/approval.';
+                        if (output) output.textContent = payload.message || '○ Konfigurasi menunggu aktivasi/approval.';
                         parentForm.dispatchEvent(new CustomEvent('configuration-draft-created', { detail: payload }));
                     } catch (exception) { showError(exception.message || 'Draft konfigurasi belum dapat disimpan.'); }
                     finally { save.disabled = false; }

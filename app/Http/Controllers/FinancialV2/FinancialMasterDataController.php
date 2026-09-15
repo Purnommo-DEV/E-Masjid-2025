@@ -364,7 +364,10 @@ final class FinancialMasterDataController
         return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request, $policyVersion) {
             $rule = $this->masters->createFundPolicyRule($entity->id, $policyVersion, $this->policyRuleInput($request), $request->user()?->id);
 
-            return ['Aturan Dana disimpan.', ['fund_policy_rule_id' => $rule->id]];
+            return [$rule->wasRecentlyCreated ? 'Aturan Dana disimpan.' : 'Aturan yang sama sudah tersedia.', [
+                'fund_policy_rule_id' => $rule->id,
+                'reused' => ! $rule->wasRecentlyCreated,
+            ]];
         });
     }
 
@@ -648,6 +651,7 @@ final class FinancialMasterDataController
             'E-MASTER-REFERENCED' => 'Master ini sudah digunakan dan tidak dapat dihapus atau diubah secara langsung. Nonaktifkan untuk transaksi baru.',
             'E-MASTER-POLICY-IMMUTABLE' => 'Aturan Dana yang sudah berlaku tidak dapat diubah. Buat versi baru untuk perubahan berikutnya.',
             'E-MASTER-POLICY-DUPLICATE' => 'Aturan Dana dengan cakupan yang sama sudah ada.',
+            'E-MASTER-POLICY-CONFLICT' => $exception->getMessage(),
             'E-MASTER-LIQUIDITY-ACCOUNT', 'E-MASTER-FUND-CONFIGURATION', 'E-MASTER-ENTITY-SCOPE' => $exception->getMessage(),
             default => $exception->getMessage() ?: 'Master keuangan belum dapat diproses. Periksa konfigurasi yang diisi.',
         };

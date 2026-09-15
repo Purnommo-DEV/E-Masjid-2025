@@ -88,9 +88,15 @@ test('inline receipt flow locks context, creates only an audited policy draft, b
         ->and(AuditEvent::query()->where('event_type', 'inline_transaction_configuration_draft_created')->where('actor_user_id', $admin->id)->exists())->toBeTrue()
         ->and($facts())->toBe($before);
 
+    $ruleIds = $draft->rules()->orderBy('id')->pluck('id')->all();
+    $auditCount = AuditEvent::query()->where('event_type', 'inline_transaction_configuration_draft_created')->count();
     $this->actingAs($admin)->postJson(route('financial-v2.configuration.inline.store'), $payload + [
         'posting_rule_version_id' => $versionId, 'effective_from' => $context['today'], 'policy_document_ref' => 'DUPLICATE',
-    ])->assertStatus(422)->assertJsonPath('ok', false);
+    ])->assertOk()->assertJsonPath('ok', true)->assertJsonPath('message', 'Aturan yang sama sudah tersedia.');
+    expect(FundPolicyVersion::query()->where('fund_id', $fund->id)->where('status', 'draft')->count())->toBe(1)
+        ->and($draft->rules()->orderBy('id')->pluck('id')->all())->toBe($ruleIds)
+        ->and(AuditEvent::query()->where('event_type', 'inline_transaction_configuration_draft_created')->count())->toBe($auditCount)
+        ->and($facts())->toBe($before);
 
     app(MasterDataGovernanceService::class)->makeFundPolicyVersionEffective($draft->id, $admin->id);
     expect(fn () => app(FinancialTransactionConfigurationResolver::class)->resolve([

@@ -5,6 +5,7 @@ use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\Fund;
+use App\Models\FinancialV2\FundPolicyRule;
 use App\Models\FinancialV2\Journal;
 use App\Models\FinancialV2\LedgerEntry;
 use App\Models\FinancialV2\Program;
@@ -164,12 +165,21 @@ test('draft fund policy rules are configurable without changing financial facts 
         'exception_approval_level' => 'Synthetic approver',
     ])->assertOk()->json('fund_policy_version_id');
 
-    $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), [
+    $rulePayload = [
         'entity' => $context['entity']->id,
         'transaction_type_id' => $context['receiptType']->id,
         'decision' => 'allowed',
         'rationale' => 'Synthetic allowed use',
-    ])->assertOk()->assertJsonPath('ok', true);
+    ];
+    $firstRule = $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), $rulePayload)
+        ->assertOk()->assertJsonPath('ok', true);
+    $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), $rulePayload + ['rationale' => 'Different origin metadata'])
+        ->assertOk()->assertJsonPath('message', 'Aturan yang sama sudah tersedia.')
+        ->assertJsonPath('reused', true)
+        ->assertJsonPath('fund_policy_rule_id', $firstRule->json('fund_policy_rule_id'));
+    expect(FundPolicyRule::where('fund_policy_version_id', $policy)->count())->toBe(1);
+    $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), array_replace($rulePayload, ['decision' => 'prohibited']))
+        ->assertStatus(422)->assertJsonPath('code', 'E-MASTER-POLICY-CONFLICT');
     $this->actingAs($user)->postJson(route('financial-v2.masters.policies.effective', $policy), ['entity' => $context['entity']->id])
         ->assertOk()->assertJsonPath('ok', true);
     $this->actingAs($user)->putJson(route('financial-v2.masters.policies.update', $policy), [

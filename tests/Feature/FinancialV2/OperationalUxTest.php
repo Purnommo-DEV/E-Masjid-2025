@@ -116,7 +116,8 @@ test('operational receipt UX is idempotent, retains evidence, and posts through 
     $context = uxOperationalContext();
     $user = User::factory()->create();
     $payload = uxReceiptPayload($context, (string) Str::uuid());
-    $payload['attachment'] = UploadedFile::fake()->image('bukti.jpg');
+    $evidenceContents = "%PDF-1.4\nretry-safe evidence\n%%EOF";
+    $payload['attachment'] = UploadedFile::fake()->createWithContent('bukti.pdf', $evidenceContents);
 
     $response = $this->actingAs($user)->post(route('financial-v2.transactions.store', 'receipt'), $payload, ['Accept' => 'application/json']);
     $response->assertOk()->assertJsonPath('ok', true);
@@ -127,8 +128,12 @@ test('operational receipt UX is idempotent, retains evidence, and posts through 
 
     $updatePayload = uxReceiptPayload($context, $payload['submission_key']);
     $updatePayload['amount'] = '125.00';
-    $this->actingAs($user)->putJson(route('financial-v2.transactions.update', $transactionId), $updatePayload)
+    $updatePayload['attachment'] = UploadedFile::fake()->createWithContent('bukti.pdf', $evidenceContents);
+    $this->actingAs($user)->put(route('financial-v2.transactions.update', $transactionId), $updatePayload, ['Accept' => 'application/json'])
         ->assertOk()->assertJsonPath('ok', true);
+
+    expect(Attachment::where('accounting_entity_id', $context['entity']->id)->count())->toBe(1)
+        ->and(AttachmentLink::where('target_id', $transactionId)->count())->toBe(1);
 
     $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'receipt'), uxReceiptPayload($context, $payload['submission_key']))
         ->assertOk()->assertJsonPath('duplicate', true)->assertJsonPath('transaction_id', $transactionId);
@@ -368,6 +373,7 @@ test('fund usage preview is sent as a CSRF-protected POST request', function () 
     $response = $this->actingAs($user)->get(route('financial-v2.transactions.create', ['operation' => 'receipt', 'entity' => $context['entity']->id]));
     $response->assertOk()
         ->assertSee("method: 'POST'", false)
+        ->assertSee("data.delete('_method');", false)
         ->assertSee("credentials: 'same-origin'", false)
         ->assertSee('Lengkapi data transaksi untuk memeriksa konfigurasi.')
         ->assertDontSee('Konfigurasi pencatatan belum tersedia untuk kategori dan tanggal yang dipilih.')
@@ -377,6 +383,18 @@ test('fund usage preview is sent as a CSRF-protected POST request', function () 
 
     $html = $response->getContent();
     expect(strpos($html, 'const version = ++requestVersion;'))->toBeLessThan(strpos($html, 'fields.some((name) => !form.elements[name]?.value)'));
+
+    $previewPayload = [
+        'entity' => $context['entity']->id,
+        'operation' => 'receipt',
+        'date' => $context['today'],
+        'financial_account_id' => $context['sourceFinancialAccount']->id,
+        'fund_id' => $context['fund']->id,
+        'category_id' => $context['receiptCategory']->id,
+    ];
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), $previewPayload)->assertOk();
+    $this->actingAs($user)->getJson(route('financial-v2.preview'))->assertStatus(405);
+    $this->actingAs($user)->putJson(route('financial-v2.preview'), $previewPayload)->assertStatus(405);
 });
 
 test('all operational configuration-aware forms start incomplete and share the canonical configuration UI', function () {

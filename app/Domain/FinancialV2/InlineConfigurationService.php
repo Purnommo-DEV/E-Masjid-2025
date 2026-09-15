@@ -66,7 +66,11 @@ final class InlineConfigurationService
     {
         $context = $this->context($input);
         if ($this->isReady($context)) {
-            throw new FinancialDomainException('E-CONFIGURATION-DUPLICATE', 'Konfigurasi untuk kombinasi ini sudah tersedia.');
+            return [
+                'state' => 'ready',
+                'message' => 'Aturan yang sama sudah tersedia.',
+                'configuration_url' => route('financial-v2.configuration.index', ['entity' => $context['entity']->id]),
+            ];
         }
         $version = $this->candidateVersions($context)->firstWhere('id', $input['posting_rule_version_id'] ?? null);
         if (! $version) {
@@ -81,6 +85,7 @@ final class InlineConfigurationService
             $created = $context['bank_mutation']
                 ? collect([$this->createBankMutationPolicy($context, $version, $input, $actorUserId)])
                 : $this->createFundPolicyDrafts($context, $version, $input, $actorUserId);
+            $createdNew = $created->contains(fn ($configuration) => $configuration->wasRecentlyCreated);
 
             if ($created->isEmpty()) {
                 throw new FinancialDomainException('E-CONFIGURATION-NOT-CREATABLE', 'Kombinasi ini tidak membutuhkan Aturan Dana baru. Periksa Posting Rule dan master terkait pada halaman Konfigurasi.');
@@ -88,32 +93,34 @@ final class InlineConfigurationService
             if ($factsBefore !== $this->factCounts()) {
                 throw new FinancialDomainException('E-CONFIGURATION-FACT-MUTATION', 'Pembuatan konfigurasi mencoba mengubah financial fact. Seluruh perubahan dibatalkan.');
             }
-            $this->auditTrail->record(
-                $context['entity']->id,
-                'inline_transaction_configuration_draft_created',
-                'financial_configuration',
-                (string) $created->first()->id,
-                (string) Str::uuid(),
-                $actorUserId,
-                null,
-                [
-                    'origin' => 'INLINE_FROM_TRANSACTION_FORM',
-                    'operation' => $context['operation'],
-                    'transaction_type_id' => $context['type']->id,
-                    'date' => $context['date'],
-                    'financial_account_ids' => $context['accounts']->pluck('id')->values()->all(),
-                    'fund_ids' => $context['funds']->pluck('id')->values()->all(),
-                    'category_id' => $context['category']?->id,
-                    'program_id' => $context['program']?->id,
-                    'posting_rule_version_id' => $version->id,
-                    'policy_document_ref' => $input['policy_document_ref'],
-                    'notes' => $input['notes'] ?? null,
-                ],
-            );
+            if ($createdNew) {
+                $this->auditTrail->record(
+                    $context['entity']->id,
+                    'inline_transaction_configuration_draft_created',
+                    'financial_configuration',
+                    (string) $created->first()->id,
+                    (string) Str::uuid(),
+                    $actorUserId,
+                    null,
+                    [
+                        'origin' => 'INLINE_FROM_TRANSACTION_FORM',
+                        'operation' => $context['operation'],
+                        'transaction_type_id' => $context['type']->id,
+                        'date' => $context['date'],
+                        'financial_account_ids' => $context['accounts']->pluck('id')->values()->all(),
+                        'fund_ids' => $context['funds']->pluck('id')->values()->all(),
+                        'category_id' => $context['category']?->id,
+                        'program_id' => $context['program']?->id,
+                        'posting_rule_version_id' => $version->id,
+                        'policy_document_ref' => $input['policy_document_ref'],
+                        'notes' => $input['notes'] ?? null,
+                    ],
+                );
+            }
 
             return [
                 'state' => 'pending',
-                'message' => 'Draft konfigurasi tersimpan dan menunggu aktivasi/approval.',
+                'message' => $createdNew ? 'Draft konfigurasi tersimpan dan menunggu aktivasi/approval.' : 'Aturan yang sama sudah tersedia.',
                 'configuration_url' => route('financial-v2.configuration.index', ['entity' => $context['entity']->id]),
             ];
         }, 3);
@@ -198,8 +205,18 @@ final class InlineConfigurationService
         $account = $context['accounts']->first();
         $fund = $context['funds']->first();
         $this->assertExistingFundPolicyAllows($context, $version, $fund);
+        FinancialAccount::query()->where('accounting_entity_id', $context['entity']->id)->lockForUpdate()->findOrFail($account->id);
+        $policy = BankMutationPolicy::query()->where('accounting_entity_id', $context['entity']->id)
+            ->where('status', 'draft')
+            ->where('financial_account_id', $account->id)->where('fund_id', $fund->id)
+            ->where('transaction_type_id', $context['type']->id)->where('category_id', $context['category']->id)
+            ->whereDate('effective_from', $context['date'])
+            ->where(fn (Builder $q) => $this->nullable($q, 'effective_to', $input['effective_to'] ?? null))
+            ->lockForUpdate()
+            ->first();
         $overlap = BankMutationPolicy::query()->where('accounting_entity_id', $context['entity']->id)
             ->whereIn('status', ['draft', 'active'])
+            ->when($policy, fn (Builder $query) => $query->whereKeyNot($policy->id))
             ->where('financial_account_id', $account->id)->where('fund_id', $fund->id)
             ->where('transaction_type_id', $context['type']->id)->where('category_id', $context['category']->id)
             ->where('effective_from', '<=', $input['effective_to'] ?? '9999-12-31')
@@ -208,7 +225,7 @@ final class InlineConfigurationService
             throw new FinancialDomainException('E-CONFIGURATION-OVERLAP', 'Konfigurasi untuk kombinasi dan periode ini sudah tersedia atau overlap.');
         }
 
-        return BankMutationPolicy::query()->create([
+        return $policy ?? BankMutationPolicy::query()->create([
             'accounting_entity_id' => $context['entity']->id, 'financial_account_id' => $account->id,
             'fund_id' => $fund->id, 'transaction_type_id' => $context['type']->id, 'category_id' => $context['category']->id,
             'posting_rule_version_id' => $version->id, 'policy_document_ref' => $input['policy_document_ref'],
@@ -248,7 +265,14 @@ final class InlineConfigurationService
         $restrictedFunds = $context['funds']->filter(fn (Fund $fund) => in_array($fund->type?->classification, ['restricted', 'perpetual_restricted', 'custodial', 'syariah'], true));
 
         return $restrictedFunds->map(function (Fund $fund) use ($context, $version, $input, $actorUserId): FundPolicyVersion {
+            Fund::query()->where('accounting_entity_id', $context['entity']->id)->lockForUpdate()->findOrFail($fund->id);
+            $policy = FundPolicyVersion::query()->where('fund_id', $fund->id)->where('status', 'draft')
+                ->whereDate('effective_from', $context['date'])
+                ->where(fn (Builder $q) => $this->nullable($q, 'effective_to', $input['effective_to'] ?? null))
+                ->lockForUpdate()
+                ->first();
             $overlapDraft = FundPolicyVersion::query()->where('fund_id', $fund->id)->where('status', 'draft')
+                ->when($policy, fn (Builder $query) => $query->whereKeyNot($policy->id))
                 ->where('effective_from', '<=', $input['effective_to'] ?? '9999-12-31')
                 ->where(fn (Builder $q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $context['date']))->exists();
             if ($overlapDraft) {
@@ -257,21 +281,14 @@ final class InlineConfigurationService
             $predecessor = FundPolicyVersion::query()->where('fund_id', $fund->id)
                 ->where(fn (Builder $q) => $q->where('status', 'effective')->orWhere(fn (Builder $h) => $h->where('status', 'superseded')->whereNotNull('approved_at')))
                 ->where('effective_from', '<=', $context['date'])->orderByDesc('effective_from')->first();
-            $policy = $this->masters->createFundPolicyVersion($context['entity']->id, [
+            $policy ??= $this->masters->createFundPolicyVersion($context['entity']->id, [
                 'fund_id' => $fund->id, 'effective_from' => $context['date'], 'effective_to' => $input['effective_to'] ?? null,
                 'policy_document_ref' => $input['policy_document_ref'], 'allowed_matrix_ref' => $input['policy_document_ref'],
                 'exception_approval_level' => $predecessor?->exception_approval_level ?: 'financial-governance',
             ], $actorUserId);
             $predecessor?->rules()->get()->each(fn (FundPolicyRule $rule) => $this->masters->createFundPolicyRule($context['entity']->id, $policy->id, $rule->only(['transaction_type_id', 'account_id', 'category_id', 'program_id', 'cost_center_id', 'decision', 'rationale']), $actorUserId));
             foreach ($this->linePolicyContexts($context, $version, $fund) as $ruleData) {
-                $exists = FundPolicyRule::query()->where('fund_policy_version_id', $policy->id)
-                    ->where('transaction_type_id', $ruleData['transaction_type_id'])->where('account_id', $ruleData['account_id'])
-                    ->where(fn (Builder $q) => $this->nullable($q, 'category_id', $ruleData['category_id']))
-                    ->where(fn (Builder $q) => $this->nullable($q, 'program_id', $ruleData['program_id']))
-                    ->where(fn (Builder $q) => $this->nullable($q, 'cost_center_id', $ruleData['cost_center_id']))->exists();
-                if (! $exists) {
-                    $this->masters->createFundPolicyRule($context['entity']->id, $policy->id, $ruleData, $actorUserId);
-                }
+                $this->masters->createFundPolicyRule($context['entity']->id, $policy->id, $ruleData, $actorUserId);
             }
 
             return $policy;

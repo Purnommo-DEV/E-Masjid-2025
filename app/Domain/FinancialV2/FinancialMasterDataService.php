@@ -310,16 +310,21 @@ final class FinancialMasterDataService
                 throw new FinancialDomainException('E-MASTER-POLICY-IMMUTABLE', 'Aturan hanya dapat ditambah pada versi Dana yang masih draft.');
             }
             $this->policyDimensionsForEntity($entityId, $data);
-            $duplicate = FundPolicyRule::query()
+            $existing = FundPolicyRule::query()
                 ->where('fund_policy_version_id', $version->id)
                 ->where('transaction_type_id', $data['transaction_type_id'])
                 ->where(fn ($query) => $this->matchNullable($query, 'account_id', $data['account_id'] ?? null))
                 ->where(fn ($query) => $this->matchNullable($query, 'category_id', $data['category_id'] ?? null))
                 ->where(fn ($query) => $this->matchNullable($query, 'program_id', $data['program_id'] ?? null))
                 ->where(fn ($query) => $this->matchNullable($query, 'cost_center_id', $data['cost_center_id'] ?? null))
-                ->exists();
-            if ($duplicate) {
-                throw new FinancialDomainException('E-MASTER-POLICY-DUPLICATE', 'Kombinasi aturan Dana ini sudah ada pada versi yang dipilih.');
+                ->lockForUpdate()
+                ->first();
+            if ($existing) {
+                if ($existing->decision !== $data['decision']) {
+                    throw new FinancialDomainException('E-MASTER-POLICY-CONFLICT', 'Cakupan aturan Dana yang sama sudah tersedia dengan keputusan berbeda. Ubah aturan draft yang ada.');
+                }
+
+                return $existing;
             }
             $rule = FundPolicyRule::create($data + [
                 'accounting_entity_id' => $entityId,
