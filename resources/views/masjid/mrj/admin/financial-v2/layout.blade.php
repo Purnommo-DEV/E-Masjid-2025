@@ -176,10 +176,19 @@
 
             const message = document.getElementById('financial-ajax-message');
             const showMessage = (text, tone = 'error') => {
-                message.className = `alert ${tone === 'success' ? 'alert-success' : 'alert-error'} mb-5 text-sm`;
+                message.className = `alert ${tone === 'success' ? 'alert-success' : 'alert-error'} mb-5 whitespace-pre-line text-sm`;
                 message.textContent = text;
                 message.classList.remove('hidden');
                 message.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            };
+            const formatEvidenceError = (payload) => {
+                if (payload?.code !== 'E-EVIDENCE-REQUIRED' || !Array.isArray(payload.required)) return payload?.message;
+                const required = payload.required.map((item) => `${item.complete ? '✓' : '⚠'} ${item.label || item.type} (${item.count || 0}/${item.minimum})`).join('\n');
+                const files = Array.isArray(payload.files) && payload.files.length
+                    ? `\n\nLampiran saat ini:\n${payload.files.map((file) => `${file.filename}\nJenis: ${file.label || file.type}\nStatus: ${file.status_label || file.status}`).join('\n\n')}`
+                    : '';
+                const action = payload.suggested_type ? '\n\nTambahkan bukti yang dipersyaratkan pada bagian Bukti/lampiran.' : '';
+                return `${payload.message}\n\nWajib:\n${required}${files}${action}`;
             };
             document.querySelectorAll('[data-financial-ajax]').forEach((form) => {
                 form.addEventListener('submit', async (event) => {
@@ -199,7 +208,7 @@
                             body: new FormData(form),
                         });
                         const payload = await response.json();
-                        if (!response.ok || !payload.ok) throw new Error(payload.message || 'Data belum dapat diproses.');
+                        if (!response.ok || !payload.ok) throw Object.assign(new Error(formatEvidenceError(payload) || payload.message || 'Data belum dapat diproses.'), { payload });
                         if (payload.reused) {
                             showMessage(payload.message, 'success');
                             if (submit) {
@@ -321,6 +330,12 @@
                                 ? 'ready'
                                 : (payload.state === 'incomplete' ? 'pending' : 'missing');
                             paint(state, payload.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.');
+                            if (state === 'ready' && Array.isArray(payload.required_evidence) && payload.required_evidence.length === 1) {
+                                const firstEvidenceType = form.querySelector('[data-evidence-line] select[name^="attachment_types"]');
+                                if (firstEvidenceType && [...firstEvidenceType.options].some((option) => option.value === payload.required_evidence[0])) {
+                                    firstEvidenceType.value = payload.required_evidence[0];
+                                }
+                            }
                         } catch (error) {
                             if (error.name === 'AbortError' || version !== requestVersion) return;
                             paint('missing', 'Status konfigurasi belum dapat diperiksa. Coba lagi.');

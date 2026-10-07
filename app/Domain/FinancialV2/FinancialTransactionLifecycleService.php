@@ -5,7 +5,6 @@ namespace App\Domain\FinancialV2;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\ApprovalDecision;
-use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\InterfundTransfer;
@@ -25,6 +24,7 @@ final class FinancialTransactionLifecycleService
         private readonly AuditTrailService $auditTrail,
         private readonly FinancialV2TransactionRunner $transactions,
         private readonly FinancialTransactionConfigurationResolver $configurationResolver,
+        private readonly TransactionEvidenceStatusService $evidenceStatus,
     ) {}
 
     /** @param array<string, mixed> $input @param array<int, array<string, mixed>> $splits */
@@ -207,16 +207,12 @@ final class FinancialTransactionLifecycleService
         $transaction = FinancialTransaction::query()->with('type')->findOrFail($transactionId);
         if ($this->configurationResolver->supports($transaction->type?->code)) {
             $resolved = $this->configurationResolver->resolveTransaction($transaction);
-            foreach ($resolved->evidenceRequirements as $requirement) {
-                $count = AttachmentLink::query()
-                    ->where('target_type', 'transaction')
-                    ->where('target_id', $transaction->id)
-                    ->where('evidence_type', $requirement->evidence_type)
-                    ->where('status', 'active')
-                    ->count();
-                if ($count < $requirement->minimum_count) {
-                    throw new FinancialDomainException('E-EVIDENCE-REQUIRED', 'Configured evidence requirements are incomplete.');
-                }
+            $evidence = $this->evidenceStatus->evaluate($transaction, $resolved->evidenceRequirements);
+            if (! $evidence['complete']) {
+                $message = $evidence['files'] === []
+                    ? 'Bukti wajib belum dilampirkan.'
+                    : 'File sudah ada, tetapi jenis atau jumlah buktinya belum sesuai.';
+                throw new FinancialDomainException('E-EVIDENCE-REQUIRED', $message, $evidence);
             }
         }
 

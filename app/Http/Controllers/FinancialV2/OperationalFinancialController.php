@@ -19,6 +19,7 @@ use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\FundGroupingReadService;
 use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
+use App\Domain\FinancialV2\TransactionEvidenceStatusService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\Attachment;
@@ -69,6 +70,7 @@ final class OperationalFinancialController
         private readonly AllocationHistoryReadService $allocationHistory,
         private readonly EvidenceService $evidence,
         private readonly TransactionEvidenceUploadService $evidenceUploads,
+        private readonly TransactionEvidenceStatusService $evidenceStatus,
         private readonly BalanceInquiryService $balances,
         private readonly FinancialReportService $reports,
         private readonly FundGroupingReadService $fundGroups,
@@ -475,12 +477,15 @@ final class OperationalFinancialController
             ->get([
                 'financial_v2_attachment_links.id as link_id',
                 'financial_v2_attachment_links.evidence_type',
+                'financial_v2_attachment_links.status as link_status',
                 'financial_v2_attachment_links.created_at as linked_at',
                 'attachment.id as attachment_id',
                 'attachment.original_filename',
                 'attachment.media_type',
                 'attachment.byte_size',
+                'attachment.status as attachment_status',
             ]);
+        $evidenceStatus = $this->evidenceStatusForTransaction($transaction);
 
         return view('masjid.mrj.admin.financial-v2.show', [
             'entities' => $context['entities'],
@@ -493,6 +498,8 @@ final class OperationalFinancialController
             'voucher' => $voucher,
             'ledgerReferences' => $ledgerReferences,
             'attachments' => $attachments,
+            'evidenceStatus' => $evidenceStatus,
+            'evidenceLabels' => TransactionEvidenceStatusService::LABELS,
             'realizationAvailability' => $transaction->realization?->budget_allocation_version_id
                 ? $this->budgetAllocations->availability($transaction->realization->budget_allocation_version_id)
                 : null,
@@ -1681,6 +1688,19 @@ final class OperationalFinancialController
         });
     }
 
+    /** @return array<string, mixed> */
+    private function evidenceStatusForTransaction(FinancialTransaction $transaction): array
+    {
+        $transaction->loadMissing('type');
+        if (! $this->configurationResolver->supports($transaction->type?->code)) {
+            return $this->evidenceStatus->evaluate($transaction, collect());
+        }
+
+        $resolved = $this->configurationResolver->resolveTransaction($transaction);
+
+        return $this->evidenceStatus->evaluate($transaction, $resolved->evidenceRequirements);
+    }
+
     public function removeAttachment(Request $request, AttachmentLink $attachmentLink)
     {
         $data = $request->validate(['reason' => ['required', 'string', 'max:1000']]);
@@ -1691,6 +1711,39 @@ final class OperationalFinancialController
             $link = $this->evidence->removeDraftTransactionEvidence($attachmentLink->id, $data['reason'], $request->user()?->id);
 
             return $this->success($request, 'Lampiran dilepas dari draft dan tetap tercatat dalam audit.', route('financial-v2.transactions.show', $link->target_id), ['attachment_link_id' => $link->id, 'entity_id' => $entity->id]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function uploadAttachment(Request $request, FinancialTransaction $transaction)
+    {
+        $data = $request->validate([
+            'entity' => ['required', 'uuid'],
+            'attachment' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
+            'evidence_type' => ['required', Rule::in(array_keys(TransactionEvidenceStatusService::LABELS))],
+        ], $this->validationMessages());
+        $entity = $this->activeEntity($data['entity']);
+        abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+
+        try {
+            $this->ensureDraftIsEditable($transaction);
+            $link = $this->evidenceUploads->attach(
+                $entity->id,
+                $transaction->id,
+                $request->file('attachment'),
+                $data['evidence_type'],
+                $request->user()?->id,
+            );
+            $status = $this->evidenceStatusForTransaction($transaction->fresh(['type']));
+            $message = $status['complete']
+                ? 'Bukti ditambahkan. Persyaratan bukti sudah lengkap.'
+                : 'Bukti ditambahkan, tetapi persyaratan bukti masih belum lengkap.';
+
+            return $this->success($request, $message, route('financial-v2.transactions.show', $transaction), [
+                'attachment_link_id' => $link->id,
+                'evidence' => $status,
+            ]);
         } catch (FinancialDomainException $exception) {
             return $this->failure($request, $exception);
         }
@@ -1950,7 +2003,12 @@ final class OperationalFinancialController
     {
         $message = $this->humanMessage($exception);
         if ($request->expectsJson()) {
-            return response()->json(['ok' => false, 'message' => $message, 'code' => $exception instanceof FinancialDomainException || $exception instanceof FinancialPostingException ? $exception->failureCode : 'E-UX-UNKNOWN'], 422);
+            $payload = ['ok' => false, 'message' => $message, 'code' => $exception instanceof FinancialDomainException || $exception instanceof FinancialPostingException ? $exception->failureCode : 'E-UX-UNKNOWN'];
+            if ($exception instanceof FinancialDomainException && $exception->details !== []) {
+                $payload += $exception->details;
+            }
+
+            return response()->json($payload, 422);
         }
 
         return back()->withInput()->withErrors(['financial' => $message]);
@@ -1964,7 +2022,7 @@ final class OperationalFinancialController
             'E-FUND-RESTRICTED' => 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.',
             'E-FUND-INSUFFICIENT' => 'Saldo dana tidak mencukupi untuk transaksi ini.',
             'E-PERIOD-CLOSED', 'E-PERIOD-REOPEN-SCOPE' => 'Periode pada tanggal tersebut belum terbuka atau sudah ditutup sehingga transaksi tidak dapat dicatat.',
-            'E-EVIDENCE-REQUIRED' => 'Bukti yang diwajibkan oleh aturan pencatatan belum dilampirkan.',
+            'E-EVIDENCE-REQUIRED' => $exception->getMessage(),
             'E-APPROVAL-REQUIRED' => 'Transaksi menunggu persetujuan yang dikonfigurasi sebelum dapat dicatat resmi.',
             'E-CONFIGURATION-MISSING' => $exception->getMessage(),
             'E-RULE-NOT-EFFECTIVE', 'E-UX-TRANSACTION-TYPE' => 'Konfigurasi pencatatan belum tersedia untuk kombinasi transaksi ini.',

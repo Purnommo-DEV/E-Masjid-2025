@@ -6,7 +6,8 @@ use DomainException;
 
 final class FinancialDomainException extends DomainException
 {
-    public function __construct(public readonly string $failureCode, string $message)
+    /** @param array<string, mixed> $details */
+    public function __construct(public readonly string $failureCode, string $message, public readonly array $details = [])
     {
         parent::__construct($message);
     }

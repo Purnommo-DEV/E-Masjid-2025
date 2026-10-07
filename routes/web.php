@@ -511,6 +511,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/lampiran/{attachment}/lihat', [OperationalFinancialController::class, 'viewAttachment'])->name('attachments.view');
         Route::get('/lampiran/{attachment}/unduh', [OperationalFinancialController::class, 'downloadAttachment'])->name('attachments.download');
         Route::post('/lampiran-link/{attachmentLink}/lepas', [OperationalFinancialController::class, 'removeAttachment'])->name('attachments.remove');
+        Route::post('/transaksi/{transaction}/lampiran', [OperationalFinancialController::class, 'uploadAttachment'])->name('attachments.store');
         Route::get('/{operation}/baru', [OperationalFinancialController::class, 'create'])
             ->where('operation', 'receipt|payment|transfer|interfund|realization')
             ->name('transactions.create');
