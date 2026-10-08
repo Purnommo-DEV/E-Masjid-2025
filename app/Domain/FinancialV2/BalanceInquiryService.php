@@ -3,9 +3,9 @@
 namespace App\Domain\FinancialV2;
 
 use App\Domain\FinancialV2\Reporting\FundFinancialAccountCompositionReadService;
+use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Models\FinancialV2\BalanceProjection;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Read-model service. All balances are derived solely from posted V2 ledger
@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class BalanceInquiryService
 {
-    public function __construct(private readonly FundFinancialAccountCompositionReadService $fundFinancialAccounts) {}
+    public function __construct(
+        private readonly FundFinancialAccountCompositionReadService $fundFinancialAccounts,
+        private readonly PostedLedgerQuery $postedLedger,
+    ) {}
 
     /** @return array{debit_total: string, credit_total: string, balance: string, through_posting_sequence: int} */
     public function accountBalance(string $entityId, string $accountId, string $asOfAccountingDate): array
@@ -130,11 +133,6 @@ final class BalanceInquiryService
 
     private function postedLedgerQuery(string $entityId, string $asOfAccountingDate)
     {
-        return DB::table('financial_v2_ledger_entries as ledger')
-            ->join('financial_v2_journal_lines as journal_line', 'journal_line.id', '=', 'ledger.journal_line_id')
-            ->join('financial_v2_journals as journal', 'journal.id', '=', 'journal_line.journal_id')
-            ->where('ledger.accounting_entity_id', $entityId)
-            ->where('ledger.accounting_date', '<=', $asOfAccountingDate)
-            ->where('journal.journal_status', 'posted');
+        return $this->postedLedger->ledger($entityId, $asOfAccountingDate);
     }
 }

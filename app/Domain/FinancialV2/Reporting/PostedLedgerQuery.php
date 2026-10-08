@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2\Reporting;
 
 use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,7 +19,7 @@ final class PostedLedgerQuery
     public function latestAccountingDate(string $entityId): ?string
     {
         $date = DB::table('financial_v2_ledger_entries as ledger')
-            ->join('financial_v2_journal_lines as journal_line', 'journal_line.id', '=', 'ledger.journal_line_id')
+            ->join('financial_v2_journal_lines as journal_line', fn (JoinClause $join) => $this->joinLedgerToJournalLine($join))
             ->join('financial_v2_journals as journal', 'journal.id', '=', 'journal_line.journal_id')
             ->where('ledger.accounting_entity_id', $entityId)
             ->where('journal.journal_status', 'posted')
@@ -30,14 +31,14 @@ final class PostedLedgerQuery
     public function ledger(string $entityId, string $throughAccountingDate): Builder
     {
         return DB::table('financial_v2_ledger_entries as ledger')
-            ->join('financial_v2_journal_lines as journal_line', 'journal_line.id', '=', 'ledger.journal_line_id')
+            ->join('financial_v2_journal_lines as journal_line', fn (JoinClause $join) => $this->joinLedgerToJournalLine($join))
             ->join('financial_v2_journals as journal', 'journal.id', '=', 'journal_line.journal_id')
             ->join('financial_v2_transactions as financial_transaction', 'financial_transaction.id', '=', 'journal.transaction_id')
-            ->join('financial_v2_transaction_types as transaction_type', 'transaction_type.id', '=', 'financial_transaction.transaction_type_id')
+            ->join('financial_v2_transaction_types as transaction_type', fn (JoinClause $join) => $this->joinBinary($join, 'transaction_type.id', 'financial_transaction.transaction_type_id'))
             ->leftJoin('financial_v2_journals as original_journal', 'original_journal.id', '=', 'journal.reversal_of_journal_id')
             ->leftJoin('financial_v2_transactions as original_transaction', 'original_transaction.id', '=', 'original_journal.transaction_id')
-            ->leftJoin('financial_v2_transaction_types as original_transaction_type', 'original_transaction_type.id', '=', 'original_transaction.transaction_type_id')
-            ->leftJoin('financial_v2_vouchers as voucher', 'voucher.transaction_id', '=', 'financial_transaction.id')
+            ->leftJoin('financial_v2_transaction_types as original_transaction_type', fn (JoinClause $join) => $this->joinBinary($join, 'original_transaction_type.id', 'original_transaction.transaction_type_id'))
+            ->leftJoin('financial_v2_vouchers as voucher', fn (JoinClause $join) => $this->joinBinary($join, 'voucher.transaction_id', 'financial_transaction.id'))
             ->where('ledger.accounting_entity_id', $entityId)
             ->where('ledger.accounting_date', '<=', $throughAccountingDate)
             ->where('journal.journal_status', 'posted');
@@ -47,11 +48,11 @@ final class PostedLedgerQuery
     {
         return DB::table('financial_v2_journals as journal')
             ->join('financial_v2_transactions as financial_transaction', 'financial_transaction.id', '=', 'journal.transaction_id')
-            ->join('financial_v2_transaction_types as transaction_type', 'transaction_type.id', '=', 'financial_transaction.transaction_type_id')
+            ->join('financial_v2_transaction_types as transaction_type', fn (JoinClause $join) => $this->joinBinary($join, 'transaction_type.id', 'financial_transaction.transaction_type_id'))
             ->leftJoin('financial_v2_journals as original_journal', 'original_journal.id', '=', 'journal.reversal_of_journal_id')
             ->leftJoin('financial_v2_transactions as original_transaction', 'original_transaction.id', '=', 'original_journal.transaction_id')
-            ->leftJoin('financial_v2_transaction_types as original_transaction_type', 'original_transaction_type.id', '=', 'original_transaction.transaction_type_id')
-            ->leftJoin('financial_v2_vouchers as voucher', 'voucher.transaction_id', '=', 'financial_transaction.id')
+            ->leftJoin('financial_v2_transaction_types as original_transaction_type', fn (JoinClause $join) => $this->joinBinary($join, 'original_transaction_type.id', 'original_transaction.transaction_type_id'))
+            ->leftJoin('financial_v2_vouchers as voucher', fn (JoinClause $join) => $this->joinBinary($join, 'voucher.transaction_id', 'financial_transaction.id'))
             ->where('journal.accounting_entity_id', $entityId)
             ->where('journal.accounting_date', '<=', $throughAccountingDate)
             ->where('journal.journal_status', 'posted');
@@ -66,5 +67,21 @@ final class PostedLedgerQuery
     public function effectiveTransactionTypeCode()
     {
         return DB::raw('COALESCE(original_transaction_type.code, transaction_type.code)');
+    }
+
+    /**
+     * Production contains historical ledger UUID columns using
+     * utf8mb4_unicode_ci while the journal tables use utf8mb4_0900_ai_ci.
+     * UUID identity is byte-exact, so a binary join avoids collation-dependent
+     * comparison without changing either immutable accounting table.
+     */
+    private function joinLedgerToJournalLine(JoinClause $join): void
+    {
+        $this->joinBinary($join, 'journal_line.id', 'ledger.journal_line_id');
+    }
+
+    private function joinBinary(JoinClause $join, string $left, string $right): void
+    {
+        $join->whereRaw("BINARY {$left} = BINARY {$right}");
     }
 }
