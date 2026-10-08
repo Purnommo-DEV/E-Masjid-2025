@@ -43,6 +43,21 @@ final class FinancialTransactionConfigurationResolver
         return $transactionTypeCode !== null && array_key_exists($transactionTypeCode, self::RULE_FAMILIES);
     }
 
+    private function canonicalDate(mixed $value): string
+    {
+        $date = is_string($value) ? $value : '';
+        if (! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $date, $parts)
+            || ! checkdate((int) $parts[2], (int) $parts[3], (int) $parts[1])) {
+            throw new FinancialPostingException(
+                'E-CONFIGURATION-DATE',
+                'Tanggal konfigurasi wajib menggunakan format canonical YYYY-MM-DD.',
+                ['status' => 'INVALID_CONTEXT', 'date' => $date],
+            );
+        }
+
+        return $date;
+    }
+
     /** @param array<string, mixed> $input @return array<string, mixed> */
     public function inspect(array $input): array
     {
@@ -68,7 +83,7 @@ final class FinancialTransactionConfigurationResolver
     /** @param array<string, mixed> $input @return Collection<int, PostingRuleVersion> */
     public function applicablePostingRuleVersions(array $input): Collection
     {
-        $date = CarbonImmutable::parse((string) ($input['date'] ?? ''))->toDateString();
+        $date = $this->canonicalDate($input['date'] ?? null);
         $entity = AccountingEntity::query()->where('status', 'active')->find($input['accounting_entity_id'] ?? null);
         if (! $entity) {
             throw new FinancialPostingException('E-MASTER-SCOPE', 'Entitas keuangan aktif tidak tersedia.');
@@ -88,7 +103,7 @@ final class FinancialTransactionConfigurationResolver
      */
     public function availablePrograms(array $input): Collection
     {
-        $date = CarbonImmutable::parse((string) ($input['date'] ?? ''))->toDateString();
+        $date = $this->canonicalDate($input['date'] ?? null);
         $entityId = (string) ($input['accounting_entity_id'] ?? '');
 
         return Program::query()
@@ -111,7 +126,7 @@ final class FinancialTransactionConfigurationResolver
     /** @param array<string, mixed> $input */
     public function resolve(array $input): ResolvedFinancialTransactionConfiguration
     {
-        $date = CarbonImmutable::parse((string) ($input['date'] ?? ''))->toDateString();
+        $date = $this->canonicalDate($input['date'] ?? null);
         $entity = AccountingEntity::query()->where('status', 'active')->find($input['accounting_entity_id'] ?? null);
         if (! $entity) {
             throw new FinancialPostingException('E-MASTER-SCOPE', 'Entitas keuangan aktif tidak tersedia.');
@@ -334,12 +349,13 @@ final class FinancialTransactionConfigurationResolver
     }
 
     /** @param iterable<string> $fundIds */
-    public function recommendAllocationCategory(string $entityId, iterable $fundIds, ?string $programId): ?Category
+    public function recommendAllocationCategory(string $entityId, iterable $fundIds, string $date, ?string $programId): ?Category
     {
         if (! $programId) {
             return null;
         }
 
+        $date = $this->canonicalDate($date);
         $typeId = TransactionType::query()
             ->where('accounting_entity_id', $entityId)
             ->where('code', TransactionTypeCode::Payment->value)
@@ -350,14 +366,27 @@ final class FinancialTransactionConfigurationResolver
             return null;
         }
 
+        $policyVersions = FundPolicyVersion::query()
+            ->where('accounting_entity_id', $entityId)
+            ->whereIn('fund_id', $fundIds)
+            ->where(fn (Builder $query) => $query->where('status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
+            ->where('effective_from', '<=', $date)
+            ->where(fn (Builder $query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
+            ->get(['id', 'fund_id']);
+        if ($policyVersions->count() !== $fundIds->count() || $policyVersions->pluck('fund_id')->unique()->count() !== $fundIds->count()) {
+            return null;
+        }
+
         $categoryIds = FundPolicyRule::query()
             ->select('financial_v2_fund_policy_rules.category_id')
             ->join('financial_v2_fund_policy_versions as policy_versions', 'policy_versions.id', '=', 'financial_v2_fund_policy_rules.fund_policy_version_id')
             ->where('policy_versions.accounting_entity_id', $entityId)
             ->whereIn('policy_versions.fund_id', $fundIds)
-            ->where(fn (Builder $query) => $query->where('policy_versions.status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('policy_versions.status', 'superseded')->whereNotNull('policy_versions.approved_at')))
+            ->whereIn('policy_versions.id', $policyVersions->pluck('id'))
             ->where('financial_v2_fund_policy_rules.transaction_type_id', $typeId)
             ->where('financial_v2_fund_policy_rules.program_id', $programId)
+            ->whereNull('financial_v2_fund_policy_rules.account_id')
+            ->whereNull('financial_v2_fund_policy_rules.cost_center_id')
             ->where('financial_v2_fund_policy_rules.decision', 'allowed')
             ->whereNotNull('financial_v2_fund_policy_rules.category_id')
             ->groupBy('financial_v2_fund_policy_rules.category_id')
@@ -366,9 +395,17 @@ final class FinancialTransactionConfigurationResolver
             ->unique()
             ->values();
 
-        return $categoryIds->count() === 1
-            ? Category::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->find($categoryIds->first())
-            : null;
+        if ($categoryIds->count() !== 1) {
+            return null;
+        }
+
+        return Category::query()
+            ->where('accounting_entity_id', $entityId)
+            ->where('status', 'active')
+            ->where(fn (Builder $query) => $query->whereNull('transaction_type_id')->orWhere('transaction_type_id', $typeId))
+            ->where(fn (Builder $query) => $query->whereNull('valid_from')->orWhere('valid_from', '<=', $date))
+            ->where(fn (Builder $query) => $query->whereNull('valid_to')->orWhere('valid_to', '>=', $date))
+            ->find($categoryIds->first());
     }
 
     /** @param array<string, mixed> $input */

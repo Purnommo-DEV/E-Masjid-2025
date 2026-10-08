@@ -762,7 +762,7 @@ final class OperationalFinancialController
     {
         $entity = $this->entityForAllocation($request, $allocation);
         $input = $request->validate([
-            'effective_from' => ['required', 'date'],
+            'effective_from' => ['required', 'date_format:Y-m-d'],
             'amendment_amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'funding_adjustments' => ['required', 'array', 'min:1', 'max:20'],
             'funding_adjustments.*.fund_id' => ['required', 'uuid', 'distinct'],
@@ -963,7 +963,7 @@ final class OperationalFinancialController
     {
         $entity = $this->requiredEntity($request);
         $data = $request->validate([
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'fund_ids' => ['required', 'array', 'min:1'],
             'fund_ids.*' => ['required', 'uuid', 'distinct'],
             'category_id' => ['nullable', 'uuid'],
@@ -975,7 +975,7 @@ final class OperationalFinancialController
         if ($funds->count() !== count($data['fund_ids'])) {
             throw new FinancialDomainException('E-UX-FUND', 'Sumber Dana alokasi tidak aktif atau berada di luar entitas ini.');
         }
-        $recommendation = $this->configurationResolver->recommendAllocationCategory($entity->id, $funds->pluck('id'), $program?->id);
+        $recommendation = $this->configurationResolver->recommendAllocationCategory($entity->id, $funds->pluck('id'), $data['date'], $program?->id);
 
         try {
             $this->allocationPolicies->assertAllocationCompatible($entity->id, $funds->pluck('id'), $data['date'], null, $category?->id, $program?->id);
@@ -988,8 +988,8 @@ final class OperationalFinancialController
                 'ok' => false,
                 'status' => $status,
                 'message' => $exception->getMessage(),
-                'recommended_category' => $status === 'MISSING_CONFIGURATION' && $recommendation && $recommendation->id !== $category?->id
-                    ? ['id' => $recommendation->id, 'name' => $recommendation->name]
+                'recommended_category' => $recommendation && $recommendation->id !== $category?->id
+                    ? ['id' => $recommendation->id, 'code' => $recommendation->code, 'name' => $recommendation->name]
                     : null,
             ], 422);
         }
@@ -1311,7 +1311,7 @@ final class OperationalFinancialController
     private function validatedAllocationInput(Request $request, bool $requireSubmissionKey = true): array
     {
         $rules = [
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'fund_id' => ['nullable', 'uuid', 'required_without:funding_sources'],
             'funding_sources' => ['nullable', 'array', 'min:1', 'max:20', 'required_without:fund_id'],
             'funding_sources.*.fund_id' => ['required_with:funding_sources', 'uuid', 'distinct'],
@@ -2139,6 +2139,7 @@ final class OperationalFinancialController
             'E-EVIDENCE-REQUIRED' => $exception->getMessage(),
             'E-APPROVAL-REQUIRED' => 'Transaksi menunggu persetujuan yang dikonfigurasi sebelum dapat dicatat resmi.',
             'E-CONFIGURATION-MISSING' => $exception->getMessage(),
+            'E-BUDGET-POLICY', 'E-FUND-POLICY-DENIED' => $exception->getMessage(),
             'E-RULE-NOT-EFFECTIVE', 'E-UX-TRANSACTION-TYPE' => 'Konfigurasi pencatatan belum tersedia untuk kombinasi transaksi ini.',
             'E-UX-POSTED-IMMUTABLE' => 'Transaksi yang sudah dicatat tidak dapat diubah langsung. Gunakan koreksi atau reversal sesuai kewenangan.',
             'E-UX-DUPLICATE', 'E-DUPLICATE-POSTING' => 'Permintaan yang sama sudah diterima. Sistem tidak membuat pencatatan ganda.',

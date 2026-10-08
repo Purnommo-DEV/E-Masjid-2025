@@ -49,7 +49,7 @@ final class FundPolicyCompatibilityService
             $funds = Fund::query()->where('accounting_entity_id', $entityId)->whereIn('id', $fundIds)->pluck('name')->join(', ');
             $category = $categoryId ? Category::query()->where('accounting_entity_id', $entityId)->find($categoryId) : null;
             $program = $programId ? Program::query()->where('accounting_entity_id', $entityId)->find($programId) : null;
-            $recommendation = $this->configurationResolver->recommendAllocationCategory($entityId, $fundIds, $programId);
+            $recommendation = $this->configurationResolver->recommendAllocationCategory($entityId, $fundIds, $effectiveDate, $programId);
             $context = ' Dana: '.($funds ?: '—').'; Kategori: '.($category?->name ?? '—').'; Program: '.($program?->name ?? '—').'.';
             $status = $exception->details['status'] ?? 'MISSING_CONFIGURATION';
             $introduction = match ($status) {
@@ -57,11 +57,20 @@ final class FundPolicyCompatibilityService
                 'INVALID_CONTEXT' => 'Alokasi belum dapat diproses karena konteks dana, kategori, atau program tidak konsisten.',
                 default => 'Alokasi belum dapat diproses karena aturan penggunaan dana untuk kombinasi ini belum tersedia.',
             };
-            $suggestion = $status === 'MISSING_CONFIGURATION' && $recommendation && $recommendation->id !== $categoryId
-                ? " Untuk Program {$program?->name}, kategori yang sesuai adalah {$recommendation->name}."
+            $suggestion = $recommendation && $recommendation->id !== $categoryId
+                ? " Kategori ".($category?->code ?? 'yang dipilih')." tidak sesuai Fund Policy yang berlaku; kategori yang diizinkan adalah {$recommendation->code} ({$recommendation->name})."
                 : ' Lengkapi konfigurasi penggunaan dana sebelum alokasi diajukan atau disetujui.';
 
-            throw new FinancialDomainException($code, $introduction.$context.$suggestion, $exception->details);
+            $details = $exception->details;
+            if ($recommendation && $recommendation->id !== $categoryId) {
+                $details['recommended_category'] = [
+                    'id' => $recommendation->id,
+                    'code' => $recommendation->code,
+                    'name' => $recommendation->name,
+                ];
+            }
+
+            throw new FinancialDomainException($code, $introduction.$context.$suggestion, $details);
         }
     }
 }

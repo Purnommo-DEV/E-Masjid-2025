@@ -29,7 +29,8 @@
             <input type="hidden" name="submission_key" value="{{ $submissionKey }}">
             <section class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300 sm:p-6">
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <label class="form-control"><span class="label-text font-medium">Tanggal berlaku</span><input type="date" name="date" value="{{ old('date', $editingVersion?->effective_from?->toDateString() ?? $today) }}" class="input input-bordered w-full" required></label>
+                    @php $allocationDate = old('date', $editingVersion?->effective_from?->toDateString() ?? $today); @endphp
+                    <label class="form-control"><span class="label-text font-medium">Tanggal berlaku</span><input type="text" value="" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/YYYY" class="input input-bordered w-full" data-allocation-date-display data-date-target="allocation-date-iso" required><input type="hidden" id="allocation-date-iso" name="date" value="{{ $allocationDate }}" data-allocation-date-iso><span class="label-text-alt">Format: DD/MM/YYYY, contoh 30/10/2026.</span></label>
                     <label class="form-control"><span class="label-text font-medium">Nominal alokasi</span><div class="relative" data-money-field><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/55">Rp</span><input type="hidden" name="amount" value="{{ $allocationAmount }}" data-money-value><input type="text" inputmode="decimal" autocomplete="off" value="{{ $allocationAmount !== null && $allocationAmount !== '' ? number_format((float) $allocationAmount, 2, ',', '.') : '' }}" placeholder="0" class="input input-bordered w-full pl-9 text-lg font-semibold" data-money-input required></div><span class="label-text-alt">Pemisah ribuan dibuat otomatis. Gunakan koma untuk sen.</span></label>
                     <label class="form-control"><span class="label-text font-medium">Program <span class="font-normal text-base-content/55">(jika relevan)</span></span><select name="program_id" class="select select-bordered w-full"><option value="">Tanpa program</option>@foreach($options['programs'] as $program)<option value="{{ $program->id }}" @selected(old('program_id', $editingAllocation?->program_id) === $program->id)>{{ $program->name }}</option>@endforeach</select></label>
                 </div>
@@ -118,7 +119,7 @@
                                 <div class="modal-box max-w-2xl"><form method="dialog"><button class="btn btn-circle btn-ghost btn-sm absolute right-2 top-2" aria-label="Tutup">✕</button></form><h3 class="text-lg font-bold">Tambah perubahan alokasi</h3><p class="mt-2 text-sm text-base-content/65">Perubahan membuat versi baru. Nilai aktif saat ini tetap Rp{{ number_format((float) $version->allocated_amount, 2, ',', '.') }} sampai versi baru disetujui.</p>
                                     <form method="POST" action="{{ route('financial-v2.allocations.amendments.store', $allocation) }}" data-financial-ajax class="mt-4 space-y-4">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}">
                                         <div class="grid gap-3 sm:grid-cols-2">
-                                            <label class="form-control"><span class="label-text font-medium">Tanggal berlaku</span><input type="date" name="effective_from" value="{{ $amendmentDate }}" min="{{ $amendmentDate }}" class="input input-bordered" required></label>
+                                            <label class="form-control"><span class="label-text font-medium">Tanggal berlaku</span><input type="text" value="" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/YYYY" class="input input-bordered" data-allocation-date-display data-date-target="amendment-date-{{ $allocation->id }}" data-min-date="{{ $amendmentDate }}" required><input type="hidden" id="amendment-date-{{ $allocation->id }}" name="effective_from" value="{{ $amendmentDate }}" data-allocation-date-iso><span class="label-text-alt">Format: DD/MM/YYYY.</span></label>
                                             <label class="form-control"><span class="label-text font-medium">Nilai tambahan</span><div class="relative" data-money-field><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/55">Rp</span><input type="hidden" name="amendment_amount" data-money-value><input type="text" inputmode="decimal" autocomplete="off" class="input input-bordered w-full pl-9" placeholder="0" data-money-input required></div></label>
                                         </div>
                                         <section class="rounded-xl bg-base-200/60 p-3"><p class="font-semibold">Tambahan menurut Sumber Dana</p><p class="mt-1 text-xs text-base-content/60">Isi hanya Dana yang menambah pembiayaan. Totalnya harus sama dengan nilai tambahan.</p><div class="mt-3 space-y-3">
@@ -142,6 +143,40 @@
 @endsection
 
 @push('scripts')
+<script>
+(() => {
+    const isoToDisplay = (iso) => {
+        const match = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
+    };
+    const displayToIso = (display) => {
+        const match = String(display || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!match) return null;
+        const day = Number(match[1]);
+        const month = Number(match[2]);
+        const year = Number(match[3]);
+        const candidate = new Date(Date.UTC(year, month - 1, day));
+        if (candidate.getUTCFullYear() !== year || candidate.getUTCMonth() !== month - 1 || candidate.getUTCDate() !== day) return null;
+        return `${match[3]}-${match[2]}-${match[1]}`;
+    };
+    document.querySelectorAll('[data-allocation-date-display]').forEach((display) => {
+        const iso = document.getElementById(display.dataset.dateTarget);
+        if (!iso) return;
+        display.value = isoToDisplay(iso.value);
+        const synchronize = () => {
+            const canonical = displayToIso(display.value.trim());
+            const minimum = display.dataset.minDate || null;
+            const valid = canonical !== null && (!minimum || canonical >= minimum);
+            display.setCustomValidity(valid ? '' : (canonical ? `Tanggal minimal ${isoToDisplay(minimum)}.` : 'Gunakan format DD/MM/YYYY yang valid.'));
+            iso.value = valid ? canonical : '';
+            if (valid) iso.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        display.addEventListener('input', synchronize);
+        display.addEventListener('blur', synchronize);
+        synchronize();
+    });
+})();
+</script>
 <template data-funding-template>
     <div class="rounded-xl border border-base-300 bg-base-100 p-3" data-funding-line>
         <div class="mb-2 flex items-center justify-between"><span class="text-sm font-semibold" data-funding-label>Sumber Dana</span><button type="button" class="btn btn-ghost btn-xs text-error" data-remove-funding>Hapus</button></div>
@@ -206,7 +241,7 @@
         const fundIds = [...form.querySelectorAll('[data-funding-fund]')].map((field) => field.value).filter(Boolean);
         const date = form.elements.date.value;
         const programId = form.elements.program_id.value;
-        if (!date || !programId || !category.value || fundIds.length === 0) {
+        if (!date || !programId || fundIds.length === 0) {
             output.classList.add('hidden');
             return;
         }
@@ -216,7 +251,7 @@
         body.append('_token', form.querySelector('input[name="_token"]').value);
         body.append('date', date);
         body.append('program_id', programId);
-        body.append('category_id', category.value);
+        if (category.value) body.append('category_id', category.value);
         fundIds.forEach((id) => body.append('fund_ids[]', id));
         try {
             const response = await fetch(form.dataset.configurationPreviewUrl, { method: 'POST', body, headers: { Accept: 'application/json' }, signal: controller.signal });
@@ -231,7 +266,7 @@
             if (payload.recommended_category) {
                 const previous = category.options[category.selectedIndex]?.text || 'kategori sebelumnya';
                 category.value = payload.recommended_category.id;
-                output.textContent = `⚠️ Konfigurasi alokasi belum sesuai. ${payload.message} Kategori otomatis disesuaikan dari ${previous} menjadi ${payload.recommended_category.name}; periksa kembali sebelum menyimpan.`;
+                output.textContent = `⚠️ Kategori disesuaikan dari ${previous} menjadi ${payload.recommended_category.name} (${payload.recommended_category.code}) sesuai Fund Policy yang berlaku; periksa kembali sebelum menyimpan.`;
             } else {
                 output.textContent = `⚠️ Konfigurasi alokasi belum sesuai. ${payload.message}`;
             }
