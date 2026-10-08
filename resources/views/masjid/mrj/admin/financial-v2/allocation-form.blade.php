@@ -237,18 +237,33 @@
     if (!form || !output || !category) return;
     let timer;
     let controller;
+    let requestVersion = 0;
+    const clearAjaxSubmissionError = () => {
+        const ajaxError = document.getElementById('financial-ajax-message');
+        if (ajaxError) {
+            ajaxError.textContent = '';
+            ajaxError.classList.add('hidden');
+        }
+    };
+    const clearStaleSubmissionError = () => {
+        clearAjaxSubmissionError();
+        document.querySelector('[data-financial-server-error]')?.classList.add('hidden');
+    };
     const inspect = async () => {
         const fundIds = [...form.querySelectorAll('[data-funding-fund]')].map((field) => field.value).filter(Boolean);
+        const entityId = form.elements.entity.value;
         const date = form.elements.date.value;
         const programId = form.elements.program_id.value;
-        if (!date || !programId || fundIds.length === 0) {
+        if (!entityId || !date || !programId || fundIds.length === 0) {
             output.classList.add('hidden');
             return;
         }
         controller?.abort();
         controller = new AbortController();
+        const version = ++requestVersion;
         const body = new FormData();
         body.append('_token', form.querySelector('input[name="_token"]').value);
+        body.append('entity', entityId);
         body.append('date', date);
         body.append('program_id', programId);
         if (category.value) body.append('category_id', category.value);
@@ -256,6 +271,8 @@
         try {
             const response = await fetch(form.dataset.configurationPreviewUrl, { method: 'POST', body, headers: { Accept: 'application/json' }, signal: controller.signal });
             const payload = await response.json();
+            if (version !== requestVersion) return;
+            clearAjaxSubmissionError();
             output.classList.remove('hidden', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-950', 'border-amber-200', 'bg-amber-50', 'text-amber-950');
             if (response.ok && payload.ok) {
                 output.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-950');
@@ -271,14 +288,14 @@
                 output.textContent = `⚠️ Konfigurasi alokasi belum sesuai. ${payload.message}`;
             }
         } catch (error) {
-            if (error.name !== 'AbortError') {
+            if (error.name !== 'AbortError' && version === requestVersion) {
                 output.className = 'mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950';
                 output.textContent = '⚠️ Konfigurasi alokasi belum dapat diperiksa. Coba lagi sebelum mengajukan alokasi.';
             }
         }
     };
     const schedule = () => { clearTimeout(timer); timer = setTimeout(inspect, 250); };
-    form.addEventListener('change', schedule);
+    form.addEventListener('change', () => { clearStaleSubmissionError(); schedule(); });
     schedule();
 })();
 </script>

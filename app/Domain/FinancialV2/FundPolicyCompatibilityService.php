@@ -2,6 +2,7 @@
 
 namespace App\Domain\FinancialV2;
 
+use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\Program;
@@ -46,11 +47,18 @@ final class FundPolicyCompatibilityService
                 ? 'E-BUDGET-POLICY'
                 : $exception->failureCode;
 
-            $funds = Fund::query()->where('accounting_entity_id', $entityId)->whereIn('id', $fundIds)->pluck('name')->join(', ');
+            $entity = AccountingEntity::query()->find($entityId);
+            $funds = Fund::query()->where('accounting_entity_id', $entityId)->whereIn('id', $fundIds)->get(['code', 'name']);
             $category = $categoryId ? Category::query()->where('accounting_entity_id', $entityId)->find($categoryId) : null;
             $program = $programId ? Program::query()->where('accounting_entity_id', $entityId)->find($programId) : null;
             $recommendation = $this->configurationResolver->recommendAllocationCategory($entityId, $fundIds, $effectiveDate, $programId);
-            $context = ' Dana: '.($funds ?: '—').'; Kategori: '.($category?->name ?? '—').'; Program: '.($program?->name ?? '—').'.';
+            $fundLabels = $funds->map(fn (Fund $fund): string => "{$fund->code} ({$fund->name})")->join(', ');
+            $context = ' Entity: '.($entity ? "{$entity->code} ({$entity->id})" : $entityId)
+                .'; Tanggal: '.$effectiveDate
+                .'; Jenis Transaksi: PAY'
+                .'; Dana: '.($fundLabels ?: '—')
+                .'; Kategori: '.($category ? "{$category->code} ({$category->name})" : '—')
+                .'; Program: '.($program ? "{$program->code} ({$program->name})" : '—').'.';
             $status = $exception->details['status'] ?? 'MISSING_CONFIGURATION';
             $introduction = match ($status) {
                 'POLICY_DENIED' => 'Alokasi belum dapat diproses karena kombinasi ini dilarang oleh aturan penggunaan dana.',

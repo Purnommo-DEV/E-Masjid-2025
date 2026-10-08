@@ -126,7 +126,7 @@
             <div role="alert" class="alert alert-success mb-5 text-sm"><span>{{ session('success') }}</span></div>
         @endif
         @if ($errors->any())
-            <div role="alert" class="alert alert-error mb-5 items-start text-sm">
+            <div role="alert" class="alert alert-error mb-5 items-start text-sm" data-financial-server-error>
                 <span>{{ $errors->first('financial') ?: $errors->first() }}</span>
             </div>
         @endif
