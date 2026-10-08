@@ -19,6 +19,7 @@ use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\FundGroupingReadService;
 use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
+use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\TransactionEvidenceStatusService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
 use App\Models\FinancialV2\AccountingEntity;
@@ -76,6 +77,7 @@ final class OperationalFinancialController
         private readonly FinancialReportService $reports,
         private readonly FundGroupingReadService $fundGroups,
         private readonly FundHistoryReadService $fundHistory,
+        private readonly PostedLedgerQuery $postedLedger,
         private readonly RealizationDraftReadService $realizationDrafts,
         private readonly DraftTransactionReadService $draftTransactions,
         private readonly FinancialTransactionConfigurationResolver $configurationResolver,
@@ -603,12 +605,13 @@ final class OperationalFinancialController
     {
         $context = $this->context($request);
         $funds = $context['entity'] ? $this->fundCards($context['entity']) : collect();
+        $asOf = $context['entity'] ? $this->reportingThroughDate($context['entity']->id) : now()->toDateString();
 
         return view('masjid.mrj.admin.financial-v2.funds.index', [
             'entities' => $context['entities'],
             'entity' => $context['entity'],
             'groups' => $this->fundGroups->groups($funds),
-            'asOf' => now()->toDateString(),
+            'asOf' => $asOf,
         ]);
     }
 
@@ -630,7 +633,7 @@ final class OperationalFinancialController
             'entities' => $context['entities'],
             'entity' => $entity,
             'group' => $fundGroup,
-            'asOf' => now()->toDateString(),
+            'asOf' => $this->reportingThroughDate($entity->id),
         ]);
     }
 
@@ -652,7 +655,7 @@ final class OperationalFinancialController
             'status' => ['nullable', 'in:posted,reversed'],
         ]);
         $from = $filters['from'] ?? $fund->valid_from?->toDateString() ?? now()->startOfYear()->toDateString();
-        $through = $filters['through'] ?? now()->toDateString();
+        $through = $filters['through'] ?? $this->reportingThroughDate($entity->id);
         abort_if($from > $through, 422, 'Tanggal mulai tidak boleh melewati tanggal akhir.');
         $history = $this->fundHistory->history($entity, $fund, [
             'from' => $from,
@@ -1270,6 +1273,9 @@ final class OperationalFinancialController
                 $version->setAttribute('availability', $this->budgetAllocations->availability($version->id));
                 $version->setAttribute('funding_availability', $this->budgetAllocations->fundingAvailability($version->id));
             });
+            $allocationVersions = $allocationVersions
+                ->filter(fn (BudgetAllocationVersion $version): bool => DecimalAmount::compare($version->availability['available'], '0.00') > 0)
+                ->values();
         }
 
         return [
@@ -1675,6 +1681,10 @@ final class OperationalFinancialController
             throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Alokasi dana yang dipilih belum disetujui atau tidak tersedia.');
         }
 
+        if (DecimalAmount::compare($this->budgetAllocations->availability($version->id)['available'], '0.00') <= 0) {
+            throw new FinancialDomainException('E-REALIZATION-EXHAUSTED', 'Alokasi dana ini sudah direalisasikan penuh dan tidak memiliki sisa yang dapat direalisasikan.');
+        }
+
         if (! $version->allocation->category_id) {
             throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Alokasi dana belum memiliki kategori pengeluaran.');
         }
@@ -1694,6 +1704,14 @@ final class OperationalFinancialController
      */
     private function realizationFundingSources(AccountingEntity $entity, string $versionId, ?array $requested, string $total): array
     {
+        $allocationAvailability = $this->budgetAllocations->availability($versionId);
+        if (DecimalAmount::compare($allocationAvailability['available'], '0.00') <= 0) {
+            throw new FinancialDomainException('E-REALIZATION-EXHAUSTED', 'Alokasi dana ini sudah direalisasikan penuh dan tidak memiliki sisa yang dapat direalisasikan.');
+        }
+        if (DecimalAmount::compare($total, $allocationAvailability['available']) > 0) {
+            throw new FinancialDomainException('E-REALIZATION-AMOUNT', 'Nominal realisasi melebihi sisa alokasi yang tersedia.');
+        }
+
         $available = collect($this->budgetAllocations->fundingAvailability($versionId))->keyBy('fund_id');
         if ($available->isEmpty()) {
             throw new FinancialDomainException('E-REALIZATION-FUNDING', 'Sumber Dana alokasi belum tersedia.');
@@ -1717,6 +1735,9 @@ final class OperationalFinancialController
             }
             $this->fund($entity, $fundId);
             $amount = $this->amount((string) ($line['amount'] ?? '0'));
+            if (DecimalAmount::compare($amount, $available->get($fundId)['available']) > 0) {
+                throw new FinancialDomainException('E-REALIZATION-AMOUNT', 'Nominal realisasi pada salah satu Sumber Dana melebihi sisa yang tersedia.');
+            }
 
             return [
                 'fund_id' => $fundId,
@@ -1997,7 +2018,7 @@ final class OperationalFinancialController
     /** @return \Illuminate\Support\Collection<int, array<string, mixed>> */
     private function fundCards(AccountingEntity $entity): \Illuminate\Support\Collection
     {
-        $through = now()->toDateString();
+        $through = $this->reportingThroughDate($entity->id);
         // Fund balance is a net-position measure. It must not be substituted
         // with a liquidity distribution even when the two happen to tie out.
         $report = $this->reports->report('fund-balance', $entity->id, now()->startOfYear()->toDateString(), $through)['data'];
@@ -2030,6 +2051,11 @@ final class OperationalFinancialController
                     'financial_accounts' => $accountsByFund->get($fund->id, []),
                 ];
             });
+    }
+
+    private function reportingThroughDate(string $entityId): string
+    {
+        return $this->postedLedger->latestAccountingDate($entityId) ?? now()->toDateString();
     }
 
     /** @param \Illuminate\Support\Collection<int, BudgetAllocation> $allocations @return \Illuminate\Support\Collection<int, array<string, mixed>> */

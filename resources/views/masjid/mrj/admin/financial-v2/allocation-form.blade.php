@@ -89,7 +89,7 @@
                                 <form method="POST" action="{{ route('financial-v2.allocations.submit', $allocation) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-outline btn-sm" type="submit">Ajukan alokasi</button></form>
                             @elseif ($allocation->status === 'submitted' && $version?->status === 'draft')
                                 <form method="POST" action="{{ route('financial-v2.allocations.approve', $allocation) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-primary btn-sm" type="submit">Setujui alokasi</button></form>
-                            @elseif ($allocation->status === 'approved')
+                            @elseif ($allocation->status === 'approved' && \App\Domain\FinancialV2\DecimalAmount::compare($summary['remaining'], '0.00') > 0)
                                 @if ($activeRealizationDraft)
                                     <a class="btn btn-success btn-sm" href="{{ route('financial-v2.transactions.show', $activeRealizationDraft) }}">Lanjutkan Realisasi</a>
                                     <p class="self-center text-xs text-base-content/60">Draft Realisasi sudah disiapkan{{ $activeRealizationDrafts->count() > 1 ? ' (perlu ditinjau)' : '' }}.</p>
@@ -101,6 +101,8 @@
                                 @else
                                     <button class="btn btn-outline btn-sm" type="button" onclick="document.getElementById('amend-allocation-{{ $allocation->id }}').showModal()">Tambah perubahan alokasi</button>
                                 @endif
+                            @elseif ($allocation->status === 'approved')
+                                <span class="badge badge-success badge-outline">Realisasi selesai</span>
                             @endif
                             @if (in_array($allocation->status, ['draft', 'submitted', 'approved'], true))
                                 <button class="btn btn-ghost btn-sm text-error" type="button" onclick="document.getElementById('cancel-allocation-{{ $allocation->id }}').showModal()">Batalkan</button>

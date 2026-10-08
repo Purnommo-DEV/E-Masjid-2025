@@ -15,6 +15,18 @@ use Illuminate\Support\Facades\DB;
  */
 final class PostedLedgerQuery
 {
+    public function latestAccountingDate(string $entityId): ?string
+    {
+        $date = DB::table('financial_v2_ledger_entries as ledger')
+            ->join('financial_v2_journal_lines as journal_line', 'journal_line.id', '=', 'ledger.journal_line_id')
+            ->join('financial_v2_journals as journal', 'journal.id', '=', 'journal_line.journal_id')
+            ->where('ledger.accounting_entity_id', $entityId)
+            ->where('journal.journal_status', 'posted')
+            ->max('ledger.accounting_date');
+
+        return $date ? (string) $date : null;
+    }
+
     public function ledger(string $entityId, string $throughAccountingDate): Builder
     {
         return DB::table('financial_v2_ledger_entries as ledger')

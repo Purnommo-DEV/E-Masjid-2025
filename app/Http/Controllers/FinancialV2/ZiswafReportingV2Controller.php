@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
+use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\Reporting\ZiswafReportingV2Service;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Category;
@@ -14,13 +15,16 @@ use Illuminate\Validation\Rule;
 /** Internal, read-only adapter for the ZISWAF Reporting V2 presentation. */
 final class ZiswafReportingV2Controller
 {
-    public function __construct(private readonly ZiswafReportingV2Service $reports) {}
+    public function __construct(
+        private readonly ZiswafReportingV2Service $reports,
+        private readonly PostedLedgerQuery $postedLedger,
+    ) {}
 
     public function index(Request $request)
     {
         $input = $this->input($request);
         $context = $this->context($input['entity'] ?? null);
-        [$from, $through] = $this->period($input);
+        [$from, $through] = $this->period($input, $context['entity']?->id);
         $report = $context['entity']
             ? $this->reports->report($context['entity'], $from, $through, null, $input)
             : $this->emptyReport($from, $through);
@@ -39,7 +43,7 @@ final class ZiswafReportingV2Controller
         $input = $this->input($request);
         $context = $this->context($input['entity'] ?? $program->accounting_entity_id);
         abort_unless($context['entity']?->id === $program->accounting_entity_id, 404);
-        [$from, $through] = $this->period($input);
+        [$from, $through] = $this->period($input, $context['entity']->id);
 
         return view('masjid.mrj.admin.financial-v2.ziswaf-report-v2.program', [
             'entities' => $context['entities'],
@@ -65,10 +69,10 @@ final class ZiswafReportingV2Controller
     }
 
     /** @param array<string, mixed> $input @return array{0: string, 1: string} */
-    private function period(array $input): array
+    private function period(array $input, ?string $entityId): array
     {
-        $from = $input['from'] ?? now()->startOfMonth()->toDateString();
-        $through = $input['through'] ?? now()->toDateString();
+        $through = $input['through'] ?? ($entityId ? $this->postedLedger->latestAccountingDate($entityId) : null) ?? now()->toDateString();
+        $from = $input['from'] ?? \Carbon\CarbonImmutable::parse($through)->startOfMonth()->toDateString();
         abort_if($from > $through, 422, 'Tanggal mulai laporan tidak boleh melewati tanggal akhir.');
 
         return [$from, $through];

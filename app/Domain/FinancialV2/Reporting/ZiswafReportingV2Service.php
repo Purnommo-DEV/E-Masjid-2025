@@ -73,7 +73,7 @@ final class ZiswafReportingV2Service
                 ]);
         $programs = $this->programRows($entity, $from, $through, $fundIdsForFacts, $fundingRows, $programId);
         $summary = $this->summary($fundRows);
-        $summary['planned_usage'] = DecimalAmount::sum($programs->pluck('allocation'));
+        $summary['planned_usage'] = DecimalAmount::sum($programs->pluck('remaining'));
         $allProgramActual = DecimalAmount::sum($allProgramFundingRows->pluck('actual_expense'));
         $nonProgramActual = DecimalAmount::sum($nonProgramByFund->pluck('amount'));
 
@@ -128,7 +128,7 @@ final class ZiswafReportingV2Service
             ->where('code', (string) config('financial_reporting.public_ziswaf.entity_code'))
             ->where('status', 'active')
             ->firstOrFail();
-        $latest = $this->postedLedger->ledger($entity->id, '9999-12-31')->max('ledger.accounting_date');
+        $latest = $this->postedLedger->latestAccountingDate($entity->id);
         $through = $requestedThrough ?: ($latest ?: now()->toDateString());
         $from = $requestedFrom ?: Carbon::parse($through)->startOfMonth()->toDateString();
         $this->assertPeriod($from, $through);

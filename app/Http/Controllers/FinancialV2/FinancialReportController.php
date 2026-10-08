@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
+use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Models\FinancialV2\AccountingEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,14 +19,17 @@ use Illuminate\Validation\Rule;
  */
 final class FinancialReportController
 {
-    public function __construct(private readonly FinancialReportService $reports) {}
+    public function __construct(
+        private readonly FinancialReportService $reports,
+        private readonly PostedLedgerQuery $postedLedger,
+    ) {}
 
     public function index(Request $request)
     {
         $input = $this->validatedInput($request);
         $context = $this->context($input['entity'] ?? null);
         $report = $input['report'] ?? 'summary';
-        [$from, $through] = $this->dateRange($input);
+        [$from, $through] = $this->dateRange($input, $context['entity']?->id);
         $data = $context['entity']
             ? $this->reports->report($report, $context['entity']->id, $from, $through, $input)
             : $this->emptyReport($report, $from, $through);
@@ -46,7 +50,7 @@ final class FinancialReportController
         $input = $this->validatedInput($request);
         $context = $this->context($input['entity'] ?? null);
         abort_unless($context['entity'], 404, 'Entitas Financial V2 aktif belum dipilih atau belum tersedia.');
-        [$from, $through] = $this->dateRange($input);
+        [$from, $through] = $this->dateRange($input, $context['entity']->id);
         $report = $input['report'] ?? 'summary';
 
         return response()->json($this->reports->report($report, $context['entity']->id, $from, $through, $input));
@@ -71,10 +75,10 @@ final class FinancialReportController
     }
 
     /** @return array{0: string, 1: string} */
-    private function dateRange(array $input): array
+    private function dateRange(array $input, ?string $entityId): array
     {
-        $from = $input['from'] ?? now()->startOfMonth()->toDateString();
-        $through = $input['through'] ?? now()->toDateString();
+        $through = $input['through'] ?? ($entityId ? $this->postedLedger->latestAccountingDate($entityId) : null) ?? now()->toDateString();
+        $from = $input['from'] ?? \Carbon\CarbonImmutable::parse($through)->startOfMonth()->toDateString();
         abort_if($from > $through, 422, 'Tanggal awal laporan tidak boleh setelah tanggal akhir.');
 
         return [$from, $through];
