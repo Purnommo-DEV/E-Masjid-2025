@@ -22,7 +22,7 @@
             }
             $allocationAmount = old('amount', $editingVersion?->allocated_amount);
         @endphp
-        <form method="POST" action="{{ $editingAllocation ? route('financial-v2.allocations.update', $editingAllocation) : route('financial-v2.allocations.store') }}" data-financial-ajax data-funding-form class="grid max-w-3xl gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <form method="POST" action="{{ $editingAllocation ? route('financial-v2.allocations.update', $editingAllocation) : route('financial-v2.allocations.store') }}" data-financial-ajax data-funding-form data-allocation-configuration data-configuration-preview-url="{{ route('financial-v2.allocations.configuration-preview') }}" class="grid max-w-3xl gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
             @csrf
             @if ($editingAllocation) @method('PUT') @endif
             <input type="hidden" name="entity" value="{{ $entity->id }}">
@@ -50,6 +50,7 @@
                     <div class="mt-3 rounded-xl bg-base-100 px-3 py-3 text-sm"><div class="flex justify-between gap-3"><span>Total Sumber</span><strong data-funding-total>Rp0,00</strong></div><p class="mt-1 text-xs" data-funding-status>Total sumber belum seimbang dengan nominal alokasi.</p></div>
                 </section>
                 <label class="form-control mt-4"><span class="label-text font-medium">Kategori <span class="font-normal text-base-content/55">(jika relevan)</span></span><select name="category_id" class="select select-bordered w-full"><option value="">Tanpa kategori</option>@foreach($options['categories'] as $category)<option value="{{ $category->id }}" @selected(old('category_id', $editingAllocation?->category_id) === $category->id)>{{ $category->name }}</option>@endforeach</select></label>
+                <aside class="mt-4 hidden rounded-xl border px-3 py-3 text-sm" data-allocation-configuration-status></aside>
                 <label class="form-control mt-4"><span class="label-text font-medium">Tujuan dan keterangan</span><textarea name="reason" rows="4" class="textarea textarea-bordered w-full" placeholder="Contoh: Peruntukan biaya program Ramadhan 1448 H" required>{{ old('reason', $editingAllocation?->reason) }}</textarea></label>
                 <div class="mt-6 flex justify-end"><button type="submit" class="btn btn-primary" data-funding-submit>{{ $editingAllocation ? 'Simpan perubahan draft' : 'Simpan alokasi sebagai draft' }}</button></div>
             </section>
@@ -189,6 +190,59 @@
     form.querySelector('[data-add-funding]').addEventListener('click', () => { lines.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__INDEX__', nextIndex++)); bind(lines.lastElementChild); renumber(); render(); });
     target.addEventListener('input', render);
     renumber(); render();
+})();
+</script>
+<script>
+(() => {
+    const form = document.querySelector('[data-allocation-configuration]');
+    const output = form?.querySelector('[data-allocation-configuration-status]');
+    const category = form?.elements.category_id;
+    if (!form || !output || !category) return;
+    let timer;
+    let controller;
+    const inspect = async () => {
+        const fundIds = [...form.querySelectorAll('[data-funding-fund]')].map((field) => field.value).filter(Boolean);
+        const date = form.elements.date.value;
+        const programId = form.elements.program_id.value;
+        if (!date || !programId || !category.value || fundIds.length === 0) {
+            output.classList.add('hidden');
+            return;
+        }
+        controller?.abort();
+        controller = new AbortController();
+        const body = new FormData();
+        body.append('_token', form.querySelector('input[name="_token"]').value);
+        body.append('date', date);
+        body.append('program_id', programId);
+        body.append('category_id', category.value);
+        fundIds.forEach((id) => body.append('fund_ids[]', id));
+        try {
+            const response = await fetch(form.dataset.configurationPreviewUrl, { method: 'POST', body, headers: { Accept: 'application/json' }, signal: controller.signal });
+            const payload = await response.json();
+            output.classList.remove('hidden', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-950', 'border-amber-200', 'bg-amber-50', 'text-amber-950');
+            if (response.ok && payload.ok) {
+                output.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-950');
+                output.textContent = `✓ ${payload.message}`;
+                return;
+            }
+            output.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-950');
+            if (payload.recommended_category) {
+                const previous = category.options[category.selectedIndex]?.text || 'kategori sebelumnya';
+                category.value = payload.recommended_category.id;
+                output.textContent = `⚠️ Konfigurasi alokasi belum sesuai. ${payload.message} Kategori otomatis disesuaikan dari ${previous} menjadi ${payload.recommended_category.name}; periksa kembali sebelum menyimpan.`;
+            } else {
+                output.textContent = `⚠️ Konfigurasi alokasi belum sesuai. ${payload.message}`;
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                output.className = 'mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-950';
+                output.textContent = '⚠️ Konfigurasi alokasi belum dapat diperiksa. Coba lagi sebelum mengajukan alokasi.';
+            }
+        }
+    };
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(inspect, 250); };
+    form.addEventListener('change', schedule);
+    schedule();
 })();
 </script>
 @endpush

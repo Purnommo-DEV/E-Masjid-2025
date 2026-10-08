@@ -333,6 +333,44 @@ final class FinancialTransactionConfigurationResolver
         }
     }
 
+    /** @param iterable<string> $fundIds */
+    public function recommendAllocationCategory(string $entityId, iterable $fundIds, ?string $programId): ?Category
+    {
+        if (! $programId) {
+            return null;
+        }
+
+        $typeId = TransactionType::query()
+            ->where('accounting_entity_id', $entityId)
+            ->where('code', TransactionTypeCode::Payment->value)
+            ->where('status', 'active')
+            ->value('id');
+        $fundIds = collect($fundIds)->filter()->unique()->values();
+        if (! $typeId || $fundIds->isEmpty()) {
+            return null;
+        }
+
+        $categoryIds = FundPolicyRule::query()
+            ->select('financial_v2_fund_policy_rules.category_id')
+            ->join('financial_v2_fund_policy_versions as policy_versions', 'policy_versions.id', '=', 'financial_v2_fund_policy_rules.fund_policy_version_id')
+            ->where('policy_versions.accounting_entity_id', $entityId)
+            ->whereIn('policy_versions.fund_id', $fundIds)
+            ->where(fn (Builder $query) => $query->where('policy_versions.status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('policy_versions.status', 'superseded')->whereNotNull('policy_versions.approved_at')))
+            ->where('financial_v2_fund_policy_rules.transaction_type_id', $typeId)
+            ->where('financial_v2_fund_policy_rules.program_id', $programId)
+            ->where('financial_v2_fund_policy_rules.decision', 'allowed')
+            ->whereNotNull('financial_v2_fund_policy_rules.category_id')
+            ->groupBy('financial_v2_fund_policy_rules.category_id')
+            ->havingRaw('COUNT(DISTINCT policy_versions.fund_id) = ?', [$fundIds->count()])
+            ->pluck('financial_v2_fund_policy_rules.category_id')
+            ->unique()
+            ->values();
+
+        return $categoryIds->count() === 1
+            ? Category::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->find($categoryIds->first())
+            : null;
+    }
+
     /** @param array<string, mixed> $input */
     private function transactionType(string $entityId, array $input): TransactionType
     {

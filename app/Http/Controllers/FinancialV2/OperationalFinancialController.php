@@ -13,6 +13,7 @@ use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialPostingException;
 use App\Domain\FinancialV2\FinancialTransactionConfigurationResolver;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
+use App\Domain\FinancialV2\FundPolicyCompatibilityService;
 use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
@@ -78,6 +79,7 @@ final class OperationalFinancialController
         private readonly RealizationDraftReadService $realizationDrafts,
         private readonly DraftTransactionReadService $draftTransactions,
         private readonly FinancialTransactionConfigurationResolver $configurationResolver,
+        private readonly FundPolicyCompatibilityService $allocationPolicies,
     ) {}
 
     public function dashboard(Request $request)
@@ -853,6 +855,15 @@ final class OperationalFinancialController
 
         try {
             if ($allocation->status === 'draft') {
+                $version = $allocation->versions()->with('fundings')->where('status', 'draft')->orderByDesc('version_no')->firstOrFail();
+                $this->allocationPolicies->assertAllocationCompatible(
+                    $entity->id,
+                    $version->fundings->pluck('fund_id'),
+                    $version->effective_from->toDateString(),
+                    $allocation->account_id,
+                    $allocation->category_id,
+                    $allocation->program_id,
+                );
                 $this->budgetAllocations->submit($allocation->id, $request->user()?->id);
             } elseif (! in_array($allocation->status, ['submitted', 'approved'], true)) {
                 throw new FinancialDomainException('E-BUDGET-STATE', 'Status alokasi tidak dapat diajukan.');
@@ -943,6 +954,42 @@ final class OperationalFinancialController
             'programs' => $programs->map(fn (Program $program) => ['id' => $program->id, 'name' => $program->name])->values(),
             'configuration_filtered' => $configurationFiltered,
         ]);
+    }
+
+    public function allocationConfigurationPreview(Request $request)
+    {
+        $entity = $this->requiredEntity($request);
+        $data = $request->validate([
+            'date' => ['required', 'date'],
+            'fund_ids' => ['required', 'array', 'min:1'],
+            'fund_ids.*' => ['required', 'uuid', 'distinct'],
+            'category_id' => ['nullable', 'uuid'],
+            'program_id' => ['nullable', 'uuid'],
+        ]);
+        $category = $this->category($entity, $data['category_id'] ?? null);
+        $program = $this->program($entity, $data['program_id'] ?? null);
+        $funds = Fund::query()->where('accounting_entity_id', $entity->id)->where('status', 'active')->whereIn('id', $data['fund_ids'])->get();
+        if ($funds->count() !== count($data['fund_ids'])) {
+            throw new FinancialDomainException('E-UX-FUND', 'Sumber Dana alokasi tidak aktif atau berada di luar entitas ini.');
+        }
+        $recommendation = $this->configurationResolver->recommendAllocationCategory($entity->id, $funds->pluck('id'), $program?->id);
+
+        try {
+            $this->allocationPolicies->assertAllocationCompatible($entity->id, $funds->pluck('id'), $data['date'], null, $category?->id, $program?->id);
+
+            return response()->json(['ok' => true, 'status' => 'READY', 'message' => 'Konfigurasi alokasi sesuai dan siap diajukan.', 'recommended_category' => null]);
+        } catch (FinancialDomainException $exception) {
+            $status = $exception->details['status'] ?? 'MISSING_CONFIGURATION';
+
+            return response()->json([
+                'ok' => false,
+                'status' => $status,
+                'message' => $exception->getMessage(),
+                'recommended_category' => $status === 'MISSING_CONFIGURATION' && $recommendation && $recommendation->id !== $category?->id
+                    ? ['id' => $recommendation->id, 'name' => $recommendation->name]
+                    : null,
+            ], 422);
+        }
     }
 
     public function preview(Request $request)
