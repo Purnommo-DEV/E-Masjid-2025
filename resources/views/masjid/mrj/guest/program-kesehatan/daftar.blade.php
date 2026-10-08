@@ -29,7 +29,7 @@
 @php
     // Nomor WhatsApp harus menggunakan format 62, tanpa tanda +, spasi, atau strip
     $adminNama = profil('nama');
-    $adminWhatsapp = profil('wa');
+    $adminWhatsapp = waNumberForLink();
     $adminWhatsappTampil = waNumberFormatted();
 
     $pesanWhatsapp = urlencode(
