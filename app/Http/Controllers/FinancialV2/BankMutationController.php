@@ -367,7 +367,7 @@ final class BankMutationController extends Controller
             $data['date'],
         );
         $proposed = $category->code === 'BANK_INTEREST' ? DecimalAmount::normalize($data['amount']) : DecimalAmount::subtract('0.00', $data['amount']);
-        $net = DecimalAmount::add($postedMovement, $proposed);
+        $net = $proposed;
 
         return response()->json([
             'ok' => true,
@@ -466,7 +466,7 @@ final class BankMutationController extends Controller
             'total_credit' => $totalCredit,
             'total_debit' => $totalDebit,
             'proposed_movement' => $proposedNet,
-            'net_movement' => DecimalAmount::add($postedMovement, $proposedNet),
+            'net_movement' => $proposedNet,
             'closing' => $running,
             'rows' => $rowPreviews,
         ]);
@@ -606,11 +606,9 @@ final class BankMutationController extends Controller
     private function balancePreview(string $entityId, string $financialAccountId, string $date): array
     {
         try {
-            $previousDate = CarbonImmutable::parse($date)->subDay()->toDateString();
-
             return [
-                $this->balances->financialAccountBalance($entityId, $financialAccountId, $previousDate)['balance'],
-                $this->balances->financialAccountMovement($entityId, $financialAccountId, $date, $date),
+                $this->balances->financialAccountBalance($entityId, $financialAccountId, $date)['balance'],
+                '0.00',
                 true,
             ];
         } catch (Throwable $exception) {

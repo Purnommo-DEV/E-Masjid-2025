@@ -32,8 +32,33 @@
                             <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $version->fund?->name }}</p><p class="text-sm text-base-content/60">Versi {{ $version->version_no }} · {{ $version->effective_from?->translatedFormat('d M Y') }}@if($version->effective_to) — {{ $version->effective_to->translatedFormat('d M Y') }}@endif</p></div><span class="badge {{ $version->status === 'effective' ? 'badge-success' : 'badge-ghost' }}">{{ $version->status === 'effective' ? 'Berlaku' : ($version->status === 'replaced_unused' ? 'Diganti · belum digunakan' : ucfirst($version->status)) }}</span></div>
                             <p class="mt-3 text-sm text-base-content/65">Dokumen: {{ $version->policy_document_ref }}@if($version->allowed_matrix_ref) · Matriks: {{ $version->allowed_matrix_ref }}@endif</p>
                             @if ($version->status === 'draft')
-                                <div class="mt-4 flex flex-wrap gap-2"><form method="post" action="{{ route('financial-v2.masters.policies.effective', $version) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-success btn-sm">Berlakukan versi</button></form></div>
+                                @if ($version->rules->isNotEmpty())
+                                    <div class="mt-4 flex flex-wrap gap-2"><form method="post" action="{{ route('financial-v2.masters.policies.effective', $version) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-success btn-sm">Berlakukan versi</button></form></div>
+                                @else
+                                    <div class="alert alert-warning mt-4 text-sm">Draft ini belum memiliki rule dan tidak dapat diberlakukan. Gunakan action “Buat Versi Berikutnya” pada predecessor; draft kosong yang tepat akan digunakan kembali dan diisi melalui clone governed.</div>
+                                @endif
                                 <details class="mt-4 rounded-xl bg-base-200 p-4"><summary class="cursor-pointer text-sm font-semibold">Ubah draft kebijakan</summary><form method="post" action="{{ route('financial-v2.masters.policies.update', $version) }}" data-financial-ajax class="mt-4 grid gap-3 sm:grid-cols-2">@csrf @method('PUT')<input type="hidden" name="entity" value="{{ $entity->id }}"><input required type="date" name="effective_from" value="{{ $version->effective_from?->toDateString() }}" class="input input-bordered input-sm"><input type="date" name="effective_to" value="{{ $version->effective_to?->toDateString() }}" class="input input-bordered input-sm"><input required name="policy_document_ref" value="{{ $version->policy_document_ref }}" class="input input-bordered input-sm sm:col-span-2"><input name="allowed_matrix_ref" value="{{ $version->allowed_matrix_ref }}" placeholder="Referensi matriks" class="input input-bordered input-sm"><input required name="exception_approval_level" value="{{ $version->exception_approval_level }}" class="input input-bordered input-sm"><button class="btn btn-primary btn-sm">Simpan perubahan</button></form></details>
+                            @endif
+
+                            @php($laterVersions = $versions->filter(fn ($candidate) => $candidate->fund_id === $version->fund_id && $candidate->version_no > $version->version_no)->sortBy('version_no')->values())
+                            @php($existingSuccessor = $laterVersions->first())
+                            @php($canReuseEmptyDraft = $laterVersions->count() === 1 && $existingSuccessor?->version_no === $version->version_no + 1 && $existingSuccessor?->status === 'draft' && $existingSuccessor?->rules->isEmpty())
+                            @php($successorBlocked = $laterVersions->isNotEmpty() && ! $canReuseEmptyDraft)
+                            @if (in_array($version->status, ['effective', 'superseded'], true) && $version->approved_at && $version->rules->isNotEmpty() && ! $successorBlocked)
+                                <details class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
+                                    <summary class="cursor-pointer text-sm font-semibold">Buat Versi Berikutnya</summary>
+                                    <p class="mt-2 text-xs leading-5">@if($canReuseEmptyDraft)Draft Version {{ $existingSuccessor->version_no }} yang masih kosong akan digunakan kembali.@else Successor baru akan dibuat sebagai draft.@endif Seluruh rule versi ini disalin tanpa perubahan dalam satu transaction. Review draft sebelum memilih “Berlakukan versi”.</p>
+                                    <form method="post" action="{{ route('financial-v2.masters.policies.successor', $version) }}" data-financial-ajax class="mt-4 grid gap-3 sm:grid-cols-2">
+                                        @csrf
+                                        <input type="hidden" name="entity" value="{{ $entity->id }}">
+                                        <label class="form-control"><span class="label-text text-xs">Berlaku mulai</span><input required type="date" name="effective_from" value="{{ $version->effective_to?->copy()->addDay()->toDateString() }}" class="input input-bordered input-sm"></label>
+                                        <label class="form-control"><span class="label-text text-xs">Berlaku sampai (opsional)</span><input type="date" name="effective_to" class="input input-bordered input-sm"></label>
+                                        <label class="form-control sm:col-span-2"><span class="label-text text-xs">Referensi dokumen kebijakan</span><input required name="policy_document_ref" maxlength="500" value="{{ $version->policy_document_ref }}" class="input input-bordered input-sm"></label>
+                                        <label class="form-control"><span class="label-text text-xs">Referensi matriks</span><input name="allowed_matrix_ref" maxlength="500" value="{{ $version->allowed_matrix_ref }}" class="input input-bordered input-sm"></label>
+                                        <label class="form-control"><span class="label-text text-xs">Tingkat persetujuan pengecualian</span><input required name="exception_approval_level" maxlength="80" value="{{ $version->exception_approval_level }}" class="input input-bordered input-sm"></label>
+                                        <button class="btn btn-success btn-sm sm:col-span-2">Clone seluruh rule sebagai draft successor</button>
+                                    </form>
+                                </details>
                             @endif
 
                             @php($usage = $policyUsage->get($version->id))

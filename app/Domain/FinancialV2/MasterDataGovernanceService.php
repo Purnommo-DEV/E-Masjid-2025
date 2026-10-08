@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2;
 
 use App\Models\FinancialV2\Account;
+use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\FundPolicyVersion;
@@ -125,12 +126,27 @@ final class MasterDataGovernanceService
     public function makeFundPolicyVersionEffective(string $versionId, ?int $actorUserId = null): FundPolicyVersion
     {
         return DB::transaction(function () use ($versionId, $actorUserId): FundPolicyVersion {
-            $version = FundPolicyVersion::query()->with('fund.type')->lockForUpdate()->findOrFail($versionId);
+            $version = FundPolicyVersion::query()->with(['fund.type', 'rules'])->lockForUpdate()->findOrFail($versionId);
             if (! $version->fund || $version->fund->accounting_entity_id !== $version->accounting_entity_id || blank($version->policy_document_ref)) {
                 throw new FinancialDomainException('E-FUND-POLICY-GOVERNANCE', 'Fund Policy Version must reference an in-scope Fund and policy document.');
             }
             if (in_array($version->fund->type->classification, ['restricted', 'perpetual_restricted', 'custodial', 'syariah'], true) && blank($version->allowed_matrix_ref)) {
                 throw new FinancialDomainException('E-FUND-POLICY-GOVERNANCE', 'Restricted Fund Policy Version requires an allowed matrix reference.');
+            }
+            if ($version->rules->isEmpty()) {
+                throw new FinancialDomainException('E-FUND-POLICY-RULES-INCOMPLETE', 'Fund Policy tanpa rule tidak dapat diberlakukan.');
+            }
+            $cloneAudit = AuditEvent::query()
+                ->where('event_type', 'fund_policy_successor_cloned')
+                ->where('target_type', 'fund_policy_version')
+                ->where('target_id', $version->id)
+                ->latest('event_at')
+                ->first();
+            if ($cloneAudit) {
+                $expected = json_decode((string) $cloneAudit->after_summary, true, 512, JSON_THROW_ON_ERROR)['rules'] ?? null;
+                if ($expected !== FundPolicyRuleSet::signature($version->rules)) {
+                    throw new FinancialDomainException('E-FUND-POLICY-RULES-INCOMPLETE', 'Rule successor tidak lagi sama dengan hasil clone predecessor dan tidak dapat diberlakukan.');
+                }
             }
             // A policy is immutable once effective. A later approved policy
             // therefore supersedes (rather than edits) its effective

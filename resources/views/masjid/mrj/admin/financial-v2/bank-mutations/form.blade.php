@@ -203,7 +203,7 @@
     const renderCurrentState = () => {
         let credit = 0;
         let debit = 0;
-        let running = baseBalance === null ? null : baseBalance + postedMovement;
+        let running = baseBalance;
         currentEntries().forEach((entry) => {
             const signed = entry.category_code === 'BANK_INTEREST' ? entry.amount : -entry.amount;
             if (signed >= 0) credit += signed; else debit += Math.abs(signed);
@@ -211,7 +211,7 @@
             entry.row.querySelector('[data-row-movement]').textContent = entry.amount > 0 ? money(signed, true) : '—';
             entry.row.querySelector('[data-row-balance]').textContent = entry.amount > 0 && running !== null ? money(running) : '—';
         });
-        const net = postedMovement + credit - debit;
+        const net = credit - debit;
         form.querySelector('[data-preview-credit]').textContent = money(credit);
         form.querySelector('[data-preview-debit]').textContent = money(debit);
         form.querySelector('[data-preview-net]').textContent = money(net, true);

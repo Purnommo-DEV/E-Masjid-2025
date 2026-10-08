@@ -8,6 +8,7 @@ use App\Domain\FinancialV2\CorrectMrjLegacyProgramLifecycleService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
 use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
+use App\Domain\FinancialV2\FundPolicySuccessorService;
 use App\Domain\FinancialV2\MasterDataGovernanceService;
 use App\Domain\FinancialV2\UnusedEffectiveFundPolicyReplacementService;
 use App\Models\FinancialV2\Account;
@@ -42,6 +43,7 @@ final class FinancialMasterDataController
         private readonly FinancialMasterDataService $masters,
         private readonly MasterDataGovernanceService $governance,
         private readonly FundPolicyVersionDeletionService $policyDeletion,
+        private readonly FundPolicySuccessorService $policySuccessor,
         private readonly UnusedEffectiveFundPolicyReplacementService $unusedPolicyReplacement,
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
         private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
@@ -351,6 +353,24 @@ final class FinancialMasterDataController
             $version = $this->governance->makeFundPolicyVersionEffective($policyVersion, $request->user()?->id);
 
             return ['Versi Aturan Dana kini berlaku. Perubahan berikutnya harus dibuat sebagai versi baru.', ['fund_policy_version_id' => $version->id]];
+        });
+    }
+
+    public function clonePolicySuccessor(Request $request, string $policyVersion)
+    {
+        return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request, $policyVersion) {
+            $this->ensureScoped(FundPolicyVersion::class, $entity->id, $policyVersion);
+            $successor = $this->policySuccessor->create(
+                $entity->id,
+                $policyVersion,
+                $this->policyInput($request, false),
+                $request->user()?->id,
+            );
+
+            return ['Versi berikutnya dibuat sebagai draft dengan seluruh rule predecessor.', [
+                'fund_policy_version_id' => $successor->id,
+                'predecessor_fund_policy_version_id' => $policyVersion,
+            ]];
         });
     }
 
