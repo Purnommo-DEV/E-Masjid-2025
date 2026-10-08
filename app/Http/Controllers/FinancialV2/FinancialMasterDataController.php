@@ -322,6 +322,7 @@ final class FinancialMasterDataController
             'costCenters' => $entityId ? CostCenter::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
             'policyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
             'policyReplacementEligibility' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->with('rules')->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->unusedPolicyReplacement->eligibility($version)]) : collect(),
+            'canReplaceUnusedEffectivePolicy' => $request->user()?->hasRole('SuperAdmin') ?? false,
         ]);
     }
 

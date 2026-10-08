@@ -61,10 +61,10 @@
                                 @endif
                             </div>
 
-                            @if ($replacementEligibility['eligible'] ?? false)
+                            @if ($canReplaceUnusedEffectivePolicy && ($replacementEligibility['eligible'] ?? false))
                                 <details class="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
                                     <summary class="cursor-pointer text-sm font-semibold">Ganti Versi Effective yang Belum Digunakan</summary>
-                                    <p class="mt-2 text-xs leading-5">Action khusus ini menyalin seluruh versi dan rule, lalu mengoreksi satu rule. Proses akan ditolak jika Allocation approved atau financial fact muncul sebelum penggantian selesai.</p>
+                                    <p class="mt-2 text-xs leading-5">Action khusus SuperAdmin ini hanya tersedia untuk policy effective dengan zero-usage. Seluruh versi dan rule akan disalin, lalu satu rule dikoreksi. Server memeriksa ulang usage di dalam transaction dan menolak proses jika Allocation approved atau financial fact muncul sebelum penggantian selesai.</p>
                                     <form method="post" action="{{ route('financial-v2.masters.policies.replace-unused-effective', $version) }}" data-financial-ajax class="mt-4 grid gap-3 sm:grid-cols-2">
                                         @csrf
                                         <input type="hidden" name="entity" value="{{ $entity->id }}">

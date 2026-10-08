@@ -209,7 +209,8 @@ final class UnusedEffectiveFundPolicyReplacementService
         $transactions = ($lock ? $transactionQuery->lockForUpdate() : $transactionQuery)->get();
 
         $realizationQuery = $query('financial_v2_fund_realizations')
-            ->whereIn('budget_allocation_version_id', $allocationVersions->pluck('id'));
+            ->whereIn('budget_allocation_version_id', $allocationVersions->pluck('id'))
+            ->whereIn('transaction_id', $transactions->pluck('id'));
         $realizations = ($lock ? $realizationQuery->lockForUpdate() : $realizationQuery)->get();
         $journalQuery = $query('financial_v2_journals')
             ->whereIn('transaction_id', $transactions->pluck('id'))
