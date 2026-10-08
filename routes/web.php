@@ -489,6 +489,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/aturan-dana', [FinancialMasterDataController::class, 'storePolicy'])->name('policies.store');
             Route::put('/aturan-dana/{policyVersion}', [FinancialMasterDataController::class, 'updatePolicy'])->name('policies.update');
             Route::post('/aturan-dana/{policyVersion}/berlakukan', [FinancialMasterDataController::class, 'makePolicyEffective'])->name('policies.effective');
+            Route::post('/aturan-dana/{policyVersion}/ganti-effective-unused', [FinancialMasterDataController::class, 'replaceUnusedEffectivePolicy'])->name('policies.replace-unused-effective');
             Route::delete('/aturan-dana/{policyVersion}', [FinancialMasterDataController::class, 'destroyPolicy'])->name('policies.destroy');
             Route::post('/aturan-dana/{policyVersion}/aturan', [FinancialMasterDataController::class, 'storePolicyRule'])->name('policy-rules.store');
             Route::put('/aturan-dana/rule/{policyRule}', [FinancialMasterDataController::class, 'updatePolicyRule'])->name('policy-rules.update');

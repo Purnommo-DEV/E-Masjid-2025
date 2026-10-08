@@ -378,21 +378,17 @@ final class FinancialTransactionConfigurationResolver
         }
 
         $categoryIds = FundPolicyRule::query()
-            ->select('financial_v2_fund_policy_rules.category_id')
-            ->join('financial_v2_fund_policy_versions as policy_versions', 'policy_versions.id', '=', 'financial_v2_fund_policy_rules.fund_policy_version_id')
-            ->where('policy_versions.accounting_entity_id', $entityId)
-            ->whereIn('policy_versions.fund_id', $fundIds)
-            ->whereIn('policy_versions.id', $policyVersions->pluck('id'))
-            ->where('financial_v2_fund_policy_rules.transaction_type_id', $typeId)
-            ->where('financial_v2_fund_policy_rules.program_id', $programId)
-            ->whereNull('financial_v2_fund_policy_rules.account_id')
-            ->whereNull('financial_v2_fund_policy_rules.cost_center_id')
-            ->where('financial_v2_fund_policy_rules.decision', 'allowed')
-            ->whereNotNull('financial_v2_fund_policy_rules.category_id')
-            ->groupBy('financial_v2_fund_policy_rules.category_id')
-            ->havingRaw('COUNT(DISTINCT policy_versions.fund_id) = ?', [$fundIds->count()])
-            ->pluck('financial_v2_fund_policy_rules.category_id')
-            ->unique()
+            ->whereIn('fund_policy_version_id', $policyVersions->pluck('id'))
+            ->where('transaction_type_id', $typeId)
+            ->where('program_id', $programId)
+            ->whereNull('account_id')
+            ->whereNull('cost_center_id')
+            ->where('decision', 'allowed')
+            ->whereNotNull('category_id')
+            ->get(['fund_policy_version_id', 'category_id'])
+            ->groupBy('category_id')
+            ->filter(fn (Collection $rules): bool => $rules->pluck('fund_policy_version_id')->unique()->count() === $policyVersions->count())
+            ->keys()
             ->values();
 
         if ($categoryIds->count() !== 1) {

@@ -9,6 +9,7 @@ use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
 use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
 use App\Domain\FinancialV2\MasterDataGovernanceService;
+use App\Domain\FinancialV2\UnusedEffectiveFundPolicyReplacementService;
 use App\Models\FinancialV2\Account;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\ApprovalRequirement;
@@ -41,6 +42,7 @@ final class FinancialMasterDataController
         private readonly FinancialMasterDataService $masters,
         private readonly MasterDataGovernanceService $governance,
         private readonly FundPolicyVersionDeletionService $policyDeletion,
+        private readonly UnusedEffectiveFundPolicyReplacementService $unusedPolicyReplacement,
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
         private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
         private readonly CorrectMrjLegacyProgramLifecycleService $legacyProgramLifecycle,
@@ -317,7 +319,9 @@ final class FinancialMasterDataController
             'accounts' => $entityId ? Account::query()->forEntity($entityId)->where('status', 'active')->orderBy('code')->get() : collect(),
             'categories' => $entityId ? Category::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
             'programs' => $entityId ? Program::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
+            'costCenters' => $entityId ? CostCenter::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
             'policyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
+            'policyReplacementEligibility' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->with('rules')->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->unusedPolicyReplacement->eligibility($version)]) : collect(),
         ]);
     }
 
@@ -356,6 +360,35 @@ final class FinancialMasterDataController
             $this->policyDeletion->delete($entity->id, $policyVersion, $request->user()?->id);
 
             return ['Versi Aturan Dana yang belum pernah digunakan berhasil dihapus. Financial fact tidak berubah.', []];
+        });
+    }
+
+    public function replaceUnusedEffectivePolicy(Request $request, string $policyVersion)
+    {
+        return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request, $policyVersion) {
+            $this->ensureScoped(FundPolicyVersion::class, $entity->id, $policyVersion);
+            $data = $request->validate([
+                'rule_id' => ['required', 'uuid'],
+                'account_id' => ['nullable', 'uuid'],
+                'cost_center_id' => ['nullable', 'uuid'],
+                'audit_reason' => ['required', 'string', 'max:2000'],
+            ], $this->messages());
+            $replacement = $this->unusedPolicyReplacement->replace(
+                $entity->id,
+                $policyVersion,
+                $data['rule_id'],
+                [
+                    'account_id' => $data['account_id'] ?? null,
+                    'cost_center_id' => $data['cost_center_id'] ?? null,
+                ],
+                $data['audit_reason'],
+                $request->user()?->id,
+            );
+
+            return ['Versi effective yang belum digunakan berhasil diganti melalui lifecycle governed.', [
+                'replaced_fund_policy_version_id' => $policyVersion,
+                'fund_policy_version_id' => $replacement->id,
+            ]];
         });
     }
 

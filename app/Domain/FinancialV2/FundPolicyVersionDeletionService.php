@@ -36,6 +36,9 @@ final class FundPolicyVersionDeletionService
         if ($version->status === 'effective') {
             return $this->result('ACTIVE_POLICY', false, 'Versi berlaku — tidak dapat dihapus', 0, 0);
         }
+        if ($version->status === 'replaced_unused') {
+            return $this->result('REPLACED_POLICY', false, 'Versi diganti melalui lifecycle — disimpan untuk audit', 0, 0);
+        }
         if ($version->status !== 'draft' && ! $this->hasReplacementCoverage($version)) {
             return $this->result('ONLY_VALID_POLICY', false, 'Satu-satunya versi untuk periode ini — tidak dapat dihapus', 0, 0);
         }
