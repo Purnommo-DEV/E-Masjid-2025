@@ -49,7 +49,11 @@ $distributionItemsByRw = $sortedDistributionItems->groupBy(fn ($item) => $groupK
 <template data-staging-template><article class="flex min-w-0 flex-col gap-2 rounded-lg border border-base-300 p-3" data-staging-item><div class="min-w-0"><strong class="block break-words text-sm" data-staging-name></strong><span class="mt-0.5 block text-xs text-base-content/65" data-staging-region></span></div><label class="form-control text-sm" data-money-field><span class="label-text text-xs">Nominal</span><div class="relative"><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/55">Rp</span><input class="input input-bordered input-sm w-full pl-9" data-money-input data-staging-amount-display inputmode="decimal" autocomplete="off" placeholder="0" required><input type="hidden" data-money-value data-staging-amount></div></label><button type="button" class="btn btn-ghost btn-xs self-start text-error" data-remove-selection>Hapus</button><input type="hidden" data-staging-beneficiary></article></template>
 
 <div class="mt-8 border-t border-base-300 pt-5"><h2 class="text-xl font-bold">Tambah Penerima ke Draft</h2><p class="mt-1 text-sm text-base-content/65">Hanya penerima aktif yang belum ada di draft dapat dipilih.</p></div>
-@include('masjid.mrj.admin.financial-v2.distributions.filters', ['recipientSelection' => true])
+@include('masjid.mrj.admin.financial-v2.distributions.filters', [
+    'recipientSelection' => true,
+    'filterAction' => route('financial-v2.distributions.show', ['distribution' => $distribution->id]),
+    'filterResetUrl' => route('financial-v2.distributions.show', ['distribution' => $distribution->id, 'entity' => $entity->id]),
+])
 <fieldset><legend class="sr-only">Pilih penerima</legend>
 <label class="mb-3 inline-flex cursor-pointer items-center gap-3 rounded-lg border border-base-300 px-3 py-2 text-sm font-semibold"><input type="checkbox" class="checkbox checkbox-sm" data-select-all-page aria-label="Pilih semua penerima yang tersedia"><span>Pilih semua yang tersedia</span></label>
 @php
