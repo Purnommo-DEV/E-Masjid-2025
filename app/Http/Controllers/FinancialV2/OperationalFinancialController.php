@@ -18,8 +18,8 @@ use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\FundGroupingReadService;
 use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
-use App\Domain\FinancialV2\TransactionEvidenceUploadService;
 use App\Domain\FinancialV2\TransactionEvidenceStatusService;
+use App\Domain\FinancialV2\TransactionEvidenceUploadService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\Attachment;
@@ -997,11 +997,14 @@ final class OperationalFinancialController
                 'destination_fund_id' => $data['destination_fund_id'] ?? null,
                 'program_id' => $data['program_id'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
+                'require_evidence_configuration' => $data['operation'] === 'realization',
             ]);
             if ($inspection['status'] !== 'READY') {
                 $messages = [
                     'POLICY_DENIED' => 'Kombinasi ini tidak diizinkan oleh aturan Dana.',
                     'POSTING_RULE_MISSING' => 'Aturan pencatatan pengeluaran belum tersedia untuk tanggal ini.',
+                    'POSTING_RULE_AMBIGUOUS' => 'Aturan pencatatan untuk transaksi ini belum dapat ditentukan secara otomatis.',
+                    'EVIDENCE_CONFIGURATION_MISSING' => 'Aturan bukti transaksi untuk pengeluaran ini belum tersedia.',
                     'INVALID_CONTEXT' => 'Konteks transaksi tidak valid atau tidak konsisten.',
                     'MISSING_CONFIGURATION' => 'Konfigurasi penggunaan dana belum tersedia.',
                 ];
@@ -1403,6 +1406,7 @@ final class OperationalFinancialController
             'fund_ids' => collect($fundingSources ?? [['fund_id' => $fund->id]])->pluck('fund_id')->all(),
             'category_id' => $category->id,
             'program_id' => $program?->id,
+            'require_evidence_configuration' => $counterpartyType === 'beneficiary',
         ]);
         $splitAccountId = $resolved->businessAccountId;
         $counterparty = $this->counterpartyFromInput($entity, $input, $actorId, $counterpartyType);

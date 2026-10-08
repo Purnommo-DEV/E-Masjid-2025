@@ -26,8 +26,6 @@ final class InlineConfigurationService
 {
     private const OPERATION_CODES = ['receipt' => 'RCV', 'payment' => 'PAY', 'realization' => 'PAY', 'transfer' => 'TRF', 'interfund' => 'IFT'];
 
-    private const RULE_FAMILIES = ['RCV' => 'receipt', 'PAY' => 'payment', 'TRF' => 'treasury-transfer', 'IFT' => 'interfund-transfer'];
-
     public function __construct(
         private readonly FinancialTransactionConfigurationResolver $resolver,
         private readonly FinancialMasterDataService $masters,
@@ -41,6 +39,13 @@ final class InlineConfigurationService
         $inspection = $this->resolver->inspect($this->resolverInput($context));
         $ready = $inspection['status'] === 'READY';
         $versions = $this->candidateVersions($context);
+        if ($inspection['status'] === 'MISSING_CONFIGURATION' && $versions->isEmpty()) {
+            $inspection = ['status' => 'POSTING_RULE_MISSING', 'message' => 'Aturan pencatatan pengeluaran untuk transaksi ini belum tersedia.'];
+        } elseif ($versions->count() > 1) {
+            $inspection = ['status' => 'POSTING_RULE_AMBIGUOUS', 'message' => 'Aturan pencatatan untuk transaksi ini belum dapat ditentukan secara otomatis.'];
+        } elseif ($context['operation'] === 'realization' && $versions->count() === 1 && ! $versions->first()->evidenceRequirements->contains(fn (EvidenceRequirement $requirement): bool => (int) $requirement->minimum_count > 0)) {
+            $inspection = ['status' => 'EVIDENCE_CONFIGURATION_MISSING', 'message' => 'Aturan bukti transaksi untuk pengeluaran ini belum tersedia.'];
+        }
         $approval = ApprovalRequirement::query()
             ->where('accounting_entity_id', $context['entity']->id)
             ->where('transaction_type_id', $context['type']->id)
@@ -61,6 +66,8 @@ final class InlineConfigurationService
                 'evidence' => $version->evidenceRequirements->pluck('evidence_type')->values(),
             ])->values(),
             'selected_posting_rule_version_id' => $versions->count() === 1 ? $versions->first()->id : null,
+            'canonical_posting_rule' => $versions->count() === 1 ? $versions->first()->rule->name.' — Versi '.$versions->first()->version_no : null,
+            'evidence_requirements' => $versions->count() === 1 ? $versions->first()->evidenceRequirements->filter(fn (EvidenceRequirement $requirement): bool => (int) $requirement->minimum_count > 0)->map(fn (EvidenceRequirement $requirement): array => ['type' => $requirement->evidence_type, 'minimum_count' => (int) $requirement->minimum_count])->values() : collect(),
             'required_approval_steps' => (int) ($approval?->required_steps ?? 0),
         ];
     }
@@ -83,12 +90,16 @@ final class InlineConfigurationService
                 $inspection['message'] ?? 'Kondisi ini tidak dapat diselesaikan dengan membuat Aturan Dana baru.',
             );
         }
-        $version = $this->candidateVersions($context)->firstWhere('id', $input['posting_rule_version_id'] ?? null);
-        if (! $version) {
+        $versions = $this->candidateVersions($context);
+        if ($versions->isEmpty()) {
             throw new FinancialDomainException('E-POSTING-RULE-MISSING', 'Posting Rule belum tersedia atau tidak berlaku pada tanggal tersebut.');
         }
-        if (filled($input['evidence_type'] ?? null) && ! $version->evidenceRequirements->contains(fn (EvidenceRequirement $requirement) => $requirement->evidence_type === $input['evidence_type'] && $requirement->minimum_count > 0)) {
-            throw new FinancialDomainException('E-EVIDENCE-CONFIGURATION', 'Evidence Requirement tersebut belum tersedia pada Posting Rule yang dipilih.');
+        if ($versions->count() > 1) {
+            throw new FinancialDomainException('E-POSTING-RULE-AMBIGUOUS', 'Aturan pencatatan untuk transaksi ini belum dapat ditentukan secara otomatis.');
+        }
+        $version = $versions->sole();
+        if ($context['operation'] === 'realization' && ! $version->evidenceRequirements->contains(fn (EvidenceRequirement $requirement): bool => (int) $requirement->minimum_count > 0)) {
+            throw new FinancialDomainException('E-EVIDENCE-CONFIGURATION-MISSING', 'Aturan bukti transaksi untuk pengeluaran ini belum tersedia.');
         }
 
         return DB::transaction(function () use ($context, $version, $input, $actorUserId): array {
@@ -210,15 +221,7 @@ final class InlineConfigurationService
     /** @param array<string, mixed> $context @return Collection<int, PostingRuleVersion> */
     private function candidateVersions(array $context): Collection
     {
-        return PostingRuleVersion::query()->with(['rule', 'lines.account', 'evidenceRequirements'])
-            ->where('accounting_entity_id', $context['entity']->id)
-            ->where(fn (Builder $q) => $q->where('status', 'effective')->orWhere(fn (Builder $h) => $h->where('status', 'superseded')->whereNotNull('approved_at')))
-            ->where('effective_from', '<=', $context['date'])
-            ->where(fn (Builder $q) => $q->whereNull('effective_to')->orWhere('effective_to', '>=', $context['date']))
-            ->whereHas('rule', fn (Builder $q) => $q->where('status', 'active')->where('transaction_type_id', $context['type']->id))
-            ->when($context['category']?->default_posting_rule_id, fn (Builder $q, string $id) => $q->where('posting_rule_id', $id))
-            ->when(! $context['bank_mutation'] && ! $context['category']?->default_posting_rule_id, fn (Builder $q) => $q->whereHas('rule', fn (Builder $rule) => $rule->where('rule_family', self::RULE_FAMILIES[$context['type']->code])))
-            ->get()->filter(fn (PostingRuleVersion $version) => $version->lines->count() >= 2)->values();
+        return $this->resolver->applicablePostingRuleVersions($this->resolverInput($context));
     }
 
     /** @param array<string, mixed> $context @param array<string, mixed> $input */
@@ -251,7 +254,8 @@ final class InlineConfigurationService
             'accounting_entity_id' => $context['entity']->id, 'financial_account_id' => $account->id,
             'fund_id' => $fund->id, 'transaction_type_id' => $context['type']->id, 'category_id' => $context['category']->id,
             'posting_rule_version_id' => $version->id, 'policy_document_ref' => $input['policy_document_ref'],
-            'evidence_type' => ($input['evidence_type'] ?? null) ?: 'statement', 'required_approval_steps' => $input['required_approval_steps'] ?? 0,
+            'evidence_type' => $version->evidenceRequirements->first(fn (EvidenceRequirement $requirement): bool => (int) $requirement->minimum_count > 0)?->evidence_type,
+            'required_approval_steps' => $input['required_approval_steps'] ?? 0,
             'effective_from' => $context['date'], 'effective_to' => $input['effective_to'] ?? null, 'status' => 'draft',
             'created_by_user_id' => $actorUserId, 'updated_by_user_id' => $actorUserId,
         ]);
@@ -351,7 +355,8 @@ final class InlineConfigurationService
             'source_financial_account_id' => $context['operation'] === 'transfer' ? $context['accounts']->get(0)?->id : null,
             'destination_financial_account_id' => $context['operation'] === 'transfer' ? $context['accounts']->get(1)?->id : null,
             'fund_ids' => $context['funds']->pluck('id')->all(), 'source_fund_id' => $context['source_fund_id'], 'destination_fund_id' => $context['destination_fund_id'],
-            'category_id' => $context['category']?->id, 'program_id' => $context['program']?->id];
+            'category_id' => $context['category']?->id, 'program_id' => $context['program']?->id,
+            'require_evidence_configuration' => $context['operation'] === 'realization'];
     }
 
     /** @param array<string, mixed> $context @return array<string, mixed> */

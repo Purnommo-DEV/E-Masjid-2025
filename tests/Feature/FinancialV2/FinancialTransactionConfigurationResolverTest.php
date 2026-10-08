@@ -157,7 +157,7 @@ test('resolver rejects overlapping effective posting-rule versions instead of se
         'financial_account_id' => $context['accountA']->id,
         'fund_id' => $context['fund']->id,
         'category_id' => $context['receiptCategory']->id,
-    ]))->toThrow(FinancialPostingException::class, 'Lebih dari satu aturan pencatatan berlaku');
+    ]))->toThrow(FinancialPostingException::class, 'belum dapat ditentukan secara otomatis');
 });
 
 test('resolver validates every fund-bearing posting line against the policy matrix', function () {

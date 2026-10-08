@@ -280,6 +280,8 @@
                 const message = status.querySelector('[data-configuration-message]');
                 const loading = status.querySelector('[data-configuration-loading]');
                 const missingAction = status.querySelector('[data-configuration-missing-action]');
+                const postingRuleAction = status.querySelector('[data-posting-rule-configuration-link]');
+                const evidenceAction = status.querySelector('[data-evidence-configuration-link]');
                 const requiredByOperation = {
                     receipt: ['date', 'financial_account_id', 'fund_id', 'category_id'],
                     payment: ['date', 'financial_account_id', 'fund_id', 'category_id'],
@@ -291,7 +293,7 @@
                 let timer;
                 let requestVersion = 0;
                 let controller;
-                const paint = (state, text, canCreateConfiguration = false) => {
+                const paint = (state, text, canCreateConfiguration = false, configurationStatus = null) => {
                     const tones = {
                         ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
                         missing: 'border-amber-200 bg-amber-50 text-amber-950',
@@ -300,6 +302,8 @@
                     status.className = `mt-4 rounded-xl border px-3 py-3 text-sm ${tones[state]}`;
                     message.textContent = text;
                     missingAction?.classList.toggle('hidden', !canCreateConfiguration);
+                    postingRuleAction?.classList.toggle('hidden', configurationStatus !== 'POSTING_RULE_MISSING');
+                    evidenceAction?.classList.toggle('hidden', configurationStatus !== 'EVIDENCE_CONFIGURATION_MISSING');
                     submit.disabled = state !== 'ready' || (form.dataset.operation === 'realization' && form.dataset.realizationFundingReady !== 'true');
                     form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
                 };
@@ -330,7 +334,7 @@
                             const state = payload.state === 'ready' && response.ok && payload.ok && payload.allowed
                                 ? 'ready'
                                 : (payload.state === 'incomplete' ? 'pending' : 'missing');
-                            paint(state, payload.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.', payload.can_create_configuration === true);
+                            paint(state, payload.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.', payload.can_create_configuration === true, payload.status || null);
                             if (state === 'ready' && Array.isArray(payload.required_evidence) && payload.required_evidence.length === 1) {
                                 const firstEvidenceType = form.querySelector('[data-evidence-line] select[name^="attachment_types"]');
                                 if (firstEvidenceType && [...firstEvidenceType.options].some((option) => option.value === payload.required_evidence[0])) {
@@ -359,7 +363,9 @@
                 const error = action.querySelector('[data-inline-configuration-error]');
                 const contextList = action.querySelector('[data-inline-configuration-context]');
                 const postingRule = action.querySelector('[data-inline-posting-rule]');
+                const postingRuleId = action.querySelector('[data-inline-posting-rule-id]');
                 const postingRuleHelp = action.querySelector('[data-inline-posting-rule-help]');
+                const evidenceRequirements = action.querySelector('[data-inline-evidence-requirements]');
                 let context = null;
                 const currentContext = () => {
                     if (parentForm._inlineConfigurationContext) return parentForm._inlineConfigurationContext;
@@ -381,13 +387,14 @@
                             const dd = document.createElement('dd'); dd.className = 'font-semibold'; dd.textContent = value;
                             wrapper.append(dt, dd); return [wrapper];
                         }));
-                        postingRule.innerHTML = '<option value="">Pilih Posting Rule</option>';
-                        payload.posting_rules.forEach((rule) => postingRule.add(new Option(rule.label, rule.id, false, rule.id === payload.selected_posting_rule_version_id)));
-                        postingRule.disabled = payload.posting_rules.length === 0 || payload.state === 'ready';
+                        postingRule.value = payload.canonical_posting_rule || 'Belum dapat ditentukan';
+                        postingRuleId.value = payload.selected_posting_rule_version_id || '';
                         postingRuleHelp.textContent = payload.message;
+                        const evidenceLabels = { receipt: 'Tanda terima', invoice: 'Invoice/tagihan', transfer_proof: 'Bukti transfer', statement: 'Rekening koran', cash_count: 'Perhitungan kas', approval: 'Persetujuan', policy: 'Dokumen kebijakan', other: 'Lainnya' };
+                        evidenceRequirements.textContent = (payload.evidence_requirements || []).map((item) => `${evidenceLabels[item.type] || item.type} — wajib ${item.minimum_count} file`).join(' · ') || 'Aturan bukti belum tersedia.';
                         modalForm.elements.effective_from.value = context.date;
                         modalForm.elements.required_approval_steps.value = payload.required_approval_steps;
-                        modalForm.querySelector('[data-inline-configuration-save]').disabled = postingRule.disabled;
+                        modalForm.querySelector('[data-inline-configuration-save]').disabled = !payload.selected_posting_rule_version_id || payload.status !== 'MISSING_CONFIGURATION';
                         dialog.showModal();
                     } catch (exception) { showError(exception.message || 'Form konfigurasi belum dapat dibuka.'); dialog.showModal(); }
                 });

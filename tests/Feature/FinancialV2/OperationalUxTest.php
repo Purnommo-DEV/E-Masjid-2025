@@ -15,6 +15,7 @@ use App\Models\FinancialV2\BudgetAllocation;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\DocumentSequence;
+use App\Models\FinancialV2\EvidenceRequirement;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Fund;
@@ -94,6 +95,23 @@ function uxPostingRule(AccountingEntity $entity, TransactionType $type, string $
     foreach ($lines as $index => $line) {
         PostingRuleLine::create(['accounting_entity_id' => $entity->id, 'posting_rule_version_id' => $version->id, 'line_no' => $index + 1] + $line);
     }
+}
+
+function uxRequireRealizationEvidence(array $context): void
+{
+    $version = PostingRuleVersion::query()
+        ->where('accounting_entity_id', $context['entity']->id)
+        ->whereHas('rule', fn ($query) => $query
+            ->where('transaction_type_id', $context['paymentType']->id)
+            ->where('rule_family', 'payment'))
+        ->sole();
+
+    EvidenceRequirement::create([
+        'accounting_entity_id' => $context['entity']->id,
+        'posting_rule_version_id' => $version->id,
+        'evidence_type' => 'invoice',
+        'minimum_count' => 1,
+    ]);
 }
 
 function uxReceiptPayload(array $context, string $submissionKey): array
@@ -241,6 +259,7 @@ test('generic draft discovery keeps receipt drafts findable, scoped, editable, a
 test('draft realization accepts multiple evidence files, converts images to readable WebP, and preserves PDF and source metadata', function () {
     Storage::fake('local');
     $context = uxOperationalContext();
+    uxRequireRealizationEvidence($context);
     $user = User::factory()->create();
     $budget = app(BudgetAllocationService::class);
     $allocation = $budget->create([
@@ -511,6 +530,7 @@ test('treasury transfer UX preserves fund and never creates income or expense im
 test('allocation UX completes its governed lifecycle before a realization posts exactly one payment effect', function () {
     Storage::fake('local');
     $context = uxOperationalContext();
+    uxRequireRealizationEvidence($context);
     $user = User::factory()->create();
 
     $allocation = $this->actingAs($user)->postJson(route('financial-v2.allocations.store'), [
@@ -603,6 +623,7 @@ test('allocation UX completes its governed lifecycle before a realization posts 
         'budget_allocation_version_id' => $version->id, 'counterparty_id' => $context['supplier']->id,
         'financial_account_id' => $context['sourceFinancialAccount']->id, 'category_id' => $context['paymentCategory']->id,
         'description' => 'Realisasi melebihi alokasi',
+        'attachment' => UploadedFile::fake()->createWithContent('bukti-excess.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
     ])->assertOk();
     $this->actingAs($user)->postJson(route('financial-v2.realizations.submit', $excess->json('transaction_id')))->assertOk();
     $this->actingAs($user)->postJson(route('financial-v2.realizations.verify', $excess->json('transaction_id')))->assertOk();
@@ -617,6 +638,7 @@ test('allocation UX completes its governed lifecycle before a realization posts 
 test('an allocation reopens its one active realization draft without creating facts or a duplicate', function () {
     Storage::fake('local');
     $context = uxOperationalContext();
+    uxRequireRealizationEvidence($context);
     $user = User::factory()->create();
 
     $created = $this->actingAs($user)->postJson(route('financial-v2.allocations.store'), [
@@ -704,6 +726,7 @@ test('an allocation reopens its one active realization draft without creating fa
 test('an unfixed allocation can be cancelled without financial facts and draft payments are hidden by default', function () {
     Storage::fake('local');
     $context = uxOperationalContext();
+    uxRequireRealizationEvidence($context);
     $user = User::factory()->create();
 
     $postedReceipt = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'receipt'), uxReceiptPayload($context, (string) Str::uuid()))->assertOk();

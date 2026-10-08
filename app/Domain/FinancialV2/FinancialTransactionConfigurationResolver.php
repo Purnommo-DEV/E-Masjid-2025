@@ -47,7 +47,9 @@ final class FinancialTransactionConfigurationResolver
     public function inspect(array $input): array
     {
         try {
-            return ['status' => 'READY', 'configuration' => $this->resolve($input)];
+            $configuration = $this->resolve($input);
+
+            return ['status' => 'READY', 'configuration' => $configuration];
         } catch (FinancialPostingException $exception) {
             return [
                 'status' => $exception->details['status'] ?? match ($exception->failureCode) {
@@ -61,6 +63,20 @@ final class FinancialTransactionConfigurationResolver
                 'details' => $exception->details,
             ];
         }
+    }
+
+    /** @param array<string, mixed> $input @return Collection<int, PostingRuleVersion> */
+    public function applicablePostingRuleVersions(array $input): Collection
+    {
+        $date = CarbonImmutable::parse((string) ($input['date'] ?? ''))->toDateString();
+        $entity = AccountingEntity::query()->where('status', 'active')->find($input['accounting_entity_id'] ?? null);
+        if (! $entity) {
+            throw new FinancialPostingException('E-MASTER-SCOPE', 'Entitas keuangan aktif tidak tersedia.');
+        }
+        $type = $this->transactionType($entity->id, $input);
+        $category = $this->category($entity->id, $type->id, $input['category_id'] ?? null, $date);
+
+        return $this->postingRuleCandidates($entity->id, $type, $category, $date);
     }
 
     /**
@@ -132,6 +148,12 @@ final class FinancialTransactionConfigurationResolver
         $approvalSteps = $this->approvalSteps($entity->id, $type->id, $date, $accounts, $funds, $category);
         $approvalSteps = max($approvalSteps, (int) ($bankPolicy?->required_approval_steps ?? 0));
         $evidenceRequirements = EvidenceRequirement::query()->where('posting_rule_version_id', $version->id)->orderBy('evidence_type')->get();
+        if (($input['require_evidence_configuration'] ?? false)
+            && ! $evidenceRequirements->contains(fn (EvidenceRequirement $requirement): bool => (int) $requirement->minimum_count > 0)) {
+            throw new FinancialPostingException('E-EVIDENCE-CONFIGURATION-MISSING', 'Aturan bukti transaksi untuk pengeluaran ini belum tersedia.', [
+                'status' => 'EVIDENCE_CONFIGURATION_MISSING', 'date' => $date,
+            ]);
+        }
         if ($bankPolicy && ! $evidenceRequirements->contains(fn (EvidenceRequirement $requirement): bool => $requirement->evidence_type === $bankPolicy->evidence_type && $requirement->minimum_count > 0)) {
             throw $this->missing($date, $accounts, $funds, $category, 'Persyaratan bukti untuk Mutasi Bank belum lengkap.');
         }
@@ -149,7 +171,7 @@ final class FinancialTransactionConfigurationResolver
 
     public function resolveTransaction(FinancialTransaction $transaction): ResolvedFinancialTransactionConfiguration
     {
-        $transaction->loadMissing(['type', 'category', 'splits', 'treasuryTransfer', 'interfundTransfer']);
+        $transaction->loadMissing(['type', 'category', 'splits', 'treasuryTransfer', 'interfundTransfer', 'realization']);
         $fundIds = $transaction->splits->pluck('fund_id')->filter()->unique()->values()->all();
         if ($transaction->type?->code === TransactionTypeCode::InterfundTransfer->value && $transaction->interfundTransfer) {
             $fundIds = array_values(array_unique([
@@ -174,6 +196,7 @@ final class FinancialTransactionConfigurationResolver
             'destination_fund_id' => $transaction->interfundTransfer?->destination_fund_id,
             'category_id' => $transaction->category_id,
             'program_id' => $programIds->first(),
+            'require_evidence_configuration' => $transaction->realization !== null,
         ]);
     }
 
@@ -425,21 +448,11 @@ final class FinancialTransactionConfigurationResolver
                 && $version->rule?->status === 'active'
                 && $this->approvedVersionIsValid($version, $date);
         } else {
-            $query = PostingRuleVersion::query()
-                ->with('rule')
-                ->where('accounting_entity_id', $entityId)
-                ->where(fn (Builder $builder) => $builder->where('status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
-                ->where('effective_from', '<=', $date)
-                ->where(fn (Builder $builder) => $builder->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
-                ->whereHas('rule', fn (Builder $builder) => $builder->where('transaction_type_id', $type->id)->where('status', 'active'));
-            if ($category?->default_posting_rule_id) {
-                $query->where('posting_rule_id', $category->default_posting_rule_id);
-            } else {
-                $query->whereHas('rule', fn (Builder $builder) => $builder->where('rule_family', self::RULE_FAMILIES[$type->code]));
-            }
-            $versions = $query->orderByDesc('effective_from')->orderByDesc('version_no')->limit(2)->get();
+            $versions = $this->postingRuleCandidates($entityId, $type, $category, $date);
             if ($versions->count() > 1) {
-                throw $this->missing($date, $accounts, $funds, $category, 'Lebih dari satu aturan pencatatan berlaku pada tanggal tersebut.');
+                throw new FinancialPostingException('E-CONFIGURATION-MISSING', 'Aturan pencatatan untuk transaksi ini belum dapat ditentukan secara otomatis.', [
+                    'status' => 'POSTING_RULE_AMBIGUOUS', 'date' => $date,
+                ]);
             }
             $version = $versions->first();
             $valid = (bool) $version;
@@ -453,6 +466,23 @@ final class FinancialTransactionConfigurationResolver
         }
 
         return $version;
+    }
+
+    /** @return Collection<int, PostingRuleVersion> */
+    private function postingRuleCandidates(string $entityId, TransactionType $type, ?Category $category, string $date): Collection
+    {
+        return PostingRuleVersion::query()
+            ->with(['rule', 'lines.account', 'evidenceRequirements'])
+            ->where('accounting_entity_id', $entityId)
+            ->where(fn (Builder $builder) => $builder->where('status', 'effective')->orWhere(fn (Builder $historical) => $historical->where('status', 'superseded')->whereNotNull('approved_at')))
+            ->where('effective_from', '<=', $date)
+            ->where(fn (Builder $builder) => $builder->whereNull('effective_to')->orWhere('effective_to', '>=', $date))
+            ->whereHas('rule', fn (Builder $builder) => $builder->where('transaction_type_id', $type->id)->where('status', 'active'))
+            ->when($category?->default_posting_rule_id,
+                fn (Builder $builder, string $ruleId) => $builder->where('posting_rule_id', $ruleId),
+                fn (Builder $builder) => $builder->whereHas('rule', fn (Builder $rule) => $rule->where('rule_family', self::RULE_FAMILIES[$type->code])),
+            )
+            ->orderByDesc('effective_from')->orderByDesc('version_no')->get();
     }
 
     private function approvedVersionIsValid(PostingRuleVersion $version, string $date): bool

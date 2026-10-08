@@ -30,10 +30,9 @@ final class InlineConfigurationController extends Controller
     {
         $this->authorizeConfiguration($request);
         $input = $this->contextInput($request) + $request->validate([
-            'posting_rule_version_id' => ['required', 'uuid'],
+            'posting_rule_version_id' => ['nullable', 'uuid'],
             'effective_from' => ['required', 'date'],
             'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
-            'evidence_type' => ['nullable', Rule::in(['receipt', 'invoice', 'transfer_proof', 'statement', 'cash_count', 'approval', 'policy', 'other'])],
             'required_approval_steps' => ['nullable', 'integer', 'min:0', 'max:9'],
             'policy_document_ref' => ['required', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:2000'],
