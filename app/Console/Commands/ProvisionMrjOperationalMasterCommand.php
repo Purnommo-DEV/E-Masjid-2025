@@ -164,7 +164,7 @@ final class ProvisionMrjOperationalMasterCommand extends Command
         $definitions = [
             'LIQ-ZIS' => [null, 'Likuiditas ZISWAF', 'asset', 'debit', true],
             'REV-MRJ' => ['REV', 'Penerimaan Operasional MRJ', 'revenue', 'credit', false],
-            'EXP-MRJ' => ['EXP', 'Penggunaan Operasional MRJ', 'expense', 'debit', false],
+            'EXP-MRJ' => ['EXP', 'Penggunaan Dana MRJ', 'expense', 'debit', false],
             'TRF-MRJ' => ['TRF', 'Transfer Antar Dana MRJ', 'transfer', 'debit', false],
         ];
         foreach ($definitions as $code => [$groupCode, $name, $class, $normal, $liquidity]) {
@@ -288,7 +288,7 @@ final class ProvisionMrjOperationalMasterCommand extends Command
     {
         $rules = [
             'RCV' => ['MRJ-RCV-STANDARD', 'Penerimaan operasional MRJ', 'receipt', [[1, 'LIQ-ZIS', 'debit', 'transaction_primary', 'split', 'split', 'split', 'none'], [2, 'REV-MRJ', 'credit', 'none', 'split', 'split', 'split', 'none']]],
-            'PAY' => ['MRJ-PAY-STANDARD', 'Pengeluaran operasional MRJ', 'payment', [[1, 'EXP-MRJ', 'debit', 'none', 'split', 'split', 'split', 'split'], [2, 'LIQ-ZIS', 'credit', 'transaction_primary', 'split', 'split', 'split', 'split']]],
+            'PAY' => ['MRJ-PAY-STANDARD', 'Pengeluaran/Penyaluran Dana MRJ', 'payment', [[1, 'EXP-MRJ', 'debit', 'none', 'split', 'split', 'split', 'split'], [2, 'LIQ-ZIS', 'credit', 'transaction_primary', 'split', 'split', 'split', 'split']]],
             'TRF' => ['MRJ-TRF-STANDARD', 'Transfer rekening atau kas MRJ', 'treasury-transfer', [[1, 'LIQ-ZIS', 'debit', 'transfer_destination', 'split', 'none', 'none', 'none'], [2, 'LIQ-ZIS', 'credit', 'transfer_source', 'split', 'none', 'none', 'none']]],
             'IFT' => ['MRJ-IFT-STANDARD', 'Transfer antar Dana MRJ', 'interfund-transfer', [[1, 'TRF-MRJ', 'debit', 'none', 'interfund_destination', 'none', 'none', 'none'], [2, 'TRF-MRJ', 'credit', 'none', 'interfund_source', 'none', 'none', 'none']]],
         ];
