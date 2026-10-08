@@ -285,12 +285,13 @@
                     payment: ['date', 'financial_account_id', 'fund_id', 'category_id'],
                     transfer: ['date', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id'],
                     interfund: ['date', 'financial_account_id', 'source_fund_id', 'destination_fund_id'],
+                    realization: ['date', 'financial_account_id', 'budget_allocation_version_id'],
                 };
                 if (!form || !submit || !message) return;
                 let timer;
                 let requestVersion = 0;
                 let controller;
-                const paint = (state, text) => {
+                const paint = (state, text, canCreateConfiguration = false) => {
                     const tones = {
                         ready: 'border-emerald-200 bg-emerald-50 text-emerald-950',
                         missing: 'border-amber-200 bg-amber-50 text-amber-950',
@@ -298,8 +299,8 @@
                     };
                     status.className = `mt-4 rounded-xl border px-3 py-3 text-sm ${tones[state]}`;
                     message.textContent = text;
-                    missingAction?.classList.toggle('hidden', state !== 'missing');
-                    submit.disabled = state !== 'ready';
+                    missingAction?.classList.toggle('hidden', !canCreateConfiguration);
+                    submit.disabled = state !== 'ready' || (form.dataset.operation === 'realization' && form.dataset.realizationFundingReady !== 'true');
                     form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
                 };
                 const resolve = () => {
@@ -329,7 +330,7 @@
                             const state = payload.state === 'ready' && response.ok && payload.ok && payload.allowed
                                 ? 'ready'
                                 : (payload.state === 'incomplete' ? 'pending' : 'missing');
-                            paint(state, payload.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.');
+                            paint(state, payload.message || '○ Konfigurasi pencatatan belum tersedia untuk kombinasi ini.', payload.can_create_configuration === true);
                             if (state === 'ready' && Array.isArray(payload.required_evidence) && payload.required_evidence.length === 1) {
                                 const firstEvidenceType = form.querySelector('[data-evidence-line] select[name^="attachment_types"]');
                                 if (firstEvidenceType && [...firstEvidenceType.options].some((option) => option.value === payload.required_evidence[0])) {
@@ -338,7 +339,7 @@
                             }
                         } catch (error) {
                             if (error.name === 'AbortError' || version !== requestVersion) return;
-                            paint('missing', 'Status konfigurasi belum dapat diperiksa. Coba lagi.');
+                            paint('missing', 'Status konfigurasi belum dapat diperiksa. Coba lagi.', false);
                         } finally {
                             if (version === requestVersion) loading?.classList.add('hidden');
                         }
@@ -363,7 +364,7 @@
                 const currentContext = () => {
                     if (parentForm._inlineConfigurationContext) return parentForm._inlineConfigurationContext;
                     const data = new FormData(parentForm);
-                    return Object.fromEntries(['entity', 'date', 'financial_account_id', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id', 'source_fund_id', 'destination_fund_id', 'category_id', 'program_id'].map((key) => [key, data.get(key) || '']).concat([['operation', parentForm.dataset.operation]]));
+                    return Object.fromEntries(['entity', 'date', 'financial_account_id', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id', 'source_fund_id', 'destination_fund_id', 'category_id', 'program_id', 'budget_allocation_version_id'].map((key) => [key, data.get(key) || '']).concat([['operation', parentForm.dataset.operation]]));
                 };
                 const showError = (message) => { error.textContent = message; error.classList.remove('hidden'); };
                 open?.addEventListener('click', async () => {

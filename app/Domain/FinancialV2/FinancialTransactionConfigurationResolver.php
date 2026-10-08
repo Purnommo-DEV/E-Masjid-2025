@@ -43,6 +43,26 @@ final class FinancialTransactionConfigurationResolver
         return $transactionTypeCode !== null && array_key_exists($transactionTypeCode, self::RULE_FAMILIES);
     }
 
+    /** @param array<string, mixed> $input @return array<string, mixed> */
+    public function inspect(array $input): array
+    {
+        try {
+            return ['status' => 'READY', 'configuration' => $this->resolve($input)];
+        } catch (FinancialPostingException $exception) {
+            return [
+                'status' => $exception->details['status'] ?? match ($exception->failureCode) {
+                    'E-FUND-POLICY-DENIED' => 'POLICY_DENIED',
+                    'E-POSTING-RULE-MISSING' => 'POSTING_RULE_MISSING',
+                    'E-MASTER-SCOPE', 'E-CONFIGURATION-CONTEXT' => 'INVALID_CONTEXT',
+                    default => 'MISSING_CONFIGURATION',
+                },
+                'code' => $exception->failureCode,
+                'message' => $exception->getMessage(),
+                'details' => $exception->details,
+            ];
+        }
+    }
+
     /**
      * Return Programs whose business lifecycle and effective transaction
      * configuration both permit the supplied transaction context.
@@ -425,7 +445,11 @@ final class FinancialTransactionConfigurationResolver
             $valid = (bool) $version;
         }
         if (! $valid) {
-            throw $this->missing($date, $accounts, $funds, $category);
+            throw new FinancialPostingException('E-CONFIGURATION-MISSING', 'Aturan pencatatan pengeluaran belum tersedia untuk tanggal ini.', [
+                'status' => 'POSTING_RULE_MISSING', 'date' => $date,
+                'funds' => $funds->pluck('name')->values()->all(),
+                'category' => $category?->name,
+            ]);
         }
 
         return $version;
@@ -565,6 +589,11 @@ final class FinancialTransactionConfigurationResolver
             throw $this->missing($date, $accounts, $funds, $selectedCategory, 'Lebih dari satu Aturan Dana berlaku pada tanggal tersebut.');
         }
         $policy = $policies->first();
+        if (! $policy) {
+            throw new FinancialPostingException('E-CONFIGURATION-MISSING', "Konfigurasi penggunaan Dana {$fund->name} belum tersedia untuk tanggal transaksi.", [
+                'status' => 'MISSING_CONFIGURATION', 'date' => $date, 'fund' => $fund->name, 'category' => $selectedCategory?->name,
+            ]);
+        }
         $decisions = $policy ? FundPolicyRule::query()
             ->where('fund_policy_version_id', $policy->id)
             ->where('transaction_type_id', $type->id)
@@ -573,10 +602,18 @@ final class FinancialTransactionConfigurationResolver
             ->where(fn (Builder $query) => $query->whereNull('program_id')->orWhere('program_id', $programId))
             ->where(fn (Builder $query) => $query->whereNull('cost_center_id')->orWhere('cost_center_id', $costCenterId))
             ->pluck('decision') : collect();
-        if ($decisions->contains('prohibited') || (! $decisions->contains('allowed') && ! $bankPolicy)) {
+        if ($decisions->contains('prohibited')) {
             throw new FinancialPostingException(
                 'E-CONFIGURATION-MISSING',
-                "Dana {$fund->name} tidak dapat digunakan untuk kombinasi tersebut. Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut.",
+                "Kombinasi ini tidak diizinkan oleh aturan Dana {$fund->name}.",
+                ['status' => 'POLICY_DENIED', 'date' => $date, 'fund' => $fund->name, 'category' => $selectedCategory?->name],
+            );
+        }
+        if (! $decisions->contains('allowed') && ! $bankPolicy) {
+            throw new FinancialPostingException(
+                'E-CONFIGURATION-MISSING',
+                "Konfigurasi penggunaan Dana {$fund->name} belum tersedia untuk kombinasi ini.",
+                ['status' => 'MISSING_CONFIGURATION', 'date' => $date, 'fund' => $fund->name, 'category' => $selectedCategory?->name],
             );
         }
 

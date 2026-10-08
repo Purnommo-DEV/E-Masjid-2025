@@ -13,6 +13,7 @@
         $counterpartyName = $value('counterparty_name', $transaction?->counterparty?->display_name);
         $fundForAllocation = fn ($version) => $version->fundings->pluck('fund.name')->filter()->join(' + ') ?: ($options['funds']->firstWhere('id', $version->allocation?->fund_id)?->name ?? 'Dana');
         $programForAllocation = fn ($version) => $options['programs']->firstWhere('id', $version->allocation?->program_id)?->name;
+        $categoryForAllocation = fn ($version) => $options['categories']->firstWhere('id', $version->allocation?->category_id)?->name;
         $selectedAllocationVersionId = $selectedAllocationVersionId ?? null;
         $realizationSources = old('funding_sources');
         if ($operation === 'realization' && $realizationSources === null) {
@@ -62,7 +63,7 @@
                     <label class="form-control mt-4"><span class="label-text font-medium">Program <span class="font-normal text-base-content/55">(jika relevan)</span></span><select name="program_id" class="select select-bordered w-full"><option value="">Tanpa program</option>@foreach($options['programs'] as $program)<option value="{{ $program->id }}" @selected($value('program_id', $split?->program_id) === $program->id)>{{ $program->name }}</option>@endforeach</select></label>
                 @elseif (in_array($operation, ['payment', 'realization'], true))
                     @if ($operation === 'realization')
-                        <label class="form-control mt-4"><span class="label-text font-medium">Alokasi dana</span><select name="budget_allocation_version_id" data-realization-allocation class="select select-bordered w-full" required @disabled($isEdit)><option value="">Pilih alokasi yang sudah disetujui</option>@foreach($options['allocationVersions'] as $version)<option value="{{ $version->id }}" data-allocated="{{ $version->availability['allocated'] }}" data-actual="{{ $version->availability['actual'] }}" data-available="{{ $version->availability['available'] }}" data-fundings='@json($version->funding_availability)' @selected($value('budget_allocation_version_id', $transaction?->realization?->budget_allocation_version_id ?? $selectedAllocationVersionId) === $version->id)>{{ $fundForAllocation($version) }}{{ $programForAllocation($version) ? ' · '.$programForAllocation($version) : '' }} · total Rp{{ number_format((float) $version->availability['allocated'], 2, ',', '.') }} · sisa Rp{{ number_format((float) $version->availability['available'], 2, ',', '.') }}</option>@endforeach</select>@if($isEdit)<input type="hidden" name="budget_allocation_version_id" value="{{ $transaction?->realization?->budget_allocation_version_id }}">@endif<span class="label-text-alt">Alokasi hanya menentukan peruntukan. Realisasi akan dicatat sebagai pengeluaran resmi.</span></label>
+                        <label class="form-control mt-4"><span class="label-text font-medium">Alokasi dana</span><select name="budget_allocation_version_id" data-realization-allocation class="select select-bordered w-full" required @disabled($isEdit)><option value="">Pilih alokasi yang sudah disetujui</option>@foreach($options['allocationVersions'] as $version)<option value="{{ $version->id }}" data-allocated="{{ $version->availability['allocated'] }}" data-actual="{{ $version->availability['actual'] }}" data-available="{{ $version->availability['available'] }}" data-fundings='@json($version->funding_availability)' data-fund-id="{{ $version->allocation?->fund_id }}" data-program-id="{{ $version->allocation?->program_id }}" data-program-name="{{ $programForAllocation($version) }}" data-category-id="{{ $version->allocation?->category_id }}" data-category-name="{{ $categoryForAllocation($version) }}" @selected($value('budget_allocation_version_id', $transaction?->realization?->budget_allocation_version_id ?? $selectedAllocationVersionId) === $version->id)>{{ $fundForAllocation($version) }}{{ $programForAllocation($version) ? ' · '.$programForAllocation($version) : '' }} · total Rp{{ number_format((float) $version->availability['allocated'], 2, ',', '.') }} · sisa Rp{{ number_format((float) $version->availability['available'], 2, ',', '.') }}</option>@endforeach</select>@if($isEdit)<input type="hidden" name="budget_allocation_version_id" value="{{ $transaction?->realization?->budget_allocation_version_id }}">@endif<span class="label-text-alt">Dana, kategori, dan program diwarisi dari alokasi. Realisasi dicatat sebagai pengeluaran (PAY).</span></label>
                         <div data-realization-summary class="mt-3 hidden rounded-xl bg-base-200 px-3 py-3 text-sm"></div>
                         <section class="mt-4 rounded-xl border border-base-300 bg-base-200/40 p-3 sm:p-4" data-realization-funding data-initial-fundings='@json($realizationSources)'>
                             <div class="flex flex-wrap items-center justify-between gap-2"><div><h2 class="font-semibold">Sumber Dana</h2><p class="mt-1 text-xs text-base-content/60">Rinci bagian realisasi yang dibebankan ke setiap Dana pada alokasi.</p></div><button type="button" class="btn btn-outline btn-sm" data-add-realization-funding>+ Tambah Sumber Dana</button></div>
@@ -76,7 +77,11 @@
                         @if ($operation === 'payment')
                             <label class="form-control"><span class="label-text font-medium">Dana</span><select name="fund_id" class="select select-bordered w-full" required><option value="">Pilih dana</option>@foreach($options['funds'] as $fund)<option value="{{ $fund->id }}" @selected($value('fund_id', $split?->fund_id) === $fund->id)>{{ $fund->name }}</option>@endforeach</select></label>
                         @endif
-                        <label class="form-control"><span class="label-text font-medium">Kategori</span><select name="category_id" class="select select-bordered w-full" required><option value="">Pilih kategori</option>@foreach($options['categories'] as $category)<option value="{{ $category->id }}" @selected($value('category_id', $transaction?->category_id) === $category->id)>{{ $category->name }}</option>@endforeach</select></label>
+                        @if ($operation === 'realization')
+                            <label class="form-control"><span class="label-text font-medium">Kategori dari alokasi</span><input type="hidden" name="category_id" value="{{ $value('category_id', $transaction?->category_id) }}" data-realization-category><input type="text" class="input input-bordered w-full bg-base-200" value="" data-realization-category-label readonly><span class="label-text-alt">Dikunci agar konteks Realisasi selalu sama dengan Allocation.</span></label>
+                        @else
+                            <label class="form-control"><span class="label-text font-medium">Kategori</span><select name="category_id" class="select select-bordered w-full" required><option value="">Pilih kategori</option>@foreach($options['categories'] as $category)<option value="{{ $category->id }}" @selected($value('category_id', $transaction?->category_id) === $category->id)>{{ $category->name }}</option>@endforeach</select></label>
+                        @endif
                     </div>
                     @if ($operation === 'payment')
                         <label class="form-control mt-4"><span class="label-text font-medium">Program <span class="font-normal text-base-content/55">(jika relevan)</span></span><select name="program_id" class="select select-bordered w-full"><option value="">Tanpa program</option>@foreach($options['programs'] as $program)<option value="{{ $program->id }}" @selected($value('program_id', $split?->program_id) === $program->id)>{{ $program->name }}</option>@endforeach</select></label>
@@ -113,14 +118,12 @@
                     <p class="mt-2 text-xs text-base-content/55">Draft dapat menambah atau melepas bukti dengan audit. Bukti transaksi yang sudah diajukan/posted tidak dihapus.</p>
                 </section>
 
-                @if ($operation !== 'realization')
                     <div class="mt-4 rounded-xl border border-base-300 bg-base-200/40 px-3 py-3 text-sm" data-financial-configuration aria-live="polite">
                         <div class="flex items-center gap-2"><span class="loading loading-spinner loading-xs hidden" data-configuration-loading></span><strong>Status konfigurasi</strong></div>
                         <p class="mt-1 text-xs text-base-content/60" data-configuration-message>Lengkapi data transaksi untuk memeriksa konfigurasi.</p>
                         @include('masjid.mrj.admin.financial-v2.components.configuration-missing-action')
                     </div>
-                @endif
-                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ $backUrl }}">Batal</a><button type="submit" class="btn btn-primary" @if($operation === 'realization') data-realization-funding-submit @else data-configuration-submit disabled @endif>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a class="btn btn-ghost" href="{{ $backUrl }}">Batal</a><button type="submit" class="btn btn-primary" data-configuration-submit @if($operation === 'realization') data-realization-funding-submit @endif disabled>{{ $isEdit ? 'Simpan perubahan draft' : 'Simpan sebagai draft' }}</button></div>
             </section>
 
             <aside class="space-y-4">
@@ -144,6 +147,8 @@
     const statusOutput = section.querySelector('[data-realization-funding-status]');
     const submit = form.querySelector('[data-realization-funding-submit]');
     const target = form.querySelector('input[name="amount"]');
+    const category = form.querySelector('[data-realization-category]');
+    const categoryLabel = form.querySelector('[data-realization-category-label]');
     let initial = JSON.parse(section.dataset.initialFundings || '[]');
     let nextIndex = 0;
     const parse = (raw) => {
@@ -179,9 +184,13 @@
         totalOutput.textContent = display(total);
         statusOutput.textContent = balanced ? '✓ Seimbang dengan Nominal Realisasi' : 'Total sumber ≠ Nominal realisasi';
         statusOutput.className = `mt-1 text-xs ${balanced ? 'text-success' : 'text-error'}`;
-        submit.disabled = !balanced;
+        form.dataset.realizationFundingReady = balanced ? 'true' : 'false';
+        submit.disabled = !balanced || form.dataset.configurationReady !== 'true';
     };
     const resetForAllocation = () => {
+        const option = allocation.options[allocation.selectedIndex];
+        if (category) category.value = option?.dataset.categoryId || '';
+        if (categoryLabel) categoryLabel.value = option?.dataset.categoryName || 'Pilih alokasi terlebih dahulu';
         lines.innerHTML = ''; nextIndex = 0;
         permitted().forEach((funding) => row({ fund_id: funding.fund_id, amount: funding.available }));
         render();

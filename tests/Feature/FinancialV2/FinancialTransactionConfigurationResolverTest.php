@@ -180,7 +180,52 @@ test('resolver validates every fund-bearing posting line against the policy matr
         'financial_account_id' => $context['accountA']->id,
         'fund_id' => $fund->id,
         'category_id' => $context['receiptCategory']->id,
-    ]))->toThrow(FinancialPostingException::class, 'Aturan penggunaan Dana tidak mengizinkan kombinasi tersebut.');
+    ]))->toThrow(FinancialPostingException::class, 'Konfigurasi penggunaan Dana');
+});
+
+test('resolver inspection distinguishes a missing fund rule from an explicit policy denial', function () {
+    $context = UatFinancialFixture::context();
+    $fund = UatFinancialFixture::restrictedFund($context, 'INSPECT', 'Dana Inspect');
+    $resolver = app(FinancialTransactionConfigurationResolver::class);
+    $input = [
+        'accounting_entity_id' => $context['entity']->id,
+        'transaction_type_id' => $context['paymentType']->id,
+        'date' => $context['today'],
+        'financial_account_id' => $context['accountA']->id,
+        'fund_id' => $fund->id,
+        'category_id' => $context['paymentCategory']->id,
+        'program_id' => $context['program']->id,
+    ];
+
+    $missing = $resolver->inspect($input);
+    expect($missing['status'])->toBe('MISSING_CONFIGURATION')
+        ->and($missing['code'])->toBe('E-CONFIGURATION-MISSING');
+    $user = User::factory()->create();
+    $preview = ['entity' => $context['entity']->id, 'operation' => 'payment'] + [
+        'date' => $context['today'], 'financial_account_id' => $context['accountA']->id,
+        'fund_id' => $fund->id, 'category_id' => $context['paymentCategory']->id,
+        'program_id' => $context['program']->id,
+    ];
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), $preview)
+        ->assertStatus(422)->assertJsonPath('status', 'MISSING_CONFIGURATION')
+        ->assertJsonPath('can_create_configuration', true);
+
+    FundPolicyRule::create([
+        'accounting_entity_id' => $context['entity']->id,
+        'fund_policy_version_id' => FundPolicyVersion::query()->where('fund_id', $fund->id)->sole()->id,
+        'transaction_type_id' => $context['paymentType']->id,
+        'category_id' => $context['paymentCategory']->id,
+        'program_id' => $context['program']->id,
+        'decision' => 'prohibited',
+    ]);
+
+    $denied = $resolver->inspect($input);
+    expect($denied['status'])->toBe('POLICY_DENIED')
+        ->and($denied['code'])->toBe('E-CONFIGURATION-MISSING')
+        ->and($denied['message'])->toContain('tidak diizinkan');
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), $preview)
+        ->assertStatus(422)->assertJsonPath('status', 'POLICY_DENIED')
+        ->assertJsonPath('can_create_configuration', false);
 });
 
 test('missing configuration is controlled and neither preview nor draft submission creates policy or financial facts', function () {

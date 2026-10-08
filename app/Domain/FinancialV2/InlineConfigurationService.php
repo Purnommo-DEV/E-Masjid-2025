@@ -5,6 +5,7 @@ namespace App\Domain\FinancialV2;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\ApprovalRequirement;
 use App\Models\FinancialV2\BankMutationPolicy;
+use App\Models\FinancialV2\BudgetAllocationVersion;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\EvidenceRequirement;
 use App\Models\FinancialV2\FinancialAccount;
@@ -23,7 +24,7 @@ use Illuminate\Support\Str;
 /** Creates governed configuration drafts only; it never writes financial facts. */
 final class InlineConfigurationService
 {
-    private const OPERATION_CODES = ['receipt' => 'RCV', 'payment' => 'PAY', 'transfer' => 'TRF', 'interfund' => 'IFT'];
+    private const OPERATION_CODES = ['receipt' => 'RCV', 'payment' => 'PAY', 'realization' => 'PAY', 'transfer' => 'TRF', 'interfund' => 'IFT'];
 
     private const RULE_FAMILIES = ['RCV' => 'receipt', 'PAY' => 'payment', 'TRF' => 'treasury-transfer', 'IFT' => 'interfund-transfer'];
 
@@ -37,7 +38,8 @@ final class InlineConfigurationService
     public function describe(array $input): array
     {
         $context = $this->context($input);
-        $ready = $this->isReady($context);
+        $inspection = $this->resolver->inspect($this->resolverInput($context));
+        $ready = $inspection['status'] === 'READY';
         $versions = $this->candidateVersions($context);
         $approval = ApprovalRequirement::query()
             ->where('accounting_entity_id', $context['entity']->id)
@@ -49,7 +51,9 @@ final class InlineConfigurationService
 
         return [
             'state' => $ready ? 'ready' : 'missing',
-            'message' => $ready ? 'Konfigurasi untuk kombinasi ini sudah tersedia.' : ($versions->isEmpty() ? 'Posting Rule belum tersedia.' : 'Lengkapi konfigurasi khusus lalu simpan sebagai draft.'),
+            'status' => $inspection['status'],
+            'can_create_configuration' => $inspection['status'] === 'MISSING_CONFIGURATION',
+            'message' => $ready ? 'Konfigurasi untuk kombinasi ini sudah tersedia.' : ($inspection['message'] ?? ($versions->isEmpty() ? 'Posting Rule belum tersedia.' : 'Lengkapi konfigurasi khusus lalu simpan sebagai draft.')),
             'context' => $this->labels($context),
             'posting_rules' => $versions->map(fn (PostingRuleVersion $version) => [
                 'id' => $version->id,
@@ -65,12 +69,19 @@ final class InlineConfigurationService
     public function createDraft(array $input, ?int $actorUserId): array
     {
         $context = $this->context($input);
-        if ($this->isReady($context)) {
+        $inspection = $this->resolver->inspect($this->resolverInput($context));
+        if ($inspection['status'] === 'READY') {
             return [
                 'state' => 'ready',
                 'message' => 'Aturan yang sama sudah tersedia.',
                 'configuration_url' => route('financial-v2.configuration.index', ['entity' => $context['entity']->id]),
             ];
+        }
+        if ($inspection['status'] !== 'MISSING_CONFIGURATION') {
+            throw new FinancialDomainException(
+                $inspection['code'] ?? 'E-CONFIGURATION-NOT-CREATABLE',
+                $inspection['message'] ?? 'Kondisi ini tidak dapat diselesaikan dengan membuat Aturan Dana baru.',
+            );
         }
         $version = $this->candidateVersions($context)->firstWhere('id', $input['posting_rule_version_id'] ?? null);
         if (! $version) {
@@ -131,13 +142,23 @@ final class InlineConfigurationService
     {
         $entity = AccountingEntity::query()->where('status', 'active')->findOrFail($input['entity']);
         $operation = (string) $input['operation'];
+        if ($operation === 'realization') {
+            $version = BudgetAllocationVersion::query()->with(['allocation', 'fundings'])->where('accounting_entity_id', $entity->id)->where('status', 'approved')->findOrFail($input['budget_allocation_version_id']);
+            if (! $version->allocation || $version->allocation->status !== 'approved') {
+                throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Alokasi dana yang dipilih belum disetujui atau tidak tersedia.');
+            }
+            $input['category_id'] = $version->allocation->category_id;
+            $input['program_id'] = $version->allocation->program_id;
+            $input['fund_id'] = $version->allocation->fund_id;
+            $input['fund_ids'] = $version->fundings->pluck('fund_id')->filter()->unique()->values()->all() ?: [$version->allocation->fund_id];
+        }
         $category = filled($input['category_id'] ?? null) ? Category::query()->forEntity($entity->id)->where('status', 'active')->findOrFail($input['category_id']) : null;
         $code = $operation === 'bank_mutation'
             ? TransactionType::query()->forEntity($entity->id)->whereKey($category?->transaction_type_id)->value('code')
             : (self::OPERATION_CODES[$operation] ?? null);
         $type = TransactionType::query()->forEntity($entity->id)->where('status', 'active')->where('code', $code)->firstOrFail();
         $accountIds = collect([$input['financial_account_id'] ?? null, $input['source_financial_account_id'] ?? null, $input['destination_financial_account_id'] ?? null])->filter()->unique()->values();
-        $fundIds = collect([$input['fund_id'] ?? null, $input['source_fund_id'] ?? null, $input['destination_fund_id'] ?? null])->filter()->unique()->values();
+        $fundIds = collect($input['fund_ids'] ?? [$input['fund_id'] ?? null, $input['source_fund_id'] ?? null, $input['destination_fund_id'] ?? null])->filter()->unique()->values();
         $accounts = FinancialAccount::query()->forEntity($entity->id)->whereIn('id', $accountIds)->get()->sortBy(fn ($item) => $accountIds->search($item->id))->values();
         $funds = Fund::query()->with('type')->forEntity($entity->id)->whereIn('id', $fundIds)->get()->sortBy(fn ($item) => $fundIds->search($item->id))->values();
         if ($accounts->count() !== $accountIds->count() || $funds->count() !== $fundIds->count()) {
@@ -156,6 +177,7 @@ final class InlineConfigurationService
         }
         $validShape = match ($operation) {
             'receipt', 'payment', 'bank_mutation' => $accounts->count() === 1 && $funds->count() === 1 && $category !== null,
+            'realization' => $accounts->count() === 1 && $funds->isNotEmpty() && $category !== null,
             'transfer' => $accounts->count() === 2 && $funds->count() === 1,
             'interfund' => $accounts->count() === 1 && $funds->count() === 2 && $input['source_fund_id'] !== $input['destination_fund_id'],
             default => false,

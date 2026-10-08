@@ -55,7 +55,7 @@ final class InlineConfigurationController extends Controller
     {
         return $request->validate([
             'entity' => ['required', 'uuid'],
-            'operation' => ['required', Rule::in(['receipt', 'payment', 'transfer', 'interfund', 'bank_mutation'])],
+            'operation' => ['required', Rule::in(['receipt', 'payment', 'transfer', 'interfund', 'realization', 'bank_mutation'])],
             'date' => ['required', 'date'],
             'financial_account_id' => ['nullable', 'uuid'],
             'source_financial_account_id' => ['nullable', 'uuid'],
@@ -65,6 +65,7 @@ final class InlineConfigurationController extends Controller
             'destination_fund_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],
+            'budget_allocation_version_id' => ['nullable', 'uuid', 'required_if:operation,realization'],
         ]);
     }
 

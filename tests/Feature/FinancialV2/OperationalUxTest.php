@@ -531,6 +531,8 @@ test('allocation UX completes its governed lifecycle before a realization posts 
     $this->actingAs($user)->get(route('financial-v2.transactions.create', ['operation' => 'realization', 'entity' => $context['entity']->id]))
         ->assertOk()
         ->assertSee('data-realization-allocation', false)
+        ->assertSee('Kategori dari alokasi')
+        ->assertSee('data-financial-configuration', false)
         ->assertSee('name="counterparty_name"', false)
         ->assertSee('data-money-input', false)
         ->assertSee('sisa Rp75,00')
@@ -541,6 +543,17 @@ test('allocation UX completes its governed lifecycle before a realization posts 
         ->and($version->allocation->fresh()->status)->toBe('approved')
         ->and(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
         ->and(LedgerEntry::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0);
+
+    $this->actingAs($user)->postJson(route('financial-v2.preview'), [
+        'entity' => $context['entity']->id,
+        'operation' => 'realization',
+        'date' => $context['today'],
+        'financial_account_id' => $context['sourceFinancialAccount']->id,
+        'budget_allocation_version_id' => $version->id,
+    ])->assertOk()
+        ->assertJsonPath('status', 'READY')
+        ->assertJsonPath('allowed', true)
+        ->assertJsonPath('can_create_configuration', false);
 
     $receipt = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'receipt'), uxReceiptPayload($context, (string) Str::uuid()))->assertOk();
     $this->actingAs($user)->postJson(route('financial-v2.transactions.post', $receipt->json('transaction_id')))->assertOk();

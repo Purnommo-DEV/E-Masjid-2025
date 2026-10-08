@@ -217,7 +217,8 @@ final class OperationalFinancialController
             $allocationVersionId = null;
             $fundingSources = null;
             if ($operation === 'realization') {
-                [$fundId, $programId, $allocationVersionId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
+                [$fundId, $programId, $allocationVersionId, $allocationCategoryId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
+                $input['category_id'] = $allocationCategoryId;
                 $fundingSources = $this->realizationFundingSources($entity, $allocationVersionId, $input['funding_sources'] ?? null, $this->amount($input['amount']));
             }
             $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
@@ -958,6 +959,7 @@ final class OperationalFinancialController
             'destination_fund_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
+            'budget_allocation_version_id' => ['nullable', 'uuid'],
         ], $this->validationMessages());
 
         if (! $this->hasConfigurationPreviewInput($data)) {
@@ -972,10 +974,18 @@ final class OperationalFinancialController
         try {
             $definition = $this->operation($data['operation']);
             $type = $this->transactionType($entity, $definition['code']);
-            $fundIds = $data['operation'] === 'interfund'
+            if ($data['operation'] === 'realization') {
+                [$allocationFundId, $allocationProgramId, , $allocationCategoryId, $allocationFundIds] = $this->realizationDimensions($entity, $data['budget_allocation_version_id']);
+                $data['fund_id'] = $allocationFundId;
+                $data['program_id'] = $allocationProgramId;
+                $data['category_id'] = $allocationCategoryId;
+            }
+            $fundIds = $data['operation'] === 'realization'
+                ? $allocationFundIds
+                : ($data['operation'] === 'interfund'
                 ? array_values(array_filter([$data['source_fund_id'] ?? null, $data['destination_fund_id'] ?? null]))
-                : array_values(array_filter([$data['fund_id'] ?? null]));
-            $resolved = $this->configurationResolver->resolve([
+                : array_values(array_filter([$data['fund_id'] ?? null])));
+            $inspection = $this->configurationResolver->inspect([
                 'accounting_entity_id' => $entity->id,
                 'transaction_type_id' => $type->id,
                 'date' => $data['date'],
@@ -988,6 +998,24 @@ final class OperationalFinancialController
                 'program_id' => $data['program_id'] ?? null,
                 'category_id' => $data['category_id'] ?? null,
             ]);
+            if ($inspection['status'] !== 'READY') {
+                $messages = [
+                    'POLICY_DENIED' => 'Kombinasi ini tidak diizinkan oleh aturan Dana.',
+                    'POSTING_RULE_MISSING' => 'Aturan pencatatan pengeluaran belum tersedia untuk tanggal ini.',
+                    'INVALID_CONTEXT' => 'Konteks transaksi tidak valid atau tidak konsisten.',
+                    'MISSING_CONFIGURATION' => 'Konfigurasi penggunaan dana belum tersedia.',
+                ];
+
+                return response()->json([
+                    'ok' => false, 'allowed' => false,
+                    'state' => 'missing',
+                    'status' => $inspection['status'],
+                    'code' => $inspection['code'] ?? null,
+                    'can_create_configuration' => $inspection['status'] === 'MISSING_CONFIGURATION',
+                    'message' => ($messages[$inspection['status']] ?? $inspection['message']).' '.$this->configurationPreviewMessage($entity, $data),
+                ], 422);
+            }
+            $resolved = $inspection['configuration'];
 
             return response()->json([
                 'ok' => true,
@@ -996,6 +1024,8 @@ final class OperationalFinancialController
                 'message' => '● Siap digunakan',
                 'required_approval_steps' => $resolved->requiredApprovalSteps,
                 'required_evidence' => $resolved->evidenceRequirements->pluck('evidence_type')->values(),
+                'status' => 'READY',
+                'can_create_configuration' => false,
             ]);
         } catch (FinancialDomainException|FinancialPostingException|InvalidArgumentException $exception) {
             return response()->json([
@@ -1014,7 +1044,7 @@ final class OperationalFinancialController
             'receipt', 'payment' => ['date', 'financial_account_id', 'fund_id', 'category_id'],
             'transfer' => ['date', 'source_financial_account_id', 'destination_financial_account_id', 'fund_id'],
             'interfund' => ['date', 'financial_account_id', 'source_fund_id', 'destination_fund_id'],
-            'realization' => ['date', 'financial_account_id', 'category_id'],
+            'realization' => ['date', 'financial_account_id', 'budget_allocation_version_id'],
         };
 
         return collect($required)->every(fn (string $field): bool => filled($data[$field] ?? null));
@@ -1271,7 +1301,7 @@ final class OperationalFinancialController
                 'counterparty_name' => ['nullable', 'string', 'max:240', 'required_without:counterparty_id'],
                 'financial_account_id' => ['required', 'uuid'],
                 'fund_id' => ['required', 'uuid'],
-                'category_id' => ['required', 'uuid'],
+                'category_id' => ['nullable', 'uuid'],
                 'program_id' => ['nullable', 'uuid'],
             ],
             'transfer' => [
@@ -1342,7 +1372,8 @@ final class OperationalFinancialController
 
     private function createRealization(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, ?int $actorId): FinancialTransaction
     {
-        [$fundId, $programId, $versionId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
+        [$fundId, $programId, $versionId, $categoryId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
+        $input['category_id'] = $categoryId;
         $fundings = $this->realizationFundingSources($entity, $versionId, $input['funding_sources'] ?? null, $this->amount($input['amount']));
         $prepared = $this->paymentInput($entity, $type, $input, $sourceKey, $fundId, $programId, $actorId, 'beneficiary', $fundings);
 
@@ -1585,15 +1616,21 @@ final class OperationalFinancialController
         return $type;
     }
 
-    /** @return array{0: string, 1: ?string, 2: string} */
+    /** @return array{0: string, 1: ?string, 2: string, 3: string, 4: array<int, string>} */
     private function realizationDimensions(AccountingEntity $entity, string $versionId): array
     {
-        $version = BudgetAllocationVersion::query()->with('allocation')->where('accounting_entity_id', $entity->id)->where('status', 'approved')->find($versionId);
+        $version = BudgetAllocationVersion::query()->with(['allocation', 'fundings'])->where('accounting_entity_id', $entity->id)->where('status', 'approved')->find($versionId);
         if (! $version || ! $version->allocation || $version->allocation->status !== 'approved') {
             throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Alokasi dana yang dipilih belum disetujui atau tidak tersedia.');
         }
 
-        return [$version->allocation->fund_id, $version->allocation->program_id, $version->id];
+        if (! $version->allocation->category_id) {
+            throw new FinancialDomainException('E-REALIZATION-ALLOCATION', 'Alokasi dana belum memiliki kategori pengeluaran.');
+        }
+
+        $fundIds = $version->fundings->pluck('fund_id')->filter()->unique()->values()->all();
+
+        return [$version->allocation->fund_id, $version->allocation->program_id, $version->id, $version->allocation->category_id, $fundIds ?: [$version->allocation->fund_id]];
     }
 
     /**
