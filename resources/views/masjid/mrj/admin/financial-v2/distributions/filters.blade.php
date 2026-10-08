@@ -1,10 +1,10 @@
 @php
 $statusFilter = request()->has('status') ? (string) request('status') : (($recipientSelection ?? false) ? 'active' : '');
 @endphp
-<form method="get" class="grid gap-3 sm:grid-cols-3 lg:grid-cols-7 mb-5">
+<form method="get" action="{{ route('financial-v2.beneficiaries.index') }}" class="grid gap-3 sm:grid-cols-3 lg:grid-cols-7 mb-5" data-beneficiary-filter-form>
 <input type="hidden" name="entity" value="{{ $entity->id }}">
 @if(request()->filled('per_page'))<input type="hidden" name="per_page" value="{{ request('per_page') }}">@endif
-<label class="form-control text-sm">Cari nama / telepon / RT / RW<input class="input input-bordered w-full" name="q" value="{{ request('q') }}" maxlength="240"></label>
+<label class="form-control text-sm">Cari nama / telepon / RT / RW<input class="input input-bordered w-full" name="q" value="{{ request('q') }}" maxlength="240" data-beneficiary-live-search autocomplete="off"></label>
 <label class="form-control text-sm">Status<select class="select select-bordered" name="status"><option value="" @selected($statusFilter === '')>Semua</option>
 @foreach(['active' => 'Aktif', 'inactive' => 'Tidak aktif', 'archived' => 'Arsip'] as $value => $label)<option value="{{ $value }}" 
 @selected($statusFilter === $value)>{{ $label }}</option>

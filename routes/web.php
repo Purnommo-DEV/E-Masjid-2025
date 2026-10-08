@@ -413,6 +413,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/penerima', [DistributionController::class, 'beneficiaries'])->name('beneficiaries.index');
         Route::post('/penerima', [DistributionController::class, 'saveBeneficiary'])->name('beneficiaries.store');
         Route::delete('/penerima', [DistributionController::class, 'destroyBeneficiaries'])->name('beneficiaries.destroy-bulk');
+        Route::get('/penerima-import/template', [DistributionController::class, 'beneficiaryImportTemplate'])->name('beneficiaries.import.template');
+        Route::post('/penerima-import/preview', [DistributionController::class, 'previewBeneficiaryImport'])->name('beneficiaries.import.preview');
+        Route::post('/penerima-import', [DistributionController::class, 'importBeneficiaries'])->name('beneficiaries.import.store');
+        Route::get('/penerima-cek-nama', [DistributionController::class, 'beneficiaryNameDuplicates'])->name('beneficiaries.name-duplicates');
         Route::get('/penerima/{beneficiary}', [DistributionController::class, 'beneficiary'])->name('beneficiaries.show');
         Route::patch('/penerima/{beneficiary}', [DistributionController::class, 'saveBeneficiary'])->name('beneficiaries.update');
         Route::get('/penyaluran', [DistributionController::class, 'index'])->name('distributions.index');

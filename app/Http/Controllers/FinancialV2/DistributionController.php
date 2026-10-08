@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\DecimalAmount;
+use App\Domain\FinancialV2\BeneficiaryDuplicateService;
+use App\Domain\FinancialV2\BeneficiaryImportService;
 use App\Domain\FinancialV2\DistributionService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Counterparty;
@@ -12,10 +14,22 @@ use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Program;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Throwable;
 
 final class DistributionController
 {
-    public function __construct(private readonly DistributionService $service) {}
+    public function __construct(
+        private readonly DistributionService $service,
+        private readonly BeneficiaryImportService $beneficiaryImport,
+        private readonly BeneficiaryDuplicateService $beneficiaryDuplicates,
+    ) {}
 
     private function context(Request $request): AccountingEntity
     {
@@ -68,6 +82,8 @@ final class DistributionController
         $people->getCollection()->each(function (Counterparty $person) use ($groupTotals): void {
             $person->setAttribute('matching_group_total', $groupTotals->get($this->beneficiaryGroupKey($person->rw, $person->rt), 0));
         });
+        $people->setPath(route('financial-v2.beneficiaries.index'))
+            ->appends($request->only(['entity', 'q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator', 'per_page']));
 
         return view('masjid.mrj.admin.financial-v2.distributions.beneficiaries', compact('entity', 'people', 'perPage'));
     }
@@ -107,6 +123,108 @@ final class DistributionController
         $person = $this->service->saveBeneficiary($entity->id, $request->all(), $beneficiary, $request->user()->id);
 
         return redirect()->route('financial-v2.beneficiaries.show', ['entity' => $entity->id, 'beneficiary' => $person->id])->with('success', 'Data penerima disimpan.');
+    }
+
+    public function beneficiaryNameDuplicates(Request $request)
+    {
+        $entity = $this->context($request);
+        $input = $request->validate(['name' => 'required|string|max:240']);
+
+        return response()->json($this->beneficiaryDuplicates->suggestions($entity->id, $input['name']));
+    }
+
+    public function beneficiaryImportTemplate(Request $request)
+    {
+        $entity = $this->context($request);
+        abort_unless($entity->code === 'MRJ-ACTUAL', 404);
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Penerima');
+        $sheet->fromArray(BeneficiaryImportService::HEADERS, null, 'A1');
+        $sheet->fromArray([
+            ['[CONTOH] Siti Aminah', '081234567890', '03', '06', 'Pak Ahmad', 'Dhuafa', 'Aktif', 'Jl. Contoh No. 1', 'CONTOH lengkap — jangan dihapus penandanya.'],
+            ['[CONTOH] Budi', '', '', '06', '', 'Belum ditentukan', 'Aktif', '', 'CONTOH sebagian kosong — jangan dihapus penandanya.'],
+        ], null, 'A2');
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+        $sheet->getStyle('A2:I3')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFF2CC');
+        foreach (range('A', 'I') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+        $sheet->getStyle('B2:B3')->getNumberFormat()->setFormatCode('@');
+
+        return response()->streamDownload(function () use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, 'template-penerima-financial-v2.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    public function previewBeneficiaryImport(Request $request)
+    {
+        $entity = $this->context($request);
+        abort_unless($entity->code === 'MRJ-ACTUAL', 404);
+        $request->validate(['import_file' => ['required', 'file', 'mimes:xls,xlsx', 'max:10240']]);
+        $file = $request->file('import_file');
+        $extension = mb_strtolower($file->getClientOriginalExtension());
+        $relativePath = $file->storeAs('financial-v2/beneficiary-imports', (string) Str::uuid().'.'.$extension, 'local');
+        if (! is_string($relativePath)) {
+            throw ValidationException::withMessages(['import_file' => 'File import tidak dapat disimpan sementara.']);
+        }
+
+        try {
+            $preview = $this->beneficiaryImport->preview($entity->id, Storage::disk('local')->path($relativePath));
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete($relativePath);
+            if ($exception instanceof ValidationException) {
+                throw $exception;
+            }
+            report($exception);
+            throw ValidationException::withMessages(['import_file' => 'File Excel tidak dapat dibaca. Gunakan template resmi XLS/XLSX.']);
+        }
+
+        $token = Crypt::encryptString(json_encode([
+            'entity_id' => $entity->id,
+            'path' => $relativePath,
+            'sha256' => hash_file('sha256', Storage::disk('local')->path($relativePath)),
+            'expires_at' => now()->addMinutes(30)->timestamp,
+        ], JSON_THROW_ON_ERROR));
+        $view = $this->beneficiaries($request);
+
+        return $view->with(['importPreview' => $preview, 'importToken' => $token]);
+    }
+
+    public function importBeneficiaries(Request $request)
+    {
+        $entity = $this->context($request);
+        abort_unless($entity->code === 'MRJ-ACTUAL', 404);
+        $input = $request->validate(['import_token' => ['required', 'string']]);
+        try {
+            $payload = json_decode(Crypt::decryptString($input['import_token']), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            throw ValidationException::withMessages(['import_file' => 'Token preview import tidak valid. Silakan preview ulang file.']);
+        }
+        $relativePath = (string) ($payload['path'] ?? '');
+        $path = $relativePath !== '' ? Storage::disk('local')->path($relativePath) : '';
+        $valid = ($payload['entity_id'] ?? null) === $entity->id
+            && (int) ($payload['expires_at'] ?? 0) >= now()->timestamp
+            && $relativePath !== ''
+            && str_starts_with($relativePath, 'financial-v2/beneficiary-imports/')
+            && Storage::disk('local')->exists($relativePath)
+            && hash_equals((string) ($payload['sha256'] ?? ''), hash_file('sha256', $path));
+        if (! $valid) {
+            throw ValidationException::withMessages(['import_file' => 'Preview import sudah kedaluwarsa atau file berubah. Silakan preview ulang.']);
+        }
+
+        try {
+            $result = $this->beneficiaryImport->import($entity->id, $path, $request->user()?->id);
+        } finally {
+            Storage::disk('local')->delete($relativePath);
+        }
+
+        return redirect()->route('financial-v2.beneficiaries.index', ['entity' => $entity->id])
+            ->with('success', "{$result['created']} penerima baru diimpor; {$result['skipped']} baris duplikat/tidak valid dilewati.");
     }
 
     public function index(Request $request)

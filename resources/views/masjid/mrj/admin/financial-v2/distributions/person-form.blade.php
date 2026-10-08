@@ -3,8 +3,9 @@
 <input type="hidden" name="entity" value="{{ $entity->id }}">
 <div class="grid gap-4 sm:grid-cols-2">
 @foreach(['display_name' => ['Nama lengkap', 240], 'contact_reference' => ['Telepon', 500], 'rt' => ['RT', 10], 'rw' => ['RW', 10], 'rt_coordinator_name' => ['Koordinator RT', 160]] as $field => [$label, $max])
-<label class="form-control text-sm">{{ $label }}<input class="input input-bordered w-full" name="{{ $field }}" value="{{ old($field, $person?->{$field}) }}" maxlength="{{ $max }}" 
-@required($field === 'display_name')></label>
+<label class="form-control text-sm">{{ $label }}<input class="input input-bordered w-full" name="{{ $field }}" value="{{ old($field, $person?->{$field}) }}" maxlength="{{ $max }}"
+@if($field === 'display_name') data-beneficiary-name-check data-name-check-url="{{ route('financial-v2.beneficiaries.name-duplicates', ['entity' => $entity->id]) }}" @endif
+@required($field === 'display_name')>@if($field === 'display_name')<span class="mt-1 text-xs text-amber-700" data-beneficiary-name-results aria-live="polite"></span>@endif</label>
 @endforeach
 <label class="form-control text-sm">Jenis penerima<select class="select select-bordered" name="beneficiary_type">
 @foreach(['YATIM' => 'Yatim', 'DHUAFA' => 'Dhuafa', 'YATIM_DHUAFA' => 'Yatim yang Dhuafa', 'BELUM_DITENTUKAN' => 'Belum ditentukan'] as $value => $label)<option value="{{ $value }}"

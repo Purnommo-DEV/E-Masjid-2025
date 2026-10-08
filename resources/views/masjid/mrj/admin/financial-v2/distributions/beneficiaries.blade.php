@@ -8,11 +8,17 @@
         <h1 class="text-2xl font-bold">Master Penerima ZISWAF</h1>
         <p class="mt-1 text-sm opacity-70">Identitas internal · {{ $entity->name }} · {{ number_format($people->total(), 0, ',', '.') }} penerima sesuai filter</p>
     </div>
-    <form method="get" class="flex items-end gap-2" data-page-size-form>
-        @foreach(request()->except(['page', 'per_page']) as $key => $value)
-            @if(is_scalar($value))
-                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-            @endif
+    <div class="flex flex-wrap items-end gap-2">
+        <a class="btn btn-outline btn-sm" href="{{ route('financial-v2.beneficiaries.import.template', ['entity' => $entity->id]) }}">Download Template</a>
+        <form method="post" action="{{ route('financial-v2.beneficiaries.import.preview') }}" enctype="multipart/form-data" class="flex flex-wrap items-end gap-2">
+            @csrf
+            <input type="hidden" name="entity" value="{{ $entity->id }}">
+            <label class="form-control text-sm"><span class="label-text">Import XLS/XLSX</span><input required type="file" name="import_file" accept=".xls,.xlsx" class="file-input file-input-bordered file-input-sm"></label>
+            <button class="btn btn-primary btn-sm">Preview Import</button>
+        </form>
+    <form method="get" action="{{ route('financial-v2.beneficiaries.index') }}" class="flex items-end gap-2" data-page-size-form>
+        @foreach(['entity', 'q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator'] as $key)
+            @if(request()->filled($key))<input type="hidden" name="{{ $key }}" value="{{ request($key) }}">@endif
         @endforeach
         <label class="form-control text-sm">
             <span class="label-text">Tampilkan</span>
@@ -24,6 +30,7 @@
         </label>
         <noscript><button class="btn btn-outline btn-sm">Terapkan</button></noscript>
     </form>
+    </div>
 </div>
 
 @if(session('warning'))
@@ -31,6 +38,32 @@
 @endif
 
 @include('masjid.mrj.admin.financial-v2.distributions.filters')
+
+@isset($importPreview)
+<section class="mb-6 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div><h2 class="text-lg font-bold">Preview Import Penerima</h2><p class="mt-1 text-sm text-base-content/65">Belum ada data yang disimpan. Baris contoh dan duplikat otomatis dilewati.</p></div>
+        <div class="flex flex-wrap gap-2 text-xs">
+            <span class="badge badge-success">Valid baru: {{ $importPreview['summary']['valid_new'] }}</span>
+            <span class="badge badge-warning">Duplicate existing: {{ $importPreview['summary']['duplicate_existing'] }}</span>
+            <span class="badge badge-warning">Duplicate dalam file: {{ $importPreview['summary']['duplicate_in_file'] }}</span>
+            <span class="badge badge-error">Tidak valid: {{ $importPreview['summary']['invalid'] }}</span>
+            <span class="badge badge-ghost">Contoh diabaikan: {{ $importPreview['summary']['examples_ignored'] }}</span>
+        </div>
+    </div>
+    <div class="mt-4 max-h-[32rem] overflow-auto rounded-xl border border-base-300">
+        <table class="table table-sm min-w-[65rem]"><thead><tr><th>Baris</th><th>Nama</th><th>Telepon</th><th>RT/RW</th><th>Jenis</th><th>Status data</th><th>Keterangan</th></tr></thead><tbody>
+        @forelse($importPreview['rows'] as $row)
+            <tr><td>{{ $row['source_row'] }}</td><td>{{ $row['data']['display_name'] ?: '—' }}</td><td>{{ $row['data']['contact_reference'] ?: '—' }}</td><td>{{ $row['data']['rt'] ?: '—' }}/{{ $row['data']['rw'] ?: '—' }}</td><td>{{ $row['data']['beneficiary_type'] }}</td><td><span @class(['badge badge-sm', 'badge-success' => $row['status'] === 'valid_new', 'badge-warning' => str_starts_with($row['status'], 'duplicate'), 'badge-error' => $row['status'] === 'invalid'])>{{ str_replace('_', ' ', $row['status']) }}</span></td><td class="max-w-80 whitespace-normal">{{ implode(' ', $row['messages']) ?: 'Siap diimpor' }}</td></tr>
+        @empty<tr><td colspan="7" class="text-center">Tidak ada baris data selain contoh.</td></tr>@endforelse
+        </tbody></table>
+    </div>
+    <form method="post" action="{{ route('financial-v2.beneficiaries.import.store') }}" class="mt-4 flex justify-end">
+        @csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="import_token" value="{{ $importToken }}">
+        <button class="btn btn-success" @disabled($importPreview['summary']['valid_new'] === 0)>Simpan {{ $importPreview['summary']['valid_new'] }} penerima baru</button>
+    </form>
+</section>
+@endisset
 
 <form id="beneficiary-bulk-delete" method="post" action="{{ route('financial-v2.beneficiaries.destroy-bulk') }}">
     @csrf
@@ -144,6 +177,44 @@
 @push('scripts')
 <script>
 (() => {
+    const filterForm = document.querySelector('[data-beneficiary-filter-form]');
+    const searchInput = filterForm?.querySelector('[data-beneficiary-live-search]');
+    if (filterForm && searchInput && !searchInput.dataset.liveSearchBound) {
+        searchInput.dataset.liveSearchBound = 'true';
+        let searchTimer;
+        searchInput.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => {
+                const page = filterForm.querySelector('input[name="page"]');
+                page?.remove();
+                filterForm.requestSubmit();
+            }, 450);
+        });
+    }
+
+    document.querySelectorAll('[data-beneficiary-name-check]').forEach((input) => {
+        if (input.dataset.nameCheckBound) return;
+        input.dataset.nameCheckBound = 'true';
+        const output = input.parentElement.querySelector('[data-beneficiary-name-results]');
+        let timer;
+        let requestSequence = 0;
+        input.addEventListener('input', () => {
+            window.clearTimeout(timer);
+            const sequence = ++requestSequence;
+            const name = input.value.trim();
+            if (name.length < 2) { output.textContent = ''; return; }
+            timer = window.setTimeout(async () => {
+                const url = new URL(input.dataset.nameCheckUrl, window.location.origin);
+                url.searchParams.set('name', name);
+                const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                if (!response.ok) return;
+                const matches = await response.json();
+                if (sequence !== requestSequence) return;
+                output.textContent = matches.length ? `Nama mirip sudah ada: ${matches.map((item) => item.display_name).join(', ')}` : '';
+            }, 400);
+        });
+    });
+
     const pageSize = document.querySelector('[data-page-size]');
     pageSize?.addEventListener('change', () => pageSize.form.submit());
 
