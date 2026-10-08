@@ -21,17 +21,21 @@ $sortRecipients = static fn ($rows, $identityPrefix = '') => $rows->sort(static 
 });
 $sortedDistributionItems = $sortRecipients($distribution->items, 'identity_snapshot.');
 $distributionItemsByRw = $sortedDistributionItems->groupBy(fn ($item) => $groupKey($item->identity_snapshot['rw'] ?? null));
+$recipientAmounts = $distribution->items->pluck('amount')->map(fn ($amount) => \App\Domain\FinancialV2\DecimalAmount::normalize($amount))->unique()->values();
+$uniformRecipientAmount = $recipientAmounts->count() === 1 ? $recipientAmounts->first() : null;
+$linkedFunds = $transaction?->splits?->pluck('fund.name')->filter()->unique()->values()->implode(', ');
 @endphp
 @section('content')
 <a class="link text-sm" href="{{ route('financial-v2.distributions.index', ['entity' => $entity->id, 'program_id' => $distribution->program_id]) }}">← Periode penyaluran program</a>
 <section class="rounded-2xl bg-emerald-950 text-white p-5 my-5"><h1 class="text-2xl font-bold">{{ $distribution->title }}</h1><p class="mt-2">{{ $distribution->program->name }} · {{ $distribution->period_label }}</p><p class="text-sm mt-1">{{ $distribution->starts_on->toDateString() }} — {{ $distribution->ends_on->toDateString() }}</p><p class="mt-4">Operasional: {{ strtoupper($distribution->status) }} · Finansial: {{ strtoupper($transaction?->status ?? 'unposted') }}</p></section>
 <div class="grid gap-4 sm:grid-cols-3 mb-5"><x-financial-v2.metric title="Jumlah penerima" :value="$distribution->items->count()" /><x-financial-v2.metric title="Total penyaluran operasional" :value="$money($total)" /><x-financial-v2.metric title="Nominal realisasi tertaut" :value="$transaction ? $money($transaction->gross_amount) : 'Belum ditautkan'" /></div>
+<section class="rounded-2xl border border-base-300 bg-base-100 p-5 mb-5"><div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-xl font-bold">Realisasi Keuangan</h2><p class="mt-1 text-sm text-base-content/65">Referensi ke fakta finansial existing; Penyaluran tidak membuat posting.</p></div><span @class(['badge', 'badge-success' => $transaction, 'badge-warning' => !$transaction])>{{ $transaction ? 'Sudah ditautkan' : 'Belum ditautkan' }}</span></div>
 @if($transaction)
-<div class="rounded-2xl bg-base-100 p-5 mb-5"><a class="link font-semibold" href="{{ route('financial-v2.transactions.show', $transaction->id) }}">Lihat realisasi Financial V2</a><p class="text-sm mt-2">Sumber Dana: {{ $transaction->splits->pluck('fund.name')->unique()->implode(', ') }}</p><p class="text-sm mt-2">Jumlah rincian Dana: {{ $money(\App\Domain\FinancialV2\DecimalAmount::sum($transaction->splits->pluck('split_amount'))) }}</p></div>
-@if(!\App\Domain\FinancialV2\DecimalAmount::equals($total, $transaction->gross_amount))
-<div role="alert" class="alert alert-error mb-5">Total penyaluran tidak sama dengan nominal realisasi. Periksa transaksi melalui lifecycle Financial V2; penyaluran final tidak dapat diedit.</div>
-@endif
-@endif
+<dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5"><div><dt class="text-base-content/55">Tanggal</dt><dd class="font-semibold">{{ $transaction->business_date->translatedFormat('d M Y') }}</dd></div><div><dt class="text-base-content/55">Fund</dt><dd class="font-semibold">{{ $linkedFunds ?: '—' }}</dd></div><div><dt class="text-base-content/55">Program</dt><dd class="font-semibold">{{ $distribution->program->name }}</dd></div><div><dt class="text-base-content/55">Nominal</dt><dd class="font-semibold">{{ $money($transaction->gross_amount) }}</dd></div><div><dt class="text-base-content/55">Penerima</dt><dd class="font-semibold">{{ $distribution->items->count() }}</dd></div></dl><div class="mt-4"><a class="btn btn-outline btn-sm" href="{{ route('financial-v2.transactions.show', $transaction->id) }}">Lihat Realisasi</a></div>
+@if(!\App\Domain\FinancialV2\DecimalAmount::equals($total, $transaction->gross_amount))<div role="alert" class="alert alert-error mt-4">Total detail penerima tidak sama dengan nominal Realisasi existing.</div>@endif
+@else<p class="mt-4 text-sm">Gunakan action “Tautkan ke Realisasi” di bawah untuk memilih Realisasi yang sudah ada.</p>@endif
+</section>
+<div class="grid gap-3 sm:grid-cols-3 mb-5"><x-financial-v2.metric title="Jumlah penerima" :value="$distribution->items->count()" /><x-financial-v2.metric title="Nominal per penerima" :value="$uniformRecipientAmount ? $money($uniformRecipientAmount) : 'Bervariasi'" /><x-financial-v2.metric title="Total rincian penerima" :value="$money($total)" /></div>
 <p class="text-sm mb-5 break-words">{{ $distribution->notes }}</p>
 @if($distribution->copied_from_id)<section class="rounded-2xl bg-base-100 p-5 mb-5"><h2 class="font-semibold">Perbandingan dengan periode sumber salinan</h2><p class="text-sm mt-2">Sebelumnya {{ $continuity['previous'] }} · Sekarang {{ $continuity['current'] }} · Masuk {{ $continuity['added'] }} · Keluar {{ $continuity['removed'] }}</p></section>
 @endif
@@ -103,10 +107,10 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 <x-financial-v2.recipient-rw-group :rw="$rwItems->first()->identity_snapshot['rw'] ?? null" data-draft-rw-group>
 @foreach($rwItems->groupBy(fn ($item) => $groupKey($item->identity_snapshot['rt'] ?? null)) as $rtKey => $rtItems)
 <x-financial-v2.recipient-rt-group :rw="$rwItems->first()->identity_snapshot['rw'] ?? null" :rt="$rtItems->first()->identity_snapshot['rt'] ?? null" :total="$rtItems->count()" data-draft-rt-group>
-<div class="hidden grid-cols-[3rem_minmax(9rem,1.2fr)_minmax(8rem,.7fr)_minmax(10rem,1fr)_auto] gap-2 border-b border-base-200 px-3 py-1.5 text-xs font-semibold text-base-content/55 lg:grid"><span>No</span><span>Nama</span><span>Nominal</span><span>Catatan</span><span>Aksi</span></div><div class="divide-y divide-base-200">
+<div class="hidden grid-cols-[3rem_minmax(9rem,1.2fr)_minmax(8rem,.8fr)_minmax(8rem,.7fr)_minmax(10rem,1fr)_auto] gap-2 border-b border-base-200 px-3 py-1.5 text-xs font-semibold text-base-content/55 lg:grid"><span>No</span><span>Nama</span><span>Telepon</span><span>Nominal</span><span>Catatan</span><span>Aksi</span></div><div class="divide-y divide-base-200">
 @foreach($rtItems as $item)
 @php $itemNumber++; @endphp
-<div class="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2 text-sm lg:grid-cols-[3rem_minmax(9rem,1.2fr)_minmax(8rem,.7fr)_minmax(10rem,1fr)_auto] lg:items-center" data-draft-item-row><span class="text-xs text-base-content/60 lg:text-sm">{{ $itemNumber }}</span><strong class="min-w-0 break-words">{{ $item->identity_snapshot['display_name'] }}</strong><span class="col-start-2 font-semibold lg:col-auto">{{ $money($item->amount) }}</span><span class="col-start-2 min-w-0 break-words text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->notes ?: '—' }}</span>@include('masjid.mrj.admin.financial-v2.distributions.item-edit')</div>
+<div class="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2 text-sm lg:grid-cols-[3rem_minmax(9rem,1.2fr)_minmax(8rem,.8fr)_minmax(8rem,.7fr)_minmax(10rem,1fr)_auto] lg:items-center" data-draft-item-row><span class="text-xs text-base-content/60 lg:text-sm">{{ $itemNumber }}</span><span class="min-w-0 break-words"><strong class="block">{{ $item->identity_snapshot['display_name'] }}</strong><span class="mt-0.5 block text-xs text-base-content/60">{{ $item->beneficiary?->beneficiary_type_label ?? 'Belum ditentukan' }} · RT {{ $item->identity_snapshot['rt'] ?? '—' }} / RW {{ $item->identity_snapshot['rw'] ?? '—' }} · {{ $item->identity_snapshot['rt_coordinator_name'] ?? '—' }} · {{ ucfirst($item->beneficiary?->status ?? 'tidak diketahui') }}</span></span><span class="col-start-2 text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->identity_snapshot['contact_reference'] ?? '—' }}</span><span class="col-start-2 font-semibold lg:col-auto">{{ $money($item->amount) }}</span><span class="col-start-2 min-w-0 break-words text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->notes ?: '—' }}</span>@include('masjid.mrj.admin.financial-v2.distributions.item-edit')</div>
 @endforeach
 </div></x-financial-v2.recipient-rt-group>
 @endforeach
@@ -116,20 +120,18 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 </div></section>
 
 @if($editable)
-<section class="bg-base-100 rounded-2xl p-5 mt-6"><h2 class="font-bold text-xl">Validasi dan finalisasi</h2><p class="text-sm my-3">Pilih realisasi existing. Total penerima harus tepat sama dengan nominal realisasi dan rincian multi-Dana. Finalisasi mengunci rincian; tidak mem-posting transaksi.</p>
-<form method="post" action="{{ route('financial-v2.distributions.finalize', $distribution->id) }}">
+<section class="bg-base-100 rounded-2xl p-5 mt-6"><h2 class="font-bold text-xl">Tautkan ke Realisasi</h2><p class="text-sm my-3">Gunakan Realisasi yang sudah ada. Proses ini hanya menyimpan reference dan mengunci rincian Penyaluran; tidak membuat atau mem-posting financial fact.</p>
+<form method="post" action="{{ route('financial-v2.distributions.realizations.link', $distribution->id) }}">
 @csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="revision" value="{{ $distribution->revision }}">
 <fieldset class="space-y-3"><legend class="sr-only">Realisasi yang tersedia</legend>
 @forelse($realizations as $realization)
-<label class="flex gap-3 items-start rounded-xl border border-base-300 p-3 text-sm"><input type="radio" class="radio radio-sm mt-1" name="realization_id" value="{{ $realization->id }}" required><span class="min-w-0 break-words">{{ $realization->transaction->description }} · {{ $realization->transaction->business_date->toDateString() }}<br>Realisasi {{ $money($realization->transaction->gross_amount) }} vs penyaluran {{ $money($total) }} · {{ strtoupper($realization->transaction->status) }}<br>
-@if(\App\Domain\FinancialV2\DecimalAmount::equals($total, $realization->transaction->gross_amount))<strong class="text-success">Total cocok</strong>
-@else<strong class="text-error">Total tidak cocok — finalisasi akan ditolak</strong>
-@endif</span></label>
-@empty<p>Belum ada realisasi sesuai Program yang dapat ditautkan. Gunakan workflow Realisasi Financial V2 existing.</p>
+<label @class(['flex gap-3 items-start rounded-xl border p-3 text-sm', 'border-emerald-300 bg-emerald-50' => $realization->link_compatible, 'border-error/30 bg-error/5' => !$realization->link_compatible])><input type="radio" class="radio radio-sm mt-1" name="realization_id" value="{{ $realization->id }}" @disabled(!$realization->link_compatible) required><span class="min-w-0 break-words"><strong>{{ $realization->transaction->description }}</strong><br>Tanggal: {{ $realization->transaction->business_date->translatedFormat('d M Y') }} · Fund: {{ $realization->link_funds ?: '—' }} · Program: {{ $distribution->program->name }}<br>Nominal: {{ $money($realization->transaction->gross_amount) }} · Penerima operasional: {{ $distribution->items->count() }} · Status: {{ strtoupper($realization->transaction->status) }}<br>
+@if($realization->link_compatible)<strong class="text-success">Seluruh dimensi dan total cocok</strong>@else<strong class="text-error">{{ implode(' ', $realization->link_validation_errors) }}</strong>@endif</span></label>
+@empty<p>Belum ditemukan Realisasi yang cocok untuk Penyaluran ini.</p>
 @endforelse</fieldset>
 <button class="btn btn-primary mt-4" 
-@disabled($realizations->isEmpty() || $distribution->items->isEmpty())>Finalisasi dan kunci penyaluran</button>
-</form><div class="mt-4">{{ $realizations->links() }}</div></section>
+@disabled(!$realizations->contains(fn ($candidate) => $candidate->link_compatible) || $distribution->items->isEmpty())>Gunakan Realisasi Ini</button>
+</form></section>
 @endif
 @endsection
 @push('scripts')

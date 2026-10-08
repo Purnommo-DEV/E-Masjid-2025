@@ -5,8 +5,6 @@ namespace App\Domain\FinancialV2;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\Distribution;
-use App\Models\FinancialV2\FinancialTransaction;
-use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Program;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 /** Operational beneficiary records only. No lifecycle/posting writer dependency. */
 final class DistributionService
 {
-    public function __construct(private readonly AuditTrailService $audit) {}
+    public function __construct(
+        private readonly AuditTrailService $audit,
+        private readonly DistributionRealizationLinkService $realizationLinks,
+    ) {}
 
     public function saveBeneficiary(string $entityId, array $input, ?string $id, ?int $actor): Counterparty
     {
@@ -238,27 +239,7 @@ final class DistributionService
 
     public function finalize(string $entityId, string $id, string $realizationId, int $revision, ?int $actor): Distribution
     {
-        return DB::transaction(function () use ($entityId, $id, $realizationId, $revision, $actor) {
-            $distribution = $this->editable($entityId, $id, $revision);
-            $realization = FundRealization::forEntity($entityId)->lockForUpdate()->findOrFail($realizationId);
-            $transaction = FinancialTransaction::forEntity($entityId)->lockForUpdate()->findOrFail($realization->transaction_id);
-            $this->require(! in_array($transaction->status, ['cancelled', 'reversed'], true) && ! in_array($realization->status, ['cancelled', 'reversed'], true), 'Realisasi dibatalkan atau dibalik.');
-            $this->require(! Distribution::where('realization_id', $realizationId)->exists(), 'Realisasi sudah dikaitkan ke penyaluran lain.');
-            $splits = $transaction->splits()->with('account')->get();
-            $this->require(in_array($transaction->type->code, app(\App\Domain\FinancialV2\Reporting\FinancialReportDefinitions::class)->cashOutTypes(), true)
-                && $splits->every(fn ($s) => $s->account?->account_class === 'expense'), 'Realisasi harus berupa pengeluaran program, bukan penerimaan atau transfer.');
-            $this->require($splits->isNotEmpty() && $splits->every(fn ($s) => $s->program_id === $distribution->program_id), 'Seluruh rincian realisasi harus milik Program penyaluran ini.');
-            $items = $distribution->items()->get();
-            $this->require($items->isNotEmpty(), 'Penyaluran kosong tidak dapat difinalisasi.');
-            $active = Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->where('status', 'active')->whereIn('id', $items->pluck('beneficiary_id'))->lockForUpdate()->get();
-            $this->require($active->count() === $items->count(), 'Hapus atau ganti penerima yang sudah tidak aktif.');
-            $total = DecimalAmount::sum($items->pluck('amount'));
-            $this->require(DecimalAmount::equals($total, $transaction->gross_amount) && DecimalAmount::equals($total, DecimalAmount::sum($splits->pluck('split_amount'))), 'Total penyaluran tidak sama dengan nominal realisasi.');
-            $distribution->update(['realization_id' => $realizationId, 'status' => 'finalized', 'finalized_at' => now(), 'finalized_by_user_id' => $actor, 'updated_by_user_id' => $actor, 'revision' => $revision + 1]);
-            $this->record($entityId, 'distribution.finalized', $id, $actor, ['realization_id' => $realizationId, 'total' => $total]);
-
-            return $distribution;
-        });
+        return $this->realizationLinks->link($entityId, $id, $realizationId, $revision, $actor);
     }
 
     private function editable(string $entityId, string $id, mixed $revision): Distribution

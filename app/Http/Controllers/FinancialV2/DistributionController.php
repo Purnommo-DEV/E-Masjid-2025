@@ -6,11 +6,11 @@ use App\Domain\FinancialV2\DecimalAmount;
 use App\Domain\FinancialV2\BeneficiaryDuplicateService;
 use App\Domain\FinancialV2\BeneficiaryImportService;
 use App\Domain\FinancialV2\DistributionService;
+use App\Domain\FinancialV2\DistributionRealizationLinkService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\Distribution;
 use App\Models\FinancialV2\DistributionItem;
-use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Program;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -27,6 +27,7 @@ final class DistributionController
 {
     public function __construct(
         private readonly DistributionService $service,
+        private readonly DistributionRealizationLinkService $realizationLinks,
         private readonly BeneficiaryImportService $beneficiaryImport,
         private readonly BeneficiaryDuplicateService $beneficiaryDuplicates,
     ) {}
@@ -254,17 +255,19 @@ final class DistributionController
     public function show(Request $request, string $distribution)
     {
         $entity = $this->context($request);
-        $distribution = Distribution::forEntity($entity->id)->with(['program', 'realization.transaction.splits.fund', 'items', 'copiedFrom.items'])->findOrFail($distribution);
+        $distribution = Distribution::forEntity($entity->id)->with([
+            'program', 'items.beneficiary', 'copiedFrom.items',
+            'realization.transaction.splits.fund',
+            'realization.budgetAllocationVersion.allocation.program',
+            'realization.budgetAllocationVersion.fundings.fund',
+        ])->findOrFail($distribution);
         $total = DecimalAmount::sum($distribution->items->pluck('amount'));
         $peopleQuery = $this->people($request, $entity->id);
         if (! $request->has('status')) {
             $peopleQuery->where('status', 'active');
         }
         $people = $peopleQuery->get();
-        $realizations = FundRealization::forEntity($entity->id)->whereNotIn('status', ['cancelled', 'reversed'])
-            ->whereHas('transaction', fn ($q) => $q->whereNotIn('status', ['cancelled', 'reversed'])->whereHas('splits', fn ($s) => $s->where('program_id', $distribution->program_id)))
-            ->whereNotIn('id', Distribution::whereNotNull('realization_id')->select('realization_id'))
-            ->with('transaction')->latest()->paginate(15, ['*'], 'realization_page')->withQueryString();
+        $realizations = $distribution->realization_id ? collect() : $this->realizationLinks->candidates($distribution);
         $oldIds = $distribution->copiedFrom?->items->pluck('beneficiary_id') ?? collect();
         $newIds = $distribution->items->pluck('beneficiary_id');
         $continuity = ['previous' => $oldIds->count(), 'current' => $newIds->count(), 'added' => $newIds->diff($oldIds)->count(), 'removed' => $oldIds->diff($newIds)->count()];
@@ -300,9 +303,10 @@ final class DistributionController
     {
         $entity = $this->context($request);
         $input = $request->validate(['realization_id' => 'required|uuid', 'revision' => 'required|integer|min:0']);
-        $this->service->finalize($entity->id, $distribution, $input['realization_id'], (int) $input['revision'], $request->user()->id);
+        $this->realizationLinks->link($entity->id, $distribution, $input['realization_id'], (int) $input['revision'], $request->user()->id);
 
-        return back()->with('success', 'Penyaluran difinalisasi. Status posting mengikuti Financial V2.');
+        return redirect()->route('financial-v2.distributions.show', ['distribution' => $distribution, 'entity' => $entity->id])
+            ->with('success', 'Penyaluran berhasil ditautkan ke Realisasi yang sudah ada.');
     }
 
     private function chooseEntity()

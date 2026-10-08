@@ -427,6 +427,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.update');
         Route::delete('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.destroy');
         Route::post('/penyaluran/{distribution}/finalize', [DistributionController::class, 'finalize'])->name('distributions.finalize');
+        Route::post('/penyaluran/{distribution}/tautkan-realisasi', [DistributionController::class, 'finalize'])->name('distributions.realizations.link');
         Route::get('/kontrol', [FinancialControlController::class, 'index'])->name('controls.index');
         Route::post('/kontrol/periode/{period}/tutup', [FinancialControlController::class, 'close'])->name('controls.close');
         Route::post('/kontrol/rekonsiliasi', [FinancialControlController::class, 'storeReconciliation'])->name('controls.reconciliations.store');
