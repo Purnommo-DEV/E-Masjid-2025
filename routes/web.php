@@ -497,6 +497,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/konfigurasi-inline', [\App\Http\Controllers\FinancialV2\InlineConfigurationController::class, 'show'])->name('configuration.inline.show');
         Route::post('/konfigurasi-inline', [\App\Http\Controllers\FinancialV2\InlineConfigurationController::class, 'store'])->name('configuration.inline.store');
         Route::get('/alokasi-dana/baru', [OperationalFinancialController::class, 'allocationForm'])->name('allocations.create');
+        Route::post('/alokasi-dana/periksa-konfigurasi', [OperationalFinancialController::class, 'allocationConfigurationPreview'])->name('allocations.configuration-preview');
         Route::post('/alokasi-dana', [OperationalFinancialController::class, 'storeAllocation'])->name('allocations.store');
         Route::get('/alokasi-dana/{allocation}/ubah', [OperationalFinancialController::class, 'editAllocation'])->name('allocations.edit');
         Route::put('/alokasi-dana/{allocation}', [OperationalFinancialController::class, 'updateAllocation'])->name('allocations.update');

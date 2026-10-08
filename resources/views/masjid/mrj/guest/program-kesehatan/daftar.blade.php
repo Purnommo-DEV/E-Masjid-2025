@@ -87,18 +87,18 @@
                                 
                                 <div class="grid grid-cols-1 gap-3">
                                     
-                                    <!-- RS Kanker Dharmais -->
+                                    <!-- PMI Lebak Banten -->
                                     <div class="flex items-center gap-3 bg-white border border-emerald-200 rounded-xl p-3">
                                         <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden border border-emerald-100 bg-white">
                                             <img
-                                                src="{{ asset('storage/mrj/dharmais.webp') }}"
-                                                alt="Logo RS Kanker Dharmais"
+                                                src="{{ asset('storage/mrj/pmi.webp') }}"
+                                                alt="Logo PMI Lebak Banten"
                                                 class="w-9 h-9 object-contain"
                                             >
                                         </div>
                                         <div class="text-sm">
                                             <div class="font-semibold text-emerald-900">Donor Darah</div>
-                                            <div class="text-slate-500 text-xs">RS Kanker Dharmais</div>
+                                            <div class="text-slate-500 text-xs">PMI Lebak Banten</div>
                                         </div>
                                     </div>
 
@@ -232,15 +232,6 @@
                                         <div class="flex-1">
                                             <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Asam Urat</div>
                                             <p class="text-slate-500 text-xs mt-1">Pemeriksaan kadar asam urat untuk mengetahui risiko keluhan sendi dan metabolisme.</p>
-                                        </div>
-                                    </label>
-
-                                    <!-- Pemeriksaan Tensi Darah -->
-                                    <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition-all">
-                                        <input type="checkbox" name="cek_kesehatan[]" value="tensi_darah" class="w-5 h-5 accent-emerald-600 mt-1">
-                                        <div class="flex-1">
-                                            <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Tensi Darah</div>
-                                            <p class="text-slate-500 text-xs mt-1">Pemeriksaan tekanan darah untuk mengetahui kondisi kesehatan secara umum.</p>
                                         </div>
                                     </label>
 
