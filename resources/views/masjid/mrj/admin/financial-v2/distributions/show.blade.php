@@ -1,6 +1,15 @@
 
 @extends('masjid.mrj.admin.financial-v2.layout')
 @section('title', 'Detail Penyaluran ZISWAF')
+@push('styles')
+<style>
+@media (min-width: 1024px) {
+    .beneficiary-filter-grid { grid-template-columns: minmax(13rem, 1.45fr) minmax(7rem, .7fr) minmax(10rem, 1fr) 4.5rem 4.5rem minmax(10rem, 1fr) auto; }
+    .recipient-picker-grid { grid-template-columns: 2rem 3rem minmax(11rem, 1.5fr) minmax(8rem, .8fr) 3rem 3rem minmax(9rem, 1fr) 5rem 4rem; }
+    .draft-recipient-grid { grid-template-columns: 3rem minmax(12rem, 1.35fr) minmax(8rem, .8fr) minmax(8rem, .7fr) minmax(10rem, 1fr) auto; }
+}
+</style>
+@endpush
 @php
 $editable = $distribution->status === 'draft' && $distribution->realization_id === null;
 $transaction = $distribution->realization?->transaction;
@@ -40,7 +49,7 @@ $linkedFunds = $transaction?->splits?->pluck('fund.name')->filter()->unique()->v
 @if($distribution->copied_from_id)<section class="rounded-2xl bg-base-100 p-5 mb-5"><h2 class="font-semibold">Perbandingan dengan periode sumber salinan</h2><p class="text-sm mt-2">Sebelumnya {{ $continuity['previous'] }} · Sekarang {{ $continuity['current'] }} · Masuk {{ $continuity['added'] }} · Keluar {{ $continuity['removed'] }}</p></section>
 @endif
 @if($editable)
-<section class="mt-6 border-y border-base-300 py-5" data-distribution-selection
+<section class="mt-6 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5" data-distribution-selection
     data-storage-key="financial-v2-distribution-selection:{{ $entity->id }}:{{ $distribution->id }}"
     data-clear-selection="{{ session('distribution_batch_added') ? 'true' : 'false' }}">
 <form method="post" action="{{ route('financial-v2.distributions.items.store', $distribution->id) }}" data-batch-form>
@@ -52,7 +61,7 @@ $linkedFunds = $transaction?->splits?->pluck('fund.name')->filter()->unique()->v
 </form>
 <template data-staging-template><article class="flex min-w-0 flex-col gap-2 rounded-lg border border-base-300 p-3" data-staging-item><div class="min-w-0"><strong class="block break-words text-sm" data-staging-name></strong><span class="mt-0.5 block text-xs text-base-content/65" data-staging-region></span></div><label class="form-control text-sm" data-money-field><span class="label-text text-xs">Nominal</span><div class="relative"><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/55">Rp</span><input class="input input-bordered input-sm w-full pl-9" data-money-input data-staging-amount-display inputmode="decimal" autocomplete="off" placeholder="0" required><input type="hidden" data-money-value data-staging-amount></div></label><button type="button" class="btn btn-ghost btn-xs self-start text-error" data-remove-selection>Hapus</button><input type="hidden" data-staging-beneficiary></article></template>
 
-<div class="mt-8 border-t border-base-300 pt-5"><h2 class="text-xl font-bold">Tambah Penerima ke Draft</h2><p class="mt-1 text-sm text-base-content/65">Hanya penerima aktif yang belum ada di draft dapat dipilih.</p></div>
+<div class="mt-8 border-t border-base-300 pt-5"><div class="flex flex-wrap items-start justify-between gap-3"><div><h2 class="text-xl font-bold">Tambah Penerima ke Draft</h2><p class="mt-1 text-sm text-base-content/65">Cari dan pilih penerima aktif yang belum ada di draft.</p></div><span class="badge badge-outline h-auto py-1">{{ $people->total() }} hasil</span></div></div>
 @include('masjid.mrj.admin.financial-v2.distributions.filters', [
     'recipientSelection' => true,
     'filterAction' => route('financial-v2.distributions.show', ['distribution' => $distribution->id]),
@@ -69,7 +78,7 @@ $peopleByRw = $sortRecipients($people)->groupBy(fn ($person) => $groupKey($perso
 <x-financial-v2.recipient-rw-group :rw="$rwPeople->first()->rw" data-recipient-rw-group>
 @foreach($rwPeople->groupBy(fn ($person) => $groupKey($person->rt)) as $rtKey => $rtPeople)
 <x-financial-v2.recipient-rt-group :rw="$rwPeople->first()->rw" :rt="$rtPeople->first()->rt" :total="$rtPeople->count()" data-recipient-rt-group>
-<div class="hidden grid-cols-[auto_3rem_minmax(9rem,1.4fr)_minmax(8rem,.8fr)_3rem_3rem_minmax(8rem,1fr)_5rem_4rem] gap-2 border-b border-base-200 px-3 py-1.5 text-xs font-semibold text-base-content/55 lg:grid"><span></span><span>No</span><span>Nama</span><span>Kategori</span><span>RT</span><span>RW</span><span>Koordinator</span><span>Status</span><span>Aksi</span></div><div class="divide-y divide-base-200">
+<div class="recipient-picker-grid hidden gap-2 border-b border-base-200 bg-base-200/40 px-3 py-2 text-xs font-semibold text-base-content/65 lg:grid"><span></span><span>No</span><span>Nama</span><span>Jenis</span><span>RT</span><span>RW</span><span>Koordinator</span><span>Status</span><span>Aksi</span></div><div class="divide-y divide-base-200">
 @foreach($rtPeople as $person)
 @php
 $personNumber++;
@@ -78,7 +87,7 @@ $eligible = $person->status === 'active' && ! $alreadyAdded;
 $statusLabel = ['active' => 'Aktif', 'inactive' => 'Tidak aktif', 'archived' => 'Arsip'][$person->status] ?? ucfirst($person->status);
 $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM_DITENTUKAN')->replace('_', ' ')->lower()->title();
 @endphp
-<div @class(['grid min-w-0 grid-cols-[auto_2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2 text-sm lg:grid-cols-[auto_3rem_minmax(9rem,1.4fr)_minmax(8rem,.8fr)_3rem_3rem_minmax(8rem,1fr)_5rem_4rem] lg:items-center', 'hover:bg-base-200/30' => $eligible, 'bg-base-200/40 text-base-content/55' => ! $eligible]) data-recipient-row>
+<div @class(['recipient-picker-grid grid min-w-0 grid-cols-[auto_2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2.5 text-sm lg:items-center', 'hover:bg-base-200/40' => $eligible, 'bg-base-200/40 text-base-content/55' => ! $eligible]) data-recipient-row>
 <input id="beneficiary-{{ $person->id }}" type="checkbox" class="checkbox checkbox-sm mt-0.5 lg:mt-0" value="{{ $person->id }}" data-beneficiary-select
     data-name="{{ $person->display_name }}" data-rt="{{ $person->rt }}" data-rw="{{ $person->rw }}"
     data-coordinator="{{ $person->rt_coordinator_name }}" @checked($alreadyAdded) @disabled(! $eligible)>
@@ -99,7 +108,7 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 </section>
 @endif
 
-<section class="mt-6 border-y border-base-300 py-5" data-draft-items><div class="flex flex-wrap items-end justify-between gap-2"><div><h2 class="text-xl font-bold">Kelola Penerima Draft</h2><p class="mt-1 text-sm text-base-content/65">Snapshot identitas saat penerima ditambahkan.</p></div><p class="text-sm"><strong>Penerima: {{ $distribution->items->count() }}</strong><br><strong>Total: {{ $money($total) }}</strong></p></div>
+<section class="mt-6 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5" data-draft-items><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h2 class="text-xl font-bold">Kelola Penerima Draft</h2><p class="mt-1 text-sm text-base-content/65">Penerima dikelompokkan berdasarkan RW dan RT dari snapshot saat ditambahkan.</p></div><div class="flex flex-wrap gap-2"><span class="badge badge-outline h-auto py-1">{{ $distribution->items->count() }} penerima</span><span class="badge badge-primary badge-outline h-auto py-1">Total {{ $money($total) }}</span></div></div>
 @if(!$editable)<p class="alert mt-4 text-sm">Penyaluran final terkunci. Edit dan Hapus tidak tersedia; perubahan master tidak mengubah snapshot ini.</p>@endif
 @php $itemNumber = 0; @endphp
 <div class="mt-4 space-y-5">
@@ -107,10 +116,10 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 <x-financial-v2.recipient-rw-group :rw="$rwItems->first()->identity_snapshot['rw'] ?? null" data-draft-rw-group>
 @foreach($rwItems->groupBy(fn ($item) => $groupKey($item->identity_snapshot['rt'] ?? null)) as $rtKey => $rtItems)
 <x-financial-v2.recipient-rt-group :rw="$rwItems->first()->identity_snapshot['rw'] ?? null" :rt="$rtItems->first()->identity_snapshot['rt'] ?? null" :total="$rtItems->count()" data-draft-rt-group>
-<div class="hidden grid-cols-[3rem_minmax(9rem,1.2fr)_minmax(8rem,.8fr)_minmax(8rem,.7fr)_minmax(10rem,1fr)_auto] gap-2 border-b border-base-200 px-3 py-1.5 text-xs font-semibold text-base-content/55 lg:grid"><span>No</span><span>Nama</span><span>Telepon</span><span>Nominal</span><span>Catatan</span><span>Aksi</span></div><div class="divide-y divide-base-200">
+<div class="draft-recipient-grid hidden gap-2 border-b border-base-200 bg-base-200/40 px-3 py-2 text-xs font-semibold text-base-content/65 lg:grid"><span>No</span><span>Nama penerima</span><span>Telepon</span><span>Nominal</span><span>Catatan</span><span>Aksi</span></div><div class="divide-y divide-base-200">
 @foreach($rtItems as $item)
 @php $itemNumber++; @endphp
-<div class="grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2 text-sm lg:grid-cols-[3rem_minmax(9rem,1.2fr)_minmax(8rem,.8fr)_minmax(8rem,.7fr)_minmax(10rem,1fr)_auto] lg:items-center" data-draft-item-row><span class="text-xs text-base-content/60 lg:text-sm">{{ $itemNumber }}</span><span class="min-w-0 break-words"><strong class="block">{{ $item->identity_snapshot['display_name'] }}</strong><span class="mt-0.5 block text-xs text-base-content/60">{{ $item->beneficiary?->beneficiary_type_label ?? 'Belum ditentukan' }} · RT {{ $item->identity_snapshot['rt'] ?? '—' }} / RW {{ $item->identity_snapshot['rw'] ?? '—' }} · {{ $item->identity_snapshot['rt_coordinator_name'] ?? '—' }} · {{ ucfirst($item->beneficiary?->status ?? 'tidak diketahui') }}</span></span><span class="col-start-2 text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->identity_snapshot['contact_reference'] ?? '—' }}</span><span class="col-start-2 font-semibold lg:col-auto">{{ $money($item->amount) }}</span><span class="col-start-2 min-w-0 break-words text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->notes ?: '—' }}</span>@include('masjid.mrj.admin.financial-v2.distributions.item-edit')</div>
+<div class="draft-recipient-grid grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2.5 text-sm lg:items-center" data-draft-item-row><span class="text-xs text-base-content/60 lg:text-sm">{{ $itemNumber }}</span><span class="min-w-0 break-words"><strong class="block">{{ $item->identity_snapshot['display_name'] }}</strong><span class="mt-0.5 block text-xs text-base-content/60">{{ $item->beneficiary?->beneficiary_type_label ?? 'Belum ditentukan' }} · RT {{ $item->identity_snapshot['rt'] ?? 'Belum ditentukan' }} / RW {{ $item->identity_snapshot['rw'] ?? 'Belum ditentukan' }} · {{ $item->identity_snapshot['rt_coordinator_name'] ?? 'Tanpa koordinator' }} · {{ ucfirst($item->beneficiary?->status ?? 'tidak diketahui') }}</span></span><span class="col-start-2 text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->identity_snapshot['contact_reference'] ?? '—' }}</span><span class="col-start-2 font-semibold lg:col-auto">{{ $money($item->amount) }}</span><span class="col-start-2 min-w-0 break-words text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->notes ?: '—' }}</span>@include('masjid.mrj.admin.financial-v2.distributions.item-edit')</div>
 @endforeach
 </div></x-financial-v2.recipient-rt-group>
 @endforeach

@@ -1,6 +1,13 @@
 @extends('masjid.mrj.admin.financial-v2.layout')
 
 @section('title', ($editingAllocation ? 'Ubah Draft ' : '').'Alokasikan Dana')
+@push('styles')
+<style>
+@media (min-width: 1280px) {
+    .allocation-form-grid { grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr); }
+}
+</style>
+@endpush
 
 @section('content')
     <div class="mb-6">
@@ -22,13 +29,13 @@
             }
             $allocationAmount = old('amount', $editingVersion?->allocated_amount);
         @endphp
-        <form method="POST" action="{{ $editingAllocation ? route('financial-v2.allocations.update', $editingAllocation) : route('financial-v2.allocations.store') }}" data-financial-ajax data-funding-form data-allocation-configuration data-configuration-preview-url="{{ route('financial-v2.allocations.configuration-preview') }}" class="grid max-w-3xl gap-5 lg:grid-cols-[minmax(0,1fr)_17rem]">
+        <form method="POST" action="{{ $editingAllocation ? route('financial-v2.allocations.update', $editingAllocation) : route('financial-v2.allocations.store') }}" data-financial-ajax data-funding-form data-allocation-configuration data-configuration-preview-url="{{ route('financial-v2.allocations.configuration-preview') }}" class="allocation-form-grid grid w-full gap-6 xl:items-start">
             @csrf
             @if ($editingAllocation) @method('PUT') @endif
             <input type="hidden" name="entity" value="{{ $entity->id }}">
             <input type="hidden" name="submission_key" value="{{ $submissionKey }}">
             <section class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300 sm:p-6">
-                <div class="grid gap-4 sm:grid-cols-2">
+                <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     @php $allocationDate = old('date', $editingVersion?->effective_from?->toDateString() ?? $today); @endphp
                     <label class="form-control"><span class="label-text font-medium">Tanggal berlaku</span><input type="text" value="" inputmode="numeric" autocomplete="off" maxlength="10" placeholder="DD/MM/YYYY" class="input input-bordered w-full" data-allocation-date-display data-date-target="allocation-date-iso" required><input type="hidden" id="allocation-date-iso" name="date" value="{{ $allocationDate }}" data-allocation-date-iso><span class="label-text-alt">Format: DD/MM/YYYY, contoh 30/10/2026.</span></label>
                     <label class="form-control"><span class="label-text font-medium">Nominal alokasi</span><div class="relative" data-money-field><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-base-content/55">Rp</span><input type="hidden" name="amount" value="{{ $allocationAmount }}" data-money-value><input type="text" inputmode="decimal" autocomplete="off" value="{{ $allocationAmount !== null && $allocationAmount !== '' ? number_format((float) $allocationAmount, 2, ',', '.') : '' }}" placeholder="0" class="input input-bordered w-full pl-9 text-lg font-semibold" data-money-input required></div><span class="label-text-alt">Pemisah ribuan dibuat otomatis. Gunakan koma untuk sen.</span></label>
@@ -55,7 +62,7 @@
                 <label class="form-control mt-4"><span class="label-text font-medium">Tujuan dan keterangan</span><textarea name="reason" rows="4" class="textarea textarea-bordered w-full" placeholder="Contoh: Peruntukan biaya program Ramadhan 1448 H" required>{{ old('reason', $editingAllocation?->reason) }}</textarea></label>
                 <div class="mt-6 flex justify-end"><button type="submit" class="btn btn-primary" data-funding-submit>{{ $editingAllocation ? 'Simpan perubahan draft' : 'Simpan alokasi sebagai draft' }}</button></div>
             </section>
-            <aside class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p class="font-bold">Tentang bukti alokasi</p><p class="mt-2 text-xs leading-5">Bukti langsung untuk alokasi belum tersedia. Simpan bukti pengeluaran pada transaksi realisasi saat uang benar-benar dibayarkan. Alokasi tetap disimpan sebagai rencana yang melalui proses pengajuan dan persetujuan.</p></aside>
+            <aside class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950 xl:sticky xl:top-28"><p class="font-bold">Tentang bukti alokasi</p><p class="mt-2 text-sm leading-6">Bukti langsung untuk alokasi belum tersedia. Simpan bukti pengeluaran pada transaksi realisasi saat uang benar-benar dibayarkan. Alokasi tetap disimpan sebagai rencana yang melalui proses pengajuan dan persetujuan.</p></aside>
         </form>
 
         <section class="mt-8 rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300 sm:p-6">
