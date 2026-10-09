@@ -31,8 +31,7 @@ final class DistributionRealizationLinkService
             ->whereNotIn('id', $usedIds)
             ->whereHas('transaction', fn ($query) => $query
                 ->whereIn('status', self::VALID_TRANSACTION_STATUSES)
-                ->whereHas('type', fn ($type) => $type->where('code', TransactionTypeCode::Payment->value))
-                ->whereHas('splits', fn ($split) => $split->where('program_id', $distribution->program_id)))
+                ->whereHas('type', fn ($type) => $type->where('code', TransactionTypeCode::Payment->value)))
             ->with([
                 'transaction.type', 'transaction.splits.account', 'transaction.splits.fund',
                 'budgetAllocationVersion.allocation.program', 'budgetAllocationVersion.allocation.fund',
@@ -41,9 +40,12 @@ final class DistributionRealizationLinkService
             ->get()
             ->each(function (FundRealization $realization) use ($distribution): void {
                 $errors = $this->compatibilityErrors($distribution, $realization);
+                $warnings = $this->compatibilityWarnings($distribution, $realization);
                 $realization->setAttribute('link_validation_errors', $errors);
+                $realization->setAttribute('link_validation_warnings', $warnings);
                 $realization->setAttribute('link_compatible', $errors === []);
                 $realization->setAttribute('link_funds', $realization->transaction->splits->pluck('fund.name')->filter()->unique()->values()->implode(', '));
+                $realization->setAttribute('link_program', $realization->budgetAllocationVersion?->allocation?->program);
             })
             ->sort(function (FundRealization $left, FundRealization $right) use ($distribution): int {
                 $compatibility = ((int) ! $left->link_compatible) <=> ((int) ! $right->link_compatible);
@@ -59,7 +61,7 @@ final class DistributionRealizationLinkService
     public function link(string $entityId, string $distributionId, string $realizationId, int $revision, ?int $actor): Distribution
     {
         return DB::transaction(function () use ($entityId, $distributionId, $realizationId, $revision, $actor): Distribution {
-            $distribution = Distribution::forEntity($entityId)->with('items.beneficiary')->lockForUpdate()->findOrFail($distributionId);
+            $distribution = Distribution::forEntity($entityId)->with(['program', 'items.beneficiary'])->lockForUpdate()->findOrFail($distributionId);
             if ($distribution->realization_id === $realizationId) {
                 return $distribution->fresh(['realization.transaction']);
             }
@@ -75,7 +77,7 @@ final class DistributionRealizationLinkService
             $realization->setRelation('transaction', $transaction);
             if ($realization->budget_allocation_version_id) {
                 $allocationVersion = BudgetAllocationVersion::forEntity($entityId)
-                    ->with(['allocation', 'fundings'])
+                    ->with(['allocation.program', 'fundings'])
                     ->lockForUpdate()
                     ->findOrFail($realization->budget_allocation_version_id);
                 $realization->setRelation('budgetAllocationVersion', $allocationVersion);
@@ -137,10 +139,14 @@ final class DistributionRealizationLinkService
             $errors[] = 'Realisasi tidak memiliki Allocation Version approved yang valid.';
         }
         if ($allocation && $allocation->program_id !== $distribution->program_id) {
-            $errors[] = 'Realisasi tidak dapat ditautkan karena Program berbeda.';
+            $errors[] = sprintf(
+                'Program berbeda: Penyaluran menggunakan %s, sedangkan Allocation/Realisasi menggunakan %s.',
+                $distribution->program?->code ?? $distribution->program_id,
+                $allocation->program?->code ?? $allocation->program_id,
+            );
         }
         if ($splits->isEmpty() || $splits->contains(fn ($split): bool => $split->program_id !== $distribution->program_id)) {
-            $errors[] = 'Seluruh rincian Realisasi harus menggunakan Program Penyaluran.';
+            $errors[] = 'Program pada rincian transaksi Realisasi tidak sama dengan Program Penyaluran.';
         }
         if ($splits->contains(fn ($split): bool => $split->account?->account_class !== 'expense')) {
             $errors[] = 'Rincian Realisasi bukan pengeluaran program.';
@@ -165,11 +171,18 @@ final class DistributionRealizationLinkService
             || ! DecimalAmount::equals($total, DecimalAmount::sum($splits->pluck('split_amount')))) {
             $errors[] = 'Nominal Realisasi berbeda dengan total rincian penerima Penyaluran.';
         }
+        return $errors;
+    }
+
+    /** @return list<string> */
+    private function compatibilityWarnings(Distribution $distribution, FundRealization $realization): array
+    {
+        $transaction = $realization->transaction;
         if ($transaction && ($transaction->business_date->lt($distribution->starts_on) || $transaction->business_date->gt($distribution->ends_on))) {
-            $errors[] = 'Tanggal Realisasi berada di luar periode Penyaluran.';
+            return ['Tanggal Realisasi berada di luar periode operasional Penyaluran; periksa kembali sebelum menautkan.'];
         }
 
-        return $errors;
+        return [];
     }
 
     private function require(bool $condition, string $message): void
