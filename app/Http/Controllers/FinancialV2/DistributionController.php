@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -87,6 +88,55 @@ final class DistributionController
             ->appends($request->only(['entity', 'q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator', 'per_page']));
 
         return view('masjid.mrj.admin.financial-v2.distributions.beneficiaries', compact('entity', 'people', 'perPage'));
+    }
+
+    public function exportBeneficiaries(Request $request)
+    {
+        $entity = $this->context($request);
+        $people = $this->people($request, $entity->id)->get();
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Penerima ZISWAF');
+        $sheet->fromArray(BeneficiaryImportService::HEADERS, null, 'A1');
+
+        $statusLabels = ['active' => 'Aktif', 'inactive' => 'Tidak aktif', 'archived' => 'Arsip'];
+        foreach ($people as $index => $person) {
+            $row = $index + 2;
+            $values = [
+                $person->display_name,
+                $person->contact_reference,
+                $person->rt,
+                $person->rw,
+                $person->rt_coordinator_name,
+                $person->beneficiary_type_label,
+                $statusLabels[$person->status] ?? $person->status,
+                $person->address,
+                $person->beneficiary_notes,
+            ];
+            foreach ($values as $column => $value) {
+                // Explicit strings prevent values beginning with =, +, -, or @ from becoming formulas.
+                $sheet->setCellValueExplicit([$column + 1, $row], (string) ($value ?? ''), DataType::TYPE_STRING);
+            }
+        }
+
+        $lastRow = max(1, $people->count() + 1);
+        $sheet->freezePane('A2');
+        $sheet->setAutoFilter("A1:I{$lastRow}");
+        $sheet->getStyle('A1:I1')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1:I1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF047857');
+        $sheet->getStyle("A1:I{$lastRow}")->getAlignment()->setVertical('top')->setWrapText(true);
+        foreach (['A' => 30, 'B' => 20, 'C' => 8, 'D' => 8, 'E' => 24, 'F' => 20, 'G' => 14, 'H' => 40, 'I' => 40] as $column => $width) {
+            $sheet->getColumnDimension($column)->setWidth($width);
+        }
+
+        $filename = 'penerima-ziswaf-'.strtolower($entity->code).'-'.now()->format('Ymd-His').'.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     public function destroyBeneficiaries(Request $request)

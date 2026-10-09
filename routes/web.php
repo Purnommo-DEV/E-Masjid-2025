@@ -411,6 +411,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/laporan-ziswaf', [ZiswafReportingV2Controller::class, 'index'])->name('ziswaf-v2.index');
         Route::get('/laporan-ziswaf/program/{program}', [ZiswafReportingV2Controller::class, 'program'])->name('ziswaf-v2.program');
         Route::get('/penerima', [DistributionController::class, 'beneficiaries'])->name('beneficiaries.index');
+        Route::get('/penerima/export', [DistributionController::class, 'exportBeneficiaries'])->name('beneficiaries.export');
         Route::post('/penerima', [DistributionController::class, 'saveBeneficiary'])->name('beneficiaries.store');
         Route::delete('/penerima', [DistributionController::class, 'destroyBeneficiaries'])->name('beneficiaries.destroy-bulk');
         Route::get('/penerima-import/template', [DistributionController::class, 'beneficiaryImportTemplate'])->name('beneficiaries.import.template');

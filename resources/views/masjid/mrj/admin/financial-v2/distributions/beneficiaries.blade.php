@@ -1,43 +1,56 @@
 @extends('masjid.mrj.admin.financial-v2.layout')
 @section('title', 'Master Penerima ZISWAF')
+@push('styles')
+<style>
+@media (min-width: 1024px) {
+    .beneficiary-filter-grid { grid-template-columns: minmax(13rem, 1.45fr) minmax(7rem, .7fr) minmax(10rem, 1fr) 4.5rem 4.5rem minmax(10rem, 1fr) auto; }
+}
+</style>
+@endpush
 @section('content')
 @php $columnCount = 10; @endphp
 
-<div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-    <div>
+<header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
         <h1 class="text-2xl font-bold">Master Penerima ZISWAF</h1>
-        <p class="mt-1 text-sm opacity-70">Identitas internal · {{ $entity->name }} · {{ number_format($people->total(), 0, ',', '.') }} penerima sesuai filter</p>
+        <p class="mt-1 max-w-2xl text-sm text-base-content/65">Kelola identitas penerima dalam {{ $entity->name }}. Data master ini tidak membuat transaksi atau pencatatan keuangan.</p>
+        <p class="mt-2 text-sm font-semibold text-emerald-800">{{ number_format($people->total(), 0, ',', '.') }} penerima sesuai filter</p>
     </div>
-    <div class="flex flex-wrap items-end gap-2">
+    <div class="flex flex-wrap gap-2 sm:justify-end">
         <a class="btn btn-outline btn-sm" href="{{ route('financial-v2.beneficiaries.import.template', ['entity' => $entity->id]) }}">Download Template</a>
-        <form method="post" action="{{ route('financial-v2.beneficiaries.import.preview') }}" enctype="multipart/form-data" class="flex flex-wrap items-end gap-2">
+        <a class="btn btn-success btn-sm" href="{{ route('financial-v2.beneficiaries.export', array_merge(['entity' => $entity->id], request()->only(['q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator']))) }}">Export Excel</a>
+    </div>
+</header>
+
+<section class="mb-5 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div><h2 class="font-bold">Import Excel</h2><p class="mt-1 text-sm text-base-content/65">Pilih XLS/XLSX lalu periksa hasil preview sebelum menyimpan data baru.</p></div>
+        <form method="post" action="{{ route('financial-v2.beneficiaries.import.preview') }}" enctype="multipart/form-data" class="grid gap-3 sm:grid-cols-[minmax(16rem,1fr)_auto] sm:items-end lg:w-[36rem]">
             @csrf
             <input type="hidden" name="entity" value="{{ $entity->id }}">
-            <label class="form-control text-sm"><span class="label-text">Import XLS/XLSX</span><input required type="file" name="import_file" accept=".xls,.xlsx" class="file-input file-input-bordered file-input-sm"></label>
-            <button class="btn btn-primary btn-sm">Preview Import</button>
+            <label class="form-control min-w-0 text-sm"><span class="label-text font-medium">File XLS/XLSX</span><input required type="file" name="import_file" accept=".xls,.xlsx" class="file-input file-input-bordered file-input-sm w-full"></label>
+            <button class="btn btn-primary btn-sm w-full sm:w-auto">Preview Import</button>
         </form>
-    <form method="get" action="{{ route('financial-v2.beneficiaries.index') }}" class="flex items-end gap-2" data-page-size-form>
-        @foreach(['entity', 'q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator'] as $key)
-            @if(request()->filled($key))<input type="hidden" name="{{ $key }}" value="{{ request($key) }}">@endif
-        @endforeach
-        <label class="form-control text-sm">
-            <span class="label-text">Tampilkan</span>
-            <select class="select select-bordered select-sm" name="per_page" data-page-size>
-                @foreach(['10' => '10', '20' => '20', '100' => '100', 'all' => 'Semua'] as $value => $label)
-                    <option value="{{ $value }}" @selected($perPage === (string) $value)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </label>
-        <noscript><button class="btn btn-outline btn-sm">Terapkan</button></noscript>
-    </form>
     </div>
-</div>
+</section>
 
 @if(session('warning'))
     <div role="alert" class="alert alert-warning mb-5 text-sm"><span>{{ session('warning') }}</span></div>
 @endif
 
-@include('masjid.mrj.admin.financial-v2.distributions.filters')
+<section class="mb-5 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
+    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div><h2 class="font-bold">Filter penerima</h2><p class="mt-1 text-sm text-base-content/65">Pencarian nama berjalan otomatis; filter lain diterapkan melalui tombol Cari / filter.</p></div>
+        <form method="get" action="{{ route('financial-v2.beneficiaries.index') }}" class="flex items-end gap-2" data-page-size-form>
+            @foreach(['entity', 'q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator'] as $key)
+                @if(request()->filled($key))<input type="hidden" name="{{ $key }}" value="{{ request($key) }}">@endif
+            @endforeach
+            <label class="form-control text-sm"><span class="label-text font-medium">Tampilkan</span><select class="select select-bordered select-sm" name="per_page" data-page-size>@foreach(['10' => '10', '20' => '20', '100' => '100', 'all' => 'Semua'] as $value => $label)<option value="{{ $value }}" @selected($perPage === (string) $value)>{{ $label }}</option>@endforeach</select></label>
+            <noscript><button class="btn btn-outline btn-sm">Terapkan</button></noscript>
+        </form>
+    </div>
+    @include('masjid.mrj.admin.financial-v2.distributions.filters')
+</section>
 
 @isset($importPreview)
 <section class="mb-6 rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
