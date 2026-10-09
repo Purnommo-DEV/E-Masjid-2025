@@ -14,8 +14,9 @@
         $counterpartyId = $value('counterparty_id', $transaction?->counterparty_id);
         $fundForAllocation = fn ($version) => $version->fundings->pluck('fund.name')->filter()->join(' + ') ?: ($options['funds']->firstWhere('id', $version->allocation?->fund_id)?->name ?? 'Dana');
         $programForAllocation = fn ($version) => $options['programs']->firstWhere('id', $version->allocation?->program_id)?->name;
-        $categoryForAllocation = fn ($version) => $options['categories']->firstWhere('id', $version->allocation?->category_id)?->name;
+        $categoryForAllocation = fn ($version) => $version->allocation?->category?->name;
         $selectedAllocationVersionId = $selectedAllocationVersionId ?? null;
+        $allocationCategory = $transaction?->realization?->budgetAllocationVersion?->allocation?->category;
         $realizationSources = old('funding_sources');
         if ($operation === 'realization' && $realizationSources === null) {
             $realizationSources = $transaction
@@ -86,7 +87,7 @@
                             <label class="form-control"><span class="label-text font-medium">Dana</span><select name="fund_id" class="select select-bordered w-full" required><option value="">Pilih dana</option>@foreach($options['funds'] as $fund)<option value="{{ $fund->id }}" @selected($value('fund_id', $split?->fund_id) === $fund->id)>{{ $fund->name }}</option>@endforeach</select></label>
                         @endif
                         @if ($operation === 'realization')
-                            <label class="form-control"><span class="label-text font-medium">Kategori dari alokasi</span><input type="hidden" name="category_id" value="{{ $value('category_id', $transaction?->category_id) }}" data-realization-category><input type="text" class="input input-bordered w-full bg-base-200" value="" data-realization-category-label readonly><span class="label-text-alt">Dikunci agar konteks Realisasi selalu sama dengan Allocation.</span></label>
+                            <label class="form-control"><span class="label-text font-medium">Kategori dari alokasi</span><input type="hidden" name="category_id" value="{{ $isEdit ? $allocationCategory?->id : $value('category_id', $transaction?->category_id) }}" data-realization-category><input type="text" class="input input-bordered w-full bg-base-200" value="{{ $allocationCategory?->name }}" data-realization-category-label readonly><span class="label-text-alt">Dikunci agar konteks Realisasi selalu sama dengan Allocation.</span></label>
                         @else
                             <label class="form-control"><span class="label-text font-medium">Kategori</span><select name="category_id" class="select select-bordered w-full" required><option value="">Pilih kategori</option>@foreach($options['categories'] as $category)<option value="{{ $category->id }}" @selected($value('category_id', $transaction?->category_id) === $category->id)>{{ $category->name }}</option>@endforeach</select></label>
                         @endif
@@ -195,10 +196,13 @@
         form.dataset.realizationFundingReady = balanced ? 'true' : 'false';
         submit.disabled = !balanced || form.dataset.configurationReady !== 'true';
     };
-    const resetForAllocation = () => {
+    const syncAllocationDimensions = () => {
         const option = allocation.options[allocation.selectedIndex];
         if (category) category.value = option?.dataset.categoryId || '';
         if (categoryLabel) categoryLabel.value = option?.dataset.categoryName || 'Pilih alokasi terlebih dahulu';
+    };
+    const resetForAllocation = () => {
+        syncAllocationDimensions();
         lines.innerHTML = ''; nextIndex = 0;
         permitted().forEach((funding) => row({ fund_id: funding.fund_id, amount: funding.available }));
         render();
@@ -206,6 +210,7 @@
     allocation.addEventListener('change', resetForAllocation);
     section.querySelector('[data-add-realization-funding]').addEventListener('click', () => { if (permitted().length) row({}); render(); });
     target.addEventListener('input', render);
+    syncAllocationDimensions();
     if (initial.length) initial.forEach(row); else resetForAllocation();
     render();
 })();

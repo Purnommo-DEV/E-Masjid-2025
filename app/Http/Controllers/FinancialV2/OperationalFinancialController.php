@@ -179,7 +179,7 @@ final class OperationalFinancialController
     public function edit(Request $request, FinancialTransaction $transaction)
     {
         try {
-            $transaction->load(['type', 'splits', 'primaryFinancialAccount', 'counterparty', 'category', 'realization']);
+            $transaction->load(['type', 'splits', 'primaryFinancialAccount', 'counterparty', 'category', 'realization.budgetAllocationVersion.allocation.category']);
             $this->ensureDraftIsEditable($transaction);
             $operation = $this->operationForTransaction($transaction);
             if (! in_array($operation, ['receipt', 'payment', 'realization'], true)) {
@@ -196,7 +196,14 @@ final class OperationalFinancialController
                 'entity' => $context['entity'],
                 'operation' => $operation,
                 'definition' => self::OPERATIONS[$operation],
-                'options' => $this->formOptions($transaction->accounting_entity_id, null, $operation === 'realization', $transaction->accounting_date->toDateString(), in_array($operation, ['payment', 'realization'], true)),
+                'options' => $this->formOptions(
+                    $transaction->accounting_entity_id,
+                    self::OPERATIONS[$operation]['code'],
+                    $operation === 'realization',
+                    $transaction->accounting_date->toDateString(),
+                    in_array($operation, ['payment', 'realization'], true),
+                    $transaction->realization?->budget_allocation_version_id,
+                ),
                 'transaction' => $transaction,
                 'submissionKey' => Str::afterLast($transaction->idempotency_key, ':'),
                 'today' => $transaction->accounting_date->toDateString(),
@@ -232,7 +239,7 @@ final class OperationalFinancialController
                 $fundingSources = $this->realizationFundingSources($entity, $allocationVersionId, $input['funding_sources'] ?? null, $this->amount($input['amount']));
             }
             $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
-            $category = $this->category($entity, $input['category_id'], $type->id);
+            $category = $this->category($entity, $input['category_id'], $type->id, $operation === 'realization' ? $allocationCategoryId : null);
             $this->fund($entity, $fundId);
             $this->program($entity, $programId);
             $amount = $this->amount($input['amount']);
@@ -1257,7 +1264,7 @@ final class OperationalFinancialController
     }
 
     /** @return array<string, mixed> */
-    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true, ?string $date = null, bool $excludeBeneficiaryCounterparties = false): array
+    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true, ?string $date = null, bool $excludeBeneficiaryCounterparties = false, ?string $currentAllocationVersionId = null): array
     {
         $entityId = $entity instanceof AccountingEntity ? $entity->id : $entity;
         $date ??= now()->toDateString();
@@ -1271,7 +1278,7 @@ final class OperationalFinancialController
                 ->where('status', 'approved')
                 ->pluck('id');
             $allocationVersions = BudgetAllocationVersion::query()
-                ->with(['allocation', 'fundings.fund'])
+                ->with(['allocation.category', 'fundings.fund'])
                 ->where('accounting_entity_id', $entityId)
                 ->where('status', 'approved')
                 ->whereIn('budget_allocation_id', $approvedAllocationIds)
@@ -1282,7 +1289,8 @@ final class OperationalFinancialController
                 $version->setAttribute('funding_availability', $this->budgetAllocations->fundingAvailability($version->id));
             });
             $allocationVersions = $allocationVersions
-                ->filter(fn (BudgetAllocationVersion $version): bool => DecimalAmount::compare($version->availability['available'], '0.00') > 0)
+                ->filter(fn (BudgetAllocationVersion $version): bool => $version->id === $currentAllocationVersionId
+                    || DecimalAmount::compare($version->availability['available'], '0.00') > 0)
                 ->values();
         }
 
@@ -1602,12 +1610,18 @@ final class OperationalFinancialController
         return $program;
     }
 
-    private function category(AccountingEntity $entity, ?string $id, ?string $typeId = null): ?Category
+    private function category(AccountingEntity $entity, ?string $id, ?string $typeId = null, ?string $authoritativeCategoryId = null): ?Category
     {
         if (! $id) {
             return null;
         }
-        $category = Category::query()->where('accounting_entity_id', $entity->id)->where('status', 'active')->find($id);
+        $category = Category::query()
+            ->where('accounting_entity_id', $entity->id)
+            ->where(fn (Builder $query) => $query->where('status', 'active')->when(
+                $authoritativeCategoryId,
+                fn (Builder $status) => $status->orWhere('id', $authoritativeCategoryId),
+            ))
+            ->find($id);
         if (! $category || ($typeId && $category->transaction_type_id && $category->transaction_type_id !== $typeId)) {
             throw new FinancialDomainException('E-UX-CATEGORY', 'Kategori yang dipilih tidak dapat digunakan untuk jenis transaksi ini.');
         }
