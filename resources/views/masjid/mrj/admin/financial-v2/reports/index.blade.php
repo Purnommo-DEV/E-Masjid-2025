@@ -7,6 +7,7 @@
         $data = $reportData['data'];
         $apiQuery = array_filter(array_merge($filters, ['report' => $report]), fn ($value) => $value !== null && $value !== '');
         $format = fn ($amount) => 'Rp '.($amount ?? '0.00');
+        $date = fn ($value) => \App\Support\FinancialDate::date($value);
         $hasData = (bool) ($data['has_data'] ?? false);
         $isFridayReport = $report === 'friday';
     @endphp
@@ -91,7 +92,7 @@
     </section>
 
     <div class="mb-5 flex flex-wrap gap-2 text-xs text-base-content/60">
-        <span class="badge badge-outline">Periode: {{ $reportData['period']['from_accounting_date'] }} s.d. {{ $reportData['period']['through_accounting_date'] }}</span>
+        <span class="badge badge-outline">Periode: {{ $date($reportData['period']['from_accounting_date']) }} s.d. {{ $date($reportData['period']['through_accounting_date']) }}</span>
         <span class="badge badge-outline">Data sampai transaksi resmi ke-{{ $reportData['as_of_posting_sequence'] }}</span>
     </div>
 
@@ -148,12 +149,12 @@
         </div>
         <x-financial-v2.table :title="$report === 'account-movement' ? 'Mutasi Rekening' : 'Mutasi Dana'">
             <thead><tr><th>Tanggal</th><th>Nomor bukti</th><th>Rekening / Dana / Program</th><th class="text-right">{{ $report === 'fund-movement' ? 'Dampak Dana' : 'Perubahan' }}</th><th class="text-right">{{ $report === 'fund-movement' ? 'Saldo Dana berjalan' : 'Saldo berjalan' }}</th></tr></thead>
-            <tbody>@foreach ($data['rows'] as $row)@php $movementAmount = $report === 'fund-movement' ? $row['fund_balance_delta'] : $row['signed_amount']; @endphp<tr><td>{{ $row['accounting_date'] }}</td><td><div>{{ $row['voucher_number'] ?: '—' }}</div><div class="text-xs opacity-60">{{ $row['transaction_type_name'] }} @if($row['reversal_of_journal_id']) · pembalikan @endif</div></td><td><div>{{ $row['financial_account_code'] ?? $row['fund_code'] ?? '—' }}</div><div class="text-xs opacity-60">{{ $row['program_code'] ? 'Program '.$row['program_code'] : 'Tanpa program' }}</div></td><td class="text-right font-mono">{{ $movementAmount[0] === '-' ? '−' : '+' }}{{ $format(ltrim($movementAmount, '-')) }}</td><td class="text-right font-mono font-semibold">{{ $format($report === 'fund-movement' ? $row['running_fund_balance'] : $row['running_balance']) }}</td></tr>@endforeach</tbody>
+            <tbody>@foreach ($data['rows'] as $row)@php $movementAmount = $report === 'fund-movement' ? $row['fund_balance_delta'] : $row['signed_amount']; @endphp<tr><td>{{ $date($row['accounting_date']) }}</td><td><div>{{ $row['voucher_number'] ?: '—' }}</div><div class="text-xs opacity-60">{{ $row['transaction_type_name'] }} @if($row['reversal_of_journal_id']) · pembalikan @endif</div></td><td><div>{{ $row['financial_account_code'] ?? $row['fund_code'] ?? '—' }}</div><div class="text-xs opacity-60">{{ $row['program_code'] ? 'Program '.$row['program_code'] : 'Tanpa program' }}</div></td><td class="text-right font-mono">{{ $movementAmount[0] === '-' ? '−' : '+' }}{{ $format(ltrim($movementAmount, '-')) }}</td><td class="text-right font-mono font-semibold">{{ $format($report === 'fund-movement' ? $row['running_fund_balance'] : $row['running_balance']) }}</td></tr>@endforeach</tbody>
         </x-financial-v2.table>
     @elseif ($report === 'transaction-history')
         <x-financial-v2.table title="Riwayat Transaksi Resmi">
             <thead><tr><th>Tanggal / bukti</th><th>Jenis</th><th>Rekening, dana, dan program</th><th>Lampiran bukti</th><th class="text-right">Nominal</th></tr></thead>
-            <tbody>@foreach ($data['rows'] as $row)<tr><td>{{ $row['accounting_date'] }}<div class="text-xs opacity-60">{{ $row['voucher_number'] ?: 'Nomor bukti belum tersedia' }}</div></td><td><div>{{ $row['transaction_type_name'] }}</div><div class="text-xs opacity-60">Dicatat resmi</div></td><td class="text-xs">Dana: {{ $row['fund_codes'] ?: '—' }}<br>Rekening: {{ $row['financial_account_codes'] ?: '—' }}<br>Program: {{ $row['program_codes'] ?: '—' }}</td><td>{{ $row['evidence_count'] }} lampiran</td><td class="text-right font-mono">{{ $format($row['amount']) }}</td></tr>@endforeach</tbody>
+            <tbody>@foreach ($data['rows'] as $row)<tr><td>{{ $date($row['accounting_date']) }}<div class="text-xs opacity-60">{{ $row['voucher_number'] ?: 'Nomor bukti belum tersedia' }}</div></td><td><div>{{ $row['transaction_type_name'] }}</div><div class="text-xs opacity-60">Dicatat resmi</div></td><td class="text-xs">Dana: {{ $row['fund_codes'] ?: '—' }}<br>Rekening: {{ $row['financial_account_codes'] ?: '—' }}<br>Program: {{ $row['program_codes'] ?: '—' }}</td><td>{{ $row['evidence_count'] }} lampiran</td><td class="text-right font-mono">{{ $format($row['amount']) }}</td></tr>@endforeach</tbody>
         </x-financial-v2.table>
         <details class="mt-4 rounded-xl border border-base-300 bg-base-100 p-4"><summary class="cursor-pointer text-sm font-semibold">Detail akuntansi transaksi</summary><div class="mt-3 overflow-x-auto"><table class="table table-sm"><thead><tr><th>ID jurnal</th><th>Jumlah baris</th></tr></thead><tbody>@foreach ($data['rows'] as $row)<tr><td class="font-mono text-xs">{{ $row['journal_id'] }}</td><td>{{ $row['line_count'] }}</td></tr>@endforeach</tbody></table></div></details>
     @elseif ($report === 'cash-flow' || $report === 'friday')
@@ -175,7 +176,7 @@
                     <thead><tr><th>Tanggal / bukti</th><th>Rincian</th><th class="text-right">Nominal</th></tr></thead>
                     <tbody>
                         @forelse ($data['receipt_rows'] as $row)
-                            <tr><td>{{ $row['accounting_date'] }}<div class="text-xs opacity-60">{{ $row['voucher_number'] ?: 'Bukti belum tersedia' }}</div></td><td>{{ $row['description'] ?: $row['transaction_type_name'] }}@if($row['is_reversal'])<div class="text-xs text-amber-700">Pembalikan</div>@endif</td><td class="text-right font-mono">{{ $format($row['amount']) }}</td></tr>
+                            <tr><td>{{ $date($row['accounting_date']) }}<div class="text-xs opacity-60">{{ $row['voucher_number'] ?: 'Bukti belum tersedia' }}</div></td><td>{{ $row['description'] ?: $row['transaction_type_name'] }}@if($row['is_reversal'])<div class="text-xs text-amber-700">Pembalikan</div>@endif</td><td class="text-right font-mono">{{ $format($row['amount']) }}</td></tr>
                         @empty <tr><td colspan="3" class="text-center text-sm opacity-60">Tidak ada penerimaan resmi pada periode ini.</td></tr>
                         @endforelse
                     </tbody>
@@ -185,7 +186,7 @@
                     <thead><tr><th>Tanggal / bukti</th><th>Rincian</th><th class="text-right">Nominal</th></tr></thead>
                     <tbody>
                         @forelse ($data['payment_rows'] as $row)
-                            <tr><td>{{ $row['accounting_date'] }}<div class="text-xs opacity-60">{{ $row['voucher_number'] ?: 'Bukti belum tersedia' }}</div></td><td>{{ $row['description'] ?: $row['transaction_type_name'] }}@if($row['is_reversal'])<div class="text-xs text-amber-700">Pembalikan</div>@endif</td><td class="text-right font-mono">{{ $format($row['amount']) }}</td></tr>
+                            <tr><td>{{ $date($row['accounting_date']) }}<div class="text-xs opacity-60">{{ $row['voucher_number'] ?: 'Bukti belum tersedia' }}</div></td><td>{{ $row['description'] ?: $row['transaction_type_name'] }}@if($row['is_reversal'])<div class="text-xs text-amber-700">Pembalikan</div>@endif</td><td class="text-right font-mono">{{ $format($row['amount']) }}</td></tr>
                         @empty <tr><td colspan="3" class="text-center text-sm opacity-60">Tidak ada pengeluaran resmi pada periode ini.</td></tr>
                         @endforelse
                     </tbody>

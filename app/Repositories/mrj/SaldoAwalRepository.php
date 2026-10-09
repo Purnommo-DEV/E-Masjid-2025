@@ -123,7 +123,7 @@ protected $jurnalRepo;
         }
 
         if ($periodeTerakhir->status !== 'locked') {
-            throw new \Exception('Periode sebelumnya (' . $periodeTerakhir->periode->format('d M Y') . ') belum di-lock!');
+            throw new \Exception('Periode sebelumnya (' . $periodeTerakhir->periode->format('d/m/Y') . ') belum di-lock!');
         }
 
         $tanggalBaru = $periodeTerakhir->periode->addYear()->startOfYear();

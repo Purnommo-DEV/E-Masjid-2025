@@ -10,5 +10,6 @@
 </head>
 <body class="m-0 bg-white antialiased">
     @yield('content')
+    <x-financial-date-inputs />
 </body>
 </html>

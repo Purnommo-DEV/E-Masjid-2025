@@ -60,7 +60,7 @@
             <div class="space-y-3 lg:hidden">
                 @foreach ($transactions as $transaction)
                     <article class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300">
-                        <div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="font-semibold">{{ $typeLabel($transaction) }}</p><p class="mt-1 text-xs text-base-content/60">{{ $transaction->accounting_date->translatedFormat('d M Y') }}</p></div><span class="badge badge-outline shrink-0">{{ $statusLabel($transaction->status) }}</span></div>
+                        <div class="flex items-start justify-between gap-3"><div class="min-w-0"><p class="font-semibold">{{ $typeLabel($transaction) }}</p><p class="mt-1 text-xs text-base-content/60">{{ $transaction->accounting_date->format('d/m/Y') }}</p></div><span class="badge badge-outline shrink-0">{{ $statusLabel($transaction->status) }}</span></div>
                         <p class="mt-3 text-xl font-bold">{{ $rupiah($transaction->gross_amount) }}</p>
                         <p class="mt-2 truncate text-sm text-base-content/70">{{ $transaction->description ?: ($transaction->counterparty?->display_name ?? 'Tanpa keterangan') }}</p>
                         <p class="mt-2 text-xs leading-5 text-base-content/60">{{ $transaction->primaryFinancialAccount?->name ?? '—' }} · {{ $fundLabel($transaction) }} · {{ $transaction->category?->name ?? '—' }}</p>

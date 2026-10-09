@@ -5,7 +5,7 @@
 @section('content')
     @php $tone = match($batch->status) { 'posted' => 'badge-success', 'approved', 'reviewed' => 'badge-warning', default => 'badge-ghost' }; @endphp
     <section class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div><a class="text-sm text-emerald-700 hover:underline" href="{{ route('financial-v2.opening-balances.index', ['entity' => $entity->id]) }}">← Saldo Awal</a><h1 class="mt-2 text-2xl font-bold">{{ $batch->cutover_reference }}</h1><p class="mt-1 text-sm text-base-content/65">Tanggal posisi rehearsal: {{ $batch->cutover_date->toDateString() }} · Paket bukti: {{ $batch->evidence_package_ref }}</p></div>
+        <div><a class="text-sm text-emerald-700 hover:underline" href="{{ route('financial-v2.opening-balances.index', ['entity' => $entity->id]) }}">← Saldo Awal</a><h1 class="mt-2 text-2xl font-bold">{{ $batch->cutover_reference }}</h1><p class="mt-1 text-sm text-base-content/65">Tanggal posisi rehearsal: {{ \App\Support\FinancialDate::date($batch->cutover_date) }} · Paket bukti: {{ $batch->evidence_package_ref }}</p></div>
         <span class="badge {{ $tone }} badge-lg">{{ str_replace('_', ' ', $batch->status) }}</span>
     </section>
 

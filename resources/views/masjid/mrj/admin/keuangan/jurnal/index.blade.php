@@ -111,9 +111,9 @@ $(document).ready(function() {
         columns: [
             { 
                 data: 'tanggal', 
-                render: d => d 
-                    ? new Date(d).toLocaleDateString('id-ID', {day:'2-digit', month:'2-digit', year:'numeric'}) 
-                    : '-' 
+                render: (d, type) => d
+                    ? (type === 'display' ? window.financialDate.toDisplay(String(d).slice(0, 10)) : d)
+                    : '-'
             },
             { data: 'no_jurnal' },
             { data: 'keterangan' },

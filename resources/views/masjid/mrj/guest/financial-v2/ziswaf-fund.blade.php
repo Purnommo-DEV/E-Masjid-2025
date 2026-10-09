@@ -4,8 +4,8 @@
 
 @php
     $rupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
-    $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->translatedFormat('d F Y');
-    $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->locale('id')->translatedFormat('d F Y, H:i') : null;
+    $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
+    $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->format('d/m/Y H:i') : null;
     $amountClass = static fn (string $kind): string => match ($kind) {
         'receipt' => 'text-emerald-700',
         'expense' => 'text-rose-700',
@@ -105,7 +105,7 @@
                     <div class="mt-5 divide-y divide-sky-100 rounded-xl bg-white/70 px-4">
                         @foreach ($report['source_opening_history'] as $item)
                             <article class="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div><p class="text-xs font-semibold text-slate-500">{{ $item['date'] }}</p><h3 class="mt-1 font-semibold text-slate-800">{{ $item['description'] }}</h3></div>
+                                <div><p class="text-xs font-semibold text-slate-500">{{ $date($item['date']) }}</p><h3 class="mt-1 font-semibold text-slate-800">{{ $item['description'] }}</h3></div>
                                 <div class="text-left sm:text-right"><p class="font-bold {{ $amountClass($item['kind']) }}">{{ $amountPrefix($item['kind'], $item['amount']) }}{{ $rupiah($item['amount']) }}</p><p class="mt-1 text-xs text-slate-500">Saldo sumber {{ $rupiah($item['running_balance']) }}</p></div>
                             </article>
                         @endforeach

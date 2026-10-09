@@ -33,7 +33,7 @@
         };
     @endphp
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div><a class="link text-sm text-base-content/60" href="{{ $backUrl }}">← Kembali ke {{ $backLabel }}</a><p class="mt-3 text-sm font-medium text-emerald-700">{{ $isBankMutation ? 'Mutasi Bank' : $transaction->type?->name }}</p><h1 class="mt-1 text-3xl font-bold">{{ $rupiah($transaction->gross_amount) }}</h1><p class="mt-2 text-sm text-base-content/65">{{ $transaction->accounting_date->translatedFormat('d F Y') }}</p></div>
+        <div><a class="link text-sm text-base-content/60" href="{{ $backUrl }}">← Kembali ke {{ $backLabel }}</a><p class="mt-3 text-sm font-medium text-emerald-700">{{ $isBankMutation ? 'Mutasi Bank' : $transaction->type?->name }}</p><h1 class="mt-1 text-3xl font-bold">{{ $rupiah($transaction->gross_amount) }}</h1><p class="mt-2 text-sm text-base-content/65">{{ $transaction->accounting_date->format('d/m/Y') }}</p></div>
         <span @class(['badge badge-lg', 'badge-success' => $transaction->status === 'posted', 'badge-warning' => in_array($transaction->status, ['draft', 'submitted', 'verified']), 'badge-error' => in_array($transaction->status, ['reversed', 'rejected', 'cancelled'])])>{{ $statusLabel }}</span>
     </div>
 

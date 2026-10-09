@@ -27,7 +27,7 @@ class KotakInfakRepository implements KotakInfakRepositoryInterface
                 ->orderBy('tanggal', 'desc');
 
             return DataTables::of($query)
-                ->addColumn('tanggal_group', fn($k) => $k->tanggal->format('d M Y'))
+                ->addColumn('tanggal_group', fn($k) => $k->tanggal->format('d/m/Y'))
                 ->addColumn('tanggal_raw', fn($k) => $k->tanggal->toDateString())
                 ->addColumn('jenis', fn($k) => $k->akunPendapatan->nama ?? 'Kotak Infak') // PAKAI NAMA AKUN!
                 ->addColumn('jumlah', fn($k) => 'Rp ' . number_format($k->total, 0, ',', '.'))
@@ -59,7 +59,7 @@ class KotakInfakRepository implements KotakInfakRepositoryInterface
                             </button>';
                 })
 ->addColumn('tanggal_group', function ($row) {
-    return $row->tanggal->translatedFormat('l, d F Y'); // Contoh: Senin, 15 Desember 2025
+    return $row->tanggal->format('d/m/Y');
     // atau pakai: $row->tanggal->format('d-m-Y');
 })
 

@@ -416,7 +416,7 @@ $(function(){
         const html = `
             <div class="text-center mb-8">
                 <h3 class="text-4xl font-black text-emerald-800 mb-2">${escapeHtml(data.jenis || 'Kotak Infak')}</h3>
-                <p class="text-lg text-gray-600">${data.tanggal || ''}${data.keterangan ? ' — '+escapeHtml(data.keterangan) : ''}</p>
+                <p class="text-lg text-gray-600">${data.tanggal ? window.financialDate.toDisplay(data.tanggal) : ''}${data.keterangan ? ' — '+escapeHtml(data.keterangan) : ''}</p>
                 <div class="text-5xl font-black text-emerald-600 mt-6">Rp ${Number(data.total||0).toLocaleString('id-ID')}</div>
             </div>
 

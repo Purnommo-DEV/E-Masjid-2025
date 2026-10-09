@@ -31,7 +31,7 @@
                     @forelse ($programs as $program)
                         <article class="p-5">
                             <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $program->name }}</p><p class="text-sm text-base-content/60">{{ $program->code }}@if($program->costCenter) · {{ $program->costCenter->name }}@endif</p></div><span class="badge {{ $program->status === 'active' ? 'badge-success' : 'badge-ghost' }}">{{ ucfirst($program->status) }}</span></div>
-                            <p class="mt-2 text-sm text-base-content/65">{{ $program->start_date?->translatedFormat('d M Y') ?? 'Mulai bisnis tidak dibatasi' }} — {{ $program->end_date?->translatedFormat('d M Y') ?? 'Berjalan sampai ditutup' }}</p>
+                            <p class="mt-2 text-sm text-base-content/65">{{ $program->start_date?->format('d/m/Y') ?? 'Mulai bisnis tidak dibatasi' }} — {{ $program->end_date?->format('d/m/Y') ?? 'Berjalan sampai ditutup' }}</p>
                             <div class="mt-4 flex flex-wrap gap-2">
                                 @if ($program->status !== 'active' && $program->status !== 'closed')<form method="post" action="{{ route('financial-v2.masters.programs.activate', $program) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-success btn-sm">Aktifkan</button></form>@endif
                                 @if ($program->status === 'active')<form method="post" action="{{ route('financial-v2.masters.programs.deactivate', $program) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-outline btn-sm">Nonaktifkan</button></form>@endif

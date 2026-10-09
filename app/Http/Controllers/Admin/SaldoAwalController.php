@@ -167,7 +167,7 @@ class SaldoAwalController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Periode baru berhasil dibuat: '.$periodeBaru->periode->format('d M Y').'. Silakan input saldo awal.',
+            'message' => 'Periode baru berhasil dibuat: '.$periodeBaru->periode->format('d/m/Y').'. Silakan input saldo awal.',
         ]);
     }
 }

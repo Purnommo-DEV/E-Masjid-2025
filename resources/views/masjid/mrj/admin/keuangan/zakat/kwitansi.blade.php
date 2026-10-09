@@ -46,7 +46,7 @@
                 </tr>
                 <tr>
                     <td>Tanggal</td>
-                    <td>: {{ $transaksi->tanggal->format('d F Y') }}</td>
+                    <td>: {{ $transaksi->tanggal->format('d/m/Y') }}</td>
                 </tr>
                 <tr>
                     <td>Diterima dari</td>

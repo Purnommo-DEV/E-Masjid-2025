@@ -67,8 +67,8 @@
 
         return ($negative ? '- ' : '').'Rp'.number_format((int) $integer, 0, ',', '.').','.$decimal;
     };
-    $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->translatedFormat('d F Y');
-    $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->locale('id')->translatedFormat('d F Y, H:i').' WIB' : 'Belum ada pembaruan posted';
+    $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
+    $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->format('d/m/Y H:i').' WIB' : 'Belum ada pembaruan posted';
     $summaries = collect($report['funds'])->keyBy('code');
 @endphp
 
@@ -151,7 +151,7 @@
                     <colgroup><col style="width:11%"><col style="width:29%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup>
                     <thead><tr><th>Tanggal</th><th>Uraian</th><th>Jenis</th><th class="amount">Pemasukan</th><th class="amount">Pengeluaran</th><th class="amount">Pemindahan</th><th class="amount">Saldo</th></tr></thead>
                     <tbody>@foreach ($detail['source_entries'] as $entry)<tr>
-                        <td>{{ $entry['date'] }}</td><td>{{ $entry['description'] }}</td><td>{{ $entry['kind'] === 'expense' ? 'Pengeluaran' : ($entry['kind'] === 'receipt' ? 'Pemasukan' : 'Saldo awal') }}</td>
+                        <td>{{ $date($entry['date']) }}</td><td>{{ $entry['description'] }}</td><td>{{ $entry['kind'] === 'expense' ? 'Pengeluaran' : ($entry['kind'] === 'receipt' ? 'Pemasukan' : 'Saldo awal') }}</td>
                         <td class="amount positive">{{ in_array($entry['kind'], ['receipt', 'opening'], true) ? $rupiah($entry['amount']) : '-' }}</td>
                         <td class="amount negative">{{ $entry['kind'] === 'expense' ? $rupiah($entry['amount']) : '-' }}</td><td class="amount">-</td><td class="amount">-</td>
                     </tr>@endforeach</tbody>

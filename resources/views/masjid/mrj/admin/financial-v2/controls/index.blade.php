@@ -66,7 +66,7 @@
                                 @php $periodRuns = $runs->get($period->id, collect()); @endphp
                                 <tr>
                                     <td class="font-medium">{{ $period->period_name }}</td>
-                                    <td>{{ $period->start_date->toDateString() }} s.d. {{ $period->end_date->toDateString() }}</td>
+                                    <td>{{ \App\Support\FinancialDate::date($period->start_date) }} s.d. {{ \App\Support\FinancialDate::date($period->end_date) }}</td>
                                     <td><span class="badge {{ $statusTone($period->status) }} badge-sm">{{ $statusLabel($period->status) }}</span></td>
                                     <td class="text-xs">
                                         @forelse ($periodRuns as $run)
@@ -135,7 +135,7 @@
                             <tbody>
                                 @forelse ($reconciliations as $reconciliation)
                                     <tr>
-                                        <td><div class="font-medium">{{ $reconciliation->financialAccount->code }} · {{ $reconciliation->financialAccount->name }}</div><div class="text-xs opacity-60">{{ $reconciliation->business_date->toDateString() }} · {{ $reconciliation->period->period_name }}</div></td>
+                                        <td><div class="font-medium">{{ $reconciliation->financialAccount->code }} · {{ $reconciliation->financialAccount->name }}</div><div class="text-xs opacity-60">{{ \App\Support\FinancialDate::date($reconciliation->business_date) }} · {{ $reconciliation->period->period_name }}</div></td>
                                         <td class="text-right font-mono">Rp {{ $reconciliation->statement_balance }}</td>
                                         <td class="text-right font-mono">Rp {{ $reconciliation->ledger_balance }}</td>
                                         <td class="text-right font-mono">Rp {{ $reconciliation->difference }}</td>

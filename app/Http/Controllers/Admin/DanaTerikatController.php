@@ -81,7 +81,7 @@ class DanaTerikatController extends Controller
             $query = $this->danaTerikat->getPenerimaanQuery($programId ? (int) $programId : null, $tahun ? (int) $tahun : null);
 
             return DataTables::of($query)
-                ->editColumn('tanggal', fn ($row) => Carbon::parse($row->tanggal)->format('d M Y'))
+                ->editColumn('tanggal', fn ($row) => Carbon::parse($row->tanggal)->format('d/m/Y'))
                 ->addColumn('program_nama', fn ($row) => $row->program_nama ?? 'Program Dihapus')
                 ->editColumn('jumlah', fn ($row) => 'Rp '.number_format($row->jumlah, 0, ',', '.'))
                 ->make(true);

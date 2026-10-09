@@ -506,6 +506,7 @@
             });
         })();
     </script>
+    <x-financial-date-inputs />
     @stack('scripts')
 </body>
 </html>

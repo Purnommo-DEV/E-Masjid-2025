@@ -29,7 +29,7 @@
                 <div class="divide-y divide-base-200">
                     @forelse ($versions as $version)
                         <article class="p-5">
-                            <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $version->fund?->name }}</p><p class="text-sm text-base-content/60">Versi {{ $version->version_no }} · {{ $version->effective_from?->translatedFormat('d M Y') }}@if($version->effective_to) — {{ $version->effective_to->translatedFormat('d M Y') }}@endif</p></div><span class="badge {{ $version->status === 'effective' ? 'badge-success' : 'badge-ghost' }}">{{ $version->status === 'effective' ? 'Berlaku' : ($version->status === 'replaced_unused' ? 'Diganti · belum digunakan' : ucfirst($version->status)) }}</span></div>
+                            <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $version->fund?->name }}</p><p class="text-sm text-base-content/60">Versi {{ $version->version_no }} · {{ $version->effective_from?->format('d/m/Y') }}@if($version->effective_to) — {{ $version->effective_to->format('d/m/Y') }}@endif</p></div><span class="badge {{ $version->status === 'effective' ? 'badge-success' : 'badge-ghost' }}">{{ $version->status === 'effective' ? 'Berlaku' : ($version->status === 'replaced_unused' ? 'Diganti · belum digunakan' : ucfirst($version->status)) }}</span></div>
                             <p class="mt-3 text-sm text-base-content/65">Dokumen: {{ $version->policy_document_ref }}@if($version->allowed_matrix_ref) · Matriks: {{ $version->allowed_matrix_ref }}@endif</p>
                             @if ($version->status === 'draft')
                                 @if ($version->rules->isNotEmpty())

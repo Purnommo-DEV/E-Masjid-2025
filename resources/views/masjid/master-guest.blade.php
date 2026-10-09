@@ -378,6 +378,7 @@
         btnDeny?.addEventListener('click', closeNotifModal);
     </script>
 
+    <x-financial-date-inputs />
     @stack('scripts')
 
 </body>

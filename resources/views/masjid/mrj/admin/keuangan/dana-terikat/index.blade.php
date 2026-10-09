@@ -3055,7 +3055,7 @@ function loadSaldo() {
                     </td>
                     <td>
                         <span class="text-xs">${p.verified_by || '-'}</span>
-                        ${p.verified_at ? `<span class="text-[10px] text-base-content/40 block">${new Date(p.verified_at).toLocaleDateString('id-ID')}</span>` : ''}
+                        ${p.verified_at ? `<span class="text-[10px] text-base-content/40 block">${window.financialDate.dateTime(p.verified_at).slice(0, 10)}</span>` : ''}
                     </td>
                     <td>
                         <span class="text-xs">${p.alasan_tidak_dapat || '-'}</span>
@@ -3198,7 +3198,7 @@ function loadSaldo() {
                         </div>
                         ${data.verified_at ? `
                             <div class="text-xs text-base-content/50">
-                                <span>Diverifikasi: ${new Date(data.verified_at).toLocaleString('id-ID')}</span>
+                                <span>Diverifikasi: ${window.financialDate.dateTime(data.verified_at)}</span>
                             </div>
                         ` : ''}
                     </div>

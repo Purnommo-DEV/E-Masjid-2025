@@ -474,7 +474,7 @@
         serverSide: true,
         ajax: '{{ route("admin.keuangan.zakat.data") }}',
         columns: [
-            { title: 'Tanggal', data: 'tanggal', render: d => moment(d).format('DD MMM YYYY') },
+            { title: 'Tanggal', data: 'tanggal', render: (d, type) => type === 'display' ? moment(d, 'YYYY-MM-DD', true).format('DD/MM/YYYY') : d },
             { title: 'Kwitansi', data: 'kwitansi' },
             { title: 'Muzakki', data: 'muzakki' },
             { title: 'Jenis', data: 'jenis' },

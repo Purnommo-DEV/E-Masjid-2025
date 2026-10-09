@@ -45,7 +45,7 @@
         <aside class="space-y-4">
             <section class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p class="font-bold">Batas accounting</p><p class="mt-2 leading-5">Riwayat ini adalah penjelasan sumber historis. Saldo accounting resmi tetap hanya berasal dari Posted V2 Ledger. Jika nilai sumber berubah, sistem menampilkan selisih rekonsiliasi secara jujur; sistem tidak membuat penyesuaian fiktif.</p></section>
             @if ($editing)
-                <section class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300 text-sm"><p class="font-bold">Lineage asli</p><dl class="mt-3 space-y-2 text-base-content/70"><div><dt class="text-xs text-base-content/50">Workbook</dt><dd>{{ $history->source_filename }}</dd></div><div><dt class="text-xs text-base-content/50">Worksheet</dt><dd>{{ $history->source_worksheet ?: '—' }}</dd></div><div><dt class="text-xs text-base-content/50">Referensi</dt><dd>{{ $history->source_reference ?: '—' }}</dd></div><div><dt class="text-xs text-base-content/50">Hash sumber</dt><dd class="break-all text-xs">{{ $history->source_hash ?: 'Koreksi admin' }}</dd></div><div><dt class="text-xs text-base-content/50">Diimpor</dt><dd>{{ $history->imported_at?->translatedFormat('d M Y H:i') ?? '—' }}</dd></div></dl></section>
+                <section class="rounded-2xl bg-base-100 p-4 shadow-sm ring-1 ring-base-300 text-sm"><p class="font-bold">Lineage asli</p><dl class="mt-3 space-y-2 text-base-content/70"><div><dt class="text-xs text-base-content/50">Workbook</dt><dd>{{ $history->source_filename }}</dd></div><div><dt class="text-xs text-base-content/50">Worksheet</dt><dd>{{ $history->source_worksheet ?: '—' }}</dd></div><div><dt class="text-xs text-base-content/50">Referensi</dt><dd>{{ $history->source_reference ?: '—' }}</dd></div><div><dt class="text-xs text-base-content/50">Hash sumber</dt><dd class="break-all text-xs">{{ $history->source_hash ?: 'Koreksi admin' }}</dd></div><div><dt class="text-xs text-base-content/50">Diimpor</dt><dd>{{ $history->imported_at?->format('d/m/Y H:i') ?? '—' }}</dd></div></dl></section>
             @endif
         </aside>
     </form>
@@ -61,7 +61,7 @@
                         $after = $event->after_summary ? json_decode($event->after_summary, true) : null;
                     @endphp
                     <article class="rounded-xl border border-base-300 p-4">
-                        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between"><div><p class="font-semibold">{{ str_replace('_', ' ', $event->event_type) }}</p><p class="mt-1 text-xs text-base-content/60">{{ $event->actor?->name ?? 'Sistem / akun tidak tersedia' }} · {{ $event->event_at?->translatedFormat('d M Y H:i:s') }}</p></div><span class="badge badge-outline">Teraudit</span></div>
+                        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between"><div><p class="font-semibold">{{ str_replace('_', ' ', $event->event_type) }}</p><p class="mt-1 text-xs text-base-content/60">{{ $event->actor?->name ?? 'Sistem / akun tidak tersedia' }} · {{ $event->event_at?->format('d/m/Y H:i') }}</p></div><span class="badge badge-outline">Teraudit</span></div>
                         @if ($after && ! empty($after['correction_reason']))
                             <p class="mt-3 text-sm"><span class="font-medium">Alasan:</span> {{ $after['correction_reason'] }}</p>
                         @endif

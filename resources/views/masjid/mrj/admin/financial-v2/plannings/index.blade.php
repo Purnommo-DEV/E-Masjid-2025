@@ -61,7 +61,7 @@
                         <tr>
                             <td>{{ $plannings->firstItem() + $loop->index }}</td>
                             <td><a class="font-semibold text-emerald-700 hover:underline" href="{{ route('financial-v2.plannings.show', ['entity' => $entity->id, 'planning' => $planning->id]) }}">{{ $planning->planning_number }}</a><div class="mt-1 text-xs text-base-content/65">{{ $planning->name }}</div></td>
-                            <td><div>{{ $planning->period_start->format('d M Y') }} – {{ $planning->period_end->format('d M Y') }}</div><div class="mt-1 text-xs text-base-content/60">{{ $planning->program?->name ?? 'Tanpa program' }}</div></td>
+                            <td><div>{{ $planning->period_start->format('d/m/Y') }} – {{ $planning->period_end->format('d/m/Y') }}</div><div class="mt-1 text-xs text-base-content/60">{{ $planning->program?->name ?? 'Tanpa program' }}</div></td>
                             <td class="text-right font-semibold">{{ \App\Domain\FinancialV2\DecimalAmount::formatIndonesian($planning->total_amount, true) }}</td>
                             <td>@foreach ($planning->fundings as $line)<div class="text-xs">{{ $line->fund->name }} · {{ \App\Domain\FinancialV2\DecimalAmount::formatIndonesian($line->amount, true) }}</div>@endforeach</td>
                             <td><span @class(['badge badge-sm', 'badge-ghost' => $planning->status === 'draft', 'badge-success' => $planning->status === 'approved', 'badge-primary' => $planning->status === 'converted', 'badge-error' => $planning->status === 'cancelled'])>{{ ucfirst($planning->status) }}</span></td>

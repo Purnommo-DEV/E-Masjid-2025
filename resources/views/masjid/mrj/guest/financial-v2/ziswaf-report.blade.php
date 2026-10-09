@@ -4,8 +4,8 @@
 
 @php
     $rupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
-    $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->translatedFormat('d F Y');
-    $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->locale('id')->translatedFormat('d F Y, H:i') : null;
+    $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
+    $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->format('d/m/Y H:i') : null;
     $transferLabel = static function (string $amount) use ($rupiah): string {
         if ($amount === '0.00') {
             return '—';

@@ -61,7 +61,7 @@
             <article class="financial-total-balance-card rounded-2xl p-5 shadow-sm" data-testid="financial-total-balance-card">
                 <p class="financial-total-balance-card__label text-sm">Total kas & rekening</p>
                 <p class="financial-total-balance-card__amount mt-2 break-words text-2xl sm:text-3xl">{{ $rupiah($summary['totalBalance']) }}</p>
-                <p class="financial-total-balance-card__period mt-2 text-xs">Per {{ \Carbon\Carbon::parse($summary['asOf'])->translatedFormat('d F Y') }}</p>
+                <p class="financial-total-balance-card__period mt-2 text-xs">Per {{ \Carbon\Carbon::parse($summary['asOf'])->format('d/m/Y') }}</p>
             </article>
             <article class="rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
                 <p class="text-sm text-base-content/60">Pemasukan bulan ini</p>
@@ -137,7 +137,7 @@
             <div class="mt-4 space-y-3 lg:hidden">
                 @forelse ($summary['recent'] as $transaction)
                     <a href="{{ route('financial-v2.transactions.show', $transaction) }}" class="block rounded-xl border border-base-300 p-4 transition hover:bg-base-200">
-                        <div class="flex items-start justify-between gap-3"><div><p class="font-semibold">{{ $transaction->type?->name }}</p><p class="mt-1 text-xs text-base-content/60">{{ $transaction->accounting_date->translatedFormat('d M Y') }} · {{ $transaction->primaryFinancialAccount?->name ?? '—' }}</p></div><span class="badge badge-outline">{{ $statusLabel($transaction->status) }}</span></div>
+                        <div class="flex items-start justify-between gap-3"><div><p class="font-semibold">{{ $transaction->type?->name }}</p><p class="mt-1 text-xs text-base-content/60">{{ $transaction->accounting_date->format('d/m/Y') }} · {{ $transaction->primaryFinancialAccount?->name ?? '—' }}</p></div><span class="badge badge-outline">{{ $statusLabel($transaction->status) }}</span></div>
                         <p class="mt-2 truncate text-sm text-base-content/70">{{ $transaction->description ?: 'Tanpa keterangan' }}</p>
                         <p class="mt-2 font-bold">{{ $rupiah($transaction->gross_amount) }}</p>
                     </a>

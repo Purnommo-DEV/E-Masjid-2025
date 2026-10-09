@@ -49,7 +49,7 @@ class KeuanganController extends Controller
             ->orderBy('id', 'asc');
 
         return DataTables::of($query)
-            ->addColumn('tanggal_group', fn($k) => $k->tanggal->format('d M Y'))
+            ->addColumn('tanggal_group', fn($k) => $k->tanggal->format('d/m/Y'))
             ->addColumn('tanggal_raw', fn($k) => $k->tanggal->toDateString())
             ->addColumn('jenis', fn($k) => $k->jenis_kotak->nama ?? '-')
             ->addColumn('jumlah', fn($k) => 'Rp ' . number_format($k->total, 0, ',', '.'))
