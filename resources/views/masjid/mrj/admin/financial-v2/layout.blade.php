@@ -10,9 +10,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.x/dist/full.min.css" rel="stylesheet" type="text/css">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .financial-ux-scope .badge { height: auto; min-height: 1.5rem; max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; text-align: center; padding-top: .25rem; padding-bottom: .25rem; }
+        .financial-ux-scope .grid > .card, .financial-ux-scope .grid > article { min-width: 0; height: 100%; }
+        .financial-ux-scope .card-body, .financial-ux-scope section, .financial-ux-scope article { min-width: 0; }
+        .financial-ux-scope table .badge { display: inline-flex; vertical-align: middle; }
+    </style>
     @stack('styles')
 </head>
-<body class="min-h-screen bg-base-200 font-[Poppins] text-base-content">
+@php
+    $financialUxScope = request()->routeIs(
+        'financial-v2.bank-mutations.*', 'financial-v2.allocations.create', 'financial-v2.transactions.index',
+        'financial-v2.distributions.index', 'financial-v2.distributions.show', 'financial-v2.beneficiaries.*',
+        'financial-v2.ziswaf-v2.index'
+    ) || (request()->routeIs('financial-v2.transactions.create') && in_array(request()->route('operation'), ['receipt', 'payment', 'transfer'], true));
+@endphp
+<body @class(['min-h-screen bg-base-200 font-[Poppins] text-base-content', 'financial-ux-scope' => $financialUxScope])>
     @php $entityId = $entity?->id; @endphp
     <header class="sticky top-0 z-30 border-b border-base-300 bg-base-100/95 backdrop-blur">
         <div class="mx-auto max-w-7xl px-4 sm:px-6">
