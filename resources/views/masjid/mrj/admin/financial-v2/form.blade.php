@@ -12,6 +12,9 @@
         $amountValue = $value('amount', $transaction?->gross_amount);
         $counterpartyName = $value('counterparty_name', $transaction?->counterparty?->display_name);
         $counterpartyId = $value('counterparty_id', $transaction?->counterparty_id);
+        $fundPurposeCode = $value('fund_purpose_code', $transaction?->fund_purpose_code);
+        $fundPurposeOther = $value('fund_purpose_other', $transaction?->fund_purpose_other);
+        $fundPurposes = \App\Domain\FinancialV2\TransactionFundPurpose::cases();
         $fundForAllocation = fn ($version) => $version->fundings->pluck('fund.name')->filter()->join(' + ') ?: ($options['funds']->firstWhere('id', $version->allocation?->fund_id)?->name ?? 'Dana');
         $programForAllocation = fn ($version) => $options['programs']->firstWhere('id', $version->allocation?->program_id)?->name;
         $categoryForAllocation = fn ($version) => $options['categories']->firstWhere('id', $version->allocation?->category_id)?->name;
@@ -91,6 +94,10 @@
                     @if ($operation === 'payment')
                         <label class="form-control mt-4"><span class="label-text font-medium">Program <span class="font-normal text-base-content/55">(jika relevan)</span></span><select name="program_id" class="select select-bordered w-full"><option value="">Tanpa program</option>@foreach($options['programs'] as $program)<option value="{{ $program->id }}" @selected($value('program_id', $split?->program_id) === $program->id)>{{ $program->name }}</option>@endforeach</select></label>
                     @endif
+                    <section class="mt-4 rounded-xl border border-base-300 bg-base-200/35 p-3 sm:p-4" data-fund-purpose>
+                        <label class="form-control"><span class="label-text font-semibold">Peruntukan Dana</span><select name="fund_purpose_code" class="select select-bordered w-full" data-fund-purpose-select required><option value="">-- Pilih Peruntukan Dana --</option>@foreach($fundPurposes as $purpose)<option value="{{ $purpose->value }}" @selected($fundPurposeCode === $purpose->value)>{{ $purpose->label() }}</option>@endforeach</select><span class="label-text-alt">Menjelaskan tujuan penggunaan dana, bukan pihak yang menerima pembayaran.</span></label>
+                        <label class="form-control mt-3" data-fund-purpose-other-wrap><span class="label-text font-medium">Detail Peruntukan Lainnya</span><input type="text" name="fund_purpose_other" value="{{ $fundPurposeOther }}" class="input input-bordered w-full" maxlength="500" placeholder="Jelaskan peruntukan dana secara spesifik" data-fund-purpose-other><span class="label-text-alt">Wajib diisi jika Peruntukan Dana dipilih Lainnya.</span></label>
+                    </section>
                 @elseif ($operation === 'transfer')
                     <div class="mt-4 grid gap-4 sm:grid-cols-2">
                         <label class="form-control"><span class="label-text font-medium">Rekening asal</span><select name="source_financial_account_id" class="select select-bordered w-full" required><option value="">Pilih rekening asal</option>@foreach($options['financialAccounts'] as $account)<option value="{{ $account->id }}">{{ $account->name }}</option>@endforeach</select></label>
@@ -138,6 +145,29 @@
         </form>
     @endif
 @endsection
+
+@if (in_array($operation, ['payment', 'realization'], true) && $entity)
+@push('scripts')
+<script>
+(() => {
+    const section = document.querySelector('[data-fund-purpose]');
+    if (!section) return;
+    const select = section.querySelector('[data-fund-purpose-select]');
+    const detailWrap = section.querySelector('[data-fund-purpose-other-wrap]');
+    const detail = section.querySelector('[data-fund-purpose-other]');
+    const render = () => {
+        const usesOther = select.value === 'other';
+        detailWrap.classList.toggle('hidden', !usesOther);
+        detail.disabled = !usesOther;
+        detail.required = usesOther;
+        if (!usesOther) detail.value = '';
+    };
+    select.addEventListener('change', render);
+    render();
+})();
+</script>
+@endpush
+@endif
 
 @if ($operation === 'realization' && $entity)
 @push('scripts')

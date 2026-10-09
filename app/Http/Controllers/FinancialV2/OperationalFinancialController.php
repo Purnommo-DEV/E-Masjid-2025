@@ -22,6 +22,7 @@ use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
 use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\TransactionEvidenceStatusService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
+use App\Domain\FinancialV2\TransactionFundPurpose;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\Attachment;
@@ -254,6 +255,8 @@ final class OperationalFinancialController
                 'counterparty_id' => $counterparty?->id,
                 'category_id' => $category->id,
                 'description' => $this->description($operation === 'receipt' ? ($input['source'] ?? null) : null, $input['description'] ?? null),
+                'fund_purpose_code' => $input['fund_purpose_code'] ?? null,
+                'fund_purpose_other' => $this->fundPurposeOther($input),
             ], $actorId);
             $splits = collect($fundingSources ?? [['fund_id' => $fundId, 'amount' => $amount]])
                 ->values()
@@ -1361,6 +1364,8 @@ final class OperationalFinancialController
                 'fund_id' => ['required', 'uuid'],
                 'category_id' => ['nullable', 'uuid'],
                 'program_id' => ['nullable', 'uuid'],
+                'fund_purpose_code' => ['required', Rule::enum(TransactionFundPurpose::class)],
+                'fund_purpose_other' => ['nullable', 'string', 'max:500', 'required_if:fund_purpose_code,'.TransactionFundPurpose::Other->value],
             ],
             'transfer' => [
                 'source_financial_account_id' => ['required', 'uuid'],
@@ -1379,6 +1384,8 @@ final class OperationalFinancialController
                 'counterparty_id' => ['required', 'uuid'],
                 'financial_account_id' => ['required', 'uuid'],
                 'category_id' => ['required', 'uuid'],
+                'fund_purpose_code' => ['required', Rule::enum(TransactionFundPurpose::class)],
+                'fund_purpose_other' => ['nullable', 'string', 'max:500', 'required_if:fund_purpose_code,'.TransactionFundPurpose::Other->value],
                 'funding_sources' => ['nullable', 'array', 'min:1', 'max:20'],
                 'funding_sources.*.fund_id' => ['required_with:funding_sources', 'uuid', 'distinct'],
                 'funding_sources.*.amount' => ['required_with:funding_sources', 'regex:/^\d+(?:\.\d{1,2})?$/'],
@@ -1473,6 +1480,8 @@ final class OperationalFinancialController
                 'counterparty_id' => $counterparty->id,
                 'category_id' => $category->id,
                 'gross_amount' => $amount,
+                'fund_purpose_code' => $input['fund_purpose_code'],
+                'fund_purpose_other' => $this->fundPurposeOther($input),
             ],
             'splits' => collect($fundingSources ?? [['fund_id' => $fund->id, 'amount' => $amount]])->values()->map(fn (array $funding): array => [
                 'account_id' => $splitAccountId,
@@ -1485,6 +1494,18 @@ final class OperationalFinancialController
                 'source_reference' => $funding['source_reference'] ?? null,
             ])->all(),
         ];
+    }
+
+    /** @param array<string, mixed> $input */
+    private function fundPurposeOther(array $input): ?string
+    {
+        if (($input['fund_purpose_code'] ?? null) !== TransactionFundPurpose::Other->value) {
+            return null;
+        }
+
+        $detail = trim((string) ($input['fund_purpose_other'] ?? ''));
+
+        return $detail !== '' ? $detail : null;
     }
 
     private function createTreasuryTransfer(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, ?int $actorId): FinancialTransaction
