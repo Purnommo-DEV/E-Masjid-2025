@@ -15,6 +15,14 @@
         .financial-ux-scope .grid > .card, .financial-ux-scope .grid > article { min-width: 0; height: 100%; }
         .financial-ux-scope .card-body, .financial-ux-scope section, .financial-ux-scope article { min-width: 0; }
         .financial-ux-scope table .badge { display: inline-flex; vertical-align: middle; }
+        .financial-ux-scope form :is(.grid, .flex) > * { min-width: 0; }
+        .financial-ux-scope :is(input, select, textarea) { max-width: 100%; }
+        .financial-ux-scope .overflow-x-auto { overscroll-behavior-inline: contain; scrollbar-gutter: stable; }
+        .financial-ux-scope :is(h1, h2, h3, p, dt, dd) { overflow-wrap: anywhere; }
+        @media (max-width: 420px) {
+            .financial-ux-scope header a[href*="keuangan-v2"] > span:last-child > span:last-child { display: none; }
+            .financial-ux-scope header a[href*="keuangan-v2"] { gap: .5rem; }
+        }
     </style>
     @stack('styles')
 </head>
