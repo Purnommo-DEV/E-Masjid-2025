@@ -213,6 +213,7 @@
     syncAllocationDimensions();
     if (initial.length) initial.forEach(row); else resetForAllocation();
     render();
+    form.dispatchEvent(new CustomEvent('configuration-context-ready', { bubbles: true }));
 })();
 </script>
 @endpush

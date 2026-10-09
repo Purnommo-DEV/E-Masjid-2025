@@ -333,7 +333,9 @@
                     controller?.abort();
                     const version = ++requestVersion;
                     const fields = requiredByOperation[form.dataset.operation] || [];
-                    if (fields.some((name) => !form.elements[name]?.value)) {
+                    const context = new FormData(form);
+                    const missingFields = fields.filter((name) => !context.get(name));
+                    if (missingFields.length) {
                         loading?.classList.add('hidden');
                         paint('pending', 'Lengkapi data transaksi untuk memeriksa konfigurasi.');
                         return;
@@ -372,6 +374,7 @@
                 };
                 form.addEventListener('input', resolve);
                 form.addEventListener('change', resolve);
+                form.addEventListener('configuration-context-ready', resolve);
                 resolve();
             });
             document.querySelectorAll('[data-configuration-missing-action]').forEach((action) => {

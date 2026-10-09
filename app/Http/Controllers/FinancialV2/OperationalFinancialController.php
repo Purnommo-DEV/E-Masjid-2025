@@ -1100,7 +1100,7 @@ final class OperationalFinancialController
                 'ok' => false,
                 'allowed' => false,
                 'state' => 'missing',
-                'message' => $this->configurationPreviewMessage($entity, $data),
+                'message' => $this->humanMessage($exception).' '.$this->configurationPreviewMessage($entity, $data),
             ], 422);
         }
     }
