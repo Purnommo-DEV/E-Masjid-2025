@@ -2186,6 +2186,14 @@ final class OperationalFinancialController
     {
         $code = $exception instanceof FinancialDomainException || $exception instanceof FinancialPostingException ? $exception->failureCode : null;
 
+        // Financial domain/posting exceptions contain deliberately authored,
+        // user-actionable messages. Preserve those messages for codes that do
+        // not need a friendlier translation instead of hiding the real
+        // configuration or lifecycle failure behind a generic response.
+        $domainMessage = $code !== null && filled($exception->getMessage())
+            ? $exception->getMessage()
+            : 'Transaksi belum dapat diproses. Periksa data yang diisi dan konfigurasi master yang berlaku.';
+
         return match ($code) {
             'E-FUND-RESTRICTED' => 'Penggunaan dana belum dapat dilakukan karena aturan penggunaan dana belum dikonfigurasi.',
             'E-FUND-INSUFFICIENT' => 'Saldo dana tidak mencukupi untuk transaksi ini.',
@@ -2202,7 +2210,7 @@ final class OperationalFinancialController
             'E-REALIZATION-ALLOCATION', 'E-BUDGET-INSUFFICIENT' => 'Alokasi dana tidak tersedia atau sisa alokasinya tidak mencukupi untuk realisasi ini.',
             'E-REALIZATION-PARENT-CANCELLED' => 'Draft Realisasi tidak dapat dilanjutkan karena alokasi induknya sudah dibatalkan.',
             'E-TRANSACTION-STATE' => 'Status transaksi belum memenuhi syarat untuk tindakan ini.',
-            default => 'Transaksi belum dapat diproses. Periksa data yang diisi dan konfigurasi master yang berlaku.',
+            default => $domainMessage,
         };
     }
 
