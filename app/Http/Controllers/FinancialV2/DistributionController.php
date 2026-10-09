@@ -199,7 +199,12 @@ final class DistributionController
             $response->with('success', number_format($result['deleted'], 0, ',', '.').' penerima berhasil dihapus.');
         }
         if ($result['protected'] > 0) {
-            $response->with('warning', number_format($result['protected'], 0, ',', '.').' penerima tidak dapat dihapus karena sudah memiliki riwayat atau referensi Financial V2.');
+            $details = collect($result['blocked'])->map(function (array $blocked): string {
+                $references = collect($blocked['references'])->map(fn (int $count, string $type): string => $type.' ('.$count.')')->implode(', ');
+
+                return $blocked['name'].': '.$references;
+            })->implode('; ');
+            $response->with('warning', number_format($result['protected'], 0, ',', '.').' penerima tidak dapat dihapus karena sudah digunakan pada data terkait. Pertahankan data ini untuk menjaga riwayat dan audit keuangan. '.$details);
         }
 
         return $response;

@@ -10,6 +10,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
 
 /** Operational beneficiary records only. No lifecycle/posting writer dependency. */
@@ -52,7 +53,7 @@ final class DistributionService
      * so operational snapshots and all Financial V2 facts keep valid foreign keys.
      *
      * @param  array<int, string>  $ids
-     * @return array{deleted: int, protected: int}
+     * @return array{deleted: int, protected: int, blocked: array<int, array{id:string,name:string,references:array<string,int>}>}
      */
     public function deleteBeneficiaries(string $entityId, array $ids, ?int $actor): array
     {
@@ -62,33 +63,42 @@ final class DistributionService
             'beneficiary_ids.*' => 'required|uuid|distinct',
         ])->validate();
 
-        return DB::transaction(function () use ($entityId, $ids, $actor): array {
-            AccountingEntity::whereKey($entityId)->where('status', 'active')->firstOrFail();
-            $people = Counterparty::query()->whereIn('id', $ids)->lockForUpdate()->get();
-            $validSelection = $people->count() === count($ids)
-                && $people->every(fn (Counterparty $person) => $person->accounting_entity_id === $entityId && $person->party_type === 'beneficiary');
-            if (! $validSelection) {
-                throw ValidationException::withMessages(['beneficiary_ids' => 'Pilihan penerima tidak valid atau berasal dari entitas lain.']);
-            }
-
-            $result = ['deleted' => 0, 'protected' => 0];
-            foreach ($people as $person) {
-                if ($this->beneficiaryHasReferences($person->id)) {
-                    $result['protected']++;
-
-                    continue;
+        try {
+            return DB::transaction(function () use ($entityId, $ids, $actor): array {
+                AccountingEntity::whereKey($entityId)->where('status', 'active')->firstOrFail();
+                $people = Counterparty::query()->whereIn('id', $ids)->lockForUpdate()->get();
+                $validSelection = $people->count() === count($ids)
+                    && $people->every(fn (Counterparty $person) => $person->accounting_entity_id === $entityId && $person->party_type === 'beneficiary');
+                if (! $validSelection) {
+                    throw ValidationException::withMessages(['beneficiary_ids' => 'Pilihan penerima tidak valid atau berasal dari entitas lain.']);
                 }
-                $before = Arr::only($person->getAttributes(), [
-                    'accounting_entity_id', 'code', 'party_type', 'beneficiary_type', 'display_name',
-                    'address', 'rt', 'rw', 'rt_coordinator_name', 'contact_reference', 'status',
-                ]);
-                $this->record($entityId, 'beneficiary.deleted', $person->id, $actor, ['deleted_record' => $before]);
-                $person->delete();
-                $result['deleted']++;
-            }
 
-            return $result;
-        });
+                $result = ['deleted' => 0, 'protected' => 0, 'blocked' => []];
+                foreach ($people as $person) {
+                    $references = $this->beneficiaryReferenceCounts($person->id);
+                    if ($references !== []) {
+                        $result['protected']++;
+                        $result['blocked'][] = ['id' => $person->id, 'name' => $person->display_name, 'references' => $references];
+
+                        continue;
+                    }
+                    $before = Arr::only($person->getAttributes(), [
+                        'accounting_entity_id', 'code', 'party_type', 'beneficiary_type', 'display_name',
+                        'address', 'rt', 'rw', 'rt_coordinator_name', 'contact_reference', 'status',
+                    ]);
+                    $this->record($entityId, 'beneficiary.deleted', $person->id, $actor, ['deleted_record' => $before]);
+                    $person->delete();
+                    $result['deleted']++;
+                }
+
+                return $result;
+            });
+        } catch (QueryException $exception) {
+            report($exception);
+            throw ValidationException::withMessages([
+                'beneficiary_ids' => 'Penerima tidak dapat dihapus karena pemeriksaan relasi tidak dapat dipastikan. Data dipertahankan untuk menjaga riwayat dan audit keuangan.',
+            ]);
+        }
     }
 
     public function create(string $entityId, array $input, ?int $actor): Distribution
@@ -256,21 +266,24 @@ final class DistributionService
         return Arr::only($person->getAttributes(), ['display_name', 'address', 'rt', 'rw', 'rt_coordinator_name', 'contact_reference']);
     }
 
-    private function beneficiaryHasReferences(string $id): bool
+    /** @return array<string, int> */
+    private function beneficiaryReferenceCounts(string $id): array
     {
+        $references = [];
         foreach ([
-            ['financial_v2_distribution_items', 'beneficiary_id'],
-            ['financial_v2_transactions', 'counterparty_id'],
-            ['financial_v2_transaction_splits', 'counterparty_id'],
-            ['financial_v2_journal_lines', 'counterparty_id'],
-            ['financial_v2_posting_rule_lines', 'fixed_counterparty_id'],
-        ] as [$table, $column]) {
-            if (DB::table($table)->where($column, $id)->exists()) {
-                return true;
+            ['financial_v2_distribution_items', 'beneficiary_id', 'Penyaluran'],
+            ['financial_v2_transactions', 'counterparty_id', 'Transaksi'],
+            ['financial_v2_transaction_splits', 'counterparty_id', 'Rincian transaksi'],
+            ['financial_v2_journal_lines', 'counterparty_id', 'Jurnal'],
+            ['financial_v2_posting_rule_lines', 'fixed_counterparty_id', 'Aturan pencatatan'],
+        ] as [$table, $column, $label]) {
+            $count = DB::table($table)->where($column, $id)->count();
+            if ($count > 0) {
+                $references[$label] = $count;
             }
         }
 
-        return false;
+        return $references;
     }
 
     private function require(bool $condition, string $message): void
