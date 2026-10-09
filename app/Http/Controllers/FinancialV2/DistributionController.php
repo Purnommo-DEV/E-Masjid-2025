@@ -370,8 +370,8 @@ final class DistributionController
         }
         $people = $peopleQuery->get();
         $realizations = $distribution->realization_id ? collect() : $this->realizationLinks->candidates($distribution);
-        $oldIds = $distribution->copiedFrom?->items->pluck('beneficiary_id') ?? collect();
-        $newIds = $distribution->items->pluck('beneficiary_id');
+        $oldIds = $distribution->copiedFrom?->items->pluck('recipient_key') ?? collect();
+        $newIds = $distribution->items->pluck('recipient_key');
         $continuity = ['previous' => $oldIds->count(), 'current' => $newIds->count(), 'added' => $newIds->diff($oldIds)->count(), 'removed' => $oldIds->diff($newIds)->count()];
 
         return view('masjid.mrj.admin.financial-v2.distributions.show', compact('entity', 'distribution', 'total', 'people', 'realizations', 'continuity'));

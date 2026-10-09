@@ -69,30 +69,30 @@ final class DistributionReportingService
         $unique = DB::table('financial_v2_distribution_items as item')
             ->join('financial_v2_distributions as distribution', 'distribution.id', '=', 'item.distribution_id')
             ->whereIn('distribution.id', $acceptedIds);
-        $byProgram = (clone $unique)->select('distribution.program_id')->selectRaw('COUNT(DISTINCT item.beneficiary_id) as unique_beneficiaries')->groupBy('distribution.program_id')->pluck('unique_beneficiaries', 'program_id');
+        $byProgram = (clone $unique)->select('distribution.program_id')->selectRaw('COUNT(DISTINCT item.recipient_key) as unique_beneficiaries')->groupBy('distribution.program_id')->pluck('unique_beneficiaries', 'program_id');
         $programs = collect($rows)->groupBy('program_id')->map(fn ($group, $id) => [
             'program_id' => $id, 'program_name' => $group->first()['program_name'], 'distribution_events' => $group->count(),
             'unique_beneficiaries' => (int) $byProgram->get($id, 0), 'actual_amount' => DecimalAmount::sum($group->pluck('actual_amount')),
         ] + ($public ? [] : ['operational_total' => DecimalAmount::sum($group->pluck('operational_total'))]))->values()->all();
 
         $regions = DB::table('financial_v2_distribution_items')->whereIn('distribution_id', $acceptedIds)
-            ->get(['beneficiary_id', 'identity_snapshot'])
+            ->get(['recipient_key', 'identity_snapshot'])
             ->map(function (object $item) use ($public): array {
                 $snapshot = json_decode((string) $item->identity_snapshot, true) ?: [];
 
                 return [
-                    'beneficiary_id' => $item->beneficiary_id,
+                    'recipient_key' => $item->recipient_key,
                     'rt' => (string) ($snapshot['rt'] ?? ''),
                     'rw' => (string) ($snapshot['rw'] ?? ''),
                     'coordinator' => $public ? null : (string) ($snapshot['rt_coordinator_name'] ?? ''),
                 ];
             })->groupBy(fn (array $row): string => json_encode([$row['rt'], $row['rw'], $row['coordinator']]))
             ->map(function (Collection $group) use ($public): array {
-                $row = ['rt' => $group->first()['rt'], 'rw' => $group->first()['rw'], 'recipient_count' => $group->pluck('beneficiary_id')->unique()->count()];
+                $row = ['rt' => $group->first()['rt'], 'rw' => $group->first()['rw'], 'recipient_count' => $group->pluck('recipient_key')->unique()->count()];
 
                 return $public ? $row : $row + ['coordinator' => $group->first()['coordinator']];
             })->values()->all();
 
-        return ['events' => $rows, 'programs' => $programs, 'regions' => $regions, 'unique_beneficiaries' => $unique->distinct()->count('item.beneficiary_id'), 'distribution_events' => count($rows)];
+        return ['events' => $rows, 'programs' => $programs, 'regions' => $regions, 'unique_beneficiaries' => $unique->distinct()->count('item.recipient_key'), 'distribution_events' => count($rows)];
     }
 }

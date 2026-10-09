@@ -163,8 +163,8 @@ final class DistributionRealizationLinkService
         if ($items->isEmpty()) {
             $errors[] = 'Penyaluran belum memiliki penerima.';
         }
-        if ($items->contains(fn ($item): bool => $item->beneficiary?->status !== 'active')) {
-            $errors[] = 'Seluruh penerima harus masih aktif saat Penyaluran ditautkan.';
+        if ($items->contains(fn ($item): bool => $item->beneficiary_id !== null && $item->beneficiary?->status !== 'active')) {
+            $errors[] = 'Seluruh penerima yang tertaut ke master harus masih aktif saat Penyaluran ditautkan.';
         }
         $total = DecimalAmount::sum($items->pluck('amount'));
         if (! $transaction || ! DecimalAmount::equals($total, $transaction->gross_amount)

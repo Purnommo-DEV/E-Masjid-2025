@@ -240,9 +240,11 @@ final class OperationalFinancialController
                 'program_id' => $programId,
             ]);
             $splitAccountId = $resolved->businessAccountId;
-            $counterparty = $operation === 'receipt'
-                ? null
-                : $this->counterpartyFromInput($entity, $input, $actorId, $operation === 'realization' ? 'beneficiary' : 'supplier');
+            $counterparty = match ($operation) {
+                'receipt' => null,
+                'realization' => $this->counterparty($entity, $input['counterparty_id'] ?? null),
+                default => $this->counterpartyFromInput($entity, $input, $actorId, 'supplier'),
+            };
 
             $this->lifecycle->updateDraft($transaction->id, [
                 'business_date' => $input['date'],
@@ -1374,8 +1376,7 @@ final class OperationalFinancialController
             ],
             'realization' => [
                 'budget_allocation_version_id' => ['required', 'uuid'],
-                'counterparty_id' => ['nullable', 'uuid', 'required_without:counterparty_name'],
-                'counterparty_name' => ['nullable', 'string', 'max:240', 'required_without:counterparty_id'],
+                'counterparty_id' => ['required', 'uuid'],
                 'financial_account_id' => ['required', 'uuid'],
                 'category_id' => ['required', 'uuid'],
                 'funding_sources' => ['nullable', 'array', 'min:1', 'max:20'],
@@ -1431,7 +1432,7 @@ final class OperationalFinancialController
         [$fundId, $programId, $versionId, $categoryId] = $this->realizationDimensions($entity, $input['budget_allocation_version_id']);
         $input['category_id'] = $categoryId;
         $fundings = $this->realizationFundingSources($entity, $versionId, $input['funding_sources'] ?? null, $this->amount($input['amount']));
-        $prepared = $this->paymentInput($entity, $type, $input, $sourceKey, $fundId, $programId, $actorId, 'beneficiary', $fundings);
+        $prepared = $this->paymentInput($entity, $type, $input, $sourceKey, $fundId, $programId, $actorId, 'beneficiary', $fundings, false);
 
         return $this->lifecycle->createRealization($prepared['input'], $prepared['splits'], $versionId, $actorId);
     }
@@ -1444,7 +1445,7 @@ final class OperationalFinancialController
     }
 
     /** @return array{input: array<string, mixed>, splits: array<int, array<string, mixed>>} */
-    private function paymentInput(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, string $fundId, ?string $programId, ?int $actorId, string $counterpartyType, ?array $fundingSources = null): array
+    private function paymentInput(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, string $fundId, ?string $programId, ?int $actorId, string $counterpartyType, ?array $fundingSources = null, bool $allowCounterpartyCreation = true): array
     {
         $financialAccount = $this->financialAccount($entity, $input['financial_account_id']);
         $fund = $this->fund($entity, $fundId);
@@ -1462,7 +1463,9 @@ final class OperationalFinancialController
             'require_evidence_configuration' => $counterpartyType === 'beneficiary',
         ]);
         $splitAccountId = $resolved->businessAccountId;
-        $counterparty = $this->counterpartyFromInput($entity, $input, $actorId, $counterpartyType);
+        $counterparty = $allowCounterpartyCreation
+            ? $this->counterpartyFromInput($entity, $input, $actorId, $counterpartyType)
+            : $this->counterparty($entity, $input['counterparty_id'] ?? null);
 
         return [
             'input' => $this->transactionInput($entity, $type, $input, $sourceKey) + [

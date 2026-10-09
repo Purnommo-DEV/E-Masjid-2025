@@ -131,8 +131,16 @@ final class DistributionService
             $this->require($previous !== null, 'Belum ada penyaluran periode sebelumnya.');
             $copy->update(['copied_from_id' => $previous->id]);
             foreach ($previous->items()->get() as $item) {
-                $person = Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->findOrFail($item->beneficiary_id);
-                $copy->items()->create(['beneficiary_id' => $person->id, 'amount' => $item->amount, 'notes' => $item->notes, 'identity_snapshot' => $this->snapshot($person)]);
+                $person = $item->beneficiary_id
+                    ? Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->findOrFail($item->beneficiary_id)
+                    : null;
+                $copy->items()->create([
+                    'beneficiary_id' => $person?->id,
+                    'recipient_key' => $person ? 'master:'.$person->id : $item->recipient_key,
+                    'amount' => $item->amount,
+                    'notes' => $item->notes,
+                    'identity_snapshot' => $person ? $this->snapshot($person) : $item->identity_snapshot,
+                ]);
             }
             $this->record($entityId, 'distribution.copied', $copy->id, $actor, ['copied_from_id' => $previous->id]);
 
@@ -149,14 +157,34 @@ final class DistributionService
                 $this->require($item !== null, 'Penerima tidak ditemukan.');
                 $item->delete();
             } else {
-                $data = Validator::make($input, ['beneficiary_id' => 'required|uuid', 'amount' => ['required', 'regex:/^\d{1,16}(\.\d{1,2})?$/'], 'notes' => 'nullable|string|max:2000'])->validate();
-                $person = Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->where('status', 'active')->lockForUpdate()->findOrFail($data['beneficiary_id']);
-                $duplicate = $distribution->items()->where('beneficiary_id', $person->id)->when($item, fn ($q) => $q->where('id', '<>', $item->id))->exists();
+                $data = Validator::make($input, [
+                    'beneficiary_id' => 'nullable|uuid',
+                    'display_name' => 'nullable|required_without:beneficiary_id|string|max:240',
+                    'contact_reference' => 'nullable|string|max:500',
+                    'address' => 'nullable|string|max:2000',
+                    'rt' => 'nullable|string|max:10',
+                    'rw' => 'nullable|string|max:10',
+                    'rt_coordinator_name' => 'nullable|string|max:160',
+                    'beneficiary_type' => 'nullable|in:YATIM,DHUAFA,YATIM_DHUAFA,BELUM_DITENTUKAN',
+                    'amount' => ['required', 'regex:/^\d{1,16}(\.\d{1,2})?$/'],
+                    'notes' => 'nullable|string|max:2000',
+                ])->validate();
+                $person = filled($data['beneficiary_id'] ?? null)
+                    ? Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->where('status', 'active')->lockForUpdate()->findOrFail($data['beneficiary_id'])
+                    : null;
+                $snapshot = $person
+                    ? ($item && $item->beneficiary_id === $person->id ? $item->identity_snapshot : $this->snapshot($person))
+                    : $this->snapshotFromInput($data);
+                $recipientKey = $person ? 'master:'.$person->id : $this->snapshotRecipientKey($snapshot);
+                $duplicate = $distribution->items()->where('recipient_key', $recipientKey)->when($item, fn ($q) => $q->where('id', '<>', $item->id))->exists();
                 $this->require(! $duplicate, 'Penerima sudah ada dalam penyaluran ini.');
                 $data['amount'] = DecimalAmount::normalize($data['amount']);
-                // Preserve the historical snapshot when editing amount/notes.
-                $data['identity_snapshot'] = $item && $item->beneficiary_id === $person->id ? $item->identity_snapshot : $this->snapshot($person);
-                $item ? $item->update($data) : $distribution->items()->create($data);
+                $attributes = Arr::only($data, ['amount', 'notes']) + [
+                    'beneficiary_id' => $person?->id,
+                    'recipient_key' => $recipientKey,
+                    'identity_snapshot' => $snapshot,
+                ];
+                $item ? $item->update($attributes) : $distribution->items()->create($attributes);
             }
             $distribution->update(['revision' => $distribution->revision + 1, 'updated_by_user_id' => $actor]);
             $this->record($entityId, $remove ? 'distribution.item_removed' : 'distribution.item_saved', $id, $actor);
@@ -186,13 +214,14 @@ final class DistributionService
                 ->keyBy('id');
 
             $this->require($people->count() === $beneficiaryIds->count(), 'Pilihan penerima harus aktif dan berasal dari entitas yang sama.');
-            $duplicate = $distribution->items()->whereIn('beneficiary_id', $beneficiaryIds)->exists();
+            $duplicate = $distribution->items()->whereIn('recipient_key', $beneficiaryIds->map(fn (string $id): string => 'master:'.$id))->exists();
             $this->require(! $duplicate, 'Salah satu penerima sudah ada dalam penyaluran ini.');
 
             foreach ($rows as $row) {
                 $person = $people->get($row['beneficiary_id']);
                 $distribution->items()->create([
                     'beneficiary_id' => $person->id,
+                    'recipient_key' => 'master:'.$person->id,
                     'amount' => DecimalAmount::normalize($row['amount']),
                     'notes' => $row['notes'] ?? null,
                     'identity_snapshot' => $this->snapshot($person),
@@ -263,7 +292,35 @@ final class DistributionService
 
     private function snapshot(Counterparty $person): array
     {
-        return Arr::only($person->getAttributes(), ['display_name', 'address', 'rt', 'rw', 'rt_coordinator_name', 'contact_reference']);
+        return Arr::only($person->getAttributes(), [
+            'display_name', 'address', 'rt', 'rw', 'rt_coordinator_name', 'contact_reference',
+            'beneficiary_type', 'status',
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function snapshotFromInput(array $data): array
+    {
+        return [
+            'display_name' => trim((string) $data['display_name']),
+            'address' => filled($data['address'] ?? null) ? trim((string) $data['address']) : null,
+            'rt' => filled($data['rt'] ?? null) ? trim((string) $data['rt']) : null,
+            'rw' => filled($data['rw'] ?? null) ? trim((string) $data['rw']) : null,
+            'rt_coordinator_name' => filled($data['rt_coordinator_name'] ?? null) ? trim((string) $data['rt_coordinator_name']) : null,
+            'contact_reference' => filled($data['contact_reference'] ?? null) ? trim((string) $data['contact_reference']) : null,
+            'beneficiary_type' => $data['beneficiary_type'] ?? 'BELUM_DITENTUKAN',
+            'status' => 'operational_snapshot',
+        ];
+    }
+
+    /** @param array<string, mixed> $snapshot */
+    private function snapshotRecipientKey(array $snapshot): string
+    {
+        $identity = collect(['display_name', 'contact_reference', 'address', 'rt', 'rw', 'rt_coordinator_name'])
+            ->map(fn (string $field): string => mb_strtolower(trim((string) ($snapshot[$field] ?? '')), 'UTF-8'))
+            ->implode("\x1F");
+
+        return 'snapshot:'.hash('sha256', $identity);
     }
 
     /** @return array<string, int> */
