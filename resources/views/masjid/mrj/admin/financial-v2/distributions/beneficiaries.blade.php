@@ -18,9 +18,27 @@
     </div>
     <div class="flex flex-wrap gap-2 sm:justify-end">
         <a class="btn btn-outline btn-sm" href="{{ route('financial-v2.beneficiaries.import.template', ['entity' => $entity->id]) }}">Download Template</a>
-        <a class="btn btn-success btn-sm" href="{{ route('financial-v2.beneficiaries.export', array_merge(['entity' => $entity->id], request()->only(['q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator']))) }}">Export Excel</a>
+        <button class="btn btn-success btn-sm" type="button" onclick="document.getElementById('beneficiary-export-dialog').showModal()">Export Excel</button>
     </div>
 </header>
+
+<dialog id="beneficiary-export-dialog" class="modal">
+    <div class="modal-box max-w-md">
+        <form method="dialog"><button class="btn btn-circle btn-ghost btn-sm absolute right-2 top-2" aria-label="Tutup">✕</button></form>
+        <h2 class="text-xl font-bold">Export daftar penerima</h2>
+        <p class="mt-2 text-sm leading-relaxed text-base-content/65">Periode hanya menjadi identitas laporan. Isi file tetap mengikuti Entity dan filter penerima yang sedang aktif.</p>
+        <form method="get" action="{{ route('financial-v2.beneficiaries.export') }}" class="mt-5 grid gap-4 sm:grid-cols-2">
+            <input type="hidden" name="entity" value="{{ $entity->id }}">
+            @foreach(['q', 'status', 'beneficiary_type', 'rt', 'rw', 'coordinator'] as $key)
+                @if(request()->filled($key))<input type="hidden" name="{{ $key }}" value="{{ request($key) }}">@endif
+            @endforeach
+            <label class="form-control"><span class="label-text font-medium">Bulan mulai</span><input class="input input-bordered w-full" type="month" name="start_month" value="{{ now()->format('Y-m') }}" required></label>
+            <label class="form-control"><span class="label-text font-medium">Bulan akhir <span class="font-normal text-base-content/55">(opsional)</span></span><input class="input input-bordered w-full" type="month" name="end_month"><span class="label-text-alt">Kosongkan untuk satu bulan.</span></label>
+            <div class="modal-action mt-1 sm:col-span-2"><button class="btn btn-ghost" type="button" onclick="document.getElementById('beneficiary-export-dialog').close()">Batal</button><button class="btn btn-success" type="submit">Download Excel</button></div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button aria-label="Tutup dialog">Tutup</button></form>
+</dialog>
 
 <section class="mb-5 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm sm:p-5">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">

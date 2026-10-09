@@ -12,6 +12,7 @@ use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\Distribution;
 use App\Models\FinancialV2\DistributionItem;
 use App\Models\FinancialV2\Program;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Crypt;
@@ -19,8 +20,11 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
@@ -93,43 +97,86 @@ final class DistributionController
     public function exportBeneficiaries(Request $request)
     {
         $entity = $this->context($request);
-        $people = $this->people($request, $entity->id)->get();
+        $period = $request->validate([
+            'start_month' => ['required', 'date_format:Y-m'],
+            'end_month' => ['nullable', 'date_format:Y-m', 'after_or_equal:start_month'],
+        ]);
+        $start = CarbonImmutable::createFromFormat('Y-m-d', $period['start_month'].'-01')->startOfMonth();
+        $endMonth = $period['end_month'] ?? $period['start_month'];
+        $end = CarbonImmutable::createFromFormat('Y-m-d', $endMonth.'-01')->endOfMonth();
+        $people = $this->people($request, $entity->id)->reorder()
+            ->orderByRaw("CASE WHEN NULLIF(TRIM(rt), '') IS NULL OR NULLIF(TRIM(rw), '') IS NULL OR NULLIF(TRIM(rt_coordinator_name), '') IS NULL THEN 1 ELSE 0 END")
+            ->orderByRaw("LOWER(TRIM(COALESCE(rt, ''))) ASC")
+            ->orderByRaw("LOWER(TRIM(COALESCE(rw, ''))) ASC")
+            ->orderByRaw("LOWER(TRIM(COALESCE(rt_coordinator_name, ''))) ASC")
+            ->orderByRaw('LOWER(display_name) ASC')->orderBy('id')->get()->unique('id')->values();
+
+        $months = [1 => 'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI', 'JULI', 'AGUSTUS', 'SEPTEMBER', 'OKTOBER', 'NOVEMBER', 'DESEMBER'];
+        $startLabel = $months[$start->month].' '.$start->year;
+        $endLabel = $months[$end->month].' '.$end->year;
+        $title = $start->isSameMonth($end)
+            ? 'DAFTAR PENERIMA MANFAAT - '.$startLabel
+            : 'DAFTAR PENERIMA MANFAAT - '.($start->year === $end->year
+                ? $months[$start->month].' SAMPAI '.$endLabel
+                : $startLabel.' SAMPAI '.$endLabel);
+
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Penerima ZISWAF');
-        $sheet->fromArray(BeneficiaryImportService::HEADERS, null, 'A1');
+        $sheet->mergeCells('A1:D1')->setCellValueExplicit('A1', $title, DataType::TYPE_STRING);
+        $sheet->mergeCells('A2:D2')->setCellValueExplicit('A2', 'Periode: '.$start->format('d/m/Y').' s.d. '.$end->format('d/m/Y'), DataType::TYPE_STRING);
+        $sheet->fromArray(['No. Urut', 'No. Grup', 'Nama', 'Keterangan'], null, 'A4');
 
-        $statusLabels = ['active' => 'Aktif', 'inactive' => 'Tidak aktif', 'archived' => 'Arsip'];
-        foreach ($people as $index => $person) {
-            $row = $index + 2;
-            $values = [
-                $person->display_name,
-                $person->contact_reference,
-                $person->rt,
-                $person->rw,
-                $person->rt_coordinator_name,
-                $person->beneficiary_type_label,
-                $statusLabels[$person->status] ?? $person->status,
-                $person->address,
-                $person->beneficiary_notes,
-            ];
-            foreach ($values as $column => $value) {
-                // Explicit strings prevent values beginning with =, +, -, or @ from becoming formulas.
-                $sheet->setCellValueExplicit([$column + 1, $row], (string) ($value ?? ''), DataType::TYPE_STRING);
+        $row = 5;
+        $globalNumber = 0;
+        $groups = $people->groupBy(function (Counterparty $person): string {
+            $rt = trim((string) $person->rt);
+            $rw = trim((string) $person->rw);
+            $coordinator = trim((string) $person->rt_coordinator_name);
+
+            return $rt === '' || $rw === '' || $coordinator === ''
+                ? '__belum_ditentukan__'
+                : mb_strtolower($rt.'|'.$rw.'|'.$coordinator, 'UTF-8');
+        });
+        foreach ($groups as $groupKey => $members) {
+            $first = $members->first();
+            $groupLabel = $groupKey === '__belum_ditentukan__'
+                ? 'Belum Ditentukan'
+                : 'RT '.trim((string) $first->rt).'/RW '.trim((string) $first->rw).' - '.trim((string) $first->rt_coordinator_name);
+            $sheet->mergeCells("C{$row}:D{$row}")->setCellValueExplicit("C{$row}", $groupLabel, DataType::TYPE_STRING);
+            $sheet->getStyle("A{$row}:D{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD1FAE5');
+            $sheet->getStyle("A{$row}:D{$row}")->getFont()->setBold(true)->getColor()->setARGB('FF064E3B');
+            $row++;
+
+            foreach ($members as $groupNumber => $person) {
+                $globalNumber++;
+                $sheet->setCellValue("A{$row}", $globalNumber);
+                $sheet->setCellValue("B{$row}", $groupNumber + 1);
+                // Explicit strings prevent a recipient name from becoming an Excel formula.
+                $sheet->setCellValueExplicit("C{$row}", (string) $person->display_name, DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit("D{$row}", '', DataType::TYPE_STRING);
+                $row++;
             }
         }
 
-        $lastRow = max(1, $people->count() + 1);
-        $sheet->freezePane('A2');
-        $sheet->setAutoFilter("A1:I{$lastRow}");
-        $sheet->getStyle('A1:I1')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
-        $sheet->getStyle('A1:I1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF047857');
-        $sheet->getStyle("A1:I{$lastRow}")->getAlignment()->setVertical('top')->setWrapText(true);
-        foreach (['A' => 30, 'B' => 20, 'C' => 8, 'D' => 8, 'E' => 24, 'F' => 20, 'G' => 14, 'H' => 40, 'I' => 40] as $column => $width) {
+        $lastRow = max(4, $row - 1);
+        $sheet->getStyle('A1:D1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1:D1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF047857');
+        $sheet->getStyle('A1:D2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A4:D4')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A4:D4')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF065F46');
+        $sheet->getStyle("A4:D{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FFCBD5E1');
+        $sheet->getStyle("A4:D{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+        $sheet->getStyle("A5:B{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->freezePane('A5');
+        foreach (['A' => 12, 'B' => 12, 'C' => 34, 'D' => 42] as $column => $width) {
             $sheet->getColumnDimension($column)->setWidth($width);
         }
+        $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_PORTRAIT)->setFitToWidth(1)->setFitToHeight(0);
+        $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 4)->setPrintArea("A1:D{$lastRow}");
+        $sheet->getPageMargins()->setTop(0.5)->setRight(0.35)->setBottom(0.5)->setLeft(0.35);
 
-        $filename = 'penerima-ziswaf-'.strtolower($entity->code).'-'.now()->format('Ymd-His').'.xlsx';
+        $filename = 'penerima-ziswaf-'.strtolower($entity->code).'-'.$start->format('Ym').'-'.$end->format('Ym').'.xlsx';
 
         return response()->streamDownload(function () use ($spreadsheet): void {
             (new Xlsx($spreadsheet))->save('php://output');
