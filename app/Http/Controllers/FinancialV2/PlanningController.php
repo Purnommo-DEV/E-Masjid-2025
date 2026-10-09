@@ -10,6 +10,7 @@ use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\Planning;
 use App\Models\FinancialV2\Program;
+use DateTimeImmutable;
 use Illuminate\Http\Request;
 use InvalidArgumentException;
 
@@ -30,6 +31,7 @@ final class PlanningController
         }
 
         $entity = $this->entity($request);
+        $this->normalizePlanningDates($request, ['period_start', 'period_end']);
         $filters = $request->validate([
             'status' => 'nullable|in:draft,approved,converted,cancelled',
             'program_id' => 'nullable|uuid',
@@ -142,6 +144,7 @@ final class PlanningController
     public function preview(Request $request)
     {
         $entity = $this->entity($request);
+        $this->normalizePlanningDates($request, ['period_start']);
         $data = $request->validate([
             'planning_id' => 'nullable|uuid',
             'period_start' => 'nullable|date_format:Y-m-d',
@@ -203,6 +206,8 @@ final class PlanningController
     /** @return array<string, mixed> */
     private function validated(Request $request): array
     {
+        $this->normalizePlanningDates($request, ['period_start', 'period_end']);
+
         return $request->validate([
             'name' => 'required|string|max:240',
             'planning_number' => 'nullable|string|max:80|unique:financial_v2_plannings,planning_number',
@@ -218,6 +223,32 @@ final class PlanningController
             'fundings.*.amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'fundings.*.notes' => 'nullable|string|max:500',
         ]);
+    }
+
+    /** @param array<int, string> $fields */
+    private function normalizePlanningDates(Request $request, array $fields): void
+    {
+        $normalized = [];
+        foreach ($fields as $field) {
+            $value = $request->input($field);
+            if (! is_string($value)) {
+                continue;
+            }
+
+            $value = trim($value);
+            if (! preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $value)) {
+                continue;
+            }
+
+            $date = DateTimeImmutable::createFromFormat('!d/m/Y', $value);
+            if ($date !== false && $date->format('d/m/Y') === $value) {
+                $normalized[$field] = $date->format('Y-m-d');
+            }
+        }
+
+        if ($normalized !== []) {
+            $request->merge($normalized);
+        }
     }
 
     private function realizedAmount(Planning $planning): string

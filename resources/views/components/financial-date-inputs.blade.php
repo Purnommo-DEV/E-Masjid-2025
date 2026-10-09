@@ -3,7 +3,7 @@
 (() => {
     const financialPath = /^(?:\/admin\/(?:keuangan(?:-v2)?|kotak-infak|dana-terikat|pengeluaran|penerimaan|zakat|alokasi-dana|saldo-awal)(?:\/|$)|\/laporan-ziswaf(?:-v2)?(?:\/|$))/;
     if (!financialPath.test(window.location.pathname)) return;
-    const datepickerPath = /^\/admin\/keuangan-v2\/(?:receipt\/baru|payment\/baru|transfer\/baru|mutasi-bank(?:\/[^/]+)?|alokasi-dana\/baru|riwayat|penyaluran(?:\/[^/]+)?|penerima(?:\/[^/]+)?|laporan-ziswaf)(?:\/|$)/.test(window.location.pathname);
+    const datepickerPath = /^\/admin\/keuangan-v2\/(?:receipt\/baru|payment\/baru|transfer\/baru|mutasi-bank(?:\/[^/]+)?|alokasi-dana\/baru|perencanaan(?:\/[^/]+(?:\/ubah)?)?|riwayat|penyaluran(?:\/[^/]+)?|penerima(?:\/[^/]+)?|laporan-ziswaf)(?:\/|$)/.test(window.location.pathname);
 
     const isoPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
     const displayPattern = /^(\d{2})\/(\d{2})\/(\d{4})$/;
@@ -85,6 +85,7 @@
         const validate = () => {
             if (isoPattern.test(input.value)) input.value = toDisplay(input.value);
             const iso = input.value === '' ? '' : toIso(input.value);
+            if (canonicalTarget) canonicalTarget.value = iso ?? '';
             let message = '';
             if (input.value !== '' && !iso) message = 'Gunakan format DD/MM/YYYY dengan tanggal yang valid.';
             if (iso && input.dataset.isoMin && iso < input.dataset.isoMin) message = `Tanggal minimal ${toDisplay(input.dataset.isoMin)}.`;

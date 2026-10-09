@@ -329,7 +329,8 @@ final class PublicZiswafReportService
                 continue;
             }
             $details[$row->fund_id]['source_entries'][] = [
-                'date' => $row->date_label ?: $row->effective_date,
+                'date' => $row->effective_date->toDateString(),
+                'date_label' => $row->date_label,
                 'description' => $row->description,
                 'kind' => match ($row->entry_kind) {
                     'usage', 'adjustment_out' => 'expense',

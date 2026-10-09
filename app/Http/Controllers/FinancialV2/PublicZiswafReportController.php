@@ -67,10 +67,10 @@ final class PublicZiswafReportController
     private function validatedPeriod(Request $request): array
     {
         return $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
             // Backward-compatible public links from the first ZISWAF report.
-            'as_of' => ['nullable', 'date'],
+            'as_of' => ['nullable', 'date_format:Y-m-d'],
         ]);
     }
 }
