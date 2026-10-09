@@ -123,7 +123,7 @@ final class HistoricalFundHistoryController
                 'uuid',
                 Rule::exists('financial_v2_funds', 'id')->where('accounting_entity_id', $entity->id),
             ],
-            'effective_date' => ['nullable', 'date'],
+            'effective_date' => ['nullable', 'date_format:Y-m-d'],
             'date_label' => ['required', 'string', 'max:100'],
             'entry_kind' => ['required', Rule::in(['opening', 'receipt', 'usage', 'adjustment_in', 'adjustment_out', 'account_position', 'closing'])],
             'description' => ['required', 'string', 'max:500'],

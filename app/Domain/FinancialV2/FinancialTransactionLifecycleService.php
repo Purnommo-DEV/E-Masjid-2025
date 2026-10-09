@@ -172,7 +172,7 @@ final class FinancialTransactionLifecycleService
             }
             $this->assertRealizationParentApproved($transaction);
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, (string) ($changes['accounting_date'] ?? $transaction->accounting_date->toDateString()), $transaction->type?->code);
-            $allowed = ['source_reference', 'business_date', 'accounting_date', 'description', 'fund_purpose_code', 'fund_purpose_other', 'currency_code', 'gross_amount', 'primary_financial_account_id', 'counterparty_id', 'category_id', 'reason_code_id', 'related_transaction_id', 'idempotency_key', 'policy_version_ref'];
+            $allowed = ['source_reference', 'business_date', 'accounting_date', 'description', 'currency_code', 'gross_amount', 'primary_financial_account_id', 'counterparty_id', 'category_id', 'reason_code_id', 'related_transaction_id', 'idempotency_key', 'policy_version_ref'];
             $changes = array_intersect_key($changes, array_flip($allowed));
             $before = $transaction->only(array_keys($changes));
             FinancialTransactionStateGuard::withinLifecycle(fn () => $transaction->update($changes + ['updated_by_user_id' => $actorUserId]));
@@ -459,8 +459,6 @@ final class FinancialTransactionLifecycleService
             'business_date' => $input['business_date'],
             'accounting_date' => $input['accounting_date'],
             'description' => $input['description'] ?? null,
-            'fund_purpose_code' => $input['fund_purpose_code'] ?? null,
-            'fund_purpose_other' => $input['fund_purpose_other'] ?? null,
             'currency_code' => $input['currency_code'] ?? $entity->functional_currency,
             'gross_amount' => $amount,
             'primary_financial_account_id' => $input['primary_financial_account_id'] ?? null,

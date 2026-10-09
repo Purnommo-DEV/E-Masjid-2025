@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\Reporting\PublicZiswafReportService;
+use App\Support\FinancialDate;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -44,7 +45,7 @@ final class PublicZiswafReportController
         $fontMetrics = $pdf->getDomPDF()->getFontMetrics();
         $font = $fontMetrics->getFont('DejaVu Sans', 'normal');
         $printedAt = $generatedAt->format('d/m/Y H:i').' WIB';
-        $period = sprintf('Periode %s-%s', $report['period_from'], $report['as_of']);
+        $period = sprintf('Periode %s-%s', FinancialDate::date($report['period_from']), FinancialDate::date($report['as_of']));
         $canvas->page_script(static function (int $pageNumber, int $pageCount, $pageCanvas) use ($font, $printedAt, $period): void {
             $pageCanvas->line(40, 800, 555, 800, [0.85, 0.91, 0.88], 0.5);
             $pageCanvas->text(40, 812, 'Masjid Raudhotul Jannah - Dicetak '.$printedAt, $font, 6.5, [0.37, 0.45, 0.41]);

@@ -150,40 +150,6 @@
 @endsection
 
 @push('scripts')
-<script>
-(() => {
-    const isoToDisplay = (iso) => {
-        const match = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
-    };
-    const displayToIso = (display) => {
-        const match = String(display || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (!match) return null;
-        const day = Number(match[1]);
-        const month = Number(match[2]);
-        const year = Number(match[3]);
-        const candidate = new Date(Date.UTC(year, month - 1, day));
-        if (candidate.getUTCFullYear() !== year || candidate.getUTCMonth() !== month - 1 || candidate.getUTCDate() !== day) return null;
-        return `${match[3]}-${match[2]}-${match[1]}`;
-    };
-    document.querySelectorAll('[data-allocation-date-display]').forEach((display) => {
-        const iso = document.getElementById(display.dataset.dateTarget);
-        if (!iso) return;
-        display.value = isoToDisplay(iso.value);
-        const synchronize = () => {
-            const canonical = displayToIso(display.value.trim());
-            const minimum = display.dataset.minDate || null;
-            const valid = canonical !== null && (!minimum || canonical >= minimum);
-            display.setCustomValidity(valid ? '' : (canonical ? `Tanggal minimal ${isoToDisplay(minimum)}.` : 'Gunakan format DD/MM/YYYY yang valid.'));
-            iso.value = valid ? canonical : '';
-            if (valid) iso.dispatchEvent(new Event('change', { bubbles: true }));
-        };
-        display.addEventListener('input', synchronize);
-        display.addEventListener('blur', synchronize);
-        synchronize();
-    });
-})();
-</script>
 <template data-funding-template>
     <div class="rounded-xl border border-base-300 bg-base-100 p-3" data-funding-line>
         <div class="mb-2 flex items-center justify-between"><span class="text-sm font-semibold" data-funding-label>Sumber Dana</span><button type="button" class="btn btn-ghost btn-xs text-error" data-remove-funding>Hapus</button></div>

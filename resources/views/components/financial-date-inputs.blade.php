@@ -3,7 +3,7 @@
 (() => {
     const financialPath = /^(?:\/admin\/(?:keuangan(?:-v2)?|kotak-infak|dana-terikat|pengeluaran|penerimaan|zakat|alokasi-dana|saldo-awal)(?:\/|$)|\/laporan-ziswaf(?:-v2)?(?:\/|$))/;
     if (!financialPath.test(window.location.pathname)) return;
-    const datepickerPath = /^\/admin\/keuangan-v2\/(?:receipt\/baru|payment\/baru|transfer\/baru|mutasi-bank(?:\/[^/]+)?|alokasi-dana\/baru|perencanaan(?:\/[^/]+(?:\/ubah)?)?|riwayat|penyaluran(?:\/[^/]+)?|penerima(?:\/[^/]+)?|laporan-ziswaf)(?:\/|$)/.test(window.location.pathname);
+    const datepickerPath = /^(?:\/admin\/keuangan-v2(?:\/|$)|\/laporan-ziswaf(?:-v2)?(?:\/|$))/.test(window.location.pathname);
 
     const isoPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
     const displayPattern = /^(\d{2})\/(\d{2})\/(\d{4})$/;
@@ -26,7 +26,17 @@
         day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
         hourCycle: 'h23', timeZone: 'Asia/Jakarta',
     }).format(new Date(value)).replace(',', '');
-    window.financialDate = Object.freeze({ toDisplay, toIso, dateTime });
+    const setCanonical = (field, value) => {
+        const display = field?.financialDisplayInput
+            || (field?.dataset?.indonesianDateReady === 'true' ? field : null);
+        const target = display?.financialCanonicalTarget || field;
+        if (target) target.value = value || '';
+        if (display) {
+            display.value = toDisplay(value || '');
+            display.setCustomValidity('');
+        }
+    };
+    window.financialDate = Object.freeze({ toDisplay, toIso, dateTime, setCanonical });
 
     const attachCalendar = input => {
         if (!datepickerPath || input.dataset.financialCalendarReady === 'true') return;
@@ -40,6 +50,7 @@
 
         const picker = document.createElement('input');
         picker.type = 'date';
+        picker.dataset.financialNativePicker = 'true';
         picker.lang = 'id';
         picker.tabIndex = -1;
         picker.setAttribute('aria-hidden', 'true');
@@ -72,7 +83,24 @@
     const enhance = input => {
         if (input.dataset.indonesianDateReady === 'true') return;
         input.dataset.indonesianDateReady = 'true';
-        const canonicalTarget = input.dataset.dateTarget ? document.getElementById(input.dataset.dateTarget) : null;
+        const originalName = input.name;
+        let canonicalTarget = input.dataset.dateTarget ? document.getElementById(input.dataset.dateTarget) : null;
+        const initialCanonical = input.value || canonicalTarget?.value || '';
+
+        // The visible field never owns the request name. A hidden field always
+        // carries the canonical ISO value, including for FormData/AJAX submits.
+        if (datepickerPath && !canonicalTarget && originalName) {
+            canonicalTarget = document.createElement('input');
+            canonicalTarget.type = 'hidden';
+            canonicalTarget.name = originalName;
+            canonicalTarget.value = initialCanonical;
+            canonicalTarget.disabled = input.disabled;
+            if (input.hasAttribute('form')) canonicalTarget.setAttribute('form', input.getAttribute('form'));
+            input.insertAdjacentElement('afterend', canonicalTarget);
+            input.removeAttribute('name');
+        }
+        input.financialCanonicalTarget = canonicalTarget;
+        if (canonicalTarget) canonicalTarget.financialDisplayInput = input;
         input.dataset.isoMin = input.dataset.minDate || input.min || '';
         input.dataset.isoMax = input.max || '';
         input.type = 'text';
@@ -80,12 +108,17 @@
         input.autocomplete = 'off';
         input.maxLength = 10;
         input.placeholder ||= 'DD/MM/YYYY';
-        input.value = toDisplay(input.value || canonicalTarget?.value || '');
+        input.value = toDisplay(initialCanonical);
+        input.defaultValue = input.value;
+        if (canonicalTarget) canonicalTarget.defaultValue = canonicalTarget.value;
 
         const validate = () => {
             if (isoPattern.test(input.value)) input.value = toDisplay(input.value);
             const iso = input.value === '' ? '' : toIso(input.value);
-            if (canonicalTarget) canonicalTarget.value = iso ?? '';
+            if (canonicalTarget) {
+                canonicalTarget.value = iso ?? '';
+                canonicalTarget.disabled = input.disabled;
+            }
             let message = '';
             if (input.value !== '' && !iso) message = 'Gunakan format DD/MM/YYYY dengan tanggal yang valid.';
             if (iso && input.dataset.isoMin && iso < input.dataset.isoMin) message = `Tanggal minimal ${toDisplay(input.dataset.isoMin)}.`;
@@ -98,11 +131,12 @@
         attachCalendar(input);
     };
 
-    const enhanceAll = root => root.querySelectorAll?.('input[type="date"], input[data-allocation-date-display]').forEach(enhance);
+    const dateInputSelector = 'input[type="date"]:not([data-financial-native-picker]), input[data-allocation-date-display]';
+    const enhanceAll = root => root.querySelectorAll?.(dateInputSelector).forEach(enhance);
     enhanceAll(document);
     new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
         if (!(node instanceof Element)) return;
-        if (node.matches('input[type="date"], input[data-allocation-date-display]')) enhance(node);
+        if (node.matches(dateInputSelector)) enhance(node);
         enhanceAll(node);
     }))).observe(document.documentElement, { childList: true, subtree: true });
 
@@ -118,10 +152,26 @@
     }, true);
 
     document.addEventListener('formdata', event => {
-        for (const input of event.target.querySelectorAll('input[data-indonesian-date-ready="true"][name]')) {
+        for (const input of event.target.querySelectorAll('input[data-indonesian-date-ready="true"]')) {
             const iso = input.value === '' ? '' : toIso(input.value);
-            if (iso !== null) event.formData.set(input.name, iso);
+            const target = input.financialCanonicalTarget;
+            if (target) {
+                if (input.disabled) event.formData.delete(target.name);
+                else if (iso !== null) event.formData.set(target.name, iso);
+            } else if (input.name && iso !== null) {
+                event.formData.set(input.name, iso);
+            }
         }
+    });
+
+    document.addEventListener('reset', event => {
+        window.setTimeout(() => {
+            for (const input of event.target.querySelectorAll('input[data-indonesian-date-ready="true"]')) {
+                const target = input.financialCanonicalTarget;
+                input.value = toDisplay(target?.value || input.defaultValue || '');
+                input.setCustomValidity('');
+            }
+        });
     });
 })();
 </script>

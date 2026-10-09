@@ -58,8 +58,8 @@ final class ZiswafReportingV2Controller
     {
         return $request->validate([
             'entity' => ['nullable', 'uuid'],
-            'from' => ['nullable', 'date'],
-            'through' => ['nullable', 'date', 'after_or_equal:from'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'through' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
             'fund_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],

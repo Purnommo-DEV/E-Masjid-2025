@@ -13,8 +13,8 @@ final class PublicZiswafReportingV2Controller
     public function index(Request $request)
     {
         $input = $request->validate([
-            'from' => ['nullable', 'date'],
-            'through' => ['nullable', 'date', 'after_or_equal:from'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'through' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
         return view('masjid.mrj.guest.financial-v2.ziswaf-report-v2', [

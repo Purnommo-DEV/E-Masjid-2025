@@ -3,7 +3,6 @@
 namespace App\Domain\FinancialV2;
 
 use App\Models\FinancialV2\Account;
-use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\FundPolicyVersion;
@@ -136,18 +135,9 @@ final class MasterDataGovernanceService
             if ($version->rules->isEmpty()) {
                 throw new FinancialDomainException('E-FUND-POLICY-RULES-INCOMPLETE', 'Fund Policy tanpa rule tidak dapat diberlakukan.');
             }
-            $cloneAudit = AuditEvent::query()
-                ->where('event_type', 'fund_policy_successor_cloned')
-                ->where('target_type', 'fund_policy_version')
-                ->where('target_id', $version->id)
-                ->latest('event_at')
-                ->first();
-            if ($cloneAudit) {
-                $expected = json_decode((string) $cloneAudit->after_summary, true, 512, JSON_THROW_ON_ERROR)['rules'] ?? null;
-                if ($expected !== FundPolicyRuleSet::signature($version->rules)) {
-                    throw new FinancialDomainException('E-FUND-POLICY-RULES-INCOMPLETE', 'Rule successor tidak lagi sama dengan hasil clone predecessor dan tidak dapat diberlakukan.');
-                }
-            }
+            // FundPolicySuccessorService verifies the predecessor clone atomically
+            // when the draft is created. The draft may then be reviewed and
+            // deliberately extended through governed rule CRUD before activation.
             // A policy is immutable once effective. A later approved policy
             // therefore supersedes (rather than edits) its effective
             // predecessor, preserving the historical decision and audit trail.

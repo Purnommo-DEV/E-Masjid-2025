@@ -413,7 +413,7 @@
                         postingRuleHelp.textContent = payload.message;
                         const evidenceLabels = { receipt: 'Tanda terima', invoice: 'Invoice/tagihan', transfer_proof: 'Bukti transfer', statement: 'Rekening koran', cash_count: 'Perhitungan kas', approval: 'Persetujuan', policy: 'Dokumen kebijakan', other: 'Lainnya' };
                         evidenceRequirements.textContent = (payload.evidence_requirements || []).map((item) => `${evidenceLabels[item.type] || item.type} — wajib ${item.minimum_count} file`).join(' · ') || 'Aturan bukti belum tersedia.';
-                        modalForm.elements.effective_from.value = context.date;
+                        window.financialDate.setCanonical(modalForm.elements.effective_from, context.date);
                         modalForm.elements.required_approval_steps.value = payload.required_approval_steps;
                         modalForm.querySelector('[data-inline-configuration-save]').disabled = !payload.selected_posting_rule_version_id || payload.status !== 'MISSING_CONFIGURATION';
                         dialog.showModal();

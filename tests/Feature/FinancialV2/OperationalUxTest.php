@@ -34,6 +34,7 @@ use App\Models\FinancialV2\Voucher;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 function uxOperationalContext(): array
@@ -167,6 +168,56 @@ test('operational receipt UX is idempotent, retains evidence, and posts through 
         ->and(FinancialTransaction::findOrFail($transactionId)->status)->toBe('posted');
 });
 
+test('payment draft validation retry and new requests preserve source idempotency without fund purpose metadata', function () {
+    $context = uxOperationalContext();
+    $user = User::factory()->create();
+    $submissionKey = (string) Str::uuid();
+    $payload = [
+        'entity' => $context['entity']->id,
+        'submission_key' => $submissionKey,
+        'date' => $context['today'],
+        'amount' => '25.00',
+        'counterparty_id' => $context['supplier']->id,
+        'financial_account_id' => $context['sourceFinancialAccount']->id,
+        'fund_id' => $context['fund']->id,
+        'category_id' => $context['paymentCategory']->id,
+        'program_id' => $context['program']->id,
+        'description' => 'Payment retry idempotency test',
+    ];
+
+    $invalid = $payload;
+    $invalid['amount'] = 'invalid';
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'payment'), $invalid)
+        ->assertStatus(422);
+    expect(FinancialTransaction::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0);
+
+    $first = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'payment'), $payload)
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonMissing(['duplicate' => true]);
+    $transactionId = $first->json('transaction_id');
+
+    $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'payment'), $payload)
+        ->assertOk()
+        ->assertJsonPath('duplicate', true)
+        ->assertJsonPath('transaction_id', $transactionId);
+
+    $newPayload = $payload;
+    $newPayload['submission_key'] = (string) Str::uuid();
+    $newPayload['amount'] = '30.00';
+    $second = $this->actingAs($user)->postJson(route('financial-v2.transactions.store', 'payment'), $newPayload)
+        ->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonMissing(['duplicate' => true]);
+
+    expect($second->json('transaction_id'))->not->toBe($transactionId)
+        ->and(FinancialTransaction::where('accounting_entity_id', $context['entity']->id)->count())->toBe(2)
+        ->and(Schema::hasColumn('financial_v2_transactions', 'fund_purpose_code'))->toBeFalse()
+        ->and(Schema::hasColumn('financial_v2_transactions', 'fund_purpose_other'))->toBeFalse()
+        ->and(class_exists(\App\Domain\FinancialV2\TransactionFundPurpose::class))->toBeFalse();
+
+});
+
 test('generic draft discovery keeps receipt drafts findable, scoped, editable, and submittable', function () {
     $this->travelTo(\Carbon\Carbon::parse('2026-07-13 10:00:00'));
     $context = uxOperationalContext();
@@ -284,7 +335,7 @@ test('draft realization accepts multiple evidence files, converts images to read
         'date' => $context['today'],
         'amount' => '20.00',
         'budget_allocation_version_id' => $version->id,
-        'counterparty_name' => 'Penerima Sembako',
+        'counterparty_id' => $context['supplier']->id,
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'category_id' => $context['paymentCategory']->id,
         'funding_sources' => [['fund_id' => $context['fund']->id, 'amount' => '20.00']],
@@ -553,7 +604,7 @@ test('allocation UX completes its governed lifecycle before a realization posts 
         ->assertSee('data-realization-allocation', false)
         ->assertSee('Kategori dari alokasi')
         ->assertSee('data-financial-configuration', false)
-        ->assertSee('name="counterparty_name"', false)
+        ->assertSee('name="counterparty_id"', false)
         ->assertSee('data-money-input', false)
         ->assertSee('sisa Rp75,00')
         ->assertSee('Lampiran bukti');
@@ -579,7 +630,7 @@ test('allocation UX completes its governed lifecycle before a realization posts 
     $this->actingAs($user)->postJson(route('financial-v2.transactions.post', $receipt->json('transaction_id')))->assertOk();
     $realization = $this->actingAs($user)->post(route('financial-v2.transactions.store', 'realization'), [
         'entity' => $context['entity']->id, 'submission_key' => (string) Str::uuid(), 'date' => $context['today'], 'amount' => '20.00',
-        'budget_allocation_version_id' => $version->id, 'counterparty_name' => 'Penerima Santunan Uji',
+        'budget_allocation_version_id' => $version->id, 'counterparty_id' => $context['supplier']->id,
         'financial_account_id' => $context['sourceFinancialAccount']->id, 'category_id' => $context['paymentCategory']->id,
         'description' => 'Realisasi biaya utilitas', 'attachment' => UploadedFile::fake()->createWithContent('bukti-realisasi.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"),
     ], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('ok', true);
@@ -663,7 +714,7 @@ test('an allocation reopens its one active realization draft without creating fa
         'date' => $context['today'],
         'amount' => '20.00',
         'budget_allocation_version_id' => $version->id,
-        'counterparty_name' => 'Penerima Draft Realisasi',
+        'counterparty_id' => $context['supplier']->id,
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'category_id' => $context['paymentCategory']->id,
         'description' => 'Realisasi sedang disiapkan',
@@ -705,7 +756,7 @@ test('an allocation reopens its one active realization draft without creating fa
     $this->actingAs($user)->get(route('financial-v2.realizations.drafts', ['entity' => $context['entity']->id]))
         ->assertOk()
         ->assertSee('Draft Realisasi')
-        ->assertSee('Penerima Draft Realisasi')
+        ->assertSee($context['supplier']->display_name)
         ->assertSee('1 bukti terlampir');
     $this->actingAs($user)->get(route('financial-v2.transactions.show', $draftId))
         ->assertOk()
@@ -755,7 +806,7 @@ test('an unfixed allocation can be cancelled without financial facts and draft p
         'date' => $context['today'],
         'amount' => '20.00',
         'budget_allocation_version_id' => $version->id,
-        'counterparty_name' => 'Penerima rencana belum final',
+        'counterparty_id' => $context['supplier']->id,
         'financial_account_id' => $context['sourceFinancialAccount']->id,
         'category_id' => $context['paymentCategory']->id,
         'description' => 'Pembayaran draft yang belum final',

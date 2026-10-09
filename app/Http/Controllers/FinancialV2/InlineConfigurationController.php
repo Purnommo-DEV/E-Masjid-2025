@@ -31,8 +31,8 @@ final class InlineConfigurationController extends Controller
         $this->authorizeConfiguration($request);
         $input = $this->contextInput($request) + $request->validate([
             'posting_rule_version_id' => ['nullable', 'uuid'],
-            'effective_from' => ['required', 'date'],
-            'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
+            'effective_from' => ['required', 'date_format:Y-m-d'],
+            'effective_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:effective_from'],
             'required_approval_steps' => ['nullable', 'integer', 'min:0', 'max:9'],
             'policy_document_ref' => ['required', 'string', 'max:500'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -55,7 +55,7 @@ final class InlineConfigurationController extends Controller
         return $request->validate([
             'entity' => ['required', 'uuid'],
             'operation' => ['required', Rule::in(['receipt', 'payment', 'transfer', 'interfund', 'realization', 'bank_mutation'])],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'financial_account_id' => ['nullable', 'uuid'],
             'source_financial_account_id' => ['nullable', 'uuid'],
             'destination_financial_account_id' => ['nullable', 'uuid'],

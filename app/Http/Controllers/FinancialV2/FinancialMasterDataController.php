@@ -266,7 +266,7 @@ final class FinancialMasterDataController
     public function activateAccount(Request $request, string $financialAccount)
     {
         return $this->perform($request, 'accounts', function (AccountingEntity $entity) use ($request, $financialAccount) {
-            $date = $request->validate(['effective_date' => ['required', 'date']])['effective_date'];
+            $date = $request->validate(['effective_date' => ['required', 'date_format:Y-m-d']])['effective_date'];
             $this->ensureScoped(FinancialAccount::class, $entity->id, $financialAccount);
             $account = $this->governance->activateFinancialAccount($financialAccount, $date, $request->user()?->id);
 
@@ -277,7 +277,7 @@ final class FinancialMasterDataController
     public function deactivateAccount(Request $request, string $financialAccount)
     {
         return $this->perform($request, 'accounts', function (AccountingEntity $entity) use ($request, $financialAccount) {
-            $date = $request->validate(['effective_date' => ['required', 'date']])['effective_date'];
+            $date = $request->validate(['effective_date' => ['required', 'date_format:Y-m-d']])['effective_date'];
             $account = $this->masters->deactivateFinancialAccount($entity->id, $financialAccount, $date, $request->user()?->id);
 
             return ['Rekening/Kas dinonaktifkan. Riwayat transaksi tetap dipertahankan.', ['financial_account_id' => $account->id]];
@@ -355,7 +355,7 @@ final class FinancialMasterDataController
     public function activateFund(Request $request, string $fund)
     {
         return $this->perform($request, 'funds', function (AccountingEntity $entity) use ($request, $fund) {
-            $date = $request->validate(['effective_date' => ['required', 'date']])['effective_date'];
+            $date = $request->validate(['effective_date' => ['required', 'date_format:Y-m-d']])['effective_date'];
             $this->ensureScoped(Fund::class, $entity->id, $fund);
             $fund = $this->governance->activateFund($fund, $date, $request->user()?->id);
 
@@ -366,7 +366,7 @@ final class FinancialMasterDataController
     public function deactivateFund(Request $request, string $fund)
     {
         return $this->perform($request, 'funds', function (AccountingEntity $entity) use ($request, $fund) {
-            $date = $request->validate(['effective_date' => ['required', 'date']])['effective_date'];
+            $date = $request->validate(['effective_date' => ['required', 'date_format:Y-m-d']])['effective_date'];
             $fund = $this->masters->deactivateFund($entity->id, $fund, $date, $request->user()?->id);
 
             return ['Dana dinonaktifkan. Riwayat dan saldo resmi di ledger tetap utuh.', ['fund_id' => $fund->id]];
@@ -601,8 +601,8 @@ final class FinancialMasterDataController
             'account_type' => ['required', Rule::in(['bank', 'cash', 'petty_cash', 'e_wallet'])],
             'custodian_reference' => ['nullable', 'string', 'max:100'],
             'currency_code' => ['required', 'string', 'size:3'],
-            'opening_date' => ['required', 'date'],
-            'closing_date' => ['nullable', 'date', 'after_or_equal:opening_date'],
+            'opening_date' => ['required', 'date_format:Y-m-d'],
+            'closing_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:opening_date'],
             'bank_name' => [Rule::requiredIf($request->input('account_type') === 'bank'), 'nullable', 'string', 'max:160'],
             'branch_name' => ['nullable', 'string', 'max:160'],
             'account_number_masked' => [Rule::requiredIf($request->input('account_type') === 'bank'), 'nullable', 'string', 'max:80'],
@@ -621,8 +621,8 @@ final class FinancialMasterDataController
             'name' => ['required', 'string', 'max:160'],
             'classification' => ['required', Rule::in(['unrestricted', 'designated', 'restricted', 'perpetual_restricted', 'custodial', 'syariah'])],
             'status' => ['required', Rule::in(['active', 'inactive'])],
-            'valid_from' => ['nullable', 'date'],
-            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'valid_from' => ['nullable', 'date_format:Y-m-d'],
+            'valid_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:valid_from'],
         ], $this->messages());
     }
 
@@ -636,8 +636,8 @@ final class FinancialMasterDataController
             'severity' => ['required', Rule::in(['low', 'medium', 'high', 'critical'])],
             'policy_basis' => ['required', 'string'],
             'status' => ['required', Rule::in(['draft', 'active', 'retired'])],
-            'valid_from' => ['nullable', 'date'],
-            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'valid_from' => ['nullable', 'date_format:Y-m-d'],
+            'valid_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:valid_from'],
         ], $this->messages());
     }
 
@@ -653,8 +653,8 @@ final class FinancialMasterDataController
             'prohibited_use_statement' => ['nullable', 'string'],
             'minimum_balance_policy' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
             'allow_negative_balance' => ['nullable', 'boolean'],
-            'valid_from' => ['nullable', 'date'],
-            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'valid_from' => ['nullable', 'date_format:Y-m-d'],
+            'valid_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:valid_from'],
         ], $this->messages()) + ['allow_negative_balance' => $request->boolean('allow_negative_balance')];
     }
 
@@ -662,8 +662,8 @@ final class FinancialMasterDataController
     private function policyInput(Request $request, bool $includeFund): array
     {
         $rules = [
-            'effective_from' => ['required', 'date'],
-            'effective_to' => ['nullable', 'date', 'after_or_equal:effective_from'],
+            'effective_from' => ['required', 'date_format:Y-m-d'],
+            'effective_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:effective_from'],
             'policy_document_ref' => ['required', 'string', 'max:500'],
             'allowed_matrix_ref' => ['nullable', 'string', 'max:500'],
             'exception_approval_level' => ['required', 'string', 'max:80'],
@@ -695,8 +695,8 @@ final class FinancialMasterDataController
             'cost_center_id' => ['nullable', 'uuid'],
             'code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/'],
             'name' => ['required', 'string', 'max:160'],
-            'start_date' => ['nullable', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'start_date' => ['nullable', 'date_format:Y-m-d'],
+            'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
             'program_owner_reference' => ['nullable', 'string', 'max:100'],
         ], $this->messages());
     }
@@ -737,8 +737,8 @@ final class FinancialMasterDataController
             'code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/'],
             'name' => ['required', 'string', 'max:160'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
-            'valid_from' => ['nullable', 'date'],
-            'valid_to' => ['nullable', 'date', 'after_or_equal:valid_from'],
+            'valid_from' => ['nullable', 'date_format:Y-m-d'],
+            'valid_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:valid_from'],
         ], $this->messages());
     }
 

@@ -78,7 +78,7 @@ final class FinancialControlController
             'entity' => ['required', 'uuid'],
             'financial_account_id' => ['required', 'uuid'],
             'accounting_period_id' => ['required', 'uuid'],
-            'as_of_date' => ['required', 'date'],
+            'as_of_date' => ['required', 'date_format:Y-m-d'],
             'statement_balance' => ['required', 'regex:/^-?\d+(?:\.\d{1,2})?$/'],
             'notes' => ['nullable', 'string', 'max:4000'],
             'evidence' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],

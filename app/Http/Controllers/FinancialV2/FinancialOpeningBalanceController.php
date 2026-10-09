@@ -49,7 +49,7 @@ final class FinancialOpeningBalanceController
     {
         $data = $request->validate([
             'entity' => ['required', 'uuid'], 'accounting_period_id' => ['required', 'uuid'], 'mapping_set_id' => ['required', 'uuid'],
-            'position_date' => ['required', 'date'], 'rehearsal_reference' => ['required', 'string', 'max:120'], 'evidence_package_ref' => ['required', 'string', 'max:700'],
+            'position_date' => ['required', 'date_format:Y-m-d'], 'rehearsal_reference' => ['required', 'string', 'max:120'], 'evidence_package_ref' => ['required', 'string', 'max:700'],
         ]);
         $entity = $this->activeEntity($data['entity']);
 

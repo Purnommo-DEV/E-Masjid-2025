@@ -340,7 +340,7 @@ final class BankMutationController extends Controller
             'entity' => ['required', 'uuid'],
             'financial_account_id' => ['nullable', 'uuid'],
             'fund_id' => ['nullable', 'uuid'],
-            'date' => ['nullable', 'date'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
             'category_id' => ['nullable', 'uuid'],
             'amount' => ['nullable', 'numeric', 'gt:0'],
         ]);
@@ -389,7 +389,7 @@ final class BankMutationController extends Controller
         $data = $request->validate([
             'entity' => ['required', 'uuid'],
             'financial_account_id' => ['nullable', 'uuid'],
-            'date' => ['nullable', 'date'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
             'mutations' => ['present', 'array', 'max:50'],
             'mutations.*.category_id' => ['nullable', 'uuid'],
             'mutations.*.fund_id' => ['nullable', 'uuid'],
@@ -483,7 +483,7 @@ final class BankMutationController extends Controller
         $data = $request->validate([
             'entity' => ['required', 'uuid', Rule::exists('financial_v2_accounting_entities', 'id')->where('status', 'active')],
             'financial_account_id' => ['required', 'uuid', Rule::exists('financial_v2_financial_accounts', 'id')->where('accounting_entity_id', $entityId)->where('status', 'active')],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'category_id' => ['required', 'uuid', Rule::exists('financial_v2_categories', 'id')->where('accounting_entity_id', $entityId)->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))],
             'fund_id' => ['required', 'uuid', Rule::exists('financial_v2_funds', 'id')->where('accounting_entity_id', $entityId)->where('status', 'active')],
             'amount' => ['required', 'numeric', 'gt:0'],
@@ -504,7 +504,7 @@ final class BankMutationController extends Controller
             'entity' => ['required', 'uuid', Rule::exists('financial_v2_accounting_entities', 'id')->where('status', 'active')],
             'bank_mutation_batch_id' => ['required', 'uuid'],
             'financial_account_id' => ['required', 'uuid', Rule::exists('financial_v2_financial_accounts', 'id')->where('accounting_entity_id', $entityId)->where('status', 'active')],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'mutations' => ['required', 'array', 'min:1', 'max:50'],
             'mutations.*.transaction_id' => ['nullable', 'uuid'],
             'mutations.*.category_id' => ['required', 'uuid', Rule::exists('financial_v2_categories', 'id')->where('accounting_entity_id', $entityId)->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES))],

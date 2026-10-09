@@ -22,7 +22,6 @@ use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
 use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\TransactionEvidenceStatusService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
-use App\Domain\FinancialV2\TransactionFundPurpose;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\Attachment;
@@ -167,7 +166,13 @@ final class OperationalFinancialController
         } catch (FinancialDomainException|FinancialPostingException|InvalidArgumentException $exception) {
             return $this->failure($request, $exception);
         } catch (QueryException $exception) {
-            return $this->failure($request, new FinancialDomainException('E-UX-DUPLICATE', $exception->getMessage()));
+            if ($this->isSourceIdempotencyDuplicate($exception)) {
+                return $this->failure($request, new FinancialDomainException('E-UX-DUPLICATE', 'Kunci permintaan transaksi sudah digunakan.'));
+            }
+
+            report($exception);
+
+            return $this->failure($request, new FinancialDomainException('E-UX-PERSISTENCE', 'Draft belum dapat disimpan karena terjadi kendala penyimpanan. Tidak ada transaksi ganda yang dibuat.'));
         }
     }
 
@@ -255,8 +260,6 @@ final class OperationalFinancialController
                 'counterparty_id' => $counterparty?->id,
                 'category_id' => $category->id,
                 'description' => $this->description($operation === 'receipt' ? ($input['source'] ?? null) : null, $input['description'] ?? null),
-                'fund_purpose_code' => $input['fund_purpose_code'] ?? null,
-                'fund_purpose_other' => $this->fundPurposeOther($input),
             ], $actorId);
             $splits = collect($fundingSources ?? [['fund_id' => $fundId, 'amount' => $amount]])
                 ->values()
@@ -571,8 +574,8 @@ final class OperationalFinancialController
         $context = $this->context($request);
         $filters = $request->validate([
             'entity' => ['nullable', 'uuid'],
-            'from' => ['nullable', 'date'],
-            'through' => ['nullable', 'date', 'after_or_equal:from'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'through' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
             'fund_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],
             'status' => ['nullable', 'in:draft,submitted,approved,cancelled,superseded'],
@@ -651,8 +654,8 @@ final class OperationalFinancialController
         }
         $context = $this->contextForEntity($entity->id);
         $filters = $request->validate([
-            'from' => ['nullable', 'date'],
-            'through' => ['nullable', 'date'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'through' => ['nullable', 'date_format:Y-m-d'],
             'type' => ['nullable', 'in:OPB,RCV,PAY,TRF,IFT,ADJ'],
             'program_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
@@ -930,7 +933,7 @@ final class OperationalFinancialController
         $entity = $this->requiredEntity($request);
         $data = $request->validate([
             'type' => ['nullable', 'string', 'max:10'],
-            'date' => ['nullable', 'date'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
             'financial_account_id' => ['nullable', 'uuid'],
             'fund_id' => ['nullable', 'uuid'],
             'category_id' => ['nullable', 'uuid'],
@@ -1005,7 +1008,7 @@ final class OperationalFinancialController
         $entity = $this->requiredEntity($request);
         $data = $request->validate([
             'operation' => ['required', 'in:receipt,payment,transfer,interfund,realization'],
-            'date' => ['nullable', 'date'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
             'financial_account_id' => ['nullable', 'uuid'],
             'source_financial_account_id' => ['nullable', 'uuid'],
             'destination_financial_account_id' => ['nullable', 'uuid'],
@@ -1345,7 +1348,7 @@ final class OperationalFinancialController
     {
         $rules = [
             'submission_key' => ['required', 'uuid'],
-            'date' => ['required', 'date'],
+            'date' => ['required', 'date_format:Y-m-d'],
             'amount' => ['required', 'regex:/^\d+(?:\.\d{1,2})?$/'],
             'description' => ['nullable', 'string', 'max:2000'],
             'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:10240'],
@@ -1369,8 +1372,6 @@ final class OperationalFinancialController
                 'fund_id' => ['required', 'uuid'],
                 'category_id' => ['nullable', 'uuid'],
                 'program_id' => ['nullable', 'uuid'],
-                'fund_purpose_code' => ['required', Rule::enum(TransactionFundPurpose::class)],
-                'fund_purpose_other' => ['nullable', 'string', 'max:500', 'required_if:fund_purpose_code,'.TransactionFundPurpose::Other->value],
             ],
             'transfer' => [
                 'source_financial_account_id' => ['required', 'uuid'],
@@ -1389,8 +1390,6 @@ final class OperationalFinancialController
                 'counterparty_id' => ['required', 'uuid'],
                 'financial_account_id' => ['required', 'uuid'],
                 'category_id' => ['required', 'uuid'],
-                'fund_purpose_code' => ['required', Rule::enum(TransactionFundPurpose::class)],
-                'fund_purpose_other' => ['nullable', 'string', 'max:500', 'required_if:fund_purpose_code,'.TransactionFundPurpose::Other->value],
                 'funding_sources' => ['nullable', 'array', 'min:1', 'max:20'],
                 'funding_sources.*.fund_id' => ['required_with:funding_sources', 'uuid', 'distinct'],
                 'funding_sources.*.amount' => ['required_with:funding_sources', 'regex:/^\d+(?:\.\d{1,2})?$/'],
@@ -1485,8 +1484,6 @@ final class OperationalFinancialController
                 'counterparty_id' => $counterparty->id,
                 'category_id' => $category->id,
                 'gross_amount' => $amount,
-                'fund_purpose_code' => $input['fund_purpose_code'],
-                'fund_purpose_other' => $this->fundPurposeOther($input),
             ],
             'splits' => collect($fundingSources ?? [['fund_id' => $fund->id, 'amount' => $amount]])->values()->map(fn (array $funding): array => [
                 'account_id' => $splitAccountId,
@@ -1499,18 +1496,6 @@ final class OperationalFinancialController
                 'source_reference' => $funding['source_reference'] ?? null,
             ])->all(),
         ];
-    }
-
-    /** @param array<string, mixed> $input */
-    private function fundPurposeOther(array $input): ?string
-    {
-        if (($input['fund_purpose_code'] ?? null) !== TransactionFundPurpose::Other->value) {
-            return null;
-        }
-
-        $detail = trim((string) ($input['fund_purpose_other'] ?? ''));
-
-        return $detail !== '' ? $detail : null;
     }
 
     private function createTreasuryTransfer(AccountingEntity $entity, TransactionType $type, array $input, string $sourceKey, ?int $actorId): FinancialTransaction
@@ -1818,6 +1803,12 @@ final class OperationalFinancialController
     private function sourceKey(string $scope, string $submissionKey): string
     {
         return 'ux:'.$scope.':'.$submissionKey;
+    }
+
+    private function isSourceIdempotencyDuplicate(QueryException $exception): bool
+    {
+        return (int) ($exception->errorInfo[1] ?? 0) === 1062
+            && str_contains(strtolower($exception->getMessage()), 'fv2_tx_entity_idempotency_uq');
     }
 
     private function description(?string $source, ?string $description): ?string

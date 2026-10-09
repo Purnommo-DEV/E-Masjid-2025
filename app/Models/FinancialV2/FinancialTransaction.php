@@ -3,7 +3,6 @@
 namespace App\Models\FinancialV2;
 
 use App\Domain\FinancialV2\FinancialTransactionStateGuard;
-use App\Domain\FinancialV2\TransactionFundPurpose;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -78,15 +77,4 @@ class FinancialTransaction extends FinancialV2Model
         return $query->where('status', 'approved');
     }
 
-    public function fundPurposeLabel(): string
-    {
-        $purpose = TransactionFundPurpose::tryFrom((string) $this->fund_purpose_code);
-        if (! $purpose) {
-            return 'Belum ditentukan';
-        }
-
-        return $purpose === TransactionFundPurpose::Other && filled($this->fund_purpose_other)
-            ? $purpose->label().': '.$this->fund_purpose_other
-            : $purpose->label();
-    }
 }

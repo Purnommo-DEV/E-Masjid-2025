@@ -62,8 +62,8 @@ final class FinancialReportController
         return $request->validate([
             'entity' => ['nullable', 'uuid'],
             'report' => ['nullable', Rule::in(array_keys(FinancialReportService::REPORTS))],
-            'from' => ['nullable', 'date'],
-            'through' => ['nullable', 'date'],
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'through' => ['nullable', 'date_format:Y-m-d'],
             'financial_account_id' => ['nullable', 'uuid'],
             'fund_id' => ['nullable', 'uuid'],
             'program_id' => ['nullable', 'uuid'],

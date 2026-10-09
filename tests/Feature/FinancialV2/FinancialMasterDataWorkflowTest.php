@@ -180,14 +180,52 @@ test('draft fund policy rules are configurable without changing financial facts 
     expect(FundPolicyRule::where('fund_policy_version_id', $policy)->count())->toBe(1);
     $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), array_replace($rulePayload, ['decision' => 'prohibited']))
         ->assertStatus(422)->assertJsonPath('code', 'E-MASTER-POLICY-CONFLICT');
+    $secondRule = $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), array_replace($rulePayload, [
+        'category_id' => $context['receiptCategory']->id,
+        'rationale' => 'Specific permitted category',
+    ]))->assertOk()->assertJsonPath('ok', true);
+    expect($secondRule->json('fund_policy_rule_id'))->not->toBe($firstRule->json('fund_policy_rule_id'))
+        ->and(FundPolicyRule::where('fund_policy_version_id', $policy)->count())->toBe(2);
     $this->actingAs($user)->postJson(route('financial-v2.masters.policies.effective', $policy), ['entity' => $context['entity']->id])
         ->assertOk()->assertJsonPath('ok', true);
+    $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), array_replace($rulePayload, [
+        'program_id' => $context['program']->id,
+    ]))->assertStatus(422)->assertJsonPath('code', 'E-MASTER-POLICY-IMMUTABLE');
+    $this->actingAs($user)->putJson(route('financial-v2.masters.policy-rules.update', $firstRule->json('fund_policy_rule_id')), array_replace($rulePayload, [
+        'rationale' => 'Attempted mutation after effective',
+    ]))->assertStatus(422)->assertJsonPath('code', 'E-MASTER-POLICY-IMMUTABLE');
     $this->actingAs($user)->putJson(route('financial-v2.masters.policies.update', $policy), [
         'entity' => $context['entity']->id,
         'effective_from' => $context['today'],
         'policy_document_ref' => 'Changed policy',
         'exception_approval_level' => 'Synthetic approver',
     ])->assertStatus(422)->assertJsonPath('ok', false);
+
+    $successor = $this->actingAs($user)->postJson(route('financial-v2.masters.policies.successor', $policy), [
+        'entity' => $context['entity']->id,
+        'effective_from' => \Carbon\CarbonImmutable::parse($context['today'])->addDay()->toDateString(),
+        'policy_document_ref' => 'Synthetic successor '.Str::uuid(),
+        'exception_approval_level' => 'Synthetic approver',
+    ])->assertOk()->assertJsonPath('ok', true)->json('fund_policy_version_id');
+    expect(FundPolicyRule::where('fund_policy_version_id', $successor)->count())->toBe(2);
+
+    $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $successor), [
+        'entity' => $context['entity']->id,
+        'transaction_type_id' => $context['paymentType']->id,
+        'decision' => 'allowed',
+        'rationale' => 'Governed addition during successor review',
+    ])->assertOk()->assertJsonPath('ok', true);
+    expect(FundPolicyRule::where('fund_policy_version_id', $successor)->count())->toBe(3);
+
+    $this->actingAs($user)->postJson(route('financial-v2.masters.policies.effective', $successor), ['entity' => $context['entity']->id])
+        ->assertOk()->assertJsonPath('ok', true);
+    expect(\App\Models\FinancialV2\FundPolicyVersion::findOrFail($policy)->status)->toBe('superseded')
+        ->and(\App\Models\FinancialV2\FundPolicyVersion::findOrFail($successor)->status)->toBe('effective');
+    $this->actingAs($user)->postJson(route('financial-v2.masters.policy-rules.store', $policy), [
+        'entity' => $context['entity']->id,
+        'transaction_type_id' => $context['paymentType']->id,
+        'decision' => 'allowed',
+    ])->assertStatus(422)->assertJsonPath('code', 'E-MASTER-POLICY-IMMUTABLE');
 
     expect(app(FinancialMasterDataService::class))->toBeInstanceOf(FinancialMasterDataService::class)
         ->and(Journal::where('accounting_entity_id', $context['entity']->id)->count())->toBe(0)
