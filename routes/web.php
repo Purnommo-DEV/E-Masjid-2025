@@ -464,6 +464,12 @@ Route::middleware(['auth'])->group(function () {
         // These routes create configuration and audit events only; they never
         // create Journal, JournalLine, Ledger, opening balance, or legacy facts.
         Route::prefix('/master')->name('masters.')->group(function () {
+            Route::get('/pihak-pembayaran', [FinancialMasterDataController::class, 'counterparties'])->name('counterparties.index');
+            Route::post('/pihak-pembayaran', [FinancialMasterDataController::class, 'storeCounterparty'])->name('counterparties.store');
+            Route::put('/pihak-pembayaran/{counterparty}', [FinancialMasterDataController::class, 'updateCounterparty'])->whereUuid('counterparty')->name('counterparties.update');
+            Route::post('/pihak-pembayaran/{counterparty}/aktifkan', [FinancialMasterDataController::class, 'activateCounterparty'])->whereUuid('counterparty')->name('counterparties.activate');
+            Route::post('/pihak-pembayaran/{counterparty}/nonaktifkan', [FinancialMasterDataController::class, 'deactivateCounterparty'])->whereUuid('counterparty')->name('counterparties.deactivate');
+
             Route::get('/rekening-kas', [FinancialMasterDataController::class, 'accounts'])->name('accounts.index');
             Route::post('/rekening-kas', [FinancialMasterDataController::class, 'storeAccount'])->name('accounts.store');
             Route::put('/rekening-kas/{financialAccount}', [FinancialMasterDataController::class, 'updateAccount'])->name('accounts.update');

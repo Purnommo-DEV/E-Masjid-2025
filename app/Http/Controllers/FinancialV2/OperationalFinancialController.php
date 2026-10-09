@@ -121,7 +121,7 @@ final class OperationalFinancialController
             'entity' => $context['entity'],
             'operation' => $operation,
             'definition' => self::OPERATIONS[$operation],
-            'options' => $context['entity'] ? $this->formOptions($context['entity'], self::OPERATIONS[$operation]['code'], $operation === 'realization') : $this->emptyOptions(),
+            'options' => $context['entity'] ? $this->formOptions($context['entity'], self::OPERATIONS[$operation]['code'], $operation === 'realization', null, in_array($operation, ['payment', 'realization'], true)) : $this->emptyOptions(),
             'transaction' => null,
             'submissionKey' => old('submission_key', (string) Str::uuid()),
             'today' => now()->toDateString(),
@@ -191,7 +191,7 @@ final class OperationalFinancialController
                 'entity' => $context['entity'],
                 'operation' => $operation,
                 'definition' => self::OPERATIONS[$operation],
-                'options' => $this->formOptions($transaction->accounting_entity_id, null, $operation === 'realization', $transaction->accounting_date->toDateString()),
+                'options' => $this->formOptions($transaction->accounting_entity_id, null, $operation === 'realization', $transaction->accounting_date->toDateString(), in_array($operation, ['payment', 'realization'], true)),
                 'transaction' => $transaction,
                 'submissionKey' => Str::afterLast($transaction->idempotency_key, ':'),
                 'today' => $transaction->accounting_date->toDateString(),
@@ -243,7 +243,7 @@ final class OperationalFinancialController
             $splitAccountId = $resolved->businessAccountId;
             $counterparty = match ($operation) {
                 'receipt' => null,
-                'realization' => $this->counterparty($entity, $input['counterparty_id'] ?? null),
+                'realization' => $this->paymentCounterparty($entity, $input['counterparty_id'] ?? null),
                 default => $this->counterpartyFromInput($entity, $input, $actorId, 'supplier'),
             };
 
@@ -1254,7 +1254,7 @@ final class OperationalFinancialController
     }
 
     /** @return array<string, mixed> */
-    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true, ?string $date = null): array
+    private function formOptions(AccountingEntity|string $entity, ?string $transactionTypeCode = null, bool $includeAllocationVersions = true, ?string $date = null, bool $excludeBeneficiaryCounterparties = false): array
     {
         $entityId = $entity instanceof AccountingEntity ? $entity->id : $entity;
         $date ??= now()->toDateString();
@@ -1297,7 +1297,12 @@ final class OperationalFinancialController
                 ->when($transactionTypeId, fn (Builder $query) => $query->where(fn (Builder $category) => $category->whereNull('transaction_type_id')->orWhere('transaction_type_id', $transactionTypeId)))
                 ->orderBy('name')
                 ->get(),
-            'counterparties' => Counterparty::query()->where('accounting_entity_id', $entityId)->where('status', 'active')->orderBy('display_name')->get(),
+            'counterparties' => Counterparty::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('status', 'active')
+                ->when($excludeBeneficiaryCounterparties, fn (Builder $query) => $query->where('party_type', '!=', 'beneficiary'))
+                ->orderBy('display_name')
+                ->get(),
             'periods' => AccountingPeriod::query()->where('accounting_entity_id', $entityId)->where('status', 'open')->orderBy('start_date')->get(),
             'allocationVersions' => $allocationVersions,
         ];
@@ -1472,7 +1477,7 @@ final class OperationalFinancialController
         $splitAccountId = $resolved->businessAccountId;
         $counterparty = $allowCounterpartyCreation
             ? $this->counterpartyFromInput($entity, $input, $actorId, $counterpartyType)
-            : $this->counterparty($entity, $input['counterparty_id'] ?? null);
+            : $this->paymentCounterparty($entity, $input['counterparty_id'] ?? null);
 
         return [
             'input' => $this->transactionInput($entity, $type, $input, $sourceKey) + [
@@ -1638,6 +1643,16 @@ final class OperationalFinancialController
         return $counterparty;
     }
 
+    private function paymentCounterparty(AccountingEntity $entity, ?string $id): ?Counterparty
+    {
+        $counterparty = $this->counterparty($entity, $id);
+        if ($counterparty?->party_type === 'beneficiary') {
+            throw new FinancialDomainException('E-UX-COUNTERPARTY-TYPE', 'Master Penerima Manfaat tidak dapat digunakan sebagai pihak penerima pembayaran. Pilih Counterparty non-beneficiary yang benar-benar menerima uang.');
+        }
+
+        return $counterparty;
+    }
+
     /**
      * Resolves an existing counterparty or creates the explicitly named operational recipient.
      * This only creates a master record; the financial fact still flows through the lifecycle
@@ -1648,7 +1663,7 @@ final class OperationalFinancialController
     private function counterpartyFromInput(AccountingEntity $entity, array $input, ?int $actorId, string $partyType): Counterparty
     {
         if (! empty($input['counterparty_id'])) {
-            return $this->counterparty($entity, $input['counterparty_id']);
+            return $this->paymentCounterparty($entity, $input['counterparty_id']);
         }
 
         $displayName = trim((string) ($input['counterparty_name'] ?? ''));
@@ -1660,10 +1675,20 @@ final class OperationalFinancialController
         $existing = Counterparty::query()
             ->where('accounting_entity_id', $entity->id)
             ->where('status', 'active')
+            ->where('party_type', '!=', 'beneficiary')
             ->whereRaw('LOWER(display_name) = ?', [$normalizedName])
             ->first();
         if ($existing) {
             return $existing;
+        }
+
+        $beneficiaryWithSameName = Counterparty::query()
+            ->where('accounting_entity_id', $entity->id)
+            ->where('party_type', 'beneficiary')
+            ->whereRaw('LOWER(display_name) = ?', [$normalizedName])
+            ->exists();
+        if ($beneficiaryWithSameName) {
+            throw new FinancialDomainException('E-UX-COUNTERPARTY-TYPE', 'Nama tersebut sudah terdaftar sebagai Master Penerima Manfaat dan tidak boleh otomatis digunakan atau diduplikasi sebagai pihak pembayaran. Pilih Counterparty non-beneficiary yang tepat.');
         }
 
         $counterparty = Counterparty::query()->firstOrCreate(

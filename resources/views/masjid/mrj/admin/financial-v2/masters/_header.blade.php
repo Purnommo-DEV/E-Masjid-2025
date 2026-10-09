@@ -2,6 +2,7 @@
     $masterTabs = [
         ['route' => 'financial-v2.configuration.index', 'label' => 'Ringkasan Konfigurasi'],
         ['route' => 'financial-v2.masters.accounts.index', 'label' => 'Rekening / Kas'],
+        ['route' => 'financial-v2.masters.counterparties.index', 'label' => 'Pihak Pembayaran'],
         ['route' => 'financial-v2.masters.funds.index', 'label' => 'Dana'],
         ['route' => 'financial-v2.masters.programs.index', 'label' => 'Program'],
         ['route' => 'financial-v2.masters.categories.index', 'label' => 'Kategori Transaksi'],

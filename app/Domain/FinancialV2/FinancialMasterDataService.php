@@ -7,6 +7,7 @@ use App\Models\FinancialV2\BankAccountDetail;
 use App\Models\FinancialV2\BudgetAllocation;
 use App\Models\FinancialV2\CashAccountDetail;
 use App\Models\FinancialV2\Category;
+use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Fund;
@@ -32,7 +33,65 @@ use Illuminate\Support\Str;
  */
 final class FinancialMasterDataService
 {
+    private const PAYMENT_PARTY_TYPES = ['supplier', 'institution', 'donor', 'bank', 'other'];
+
     public function __construct(private readonly AuditTrailService $auditTrail) {}
+
+    /** @param array<string, mixed> $data */
+    public function createCounterparty(string $entityId, array $data, ?int $actorUserId = null): Counterparty
+    {
+        return DB::transaction(function () use ($entityId, $data, $actorUserId): Counterparty {
+            $this->assertPaymentCounterpartyData($data, true);
+            $counterparty = Counterparty::create(array_merge($data, [
+                'accounting_entity_id' => $entityId,
+                'status' => $data['status'],
+                'created_by_user_id' => $actorUserId,
+                'updated_by_user_id' => $actorUserId,
+            ]));
+            $this->record($entityId, 'counterparty_created', 'counterparty', $counterparty, $actorUserId, null, $this->counterpartySummary($counterparty));
+
+            return $counterparty;
+        }, 3);
+    }
+
+    /** @param array<string, mixed> $data */
+    public function updateCounterparty(string $entityId, string $counterpartyId, array $data, ?int $actorUserId = null): Counterparty
+    {
+        return DB::transaction(function () use ($entityId, $counterpartyId, $data, $actorUserId): Counterparty {
+            $this->assertPaymentCounterpartyData($data, false);
+            $counterparty = $this->paymentCounterpartyForEntity($entityId, $counterpartyId);
+            if ($counterparty->status === 'archived') {
+                throw new FinancialDomainException('E-MASTER-CLOSED', 'Pihak pembayaran yang sudah diarsipkan tidak dapat diubah kembali.');
+            }
+            if ($this->counterpartyIsReferenced($counterparty->id)
+                && ($counterparty->code !== $data['code'] || $counterparty->display_name !== $data['display_name'] || $counterparty->party_type !== $data['party_type'])) {
+                throw new FinancialDomainException('E-MASTER-REFERENCED', 'Pihak pembayaran yang sudah dipakai tidak dapat mengubah kode, nama, atau tipe. Nonaktifkan bila tidak lagi digunakan.');
+            }
+            $before = $this->counterpartySummary($counterparty);
+            $counterparty->update(array_merge($data, ['updated_by_user_id' => $actorUserId]));
+            $this->record($entityId, 'counterparty_updated', 'counterparty', $counterparty, $actorUserId, $before, $this->counterpartySummary($counterparty->fresh()));
+
+            return $counterparty->fresh();
+        }, 3);
+    }
+
+    public function setCounterpartyStatus(string $entityId, string $counterpartyId, string $status, ?int $actorUserId = null): Counterparty
+    {
+        return DB::transaction(function () use ($entityId, $counterpartyId, $status, $actorUserId): Counterparty {
+            if (! in_array($status, ['active', 'inactive'], true)) {
+                throw new FinancialDomainException('E-MASTER-STATUS', 'Status pihak pembayaran tidak valid.');
+            }
+            $counterparty = $this->paymentCounterpartyForEntity($entityId, $counterpartyId);
+            if ($counterparty->status === 'archived') {
+                throw new FinancialDomainException('E-MASTER-CLOSED', 'Pihak pembayaran yang sudah diarsipkan tidak dapat diaktifkan atau dinonaktifkan kembali.');
+            }
+            $before = $this->counterpartySummary($counterparty);
+            $counterparty->update(['status' => $status, 'updated_by_user_id' => $actorUserId]);
+            $this->record($entityId, 'counterparty_'.$status, 'counterparty', $counterparty, $actorUserId, $before, $this->counterpartySummary($counterparty->fresh()));
+
+            return $counterparty->fresh();
+        }, 3);
+    }
 
     /** @param array<string, mixed> $data */
     public function createFinancialAccount(string $entityId, array $data, ?int $actorUserId = null): FinancialAccount
@@ -548,6 +607,35 @@ final class FinancialMasterDataService
             || DB::table('financial_v2_reconciliations')->where('financial_account_id', $financialAccountId)->exists();
     }
 
+    private function counterpartyIsReferenced(string $counterpartyId): bool
+    {
+        return FinancialTransaction::query()->where('counterparty_id', $counterpartyId)->exists()
+            || TransactionSplit::query()->where('counterparty_id', $counterpartyId)->exists()
+            || JournalLine::query()->where('counterparty_id', $counterpartyId)->exists()
+            || DB::table('financial_v2_posting_rule_lines')->where('fixed_counterparty_id', $counterpartyId)->exists();
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertPaymentCounterpartyData(array $data, bool $requireStatus): void
+    {
+        if (! isset($data['party_type']) || ! in_array($data['party_type'], self::PAYMENT_PARTY_TYPES, true)) {
+            throw new FinancialDomainException('E-MASTER-TYPE', 'Tipe pihak pembayaran tidak valid dan tidak boleh menggunakan tipe penerima manfaat.');
+        }
+        if ($requireStatus && (! isset($data['status']) || ! in_array($data['status'], ['active', 'inactive'], true))) {
+            throw new FinancialDomainException('E-MASTER-STATUS', 'Status pihak pembayaran tidak valid.');
+        }
+    }
+
+    private function paymentCounterpartyForEntity(string $entityId, string $counterpartyId): Counterparty
+    {
+        $counterparty = $this->modelForEntity(Counterparty::class, $entityId, $counterpartyId, 'Pihak pembayaran');
+        if ($counterparty->party_type === 'beneficiary') {
+            throw new FinancialDomainException('E-MASTER-ENTITY-SCOPE', 'Master Penerima Manfaat hanya dapat dikelola melalui menu Penerima ZISWAF.');
+        }
+
+        return $counterparty;
+    }
+
     private function programIsReferenced(string $programId): bool
     {
         return TransactionSplit::query()->where('program_id', $programId)->exists()
@@ -599,6 +687,12 @@ final class FinancialMasterDataService
     private function financialAccountSummary(FinancialAccount $financialAccount): array
     {
         return $this->summary($financialAccount, ['account_id', 'code', 'name', 'account_type', 'custodian_reference', 'currency_code', 'opening_date', 'closing_date', 'status']);
+    }
+
+    /** @return array<string, mixed> */
+    private function counterpartySummary(Counterparty $counterparty): array
+    {
+        return $this->summary($counterparty, ['code', 'display_name', 'party_type', 'status']);
     }
 
     /** @return array<string, mixed> */

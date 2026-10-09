@@ -17,6 +17,7 @@ use App\Models\FinancialV2\ApprovalRequirement;
 use App\Models\FinancialV2\BankMutationPolicy;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\CostCenter;
+use App\Models\FinancialV2\Counterparty;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\FundPolicyVersion;
@@ -177,6 +178,71 @@ final class FinancialMasterDataController
             'financialAccounts' => $context['entity'] ? FinancialAccount::query()->forEntity($context['entity']->id)->with(['account', 'bankDetail', 'cashDetail'])->orderBy('name')->get() : collect(),
             'liquidityAccounts' => $context['entity'] ? Account::query()->forEntity($context['entity']->id)->where('is_liquidity_account', true)->orderBy('code')->get() : collect(),
         ]);
+    }
+
+    public function counterparties(Request $request)
+    {
+        $context = $this->context($request->query('entity'));
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:160'],
+            'party_type' => ['nullable', Rule::in(['donor', 'supplier', 'bank', 'institution', 'other'])],
+            'status' => ['nullable', Rule::in(['active', 'inactive', 'archived'])],
+        ]);
+        $counterparties = $context['entity']
+            ? Counterparty::query()
+                ->forEntity($context['entity']->id)
+                ->where('party_type', '!=', 'beneficiary')
+                ->when($filters['q'] ?? null, fn ($query, $term) => $query->where(fn ($search) => $search->where('code', 'like', '%'.$term.'%')->orWhere('display_name', 'like', '%'.$term.'%')))
+                ->when($filters['party_type'] ?? null, fn ($query, $type) => $query->where('party_type', $type))
+                ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+                ->orderBy('display_name')
+                ->paginate(20)
+                ->withQueryString()
+            : null;
+
+        return view('masjid.mrj.admin.financial-v2.masters.counterparties', [
+            'entities' => $context['entities'],
+            'entity' => $context['entity'],
+            'counterparties' => $counterparties,
+            'filters' => $filters,
+            'partyTypes' => $this->counterpartyTypes(),
+        ]);
+    }
+
+    public function storeCounterparty(Request $request)
+    {
+        return $this->perform($request, 'counterparties', function (AccountingEntity $entity) use ($request) {
+            $counterparty = $this->masters->createCounterparty($entity->id, $this->counterpartyInput($request, $entity->id, null, true), $request->user()?->id);
+
+            return ['Pihak pembayaran berhasil ditambahkan.', ['counterparty_id' => $counterparty->id]];
+        });
+    }
+
+    public function updateCounterparty(Request $request, string $counterparty)
+    {
+        return $this->perform($request, 'counterparties', function (AccountingEntity $entity) use ($request, $counterparty) {
+            $record = $this->masters->updateCounterparty($entity->id, $counterparty, $this->counterpartyInput($request, $entity->id, $counterparty), $request->user()?->id);
+
+            return ['Pihak pembayaran berhasil diperbarui.', ['counterparty_id' => $record->id]];
+        });
+    }
+
+    public function activateCounterparty(Request $request, string $counterparty)
+    {
+        return $this->perform($request, 'counterparties', function (AccountingEntity $entity) use ($request, $counterparty) {
+            $record = $this->masters->setCounterpartyStatus($entity->id, $counterparty, 'active', $request->user()?->id);
+
+            return ['Pihak pembayaran diaktifkan dan dapat dipilih pada transaksi baru.', ['counterparty_id' => $record->id]];
+        });
+    }
+
+    public function deactivateCounterparty(Request $request, string $counterparty)
+    {
+        return $this->perform($request, 'counterparties', function (AccountingEntity $entity) use ($request, $counterparty) {
+            $record = $this->masters->setCounterpartyStatus($entity->id, $counterparty, 'inactive', $request->user()?->id);
+
+            return ['Pihak pembayaran dinonaktifkan. Seluruh referensi historis tetap dipertahankan.', ['counterparty_id' => $record->id]];
+        });
     }
 
     public function storeAccount(Request $request)
@@ -633,6 +699,33 @@ final class FinancialMasterDataController
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'program_owner_reference' => ['nullable', 'string', 'max:100'],
         ], $this->messages());
+    }
+
+    /** @return array<string, mixed> */
+    private function counterpartyInput(Request $request, string $entityId, ?string $ignoreId = null, bool $includeStatus = false): array
+    {
+        $rules = [
+            'code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/', Rule::unique('financial_v2_counterparties', 'code')->where(fn ($query) => $query->where('accounting_entity_id', $entityId))->ignore($ignoreId)],
+            'display_name' => ['required', 'string', 'max:240'],
+            'party_type' => ['required', Rule::in(array_keys($this->counterpartyTypes()))],
+        ];
+        if ($includeStatus) {
+            $rules['status'] = ['required', Rule::in(['active', 'inactive'])];
+        }
+
+        return $request->validate($rules, $this->messages());
+    }
+
+    /** @return array<string, string> */
+    private function counterpartyTypes(): array
+    {
+        return [
+            'supplier' => 'Pemasok / Penyedia',
+            'institution' => 'Lembaga',
+            'donor' => 'Donatur',
+            'bank' => 'Bank',
+            'other' => 'Pihak lainnya',
+        ];
     }
 
     /** @return array<string, mixed> */
