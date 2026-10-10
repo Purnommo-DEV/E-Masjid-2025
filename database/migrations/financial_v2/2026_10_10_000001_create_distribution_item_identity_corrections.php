@@ -2,19 +2,22 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('financial_v2_distribution_item_identity_corrections', function (Blueprint $table) {
-            // Every referenced Financial V2 UUID is CHAR(36) using the
-            // established Financial V2 collation. The database default can
-            // differ, and MySQL rejects string foreign keys whose collations
-            // are not identical (error 3780).
-            $table->charset = 'utf8mb4';
-            $table->collation = 'utf8mb4_0900_ai_ci';
+        $uuidDefinition = $this->referencedUuidDefinition();
+        $this->assertUserKeyCompatibility();
+
+        Schema::create('financial_v2_distribution_item_identity_corrections', function (Blueprint $table) use ($uuidDefinition) {
+            // Use the collation already present on every referenced Financial
+            // V2 UUID. This works on both MySQL and MariaDB without requiring
+            // a server-specific collation such as utf8mb4_0900_ai_ci.
+            $table->charset = $uuidDefinition['charset'];
+            $table->collation = $uuidDefinition['collation'];
 
             $table->uuid('id')->primary();
             $table->uuid('accounting_entity_id');
@@ -47,5 +50,61 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('financial_v2_distribution_item_identity_corrections');
+    }
+
+    /** @return array{charset: string, collation: string} */
+    private function referencedUuidDefinition(): array
+    {
+        $references = [
+            'financial_v2_accounting_entities',
+            'financial_v2_distributions',
+            'financial_v2_distribution_items',
+            'financial_v2_counterparties',
+        ];
+        $expected = null;
+
+        foreach ($references as $table) {
+            $column = DB::selectOne(
+                'SELECT DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, CHARACTER_SET_NAME, COLLATION_NAME
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+                [$table, 'id'],
+            );
+
+            if (! $column) {
+                throw new RuntimeException("Kolom induk {$table}.id tidak ditemukan.");
+            }
+
+            $definition = [
+                'type' => strtolower((string) $column->DATA_TYPE),
+                'length' => (int) $column->CHARACTER_MAXIMUM_LENGTH,
+                'charset' => (string) $column->CHARACTER_SET_NAME,
+                'collation' => (string) $column->COLLATION_NAME,
+            ];
+
+            if ($definition['type'] !== 'char' || $definition['length'] !== 36 || $definition['charset'] === '' || $definition['collation'] === '') {
+                throw new RuntimeException("Definisi {$table}.id bukan UUID CHAR(36) yang didukung migration koreksi identitas.");
+            }
+
+            $expected ??= $definition;
+            if ($definition !== $expected) {
+                throw new RuntimeException('Kolom UUID induk Financial V2 memiliki tipe, charset, atau collation yang tidak konsisten. Migration dihentikan sebelum membuat tabel.');
+            }
+        }
+
+        return ['charset' => $expected['charset'], 'collation' => $expected['collation']];
+    }
+
+    private function assertUserKeyCompatibility(): void
+    {
+        $column = DB::selectOne(
+            'SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+            ['users', 'id'],
+        );
+
+        if (! $column || strtolower((string) $column->COLUMN_TYPE) !== 'bigint unsigned') {
+            throw new RuntimeException('Definisi users.id harus BIGINT UNSIGNED agar kompatibel dengan corrected_by_user_id.');
+        }
     }
 };
