@@ -197,6 +197,23 @@ final class MasterDataGovernanceService
 
     private function supersedeEffectiveFundPolicyPredecessors(FundPolicyVersion $version, ?int $actorUserId): void
     {
+        $historicalOverlap = FundPolicyVersion::query()
+            ->where('fund_id', $version->fund_id)
+            ->where('status', 'superseded')
+            ->whereNotNull('approved_at')
+            ->whereKeyNot($version->id)
+            ->where('effective_from', '<=', $version->effective_to ?? '9999-12-31')
+            ->where(fn ($query) => $query->whereNull('effective_to')->orWhere('effective_to', '>=', $version->effective_from))
+            ->lockForUpdate()
+            ->exists();
+
+        if ($historicalOverlap) {
+            throw new FinancialDomainException(
+                'E-MASTER-VERSION-HISTORICAL-OVERLAP',
+                'Periode Fund Policy bertabrakan dengan versi historis yang telah disetujui. Selesaikan konflik temporal melalui koreksi historis yang governed sebelum versi ini diberlakukan.'
+            );
+        }
+
         $overlaps = FundPolicyVersion::query()
             ->where('fund_id', $version->fund_id)
             ->where('status', 'effective')
@@ -206,9 +223,36 @@ final class MasterDataGovernanceService
             ->lockForUpdate()
             ->get();
 
+        if ($overlaps->isEmpty()) {
+            $latestPrior = FundPolicyVersion::query()
+                ->where('fund_id', $version->fund_id)
+                ->whereIn('status', ['effective', 'superseded'])
+                ->whereNotNull('approved_at')
+                ->whereKeyNot($version->id)
+                ->whereNotNull('effective_to')
+                ->where('effective_to', '<', $version->effective_from)
+                ->orderByDesc('effective_to')
+                ->lockForUpdate()
+                ->first();
+
+            if ($latestPrior && ! $latestPrior->effective_to->copy()->addDay()->equalTo($version->effective_from)) {
+                throw new FinancialDomainException(
+                    'E-MASTER-VERSION-PERIOD-GAP',
+                    'Periode Fund Policy tidak berkesinambungan dengan policy sebelumnya. Gunakan draft successor resmi dan mulai tepat satu hari setelah periode sebelumnya berakhir.'
+                );
+            }
+        }
+
         foreach ($overlaps as $predecessor) {
             if ($predecessor->effective_from->gte($version->effective_from)) {
                 throw new FinancialDomainException('E-MASTER-VERSION-OVERLAP', 'Effective master-policy date ranges must not overlap. A successor policy must start after its predecessor.');
+            }
+            if ((! $predecessor->effective_to && $version->effective_to)
+                || ($predecessor->effective_to && $version->effective_to && $version->effective_to->lt($predecessor->effective_to))) {
+                throw new FinancialDomainException(
+                    'E-MASTER-VERSION-PERIOD-FRAGMENT',
+                    'Successor tidak boleh memendekkan cakupan policy berjalan menjadi periode sementara. Gunakan akhir periode yang sama atau biarkan tanpa tanggal akhir.'
+                );
             }
 
             $before = $this->summary($predecessor, ['status', 'effective_to', 'approved_at']);

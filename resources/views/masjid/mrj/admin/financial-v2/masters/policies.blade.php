@@ -13,15 +13,16 @@
             <form method="post" action="{{ route('financial-v2.masters.policies.store') }}" data-financial-ajax class="rounded-2xl border border-base-300 bg-base-100 p-5 shadow-sm">
                 @csrf <input type="hidden" name="entity" value="{{ $entity->id }}">
                 <h2 class="text-lg font-bold">Versi Aturan Dana Baru</h2>
-                <p class="mt-1 text-sm text-base-content/65">Kebijakan yang sudah berlaku bersifat tetap. Buat versi baru untuk perubahan pada periode berikutnya.</p>
+                <p class="mt-1 text-sm text-base-content/65">Form ini hanya untuk baseline pertama Dana yang belum memiliki Fund Policy. Untuk Dana yang sudah memiliki policy, gunakan <strong>Tambah Aturan Penggunaan</strong> agar perubahan terkumpul dalam satu draft successor.</p>
                 <div class="mt-5 grid gap-4">
-                    <label class="form-control"><span class="label-text text-sm">Dana</span><select required name="fund_id" class="select select-bordered"><option value="">Pilih Dana</option>@foreach ($funds as $fund)<option value="{{ $fund->id }}">{{ $fund->name }} · {{ ucfirst($fund->status) }}</option>@endforeach</select></label>
+                    <label class="form-control"><span class="label-text text-sm">Dana</span><select required name="fund_id" class="select select-bordered"><option value="">Pilih Dana tanpa policy</option>@foreach ($fundsWithoutPolicy as $fund)<option value="{{ $fund->id }}">{{ $fund->name }} · {{ ucfirst($fund->status) }}</option>@endforeach</select></label>
                     <div class="grid gap-4 sm:grid-cols-2"><label class="form-control"><span class="label-text text-sm">Berlaku mulai</span><input required type="date" name="effective_from" value="{{ now()->toDateString() }}" class="input input-bordered"></label><label class="form-control"><span class="label-text text-sm">Berlaku sampai <span class="text-base-content/45">(opsional)</span></span><input type="date" name="effective_to" class="input input-bordered"></label></div>
                     <label class="form-control"><span class="label-text text-sm">Referensi dokumen kebijakan</span><input required name="policy_document_ref" maxlength="500" class="input input-bordered" placeholder="Nomor atau lokasi dokumen yang disetujui"></label>
                     <label class="form-control"><span class="label-text text-sm">Referensi matriks yang diizinkan <span class="text-base-content/45">(wajib untuk Dana restricted)</span></span><input name="allowed_matrix_ref" maxlength="500" class="input input-bordered" placeholder="Referensi matriks persetujuan"></label>
                     <label class="form-control"><span class="label-text text-sm">Tingkat persetujuan pengecualian</span><input required name="exception_approval_level" maxlength="80" class="input input-bordered" placeholder="Sesuai kebijakan internal"></label>
                 </div>
-                <button class="btn btn-primary mt-5">Simpan draft kebijakan</button>
+                <button class="btn btn-primary mt-5" @disabled($fundsWithoutPolicy->isEmpty())>Simpan draft baseline</button>
+                @if($fundsWithoutPolicy->isEmpty())<p class="mt-3 text-xs text-base-content/60">Semua Dana pada Entity ini sudah memiliki lineage policy. Lanjutkan dari kartu versi effective; jangan membuat versi paralel.</p>@endif
             </form>
 
             <section class="rounded-2xl border border-base-300 bg-base-100 shadow-sm">

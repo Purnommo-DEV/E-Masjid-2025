@@ -385,6 +385,11 @@ final class FinancialMasterDataController
             'entity' => $context['entity'],
             'versions' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->with(['fund.type', 'rules'])->orderByDesc('effective_from')->get() : collect(),
             'funds' => $entityId ? Fund::query()->forEntity($entityId)->orderBy('name')->get() : collect(),
+            'fundsWithoutPolicy' => $entityId ? Fund::query()
+                ->forEntity($entityId)
+                ->whereDoesntHave('policyVersions')
+                ->orderBy('name')
+                ->get() : collect(),
             'transactionTypes' => $entityId ? TransactionType::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
             'accounts' => $entityId ? Account::query()->forEntity($entityId)->where('status', 'active')->orderBy('code')->get() : collect(),
             'categories' => $entityId ? Category::query()->forEntity($entityId)->where('status', 'active')->orderBy('name')->get() : collect(),
@@ -400,7 +405,14 @@ final class FinancialMasterDataController
     public function storePolicy(Request $request)
     {
         return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request) {
-            $version = $this->masters->createFundPolicyVersion($entity->id, $this->policyInput($request, true), $request->user()?->id);
+            $input = $this->policyInput($request, true);
+            if (FundPolicyVersion::query()->where('accounting_entity_id', $entity->id)->where('fund_id', $input['fund_id'])->exists()) {
+                throw new FinancialDomainException(
+                    'E-FUND-POLICY-LINEAGE-EXISTS',
+                    'Dana ini sudah memiliki lineage Fund Policy. Tambahkan perubahan melalui aksi Tambah Aturan Penggunaan pada versi effective agar satu draft successor resmi digunakan kembali.'
+                );
+            }
+            $version = $this->masters->createFundPolicyVersion($entity->id, $input, $request->user()?->id);
 
             return ['Versi Aturan Dana disimpan sebagai draft.', ['fund_policy_version_id' => $version->id]];
         });
