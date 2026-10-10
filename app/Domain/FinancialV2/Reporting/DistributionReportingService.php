@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2\Reporting;
 
 use App\Domain\FinancialV2\DecimalAmount;
+use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -75,18 +76,42 @@ final class DistributionReportingService
             'unique_beneficiaries' => (int) $byProgram->get($id, 0), 'actual_amount' => DecimalAmount::sum($group->pluck('actual_amount')),
         ] + ($public ? [] : ['operational_total' => DecimalAmount::sum($group->pluck('operational_total'))]))->values()->all();
 
-        $regions = DB::table('financial_v2_distribution_items')->whereIn('distribution_id', $acceptedIds)
-            ->get(['recipient_key', 'identity_snapshot'])
+        $regions = DB::table('financial_v2_distribution_items as item')
+            ->join('financial_v2_distributions as distribution', 'distribution.id', '=', 'item.distribution_id')
+            ->leftJoin('financial_v2_counterparties as beneficiary', function (JoinClause $join): void {
+                $join->on('beneficiary.id', '=', 'item.beneficiary_id')
+                    ->on('beneficiary.accounting_entity_id', '=', 'distribution.accounting_entity_id');
+            })
+            ->whereIn('distribution.id', $acceptedIds)
+            ->orderByDesc('distribution.ends_on')
+            ->orderByDesc('item.created_at')
+            ->orderByDesc('item.id')
+            ->get([
+                'item.recipient_key',
+                'item.identity_snapshot',
+                'beneficiary.id as master_id',
+                'beneficiary.rt as master_rt',
+                'beneficiary.rw as master_rw',
+                'beneficiary.rt_coordinator_name as master_coordinator',
+            ])
             ->map(function (object $item) use ($public): array {
                 $snapshot = json_decode((string) $item->identity_snapshot, true) ?: [];
+                $usesMaster = $item->master_id !== null;
 
                 return [
                     'recipient_key' => $item->recipient_key,
-                    'rt' => (string) ($snapshot['rt'] ?? ''),
-                    'rw' => (string) ($snapshot['rw'] ?? ''),
-                    'coordinator' => $public ? null : (string) ($snapshot['rt_coordinator_name'] ?? ''),
+                    // Sebaran is a current master-data aggregate. Keep the
+                    // immutable snapshot only as the source for recipients
+                    // that intentionally have no beneficiary master record.
+                    'rt' => (string) ($usesMaster ? $item->master_rt : ($snapshot['rt'] ?? '')),
+                    'rw' => (string) ($usesMaster ? $item->master_rw : ($snapshot['rw'] ?? '')),
+                    'coordinator' => $public ? null : (string) ($usesMaster ? $item->master_coordinator : ($snapshot['rt_coordinator_name'] ?? '')),
                 ];
-            })->groupBy(fn (array $row): string => json_encode([$row['rt'], $row['rw'], $row['coordinator']]))
+            })
+            // One recipient may occur in several Distribution periods. The
+            // stable key prevents the same person inflating multiple regions.
+            ->unique('recipient_key')
+            ->groupBy(fn (array $row): string => json_encode([$row['rt'], $row['rw'], $row['coordinator']]))
             ->map(function (Collection $group) use ($public): array {
                 $row = ['rt' => $group->first()['rt'], 'rw' => $group->first()['rw'], 'recipient_count' => $group->pluck('recipient_key')->unique()->count()];
 

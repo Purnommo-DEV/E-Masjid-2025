@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
+use App\Models\FinancialV2\HistoricalFundHistory;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Tests\Support\UatFinancialFixture;
@@ -175,6 +176,46 @@ test('public ZISWAF report recalculates for the selected as-of date and does not
         ->assertDontSee('Dana Tidak Dipublikasikan');
 
     $this->get(route('public.ziswaf.fund', ['fundCode' => $unlisted->code]))->assertNotFound();
+});
+
+test('fund detail preserves canonical range and renders Indonesian source month labels without parsing them', function () {
+    $context = UatFinancialFixture::context();
+    $context['entity']->update(['code' => 'MRJ-ACTUAL']);
+    configurePublicZiswafDisclosure($context);
+    HistoricalFundHistory::create([
+        'accounting_entity_id' => $context['entity']->id,
+        'fund_id' => $context['fund']->id,
+        'source_key' => 'public-fund-indonesian-month-label',
+        'source_fund_code' => $context['fund']->code,
+        'source_filename' => 'Fixture laporan',
+        'source_reference' => 'Fixture!A1',
+        'source_sequence' => 1,
+        'entry_kind' => 'receipt',
+        'effective_date' => null,
+        'date_label' => 'Maret 2026',
+        'description' => 'Penerimaan historis berlabel lokal',
+        'amount' => '100.00',
+        'status' => 'active',
+    ]);
+
+    $this->get(route('public.ziswaf.fund', [
+        'fundCode' => $context['fund']->code,
+        'from' => '2026-06-27',
+        'to' => '2026-10-12',
+    ]))
+        ->assertOk()
+        ->assertSee('Maret 2026')
+        ->assertSee('27/06/2026')
+        ->assertSee('12/10/2026');
+
+    $this->get(route('public.ziswaf.fund', [
+        'fundCode' => $context['fund']->code,
+        'from' => '2025-12-01',
+        'to' => '2026-01-31',
+    ]))
+        ->assertOk()
+        ->assertSee('01/12/2025')
+        ->assertSee('31/01/2026');
 });
 
 test('public ZISWAF disclosure hides the superseded Cash Tromol IFT and lists only the real Fund reclassification', function () {

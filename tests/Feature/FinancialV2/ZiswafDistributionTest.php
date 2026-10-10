@@ -493,6 +493,50 @@ test('internal reporting counts unique people across multiple periods without co
         ->and($r['programs'][0]['operational_total'])->toBe('240.00')->and($r['programs'][0]['actual_amount'])->toBe('0.00');
 });
 
+test('region reporting follows current beneficiary master and falls back to snapshot-only identity', function () {
+    $c = UatFinancialFixture::context();
+    $service = app(DistributionService::class);
+    $person = distributionPerson($c, [
+        'display_name' => 'Penerima Master Wilayah',
+        'rt' => '01',
+        'rw' => '01',
+        'rt_coordinator_name' => 'Koordinator Lama',
+    ]);
+    $distribution = $service->create($c['entity']->id, distributionInput($c), null);
+    distributionAttach($distribution, $person);
+    $service->item($c['entity']->id, $distribution->id, [
+        'revision' => $distribution->fresh()->revision,
+        'display_name' => 'Penerima Snapshot Saja',
+        'rt' => '03',
+        'rw' => '04',
+        'rt_coordinator_name' => 'Koordinator Snapshot',
+        'amount' => '120.00',
+    ], null, false, null);
+
+    $originalSnapshot = $distribution->fresh()->items()->where('beneficiary_id', $person->id)->sole()->identity_snapshot;
+    $service->saveBeneficiary($c['entity']->id, [
+        'display_name' => $person->display_name,
+        'rt' => '09',
+        'rw' => '10',
+        'rt_coordinator_name' => 'Ibu Ella',
+        'status' => 'active',
+    ], $person->id, null);
+
+    $report = app(DistributionReportingService::class)->report(
+        $c['entity']->id,
+        now()->startOfMonth()->toDateString(),
+        now()->endOfMonth()->toDateString(),
+        [$c['fund']->id, $c['destinationFund']->id],
+    );
+    $regions = collect($report['regions'])->keyBy(fn (array $row): string => $row['rt'].'/'.$row['rw']);
+
+    expect($regions['09/10'])->toMatchArray(['coordinator' => 'Ibu Ella', 'recipient_count' => 1])
+        ->and($regions['03/04'])->toMatchArray(['coordinator' => 'Koordinator Snapshot', 'recipient_count' => 1])
+        ->and($regions)->not->toHaveKey('01/01')
+        ->and($report['unique_beneficiaries'])->toBe(2)
+        ->and($distribution->fresh()->items()->where('beneficiary_id', $person->id)->sole()->identity_snapshot)->toBe($originalSnapshot);
+});
+
 test('distribution HTTP workflow supports creation item edit delete copying and finalization', function () {
     $c = UatFinancialFixture::context();
     $p = distributionPerson($c);

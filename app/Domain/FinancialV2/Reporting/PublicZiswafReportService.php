@@ -99,10 +99,10 @@ final class PublicZiswafReportService
     }
 
     /** @return array<string, mixed> */
-    public function fundDetail(string $fundCode, ?string $requestedAsOf = null): array
+    public function fundDetail(string $fundCode, ?string $requestedFrom = null, ?string $requestedAsOf = null): array
     {
         $entity = $this->publicEntity();
-        [$from, $through] = $this->period($entity, null, $requestedAsOf);
+        [$from, $through] = $this->period($entity, $requestedFrom, $requestedAsOf);
         $fund = $this->publishedFunds($entity)->firstWhere('code', $fundCode);
         if (! $fund instanceof Fund) {
             throw (new ModelNotFoundException)->setModel(Fund::class, [$fundCode]);

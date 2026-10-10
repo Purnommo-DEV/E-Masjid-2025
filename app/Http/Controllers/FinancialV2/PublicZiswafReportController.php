@@ -60,7 +60,11 @@ final class PublicZiswafReportController
         $input = $this->validatedPeriod($request);
 
         return view('masjid.mrj.guest.financial-v2.ziswaf-fund', [
-            'report' => $this->reports->fundDetail($fundCode, $input['to'] ?? $input['as_of'] ?? null),
+            'report' => $this->reports->fundDetail(
+                $fundCode,
+                $input['from'] ?? null,
+                $input['to'] ?? $input['as_of'] ?? null,
+            ),
         ]);
     }
 
