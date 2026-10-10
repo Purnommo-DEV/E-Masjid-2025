@@ -26,6 +26,7 @@ final class PublicZiswafReportService
         private readonly FinancialReportService $reports,
         private readonly FundHistoryReadService $fundHistory,
         private readonly PostedLedgerQuery $postedLedger,
+        private readonly ZiswafFundScope $fundScope,
     ) {}
 
     /** @return array<string, mixed> */
@@ -33,7 +34,18 @@ final class PublicZiswafReportService
     {
         $entity = $this->publicEntity();
         [$from, $through] = $this->period($entity, $requestedFrom, $requestedThrough);
-        $funds = $this->publishedFunds($entity);
+
+        return $this->reportForEntity($entity, $from, $through);
+    }
+
+    /** @return array<string, mixed> */
+    public function reportForEntity(AccountingEntity $entity, string $from, string $through): array
+    {
+        if ($from > $through) {
+            throw new \InvalidArgumentException('Tanggal mulai laporan tidak boleh melewati tanggal akhir.');
+        }
+
+        $funds = $this->fundScope->funds($entity);
         $fundReport = $this->reports->report('ziswaf', $entity->id, $from, $through);
         $accountReport = $this->reports->report('account-balance', $entity->id, $from, $through);
 
@@ -103,7 +115,7 @@ final class PublicZiswafReportService
     {
         $entity = $this->publicEntity();
         [$from, $through] = $this->period($entity, $requestedFrom, $requestedAsOf);
-        $fund = $this->publishedFunds($entity)->firstWhere('code', $fundCode);
+        $fund = $this->fundScope->funds($entity)->firstWhere('code', $fundCode);
         if (! $fund instanceof Fund) {
             throw (new ModelNotFoundException)->setModel(Fund::class, [$fundCode]);
         }
@@ -146,7 +158,7 @@ final class PublicZiswafReportService
     {
         $report = $this->report($requestedFrom, $requestedThrough);
         $entity = $this->publicEntity();
-        $funds = $this->publishedFunds($entity);
+        $funds = $this->fundScope->funds($entity);
         $movementFeed = $this->reports->fundMovementsForFunds(
             $entity->id,
             $report['period_from'],
@@ -187,20 +199,6 @@ final class PublicZiswafReportService
         }
 
         return $entity;
-    }
-
-    /** @return Collection<int, Fund> */
-    private function publishedFunds(AccountingEntity $entity): Collection
-    {
-        $codes = $this->fundCodes();
-
-        return Fund::query()
-            ->where('accounting_entity_id', $entity->id)
-            ->where('status', 'active')
-            ->whereIn('code', $codes)
-            ->get()
-            ->sortBy(fn (Fund $fund): int => array_search($fund->code, $codes, true))
-            ->values();
     }
 
     /** @param array<string, mixed> $row @return array<string, mixed> */
@@ -455,7 +453,7 @@ final class PublicZiswafReportService
     /** @return array<int, string> */
     private function fundCodes(): array
     {
-        return array_values(array_filter(config('financial_reporting.public_ziswaf.fund_codes', []), 'is_string'));
+        return $this->fundScope->codes();
     }
 
     /** @return array<int, string> */

@@ -48,4 +48,12 @@ return [
             'CASH-ZISWAF',
         ],
     ],
+
+    'internal_ziswaf_dashboard' => [
+        // Store only SHA-256(token) in the environment. Rotating/removing the
+        // hash immediately invalidates every existing dashboard session.
+        'token_hash' => env('FINANCIAL_INTERNAL_ZISWAF_TOKEN_HASH'),
+        'entity_id' => env('FINANCIAL_INTERNAL_ZISWAF_ENTITY_ID'),
+        'session_minutes' => (int) env('FINANCIAL_INTERNAL_ZISWAF_SESSION_MINUTES', 120),
+    ],
 ];

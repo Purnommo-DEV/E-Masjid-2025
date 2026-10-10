@@ -69,7 +69,7 @@
             </header>
 
             <form class="public-report-actions no-print mt-6 flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between" method="GET" action="{{ route('public.ziswaf.index') }}">
-                <div class="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 lg:max-w-xl">
+                <div class="grid w-full grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:max-w-xl">
                     <label class="min-w-0 text-sm font-semibold text-slate-700" for="from">
                         Tanggal mulai
                         <input id="from" name="from" type="date" value="{{ $report['period_from'] }}" class="mt-1 block min-w-0 w-full rounded-xl border-slate-300 bg-white px-2 text-sm focus:border-emerald-600 focus:ring-emerald-600">
@@ -78,7 +78,7 @@
                         Tanggal akhir
                         <input id="to" name="to" type="date" value="{{ $report['as_of'] }}" class="mt-1 block min-w-0 w-full rounded-xl border-slate-300 bg-white px-2 text-sm focus:border-emerald-600 focus:ring-emerald-600">
                     </label>
-                    <button class="min-h-11 whitespace-nowrap rounded-xl bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:px-4" type="submit">Terapkan</button>
+                    <button class="min-h-11 w-full whitespace-nowrap rounded-xl bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 sm:w-auto sm:px-4" type="submit">Terapkan</button>
                 </div>
                 <div class="grid w-full grid-cols-2 gap-2 lg:flex lg:w-auto">
                     <a class="inline-flex min-h-11 items-center justify-center rounded-xl px-3 text-center text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 sm:px-4" href="{{ route('public.ziswaf.index') }}">Data terbaru</a>
@@ -152,26 +152,6 @@
                 </div>
                 <p class="mt-3 text-sm leading-6 text-slate-500">Pemindahan dana antar peruntukan ditampilkan terpisah; bukan pemasukan atau pengeluaran baru.</p>
             </section>
-
-            @if ($report['fund_transfers'] !== [])
-                <section class="mt-12" aria-labelledby="pemindahan-title">
-                    <div class="mb-5">
-                        <p class="text-xs font-bold uppercase tracking-[.18em] text-sky-700">Perpindahan antar Dana</p>
-                        <h2 id="pemindahan-title" class="mt-1 text-2xl font-bold text-emerald-950">Pemindahan Dana</h2>
-                        <p class="mt-2 text-sm leading-6 text-slate-500">Setiap peristiwa ditampilkan satu kali. Cash Tromol Yatim merupakan komposisi rekening Dana Dhuafa &amp; Anak Yatim dan tidak ditampilkan sebagai pemindahan Dana.</p>
-                    </div>
-                    <div class="grid gap-4 lg:grid-cols-2">
-                        @foreach ($report['fund_transfers'] as $transfer)
-                            <article class="report-card rounded-2xl border border-sky-100 bg-white p-6">
-                                <p class="text-xs font-bold uppercase tracking-[.14em] text-sky-700">{{ $transfer['category'] }}</p>
-                                <h3 class="mt-3 text-lg font-bold leading-snug text-emerald-950">{{ $transfer['from'] }} <span class="text-sky-600" aria-hidden="true">→</span> {{ $transfer['to'] }}</h3>
-                                <p class="mt-2 text-sm leading-6 text-slate-500">{{ $transfer['description'] }}</p>
-                                <p class="mt-5 text-2xl font-bold tracking-tight text-sky-800">{{ $rupiah($transfer['amount']) }}</p>
-                            </article>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
 
             <section class="mt-12" aria-labelledby="rincian-title">
                 <div class="mb-5">

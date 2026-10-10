@@ -28,6 +28,7 @@ final class ZiswafReportingV2Service
         private readonly PostedLedgerQuery $postedLedger,
         private readonly FinancialReportDefinitions $definitions,
         private readonly DistributionReportingService $distributions,
+        private readonly ZiswafFundScope $fundScope,
     ) {}
 
     /**
@@ -53,8 +54,9 @@ final class ZiswafReportingV2Service
             ->where('accounting_entity_id', $entity->id)
             ->when($scopeFundIds !== [], fn ($query) => $query->whereIn('id', $scopeFundIds))
             ->when($scopeFundIds === [], fn ($query) => $query->whereRaw('1 = 0'))
-            ->orderBy('code')
-            ->get();
+            ->get()
+            ->sortBy(fn (Fund $fund): int => array_search($fund->id, $scopeFundIds, true))
+            ->values();
 
         $fundRows = $funds->map(fn (Fund $fund): array => $this->fundRow($fund, $canonicalRows->get($fund->id, [])))->values();
         $fundIdsForFacts = $fundRows->pluck('fund_id')->all();
@@ -132,8 +134,7 @@ final class ZiswafReportingV2Service
         $through = $requestedThrough ?: ($latest ?: now()->toDateString());
         $from = $requestedFrom ?: Carbon::parse($through)->startOfMonth()->toDateString();
         $this->assertPeriod($from, $through);
-        $fundCodes = array_values(array_filter(config('financial_reporting.public_ziswaf.fund_codes', []), 'is_string'));
-        $fundIds = Fund::query()->where('accounting_entity_id', $entity->id)->whereIn('code', $fundCodes)->pluck('id')->all();
+        $fundIds = $this->fundScope->ids($entity);
 
         $report = $this->report($entity, $from, $through, $fundIds);
         $report['programs'] = $this->publicProgramRows(collect($report['programs']));
@@ -430,7 +431,7 @@ final class ZiswafReportingV2Service
             return array_values(array_unique(array_filter($fundIds, 'is_string')));
         }
 
-        return Fund::query()->where('accounting_entity_id', $entity->id)->pluck('id')->all();
+        return Fund::query()->where('accounting_entity_id', $entity->id)->orderBy('code')->pluck('id')->all();
     }
 
     /** @return array<string, mixed> */

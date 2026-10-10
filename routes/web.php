@@ -40,6 +40,7 @@ use App\Http\Controllers\FinancialV2\FinancialMasterDataController;
 use App\Http\Controllers\FinancialV2\FinancialOpeningBalanceController;
 use App\Http\Controllers\FinancialV2\FinancialReportController;
 use App\Http\Controllers\FinancialV2\HistoricalFundHistoryController;
+use App\Http\Controllers\FinancialV2\InternalZiswafDashboardController;
 use App\Http\Controllers\FinancialV2\OperationalFinancialController;
 use App\Http\Controllers\FinancialV2\PlanningController;
 use App\Http\Controllers\FinancialV2\PublicZiswafReportController;
@@ -302,6 +303,16 @@ Route::prefix('laporan-ziswaf')->name('public.ziswaf.')->group(function () {
 // report above. It is web-only; it has no PDF, export, or writer endpoint.
 Route::get('/laporan-ziswaf-v2', [PublicZiswafReportingV2Controller::class, 'index'])
     ->name('public.ziswaf-v2.index');
+
+Route::get('/internal/ziswaf/access/{token}', [InternalZiswafDashboardController::class, 'access'])
+    ->middleware('throttle:5,1')->where('token', '[A-HJ-NP-Za-km-z2-9]{5,10}')->name('internal.ziswaf.access');
+Route::middleware(['internal.ziswaf', 'throttle:120,1'])->prefix('internal/ziswaf')->name('internal.ziswaf.')->group(function () {
+    Route::get('/', [InternalZiswafDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/transaksi/{transaction}', [InternalZiswafDashboardController::class, 'transaction'])->name('transactions.show');
+    Route::get('/penyaluran/{distribution}', [InternalZiswafDashboardController::class, 'distribution'])->name('distributions.show');
+    Route::get('/transaksi/{transaction}/dokumen/{attachment}/{disposition?}', [InternalZiswafDashboardController::class, 'attachment'])
+        ->where('disposition', 'view|download')->name('attachments.open');
+});
 
 // Laporan program publik ini sengaja statis pada tahap awal. Tidak membaca
 // database atau Financial V2; angka ditampilkan sebagai ringkasan informasi.

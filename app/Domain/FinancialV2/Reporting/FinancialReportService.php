@@ -246,7 +246,7 @@ final class FinancialReportService
                 ->select([
                     'ledger.fund_id', 'fund.code as fund_code', 'fund.name as fund_name',
                     'ledger.accounting_date', 'ledger.posting_sequence', 'ledger.line_no',
-                    'journal.id as journal_id', 'journal.description as journal_description',
+                    'journal.id as journal_id', 'financial_transaction.id as transaction_id', 'journal.description as journal_description',
                     'financial_transaction.source_reference', 'transaction_type.code as transaction_type_code',
                     'original_transaction_type.code as original_transaction_type_code',
                 ])
@@ -262,6 +262,7 @@ final class FinancialReportService
                     'accounting_date' => $row->accounting_date,
                     'posting_sequence' => (int) $row->posting_sequence,
                     'journal_id' => $row->journal_id,
+                    'transaction_id' => $row->transaction_id,
                     'source_reference' => $row->source_reference,
                     'description' => $row->journal_description ?: $row->source_reference,
                     'transaction_type_code' => $row->original_transaction_type_code ?: $row->transaction_type_code,
