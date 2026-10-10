@@ -377,6 +377,18 @@ final class DistributionController
         return view('masjid.mrj.admin.financial-v2.distributions.show', compact('entity', 'distribution', 'total', 'people', 'realizations', 'continuity'));
     }
 
+    public function updatePeriodLabel(Request $request, string $distribution)
+    {
+        $entity = $this->context($request);
+        $this->service->updatePeriodLabel($entity->id, $distribution, $request->all(), $request->user()->id);
+
+        return redirect()->route('financial-v2.distributions.index', [
+            'entity' => $entity->id,
+            'program_id' => $request->input('program_id'),
+            'page' => $request->input('page'),
+        ])->with('success', 'Label periode penyaluran berhasil diperbarui. Tanggal bisnis dan data keuangan tidak berubah.');
+    }
+
     public function destroy(Request $request, string $distribution)
     {
         $entity = $this->context($request);

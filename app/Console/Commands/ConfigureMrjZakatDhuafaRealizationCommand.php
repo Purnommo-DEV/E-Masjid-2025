@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\DB;
  */
 final class ConfigureMrjZakatDhuafaRealizationCommand extends Command
 {
+    private const PROGRAM_ID = 'a281e34d-a102-4bd8-89f8-3bc2b8048dbe';
+
     private const EFFECTIVE_FROM = '2026-08-21';
 
     private const POLICY_DOCUMENT = 'PHASE-REALIZATION-OPERATIONS|ZAKAT-MAAL|BANTUAN-DHUAFA';
@@ -41,7 +43,9 @@ final class ConfigureMrjZakatDhuafaRealizationCommand extends Command
 
         $entity = AccountingEntity::query()->where('code', 'MRJ-ACTUAL')->firstOrFail();
         $fund = Fund::query()->where('accounting_entity_id', $entity->id)->where('code', 'ZAKAT-MAAL')->firstOrFail();
-        $program = Program::query()->where('accounting_entity_id', $entity->id)->where('code', 'BANTUAN-DHUAFA')->where('status', 'active')->firstOrFail();
+        $program = Program::query()->where('accounting_entity_id', $entity->id)
+            ->where(fn ($query) => $query->whereKey(self::PROGRAM_ID)->orWhere('code', 'BANTUAN-DHUAFA'))
+            ->where('status', 'active')->firstOrFail();
         $payment = TransactionType::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY')->where('status', 'active')->firstOrFail();
         $category = Category::query()->where('accounting_entity_id', $entity->id)->where('code', 'PAY-SANTUNAN')->where('status', 'active')->firstOrFail();
         $target = FundPolicyVersion::query()

@@ -148,6 +148,48 @@ final class DistributionService
         });
     }
 
+    public function updatePeriodLabel(string $entityId, string $id, array $input, ?int $actor): Distribution
+    {
+        $data = Validator::make([
+            'period_label' => trim((string) ($input['period_label'] ?? '')),
+            'revision' => $input['revision'] ?? null,
+        ], [
+            'period_label' => 'required|string|max:100',
+            'revision' => 'required|integer|min:0',
+        ], [
+            'period_label.required' => 'Label periode wajib diisi.',
+            'period_label.max' => 'Label periode maksimal 100 karakter.',
+            'revision.required' => 'Versi data tidak tersedia. Muat ulang halaman sebelum menyimpan.',
+        ])->validate();
+
+        return DB::transaction(function () use ($entityId, $id, $data, $actor): Distribution {
+            AccountingEntity::whereKey($entityId)->where('status', 'active')->lockForUpdate()->firstOrFail();
+            $distribution = Distribution::forEntity($entityId)->lockForUpdate()->findOrFail($id);
+            $this->require((int) $data['revision'] === (int) $distribution->revision, 'Data telah berubah. Muat ulang sebelum menyimpan.');
+
+            $before = [
+                'period_label' => $distribution->period_label,
+                'starts_on' => $distribution->starts_on->toDateString(),
+                'ends_on' => $distribution->ends_on->toDateString(),
+                'revision' => $distribution->revision,
+            ];
+            $distribution->update([
+                'period_label' => trim($data['period_label']),
+                'revision' => $distribution->revision + 1,
+                'updated_by_user_id' => $actor,
+            ]);
+            $after = [
+                'period_label' => $distribution->period_label,
+                'starts_on' => $distribution->starts_on->toDateString(),
+                'ends_on' => $distribution->ends_on->toDateString(),
+                'revision' => $distribution->revision,
+            ];
+            $this->audit->record($entityId, 'distribution.period_label_updated', 'ziswaf_distribution', $distribution->id, (string) Str::uuid(), $actor, $before, $after);
+
+            return $distribution->fresh();
+        });
+    }
+
     public function item(string $entityId, string $id, array $input, ?string $itemId, bool $remove, ?int $actor): Distribution
     {
         return DB::transaction(function () use ($entityId, $id, $input, $itemId, $remove, $actor) {

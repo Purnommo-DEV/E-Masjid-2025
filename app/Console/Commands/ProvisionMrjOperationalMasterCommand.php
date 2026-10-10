@@ -238,19 +238,28 @@ final class ProvisionMrjOperationalMasterCommand extends Command
     private function ensurePrograms(FinancialMasterDataService $masters, MasterDataGovernanceService $governance, AuditTrailService $audit): void
     {
         $definitions = [
-            'OPERASIONAL-JUMAT' => 'Operasional Jumat', 'OPERASIONAL-HARIAN' => 'Operasional Harian Masjid',
-            'SANTUNAN-YATIM-BULANAN' => 'Santunan Anak Yatim Bulanan', 'QURBAN' => 'Qurban', 'IFTAR-RAMADHAN' => 'Iftar Ramadhan',
-            'KEGIATAN-RAMADHAN' => 'Kegiatan Ramadhan', 'SANTUNAN-RAMADHAN' => 'Santunan Ramadhan',
-            'SOSIAL-KEMATIAN' => 'Sosial/Kematian', 'SEWA-AULA' => 'Sewa Aula', 'BEASISWA-DHUAFA' => 'Beasiswa Dhuafa',
-            'BANTUAN-DHUAFA' => 'Bantuan Dhuafa', 'PEMELIHARAAN-MASJID' => 'Pemeliharaan Masjid',
+            'OPERASIONAL-JUMAT' => ['a281e34d-7c2c-4796-88e4-8cb4ec9d2ae2', 'Operasional Jumat'],
+            'OPERASIONAL-HARIAN' => ['a281e34d-803e-4ce0-a58e-c8887655f985', 'Operasional Harian Masjid'],
+            'SANTUNAN-YATIM-BULANAN' => ['a281e34d-8393-4339-9c17-be2759d6b426', 'Santunan Anak Yatim Bulanan'],
+            'QURBAN' => ['a281e34d-8882-4dc8-aabd-a3e462bf77f2', 'Qurban'],
+            'IFTAR-RAMADHAN' => ['a281e34d-8c19-4d80-ae7b-a580e2431dc7', 'Iftar Ramadhan'],
+            'KEGIATAN-RAMADHAN' => ['a281e34d-9048-41f7-b911-50ca2c229375', 'Kegiatan Ramadhan'],
+            'SANTUNAN-RAMADHAN' => ['a281e34d-93ab-48bb-8324-e458bbd6ac73', 'Santunan Ramadhan'],
+            'SOSIAL-KEMATIAN' => ['a281e34d-96ec-4ec0-831a-b726750f2e4d', 'Sosial/Kematian'],
+            'SEWA-AULA' => ['a281e34d-9a30-4e54-983c-e9d8f176e28f', 'Sewa Aula'],
+            'BEASISWA-DHUAFA' => ['a281e34d-9de7-4a3c-80de-322f06038e8d', 'Beasiswa Dhuafa'],
+            'BANTUAN-DHUAFA' => ['a281e34d-a102-4bd8-89f8-3bc2b8048dbe', 'Bantuan Dhuafa'],
+            'PEMELIHARAAN-MASJID' => ['a281e34d-a43e-4ec3-8dd4-9a3e97bec743', 'Pemeliharaan Masjid'],
         ];
-        foreach ($definitions as $code => $name) {
+        foreach ($definitions as $code => [$programId, $name]) {
             // Program dates describe the business lifecycle. Financial V2
             // configuration dates belong to policy/rule versions. This legacy
             // Program was already running before the Phase 12 cutover, so its
             // unknown historical start is represented by null.
             $businessStartDate = $code === 'SANTUNAN-YATIM-BULANAN' ? null : self::EFFECTIVE_DATE;
-            $program = Program::query()->where('accounting_entity_id', $this->entity->id)->where('code', $code)->first();
+            $program = Program::query()->where('accounting_entity_id', $this->entity->id)
+                ->where(fn ($query) => $query->whereKey($programId)->orWhere('code', $code))
+                ->first();
             if (! $program) {
                 $program = $masters->createProgram($this->entity->id, ['cost_center_id' => null, 'code' => $code, 'name' => $name, 'start_date' => $businessStartDate, 'end_date' => null, 'program_owner_reference' => 'Konfigurasi operasional MRJ Phase 12'], $this->actorUserId);
             } elseif ($code === 'SANTUNAN-YATIM-BULANAN'

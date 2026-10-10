@@ -17,7 +17,10 @@ class Distribution extends FinancialV2Model
         static::updating(function (self $model): void {
             $stored = self::findOrFail($model->id);
             if ($stored->status !== 'draft' || $stored->realization_id !== null) {
-                throw new \DomainException('Finalized distribution is immutable.');
+                $metadataFields = ['period_label', 'revision', 'updated_by_user_id', 'updated_at'];
+                if (array_diff(array_keys($model->getDirty()), $metadataFields) !== []) {
+                    throw new \DomainException('Finalized distribution financial and operational facts are immutable.');
+                }
             }
         });
         static::deleting(function (self $model): void {

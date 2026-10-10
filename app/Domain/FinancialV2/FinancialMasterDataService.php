@@ -457,6 +457,40 @@ final class FinancialMasterDataService
         }, 3);
     }
 
+    public function updateProgramIdentity(string $entityId, string $programId, string $name, string $code, ?int $actorUserId = null): Program
+    {
+        return DB::transaction(function () use ($entityId, $programId, $name, $code, $actorUserId): Program {
+            $program = $this->modelForEntity(Program::class, $entityId, $programId, 'Program');
+            $name = trim($name);
+            $code = trim($code);
+
+            if (Program::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('id', '<>', $program->id)
+                ->where('name', $name)
+                ->exists()) {
+                throw new FinancialDomainException('E-MASTER-PROGRAM-NAME-DUPLICATE', 'Nama Program sudah digunakan pada Entity yang dipilih.');
+            }
+            if (Program::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('id', '<>', $program->id)
+                ->where('code', $code)
+                ->exists()) {
+                throw new FinancialDomainException('E-MASTER-PROGRAM-CODE-DUPLICATE', 'Kode Program sudah digunakan pada Entity yang dipilih.');
+            }
+
+            $before = $this->programSummary($program);
+            $program->update([
+                'name' => $name,
+                'code' => $code,
+                'updated_by_user_id' => $actorUserId,
+            ]);
+            $this->record($entityId, 'program_updated', 'program', $program, $actorUserId, $before, $this->programSummary($program->fresh()));
+
+            return $program->fresh();
+        }, 3);
+    }
+
     public function deactivateProgram(string $entityId, string $programId, ?int $actorUserId = null): Program
     {
         return DB::transaction(function () use ($entityId, $programId, $actorUserId): Program {

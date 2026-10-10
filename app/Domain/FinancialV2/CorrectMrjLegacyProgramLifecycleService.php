@@ -24,6 +24,8 @@ final class CorrectMrjLegacyProgramLifecycleService
 
     public const PROGRAM_CODE = 'SANTUNAN-YATIM-BULANAN';
 
+    public const PROGRAM_ID = 'a281e34d-8393-4339-9c17-be2759d6b426';
+
     public const TRANSACTION_DATE = '2026-07-11';
 
     private const ERRONEOUS_CUTOVER_DATE = '2026-08-15';
@@ -54,7 +56,7 @@ final class CorrectMrjLegacyProgramLifecycleService
             $entity = AccountingEntity::query()->where('code', self::ENTITY_CODE)->where('status', 'active')->firstOrFail();
             $program = Program::query()
                 ->where('accounting_entity_id', $entity->id)
-                ->where('code', self::PROGRAM_CODE)
+                ->where(fn ($query) => $query->whereKey(self::PROGRAM_ID)->orWhere('code', self::PROGRAM_CODE))
                 ->lockForUpdate()
                 ->firstOrFail();
 
@@ -92,7 +94,8 @@ final class CorrectMrjLegacyProgramLifecycleService
     public function status(): array
     {
         $entity = AccountingEntity::query()->where('code', self::ENTITY_CODE)->first();
-        $program = $entity ? Program::query()->where('accounting_entity_id', $entity->id)->where('code', self::PROGRAM_CODE)->first() : null;
+        $program = $entity ? Program::query()->where('accounting_entity_id', $entity->id)
+            ->where(fn ($query) => $query->whereKey(self::PROGRAM_ID)->orWhere('code', self::PROGRAM_CODE))->first() : null;
 
         return [
             'ready' => $program?->isBusinessActiveOn(self::TRANSACTION_DATE) === true,

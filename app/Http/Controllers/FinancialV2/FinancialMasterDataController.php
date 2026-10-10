@@ -581,6 +581,13 @@ final class FinancialMasterDataController
     public function updateProgram(Request $request, string $program)
     {
         return $this->perform($request, 'programs', function (AccountingEntity $entity) use ($request, $program) {
+            if ($request->input('edit_scope') === 'identity') {
+                $input = $this->programIdentityInput($request, $entity->id, $program);
+                $program = $this->masters->updateProgramIdentity($entity->id, $program, $input['name'], $input['code'], $request->user()?->id);
+
+                return ['Nama dan Kode Program berhasil diperbarui.', ['program_id' => $program->id]];
+            }
+
             $program = $this->masters->updateProgram($entity->id, $program, $this->programInput($request), $request->user()?->id);
 
             return ['Program diperbarui.', ['program_id' => $program->id]];
@@ -757,6 +764,30 @@ final class FinancialMasterDataController
         ], $this->messages());
     }
 
+    /** @return array{name: string, code: string} */
+    private function programIdentityInput(Request $request, string $entityId, string $programId): array
+    {
+        return $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:160',
+                Rule::unique('financial_v2_programs', 'name')
+                    ->where(fn ($query) => $query->where('accounting_entity_id', $entityId))
+                    ->ignore($programId),
+            ],
+            'code' => [
+                'required',
+                'string',
+                'max:40',
+                'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/',
+                Rule::unique('financial_v2_programs', 'code')
+                    ->where(fn ($query) => $query->where('accounting_entity_id', $entityId))
+                    ->ignore($programId),
+            ],
+        ], $this->messages(), ['name' => 'Nama Program', 'code' => 'Kode Program']);
+    }
+
     /** @return array<string, mixed> */
     private function counterpartyInput(Request $request, string $entityId, ?string $ignoreId = null, bool $includeStatus = false): array
     {
@@ -857,6 +888,8 @@ final class FinancialMasterDataController
     {
         $message = match ($exception->failureCode) {
             'E-MASTER-REFERENCED' => 'Master ini sudah digunakan dan tidak dapat dihapus atau diubah secara langsung. Nonaktifkan untuk transaksi baru.',
+            'E-MASTER-PROGRAM-NAME-DUPLICATE' => $exception->getMessage(),
+            'E-MASTER-PROGRAM-CODE-DUPLICATE' => $exception->getMessage(),
             'E-MASTER-POLICY-IMMUTABLE' => 'Aturan Dana yang sudah berlaku tidak dapat diubah. Buat versi baru untuk perubahan berikutnya.',
             'E-MASTER-POLICY-DUPLICATE' => 'Aturan Dana dengan cakupan yang sama sudah ada.',
             'E-MASTER-POLICY-CONFLICT' => $exception->getMessage(),
@@ -875,6 +908,7 @@ final class FinancialMasterDataController
     {
         return [
             'required' => ':attribute wajib diisi.',
+            'unique' => ':attribute sudah digunakan pada Entity yang dipilih.',
             'uuid' => ':attribute tidak valid.',
             'date' => ':attribute harus berupa tanggal yang valid.',
             'after_or_equal' => ':attribute tidak boleh lebih awal dari tanggal mulai.',

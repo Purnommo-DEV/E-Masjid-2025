@@ -434,6 +434,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/penyaluran', [DistributionController::class, 'index'])->name('distributions.index');
         Route::post('/penyaluran', [DistributionController::class, 'store'])->name('distributions.store');
         Route::get('/penyaluran/{distribution}', [DistributionController::class, 'show'])->name('distributions.show');
+        Route::patch('/penyaluran/{distribution}/periode', [DistributionController::class, 'updatePeriodLabel'])->name('distributions.period.update');
         Route::delete('/penyaluran/{distribution}', [DistributionController::class, 'destroy'])->name('distributions.destroy');
         Route::post('/penyaluran/{distribution}/penerima', [DistributionController::class, 'item'])->name('distributions.items.store');
         Route::patch('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.update');
