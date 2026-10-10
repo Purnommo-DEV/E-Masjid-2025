@@ -47,9 +47,9 @@ final class PublicZiswafReportController
         $printedAt = $generatedAt->format('d/m/Y H:i').' WIB';
         $period = sprintf('Periode %s-%s', FinancialDate::date($report['period_from']), FinancialDate::date($report['as_of']));
         $canvas->page_script(static function (int $pageNumber, int $pageCount, $pageCanvas) use ($font, $printedAt, $period): void {
-            $pageCanvas->line(40, 800, 555, 800, [0.85, 0.91, 0.88], 0.5);
-            $pageCanvas->text(40, 812, 'Masjid Raudhotul Jannah - Dicetak '.$printedAt, $font, 6.5, [0.37, 0.45, 0.41]);
-            $pageCanvas->text(355, 812, sprintf('%s - Hal. %d/%d', $period, $pageNumber, $pageCount), $font, 6.5, [0.37, 0.45, 0.41]);
+            $pageCanvas->line(40, 790, 555, 790, [0.85, 0.91, 0.88], 0.5);
+            $pageCanvas->text(40, 802, 'Masjid Raudhotul Jannah - Dicetak '.$printedAt, $font, 6.5, [0.37, 0.45, 0.41]);
+            $pageCanvas->text(355, 802, sprintf('%s - Hal. %d/%d', $period, $pageNumber, $pageCount), $font, 6.5, [0.37, 0.45, 0.41]);
         });
 
         return $pdf->download('laporan-dana-ziswaf-'.$report['as_of'].'.pdf');

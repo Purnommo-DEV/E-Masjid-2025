@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <title>Laporan Dana ZISWAF</title>
     <style>
-        @page { margin: 25mm 14mm 18mm; }
+        @page { margin: 25mm 14mm 24mm; }
         * { box-sizing: border-box; }
         body { color: #18352a; font-family: DejaVu Sans, sans-serif; font-size: 9pt; line-height: 1.52; }
         h1, h2, h3, p { margin: 0; }
@@ -25,7 +25,10 @@
         table { border-collapse: collapse; table-layout: fixed; width: 100%; }
         .data-table { border: 1px solid #d0e6d9; }
         .data-table th { background: #e7f7ed; color: #065f46; font-size: 7pt; letter-spacing: .35px; line-height: 1.35; padding: 7pt 6pt; text-align: left; text-transform: uppercase; vertical-align: middle; }
-        .data-table td { border-top: 1px solid #dcece3; line-height: 1.5; overflow-wrap: break-word; padding: 7pt 6pt; vertical-align: top; word-wrap: break-word; }
+        .data-table td { border-top: 1px solid #dcece3; line-height: 1.5; overflow-wrap: anywhere; padding: 7pt 6pt; vertical-align: top; word-break: break-all; word-wrap: break-word; }
+        .data-table thead { display: table-header-group; }
+        .data-table tbody { display: table-row-group; }
+        .data-table tr { page-break-inside: avoid; }
         .data-table tbody tr:nth-child(even) td { background: #fbfefc; }
         .recap-table th, .recap-table td { font-size: 7.2pt; padding: 6pt 4pt; }
         .movement-table th { font-size: 6.1pt; padding: 6pt 3pt; }
@@ -37,9 +40,9 @@
         .muted { color: #657b70; }
         .section-note { color: #5f7469; font-size: 8pt; line-height: 1.5; margin: 4pt 0 8pt; }
         .page-break { page-break-before: always; }
-        .fund-section { border: 1px solid #b9ddca; break-inside: avoid; margin: 14pt 0 0; page-break-inside: avoid; }
+        .fund-section { border: 1px solid #b9ddca; margin: 14pt 0 0; page-break-inside: auto; }
         .fund-section-detailed { margin-top: 0; }
-        .fund-heading { background: #e7f7ed; border-bottom: 1px solid #b9ddca; display: table; padding: 9pt 10pt; width: 100%; }
+        .fund-heading { background: #e7f7ed; border-bottom: 1px solid #b9ddca; display: table; page-break-after: avoid; page-break-inside: avoid; padding: 9pt 10pt; width: 100%; }
         .fund-number, .fund-title { display: table-cell; vertical-align: middle; }
         .fund-number { color: #047857; font-size: 14pt; font-weight: bold; padding-right: 9pt; width: 39pt; }
         .fund-title p { color: #557468; font-size: 7.5pt; line-height: 1.4; margin-top: 2pt; }
@@ -56,6 +59,7 @@
         .note-box { background: #fffbeb; border: 1px solid #f8e5a5; break-inside: avoid; color: #5f4b18; padding: 10pt; page-break-inside: avoid; }
         .note-box li { margin: 3pt 0; }
         .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+        .continuation-label { color: #789086; font-size: 5.8pt; font-style: italic; }
     </style>
 </head>
 <body>
@@ -71,6 +75,28 @@
     $sourceDate = static fn (array $entry): string => filled($entry['date_label'] ?? null)
         ? $entry['date_label']
         : $date($entry['date']);
+    $descriptionChunks = static function (?string $description, int $limit = 220): array {
+        $remaining = trim((string) preg_replace('/\s+/u', ' ', (string) $description));
+        if ($remaining === '') {
+            return [''];
+        }
+
+        $chunks = [];
+        while (mb_strlen($remaining, 'UTF-8') > $limit) {
+            $window = mb_substr($remaining, 0, $limit, 'UTF-8');
+            $breakAt = mb_strrpos($window, ' ', 0, 'UTF-8');
+            if ($breakAt === false || $breakAt < (int) floor($limit * .55)) {
+                $breakAt = $limit;
+            }
+            $chunks[] = rtrim(mb_substr($remaining, 0, $breakAt, 'UTF-8'));
+            $remaining = ltrim(mb_substr($remaining, $breakAt, null, 'UTF-8'));
+        }
+        if ($remaining !== '') {
+            $chunks[] = $remaining;
+        }
+
+        return $chunks;
+    };
     $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->format('d/m/Y H:i').' WIB' : 'Belum ada pembaruan posted';
     $summaries = collect($report['funds'])->keyBy('code');
 @endphp
@@ -153,11 +179,19 @@
                 <table class="data-table movement-table">
                     <colgroup><col style="width:11%"><col style="width:29%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup>
                     <thead><tr><th>Tanggal</th><th>Uraian</th><th>Jenis</th><th class="amount">Pemasukan</th><th class="amount">Pengeluaran</th><th class="amount">Pemindahan</th><th class="amount">Saldo</th></tr></thead>
-                    <tbody>@foreach ($detail['source_entries'] as $entry)<tr>
-                        <td>{{ $sourceDate($entry) }}</td><td>{{ $entry['description'] }}</td><td>{{ $entry['kind'] === 'expense' ? 'Pengeluaran' : ($entry['kind'] === 'receipt' ? 'Pemasukan' : 'Saldo awal') }}</td>
-                        <td class="amount positive">{{ in_array($entry['kind'], ['receipt', 'opening'], true) ? $rupiah($entry['amount']) : '-' }}</td>
-                        <td class="amount negative">{{ $entry['kind'] === 'expense' ? $rupiah($entry['amount']) : '-' }}</td><td class="amount">-</td><td class="amount">-</td>
-                    </tr>@endforeach</tbody>
+                    <tbody>@foreach ($detail['source_entries'] as $entry)
+                        @foreach ($descriptionChunks($entry['description']) as $chunk)
+                            @php $firstChunk = $loop->first; @endphp
+                            <tr>
+                                <td>{{ $firstChunk ? $sourceDate($entry) : '' }}</td>
+                                <td>@unless($firstChunk)<span class="continuation-label">Lanjutan: </span>@endunless{{ $chunk }}</td>
+                                <td>{{ $firstChunk ? ($entry['kind'] === 'expense' ? 'Pengeluaran' : ($entry['kind'] === 'receipt' ? 'Pemasukan' : 'Saldo awal')) : '' }}</td>
+                                <td class="amount positive">{{ $firstChunk ? (in_array($entry['kind'], ['receipt', 'opening'], true) ? $rupiah($entry['amount']) : '-') : '' }}</td>
+                                <td class="amount negative">{{ $firstChunk ? ($entry['kind'] === 'expense' ? $rupiah($entry['amount']) : '-') : '' }}</td>
+                                <td class="amount">{{ $firstChunk ? '-' : '' }}</td><td class="amount">{{ $firstChunk ? '-' : '' }}</td>
+                            </tr>
+                        @endforeach
+                    @endforeach</tbody>
                 </table>
             @endif
 
@@ -166,14 +200,20 @@
                 <table class="data-table movement-table">
                     <colgroup><col style="width:11%"><col style="width:29%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup>
                     <thead><tr><th>Tanggal</th><th>Uraian</th><th>Jenis</th><th class="amount">Pemasukan</th><th class="amount">Pengeluaran</th><th class="amount">Pemindahan</th><th class="amount">Saldo</th></tr></thead>
-                    <tbody>@foreach ($detail['official_entries'] as $entry)<tr>
-                        <td>{{ $date($entry['date']) }}</td><td>{{ $entry['description'] }}</td>
-                        <td>{{ $entry['kind'] === 'receipt' ? 'Pemasukan' : ($entry['kind'] === 'expense' ? 'Pengeluaran' : ($entry['kind'] === 'transfer' ? 'Pemindahan Dana' : 'Saldo Awal')) }}</td>
-                        <td class="amount positive">{{ in_array($entry['kind'], ['receipt', 'opening'], true) ? $rupiah($entry['amount']) : '-' }}</td>
-                        <td class="amount negative">{{ $entry['kind'] === 'expense' ? $rupiah($entry['amount']) : '-' }}</td>
-                        <td class="amount transfer">{{ $entry['kind'] === 'transfer' ? (str_starts_with($entry['delta'], '-') ? '- ' : '') . $rupiah($entry['amount']) : '-' }}</td>
-                        <td class="amount">{{ $rupiah($entry['running_balance']) }}</td>
-                    </tr>@endforeach</tbody>
+                    <tbody>@foreach ($detail['official_entries'] as $entry)
+                        @foreach ($descriptionChunks($entry['description']) as $chunk)
+                            @php $firstChunk = $loop->first; @endphp
+                            <tr>
+                                <td>{{ $firstChunk ? $date($entry['date']) : '' }}</td>
+                                <td>@unless($firstChunk)<span class="continuation-label">Lanjutan: </span>@endunless{{ $chunk }}</td>
+                                <td>{{ $firstChunk ? ($entry['kind'] === 'receipt' ? 'Pemasukan' : ($entry['kind'] === 'expense' ? 'Pengeluaran' : ($entry['kind'] === 'transfer' ? 'Pemindahan Dana' : 'Saldo Awal'))) : '' }}</td>
+                                <td class="amount positive">{{ $firstChunk ? (in_array($entry['kind'], ['receipt', 'opening'], true) ? $rupiah($entry['amount']) : '-') : '' }}</td>
+                                <td class="amount negative">{{ $firstChunk ? ($entry['kind'] === 'expense' ? $rupiah($entry['amount']) : '-') : '' }}</td>
+                                <td class="amount transfer">{{ $firstChunk ? ($entry['kind'] === 'transfer' ? (str_starts_with($entry['delta'], '-') ? '- ' : '').$rupiah($entry['amount']) : '-') : '' }}</td>
+                                <td class="amount">{{ $firstChunk ? $rupiah($entry['running_balance']) : '' }}</td>
+                            </tr>
+                        @endforeach
+                    @endforeach</tbody>
                 </table>
             @endif
             </div>
