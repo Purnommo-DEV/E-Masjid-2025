@@ -28,8 +28,14 @@ $sortRecipients = static fn ($rows, $identityPrefix = '') => $rows->sort(static 
     }
     return strcmp((string) $left->id, (string) $right->id);
 });
-$sortedDistributionItems = $sortRecipients($distribution->items, 'identity_snapshot.');
-$distributionItemsByRw = $sortedDistributionItems->groupBy(fn ($item) => $groupKey($item->identity_snapshot['rw'] ?? null));
+$sortedDistributionItems = $distribution->items->sort(function ($left, $right) use ($compareGroupValue) {
+    foreach (['rw', 'rt', 'display_name'] as $field) {
+        $comparison = $compareGroupValue(data_get($left->effective_identity_snapshot, $field), data_get($right->effective_identity_snapshot, $field));
+        if ($comparison !== 0) return $comparison;
+    }
+    return strcmp((string) $left->id, (string) $right->id);
+});
+$distributionItemsByRw = $sortedDistributionItems->groupBy(fn ($item) => $groupKey($item->effective_identity_snapshot['rw'] ?? null));
 $recipientAmounts = $distribution->items->pluck('amount')->map(fn ($amount) => \App\Domain\FinancialV2\DecimalAmount::normalize($amount))->unique()->values();
 $uniformRecipientAmount = $recipientAmounts->count() === 1 ? $recipientAmounts->first() : null;
 $linkedFunds = $transaction?->splits?->pluck('fund.name')->filter()->unique()->values()->implode(', ');
@@ -127,13 +133,14 @@ $categoryLabel = \Illuminate\Support\Str::of($person->beneficiary_type ?: 'BELUM
 @php $itemNumber = 0; @endphp
 <div class="mt-4 space-y-5">
 @forelse($distributionItemsByRw as $rwKey => $rwItems)
-<x-financial-v2.recipient-rw-group :rw="$rwItems->first()->identity_snapshot['rw'] ?? null" data-draft-rw-group>
-@foreach($rwItems->groupBy(fn ($item) => $groupKey($item->identity_snapshot['rt'] ?? null)) as $rtKey => $rtItems)
-<x-financial-v2.recipient-rt-group :rw="$rwItems->first()->identity_snapshot['rw'] ?? null" :rt="$rtItems->first()->identity_snapshot['rt'] ?? null" :total="$rtItems->count()" data-draft-rt-group>
+<x-financial-v2.recipient-rw-group :rw="$rwItems->first()->effective_identity_snapshot['rw'] ?? null" data-draft-rw-group>
+@foreach($rwItems->groupBy(fn ($item) => $groupKey($item->effective_identity_snapshot['rt'] ?? null)) as $rtKey => $rtItems)
+<x-financial-v2.recipient-rt-group :rw="$rwItems->first()->effective_identity_snapshot['rw'] ?? null" :rt="$rtItems->first()->effective_identity_snapshot['rt'] ?? null" :total="$rtItems->count()" data-draft-rt-group>
 <div class="draft-recipient-grid hidden gap-2 border-b border-base-200 bg-base-200/40 px-3 py-2 text-xs font-semibold text-base-content/65 lg:grid"><span>No</span><span>Nama penerima</span><span>Telepon</span><span>Nominal</span><span>Catatan</span><span>Aksi</span></div><div class="divide-y divide-base-200">
 @foreach($rtItems as $item)
 @php $itemNumber++; @endphp
-<div class="draft-recipient-grid grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2.5 text-sm lg:items-center" data-draft-item-row><span class="text-xs text-base-content/60 lg:text-sm">{{ $itemNumber }}</span><span class="min-w-0 break-words"><strong class="block">{{ $item->identity_snapshot['display_name'] }}</strong><span class="mt-0.5 block text-xs text-base-content/60">{{ \Illuminate\Support\Str::of($item->identity_snapshot['beneficiary_type'] ?? 'BELUM_DITENTUKAN')->replace('_', ' ')->lower()->title() }} · RT {{ $item->identity_snapshot['rt'] ?? 'Belum ditentukan' }} / RW {{ $item->identity_snapshot['rw'] ?? 'Belum ditentukan' }} · {{ $item->identity_snapshot['rt_coordinator_name'] ?? 'Tanpa koordinator' }} · {{ $item->beneficiary_id ? 'Terhubung master' : 'Identitas operasional' }}</span></span><span class="col-start-2 text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->identity_snapshot['contact_reference'] ?? '—' }}</span><span class="col-start-2 font-semibold lg:col-auto">{{ $money($item->amount) }}</span><span class="col-start-2 min-w-0 break-words text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->notes ?: '—' }}</span>@include('masjid.mrj.admin.financial-v2.distributions.item-edit')</div>
+@php $effectiveIdentity = $item->effective_identity_snapshot; @endphp
+<div class="draft-recipient-grid grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2.5 text-sm lg:items-center" data-draft-item-row><span class="text-xs text-base-content/60 lg:text-sm">{{ $itemNumber }}</span><span class="min-w-0 break-words"><strong class="block">{{ $effectiveIdentity['display_name'] }}</strong>@if($item->latestIdentityCorrection)<span class="badge badge-warning badge-xs mt-1">Identitas dikoreksi</span>@endif<span class="mt-0.5 block text-xs text-base-content/60">{{ \Illuminate\Support\Str::of($effectiveIdentity['beneficiary_type'] ?? 'BELUM_DITENTUKAN')->replace('_', ' ')->lower()->title() }} · RT {{ $effectiveIdentity['rt'] ?? 'Belum ditentukan' }} / RW {{ $effectiveIdentity['rw'] ?? 'Belum ditentukan' }} · {{ $effectiveIdentity['rt_coordinator_name'] ?? 'Tanpa koordinator' }} · {{ $item->effective_beneficiary_id ? 'Terhubung master' : 'Identitas operasional' }}</span></span><span class="col-start-2 text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $effectiveIdentity['contact_reference'] ?? '—' }}</span><span class="col-start-2 font-semibold lg:col-auto">{{ $money($item->amount) }}</span><span class="col-start-2 min-w-0 break-words text-xs text-base-content/65 lg:col-auto lg:text-sm">{{ $item->notes ?: '—' }}</span>@include('masjid.mrj.admin.financial-v2.distributions.item-edit')</div>
 @endforeach
 </div></x-financial-v2.recipient-rt-group>
 @endforeach

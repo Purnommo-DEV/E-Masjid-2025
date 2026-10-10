@@ -438,6 +438,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/penyaluran/{distribution}', [DistributionController::class, 'destroy'])->name('distributions.destroy');
         Route::post('/penyaluran/{distribution}/penerima', [DistributionController::class, 'item'])->name('distributions.items.store');
         Route::patch('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.update');
+        Route::post('/penyaluran/{distribution}/penerima/{item}/koreksi-identitas', [DistributionController::class, 'correctRecipientIdentity'])
+            ->middleware('role:SuperAdmin')->name('distributions.items.identity-corrections.store');
         Route::delete('/penyaluran/{distribution}/penerima/{item}', [DistributionController::class, 'item'])->name('distributions.items.destroy');
         Route::post('/penyaluran/{distribution}/finalize', [DistributionController::class, 'finalize'])->name('distributions.finalize');
         Route::post('/penyaluran/{distribution}/tautkan-realisasi', [DistributionController::class, 'finalize'])->name('distributions.realizations.link');

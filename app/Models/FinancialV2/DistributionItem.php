@@ -3,6 +3,8 @@
 namespace App\Models\FinancialV2;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DistributionItem extends FinancialV2Model
 {
@@ -32,5 +34,30 @@ class DistributionItem extends FinancialV2Model
     public function beneficiary(): BelongsTo
     {
         return $this->belongsTo(Counterparty::class, 'beneficiary_id');
+    }
+
+    public function identityCorrections(): HasMany
+    {
+        return $this->hasMany(DistributionItemIdentityCorrection::class, 'distribution_item_id')->orderBy('correction_no');
+    }
+
+    public function latestIdentityCorrection(): HasOne
+    {
+        return $this->hasOne(DistributionItemIdentityCorrection::class, 'distribution_item_id')->ofMany('correction_no', 'max');
+    }
+
+    public function getEffectiveBeneficiaryIdAttribute(): ?string
+    {
+        return $this->latestIdentityCorrection?->corrected_beneficiary_id ?? $this->beneficiary_id;
+    }
+
+    public function getEffectiveRecipientKeyAttribute(): string
+    {
+        return $this->latestIdentityCorrection?->corrected_recipient_key ?? $this->recipient_key;
+    }
+
+    public function getEffectiveIdentitySnapshotAttribute(): array
+    {
+        return $this->latestIdentityCorrection?->corrected_identity_snapshot ?? $this->identity_snapshot;
     }
 }

@@ -19,6 +19,7 @@ use App\Models\FinancialV2\TransactionType;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -122,23 +123,36 @@ final class InternalZiswafDashboardController
             'program', 'realization.transaction.type', 'realization.transaction.splits.fund',
             'realization.budgetAllocationVersion.allocation.program',
         ]);
-        $itemsQuery = $distribution->items()->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.rw')), '')")
-            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.rt')), '')")
-            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.display_name')), '')")
-            ->when($input['q'] ?? null, fn ($query, $value) => $query->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.display_name'))) LIKE ?", ['%'.mb_strtolower($value).'%']))
-            ->when($input['rt'] ?? null, fn ($query, $value) => $query->where('identity_snapshot->rt', $value))
-            ->when($input['rw'] ?? null, fn ($query, $value) => $query->where('identity_snapshot->rw', $value));
+        $latestCorrectionNumbers = DB::table('financial_v2_distribution_item_identity_corrections')
+            ->select('distribution_item_id')->selectRaw('MAX(correction_no) as correction_no')->groupBy('distribution_item_id');
+        $effectiveSnapshot = 'COALESCE(identity_correction.corrected_identity_snapshot, financial_v2_distribution_items.identity_snapshot)';
+        $snapshotValue = fn (string $field): string => "JSON_UNQUOTE(JSON_EXTRACT({$effectiveSnapshot}, '$.{$field}'))";
+        $itemsQuery = $distribution->items()
+            ->leftJoinSub($latestCorrectionNumbers, 'latest_identity_correction_no', fn ($join) => $join->on('latest_identity_correction_no.distribution_item_id', '=', 'financial_v2_distribution_items.id'))
+            ->leftJoin('financial_v2_distribution_item_identity_corrections as identity_correction', function ($join): void {
+                $join->on('identity_correction.distribution_item_id', '=', 'financial_v2_distribution_items.id')
+                    ->on('identity_correction.correction_no', '=', 'latest_identity_correction_no.correction_no');
+            })
+            ->select('financial_v2_distribution_items.*')
+            ->with('latestIdentityCorrection')
+            ->orderByRaw("COALESCE({$snapshotValue('rw')}, '')")
+            ->orderByRaw("COALESCE({$snapshotValue('rt')}, '')")
+            ->orderByRaw("COALESCE({$snapshotValue('display_name')}, '')")
+            ->when($input['q'] ?? null, fn ($query, $value) => $query->whereRaw("LOWER({$snapshotValue('display_name')}) LIKE ?", ['%'.mb_strtolower($value).'%']))
+            ->when($input['rt'] ?? null, fn ($query, $value) => $query->whereRaw("{$snapshotValue('rt')} = ?", [$value]))
+            ->when($input['rw'] ?? null, fn ($query, $value) => $query->whereRaw("{$snapshotValue('rw')} = ?", [$value]));
         $allItems = $distribution->items();
         $totalRecipients = (clone $allItems)->count();
         $operationalTotal = DecimalAmount::normalize((string) (clone $allItems)->sum('amount'));
         $filteredCount = (clone $itemsQuery)->count();
-        $filteredTotal = DecimalAmount::normalize((string) (clone $itemsQuery)->sum('amount'));
+        $filteredTotal = DecimalAmount::normalize((string) (clone $itemsQuery)->sum('financial_v2_distribution_items.amount'));
         $groupRows = (clone $itemsQuery)
             ->reorder()
-            ->selectRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.rt')), '') as snapshot_rt")
-            ->selectRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.rw')), '') as snapshot_rw")
-            ->selectRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(identity_snapshot, '$.rt_coordinator_name')), '') as snapshot_coordinator")
-            ->selectRaw('COUNT(*) as recipient_count, COALESCE(SUM(amount), 0) as group_total')
+            ->select([])
+            ->selectRaw("COALESCE({$snapshotValue('rt')}, '') as snapshot_rt")
+            ->selectRaw("COALESCE({$snapshotValue('rw')}, '') as snapshot_rw")
+            ->selectRaw("COALESCE({$snapshotValue('rt_coordinator_name')}, '') as snapshot_coordinator")
+            ->selectRaw('COUNT(*) as recipient_count, COALESCE(SUM(financial_v2_distribution_items.amount), 0) as group_total')
             ->groupBy('snapshot_rt', 'snapshot_rw', 'snapshot_coordinator')->get();
         $groups = $groupRows->mapWithKeys(fn ($row): array => [
             $this->recipientGroupKey((string) $row->snapshot_rt, (string) $row->snapshot_rw, (string) $row->snapshot_coordinator) => [
@@ -149,8 +163,8 @@ final class InternalZiswafDashboardController
         ]);
         $items = $itemsQuery->paginate(25)->withQueryString();
         $pageGroups = $items->getCollection()->groupBy(fn ($item): string => $this->recipientGroupKey(
-            (string) data_get($item->identity_snapshot, 'rt'), (string) data_get($item->identity_snapshot, 'rw'),
-            (string) data_get($item->identity_snapshot, 'rt_coordinator_name')
+            (string) data_get($item->effective_identity_snapshot, 'rt'), (string) data_get($item->effective_identity_snapshot, 'rw'),
+            (string) data_get($item->effective_identity_snapshot, 'rt_coordinator_name')
         ));
         $report = $this->reports->report($entity, $distribution->starts_on->toDateString(), $distribution->ends_on->toDateString());
         $reported = collect($report['distributions']['events'])->firstWhere('distribution_id', $distribution->id);

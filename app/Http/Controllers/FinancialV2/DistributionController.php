@@ -6,6 +6,7 @@ use App\Domain\FinancialV2\DecimalAmount;
 use App\Domain\FinancialV2\BeneficiaryDuplicateService;
 use App\Domain\FinancialV2\BeneficiaryImportService;
 use App\Domain\FinancialV2\DistributionService;
+use App\Domain\FinancialV2\DistributionIdentityCorrectionService;
 use App\Domain\FinancialV2\DistributionRealizationLinkService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\Counterparty;
@@ -16,6 +17,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -32,6 +34,7 @@ final class DistributionController
 {
     public function __construct(
         private readonly DistributionService $service,
+        private readonly DistributionIdentityCorrectionService $identityCorrections,
         private readonly DistributionRealizationLinkService $realizationLinks,
         private readonly BeneficiaryImportService $beneficiaryImport,
         private readonly BeneficiaryDuplicateService $beneficiaryDuplicates,
@@ -214,8 +217,19 @@ final class DistributionController
     {
         $entity = $this->context($request);
         $person = Counterparty::forEntity($entity->id)->where('party_type', 'beneficiary')->findOrFail($beneficiary);
-        $history = DistributionItem::where('beneficiary_id', $person->id)->whereHas('distribution', fn ($q) => $q->forEntity($entity->id))
-            ->with(['distribution.program', 'distribution.realization.transaction'])->latest()->paginate(20)->withQueryString();
+        $latestCorrections = DB::table('financial_v2_distribution_item_identity_corrections')
+            ->select('distribution_item_id')->selectRaw('MAX(correction_no) as correction_no')->groupBy('distribution_item_id');
+        $history = DistributionItem::query()
+            ->leftJoinSub($latestCorrections, 'latest_identity_correction_no', fn ($join) => $join->on('latest_identity_correction_no.distribution_item_id', '=', 'financial_v2_distribution_items.id'))
+            ->leftJoin('financial_v2_distribution_item_identity_corrections as latest_identity_correction', function ($join): void {
+                $join->on('latest_identity_correction.distribution_item_id', '=', 'financial_v2_distribution_items.id')
+                    ->on('latest_identity_correction.correction_no', '=', 'latest_identity_correction_no.correction_no');
+            })
+            ->whereRaw('COALESCE(latest_identity_correction.corrected_beneficiary_id, financial_v2_distribution_items.beneficiary_id) = ?', [$person->id])
+            ->whereHas('distribution', fn ($q) => $q->forEntity($entity->id))
+            ->select('financial_v2_distribution_items.*')
+            ->with(['latestIdentityCorrection', 'distribution.program', 'distribution.realization.transaction'])
+            ->latest('financial_v2_distribution_items.created_at')->paginate(20)->withQueryString();
 
         return view('masjid.mrj.admin.financial-v2.distributions.beneficiary', compact('entity', 'person', 'history'));
     }
@@ -358,7 +372,7 @@ final class DistributionController
     {
         $entity = $this->context($request);
         $distribution = Distribution::forEntity($entity->id)->with([
-            'program', 'items.beneficiary', 'copiedFrom.items',
+            'program', 'items.beneficiary', 'items.latestIdentityCorrection', 'items.identityCorrections.correctedBeneficiary', 'items.identityCorrections.correctedBy', 'copiedFrom.items.latestIdentityCorrection',
             'realization.transaction.splits.fund',
             'realization.budgetAllocationVersion.allocation.program',
             'realization.budgetAllocationVersion.fundings.fund',
@@ -369,12 +383,20 @@ final class DistributionController
             $peopleQuery->where('status', 'active');
         }
         $people = $peopleQuery->get();
+        $replacementCandidates = ($distribution->status === 'draft' && $distribution->realization_id === null) || ($request->user()?->hasRole('SuperAdmin') ?? false)
+            ? Counterparty::forEntity($entity->id)
+                ->where('party_type', 'beneficiary')
+                ->where('status', 'active')
+                ->orderBy('display_name')
+                ->orderBy('id')
+                ->get()
+            : collect();
         $realizations = $distribution->realization_id ? collect() : $this->realizationLinks->candidates($distribution);
-        $oldIds = $distribution->copiedFrom?->items->pluck('recipient_key') ?? collect();
-        $newIds = $distribution->items->pluck('recipient_key');
+        $oldIds = $distribution->copiedFrom?->items->map->effective_recipient_key ?? collect();
+        $newIds = $distribution->items->map->effective_recipient_key;
         $continuity = ['previous' => $oldIds->count(), 'current' => $newIds->count(), 'added' => $newIds->diff($oldIds)->count(), 'removed' => $oldIds->diff($newIds)->count()];
 
-        return view('masjid.mrj.admin.financial-v2.distributions.show', compact('entity', 'distribution', 'total', 'people', 'realizations', 'continuity'));
+        return view('masjid.mrj.admin.financial-v2.distributions.show', compact('entity', 'distribution', 'total', 'people', 'replacementCandidates', 'realizations', 'continuity'));
     }
 
     public function updatePeriodLabel(Request $request, string $distribution)
@@ -410,7 +432,19 @@ final class DistributionController
         }
         $this->service->item($entity->id, $distribution, $request->all(), $item, $request->isMethod('delete'), $request->user()->id);
 
-        return back()->with('success', 'Daftar penerima diperbarui.');
+        return back()->with('success', $request->boolean('replace_beneficiary')
+            ? 'Penerima berhasil diganti. Nominal bantuan dan data keuangan tidak berubah.'
+            : 'Daftar penerima diperbarui.');
+    }
+
+    public function correctRecipientIdentity(Request $request, string $distribution, string $item)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->context($request);
+        $this->identityCorrections->correct($entity->id, $distribution, $item, $request->all(), $request->user()->id);
+
+        return redirect()->route('financial-v2.distributions.show', ['entity' => $entity->id, 'distribution' => $distribution])
+            ->with('success', 'Koreksi identitas penerima tersimpan. Fakta pembayaran dan data keuangan tidak berubah.');
     }
 
     public function finalize(Request $request, string $distribution)

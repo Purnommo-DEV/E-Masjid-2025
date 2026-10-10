@@ -130,16 +130,16 @@ final class DistributionService
                 ->where('ends_on', '<', $copy->starts_on->toDateString())->orderByDesc('ends_on')->lockForUpdate()->first();
             $this->require($previous !== null, 'Belum ada penyaluran periode sebelumnya.');
             $copy->update(['copied_from_id' => $previous->id]);
-            foreach ($previous->items()->get() as $item) {
-                $person = $item->beneficiary_id
-                    ? Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->findOrFail($item->beneficiary_id)
+            foreach ($previous->items()->with('latestIdentityCorrection')->get() as $item) {
+                $person = $item->effective_beneficiary_id
+                    ? Counterparty::forEntity($entityId)->where('party_type', 'beneficiary')->findOrFail($item->effective_beneficiary_id)
                     : null;
                 $copy->items()->create([
                     'beneficiary_id' => $person?->id,
-                    'recipient_key' => $person ? 'master:'.$person->id : $item->recipient_key,
+                    'recipient_key' => $person ? 'master:'.$person->id : $item->effective_recipient_key,
                     'amount' => $item->amount,
                     'notes' => $item->notes,
-                    'identity_snapshot' => $person ? $this->snapshot($person) : $item->identity_snapshot,
+                    'identity_snapshot' => $person ? $this->snapshot($person) : $item->effective_identity_snapshot,
                 ]);
             }
             $this->record($entityId, 'distribution.copied', $copy->id, $actor, ['copied_from_id' => $previous->id]);
@@ -198,6 +198,47 @@ final class DistributionService
             if ($remove) {
                 $this->require($item !== null, 'Penerima tidak ditemukan.');
                 $item->delete();
+            } elseif ($item && filter_var($input['replace_beneficiary'] ?? false, FILTER_VALIDATE_BOOL)) {
+                $data = Validator::make($input, [
+                    'beneficiary_id' => 'required|uuid',
+                ], [
+                    'beneficiary_id.required' => 'Penerima pengganti wajib dipilih.',
+                    'beneficiary_id.uuid' => 'Penerima pengganti tidak valid.',
+                ])->validate();
+                $person = Counterparty::forEntity($entityId)
+                    ->where('party_type', 'beneficiary')
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->findOrFail($data['beneficiary_id']);
+                $recipientKey = 'master:'.$person->id;
+                $duplicate = $distribution->items()
+                    ->where('recipient_key', $recipientKey)
+                    ->where('id', '<>', $item->id)
+                    ->exists();
+                $this->require(! $duplicate, 'Penerima pengganti sudah tercatat dalam penyaluran ini.');
+
+                $before = [
+                    'item_id' => $item->id,
+                    'beneficiary_id' => $item->beneficiary_id,
+                    'recipient_key' => $item->recipient_key,
+                    'identity_snapshot' => $item->identity_snapshot,
+                    'amount' => $item->amount,
+                    'notes' => $item->notes,
+                ];
+                $item->update([
+                    'beneficiary_id' => $person->id,
+                    'recipient_key' => $recipientKey,
+                    'identity_snapshot' => $this->snapshot($person),
+                ]);
+                $after = [
+                    'item_id' => $item->id,
+                    'beneficiary_id' => $item->beneficiary_id,
+                    'recipient_key' => $item->recipient_key,
+                    'identity_snapshot' => $item->identity_snapshot,
+                    'amount' => $item->amount,
+                    'notes' => $item->notes,
+                ];
+                $this->audit->record($entityId, 'distribution.beneficiary_replaced', 'ziswaf_distribution', $distribution->id, (string) Str::uuid(), $actor, $before, $after);
             } else {
                 $data = Validator::make($input, [
                     'beneficiary_id' => 'nullable|uuid',
@@ -229,7 +270,9 @@ final class DistributionService
                 $item ? $item->update($attributes) : $distribution->items()->create($attributes);
             }
             $distribution->update(['revision' => $distribution->revision + 1, 'updated_by_user_id' => $actor]);
-            $this->record($entityId, $remove ? 'distribution.item_removed' : 'distribution.item_saved', $id, $actor);
+            if (! ($item && filter_var($input['replace_beneficiary'] ?? false, FILTER_VALIDATE_BOOL))) {
+                $this->record($entityId, $remove ? 'distribution.item_removed' : 'distribution.item_saved', $id, $actor);
+            }
 
             return $distribution;
         });

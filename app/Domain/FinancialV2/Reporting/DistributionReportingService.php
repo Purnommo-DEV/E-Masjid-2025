@@ -67,10 +67,18 @@ final class DistributionReportingService
             }
             $rows[] = $row;
         }
+        $latestCorrectionNumbers = DB::table('financial_v2_distribution_item_identity_corrections')
+            ->select('distribution_item_id')->selectRaw('MAX(correction_no) as correction_no')->groupBy('distribution_item_id');
         $unique = DB::table('financial_v2_distribution_items as item')
             ->join('financial_v2_distributions as distribution', 'distribution.id', '=', 'item.distribution_id')
+            ->leftJoinSub($latestCorrectionNumbers, 'latest_identity_correction_no', fn ($join) => $join->on('latest_identity_correction_no.distribution_item_id', '=', 'item.id'))
+            ->leftJoin('financial_v2_distribution_item_identity_corrections as identity_correction', function (JoinClause $join): void {
+                $join->on('identity_correction.distribution_item_id', '=', 'item.id')
+                    ->on('identity_correction.correction_no', '=', 'latest_identity_correction_no.correction_no');
+            })
             ->whereIn('distribution.id', $acceptedIds);
-        $byProgram = (clone $unique)->select('distribution.program_id')->selectRaw('COUNT(DISTINCT item.recipient_key) as unique_beneficiaries')->groupBy('distribution.program_id')->pluck('unique_beneficiaries', 'program_id');
+        $effectiveRecipientKey = 'COALESCE(identity_correction.corrected_recipient_key, item.recipient_key)';
+        $byProgram = (clone $unique)->select('distribution.program_id')->selectRaw("COUNT(DISTINCT {$effectiveRecipientKey}) as unique_beneficiaries")->groupBy('distribution.program_id')->pluck('unique_beneficiaries', 'program_id');
         $programs = collect($rows)->groupBy('program_id')->map(fn ($group, $id) => [
             'program_id' => $id, 'program_name' => $group->first()['program_name'], 'distribution_events' => $group->count(),
             'unique_beneficiaries' => (int) $byProgram->get($id, 0), 'actual_amount' => DecimalAmount::sum($group->pluck('actual_amount')),
@@ -78,8 +86,13 @@ final class DistributionReportingService
 
         $regions = DB::table('financial_v2_distribution_items as item')
             ->join('financial_v2_distributions as distribution', 'distribution.id', '=', 'item.distribution_id')
+            ->leftJoinSub($latestCorrectionNumbers, 'latest_identity_correction_no', fn ($join) => $join->on('latest_identity_correction_no.distribution_item_id', '=', 'item.id'))
+            ->leftJoin('financial_v2_distribution_item_identity_corrections as identity_correction', function (JoinClause $join): void {
+                $join->on('identity_correction.distribution_item_id', '=', 'item.id')
+                    ->on('identity_correction.correction_no', '=', 'latest_identity_correction_no.correction_no');
+            })
             ->leftJoin('financial_v2_counterparties as beneficiary', function (JoinClause $join): void {
-                $join->on('beneficiary.id', '=', 'item.beneficiary_id')
+                $join->whereRaw('beneficiary.id = COALESCE(identity_correction.corrected_beneficiary_id, item.beneficiary_id)')
                     ->on('beneficiary.accounting_entity_id', '=', 'distribution.accounting_entity_id');
             })
             ->whereIn('distribution.id', $acceptedIds)
@@ -87,8 +100,8 @@ final class DistributionReportingService
             ->orderByDesc('item.created_at')
             ->orderByDesc('item.id')
             ->get([
-                'item.recipient_key',
-                'item.identity_snapshot',
+                DB::raw("{$effectiveRecipientKey} as recipient_key"),
+                DB::raw('COALESCE(identity_correction.corrected_identity_snapshot, item.identity_snapshot) as identity_snapshot'),
                 'beneficiary.id as master_id',
                 'beneficiary.rt as master_rt',
                 'beneficiary.rw as master_rw',
@@ -118,6 +131,8 @@ final class DistributionReportingService
                 return $public ? $row : $row + ['coordinator' => $group->first()['coordinator']];
             })->values()->all();
 
-        return ['events' => $rows, 'programs' => $programs, 'regions' => $regions, 'unique_beneficiaries' => $unique->distinct()->count('item.recipient_key'), 'distribution_events' => count($rows)];
+        $uniqueBeneficiaries = (int) (clone $unique)->selectRaw("COUNT(DISTINCT {$effectiveRecipientKey}) as aggregate")->value('aggregate');
+
+        return ['events' => $rows, 'programs' => $programs, 'regions' => $regions, 'unique_beneficiaries' => $uniqueBeneficiaries, 'distribution_events' => count($rows)];
     }
 }

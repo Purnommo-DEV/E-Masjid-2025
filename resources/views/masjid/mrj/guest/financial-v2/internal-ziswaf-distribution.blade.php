@@ -5,7 +5,7 @@
 $rp=static fn($n)=>'Rp'.number_format((float)$n,0,',','.');
 $transaction=$distribution->realization?->transaction;
 $actual=$reported['actual_amount']??'0.00';
-$snapshot=static fn($item,$key,$fallback='—')=>filled(data_get($item->identity_snapshot,$key))?data_get($item->identity_snapshot,$key):$fallback;
+$snapshot=static fn($item,$key,$fallback='—')=>filled(data_get($item->effective_identity_snapshot,$key))?data_get($item->effective_identity_snapshot,$key):$fallback;
 @endphp
 <header class="border-b border-emerald-900 bg-emerald-950 text-white"><div class="mx-auto max-w-7xl px-4 py-7 sm:px-6"><nav aria-label="Breadcrumb" class="text-xs text-emerald-200"><a class="rounded focus:outline-none focus:ring-2 focus:ring-white" href="{{ route('internal.ziswaf.dashboard') }}">Ringkasan ZISWAF</a><span class="mx-2">/</span><span>Detail penyaluran</span></nav><div class="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div class="min-w-0"><p class="text-xs font-bold uppercase tracking-[.2em] text-emerald-300">{{ $distribution->program->name }}</p><h1 class="mt-2 break-words text-2xl font-bold sm:text-3xl">{{ $distribution->title }}</h1><p class="mt-2 text-sm text-emerald-100">{{ $distribution->period_label }} · {{ $distribution->starts_on->format('d/m/Y') }}–{{ $distribution->ends_on->format('d/m/Y') }}</p></div><div class="flex flex-wrap gap-2"><span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">Operasional: {{ strtoupper($distribution->status) }}</span><span class="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">Finansial: {{ strtoupper($transaction?->status??'belum tertaut') }}</span></div></div></div></header>
 <main class="mx-auto max-w-7xl space-y-7 px-4 py-6 sm:px-6">
@@ -28,5 +28,5 @@ $snapshot=static fn($item,$key,$fallback='—')=>filled(data_get($item->identity
 </article>
 @empty<div class="rounded-xl bg-slate-50 px-4 py-12 text-center text-slate-500">Tidak ada penerima yang sesuai dengan pencarian.</div>@endforelse
 </div><div class="mt-5">{{ $items->links() }}</div></section>
-<p class="pb-8 text-center text-xs text-slate-500">Data identitas berasal dari snapshot immutable saat penerima ditambahkan ke penyaluran.</p>
+<p class="pb-8 text-center text-xs text-slate-500">Identitas menampilkan atribusi efektif terbaru. Snapshot asli saat penyaluran dibuat tetap dipertahankan dalam riwayat audit.</p>
 </main></body></html>
