@@ -98,13 +98,23 @@ return new class extends Migration
     private function assertUserKeyCompatibility(): void
     {
         $column = DB::selectOne(
-            'SELECT COLUMN_TYPE FROM information_schema.COLUMNS
+            'SELECT DATA_TYPE, COLUMN_TYPE, COLUMN_KEY FROM information_schema.COLUMNS
              WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
             ['users', 'id'],
         );
 
-        if (! $column || strtolower((string) $column->COLUMN_TYPE) !== 'bigint unsigned') {
-            throw new RuntimeException('Definisi users.id harus BIGINT UNSIGNED agar kompatibel dengan corrected_by_user_id.');
+        if (! $column) {
+            throw new RuntimeException('Kolom induk users.id tidak ditemukan. Migration dihentikan sebelum membuat tabel koreksi identitas.');
+        }
+
+        $dataType = strtolower((string) $column->DATA_TYPE);
+        $columnType = strtolower((string) $column->COLUMN_TYPE);
+        $isUnsignedBigInt = $dataType === 'bigint' && preg_match('/\bunsigned\b/', $columnType) === 1;
+
+        if (! $isUnsignedBigInt || strtoupper((string) $column->COLUMN_KEY) !== 'PRI') {
+            throw new RuntimeException(
+                "Definisi users.id harus primary key BIGINT UNSIGNED; ditemukan {$columnType}. Migration dihentikan sebelum membuat tabel koreksi identitas."
+            );
         }
     }
 };
