@@ -186,48 +186,66 @@ final class UnusedEffectiveFundPolicyReplacementService
         $to = $toOverride ?? $version->effective_to?->toDateString() ?? '9999-12-31';
         $query = fn (string $table) => DB::table($table);
 
-        $fundingQuery = $query('financial_v2_budget_allocation_fundings')->where('fund_id', $version->fund_id);
+        $fundingQuery = $query('financial_v2_budget_allocation_fundings')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
+            ->where('fund_id', $version->fund_id);
         $fundings = ($lock ? $fundingQuery->lockForUpdate() : $fundingQuery)->get();
         $allocationVersionQuery = $query('financial_v2_budget_allocation_versions')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
             ->whereIn('id', $fundings->pluck('budget_allocation_version_id'))
-            ->where('effective_from', '<=', $to)
-            ->where(fn ($range) => $range->whereNull('effective_to')->orWhere('effective_to', '>=', $from));
+            // Allocation compatibility is resolved on effective_from. Its
+            // optional effective_to is a planning horizon, not a second date
+            // on which Fund Policy is selected.
+            ->whereBetween('effective_from', [$from, $to]);
         $allocationVersions = ($lock ? $allocationVersionQuery->lockForUpdate() : $allocationVersionQuery)->get();
-        $allocationQuery = $query('financial_v2_budget_allocations')->whereIn('id', $allocationVersions->pluck('budget_allocation_id'));
+        $allocationQuery = $query('financial_v2_budget_allocations')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
+            ->whereIn('id', $allocationVersions->pluck('budget_allocation_id'));
         $allocations = ($lock ? $allocationQuery->lockForUpdate() : $allocationQuery)->get();
 
         $payTypeId = TransactionType::query()
             ->where('accounting_entity_id', $version->accounting_entity_id)
             ->where('code', TransactionTypeCode::Payment->value)
             ->value('id');
-        $splitQuery = $query('financial_v2_transaction_splits')->where('fund_id', $version->fund_id);
+        $splitQuery = $query('financial_v2_transaction_splits')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
+            ->where('fund_id', $version->fund_id);
         $splits = ($lock ? $splitQuery->lockForUpdate() : $splitQuery)->get();
         $transactionQuery = $query('financial_v2_transactions')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
             ->whereIn('id', $splits->pluck('transaction_id'))
             ->where('transaction_type_id', $payTypeId)
             ->whereBetween('accounting_date', [$from, $to]);
         $transactions = ($lock ? $transactionQuery->lockForUpdate() : $transactionQuery)->get();
 
         $realizationQuery = $query('financial_v2_fund_realizations')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
             ->whereIn('budget_allocation_version_id', $allocationVersions->pluck('id'))
             ->whereIn('transaction_id', $transactions->pluck('id'));
         $realizations = ($lock ? $realizationQuery->lockForUpdate() : $realizationQuery)->get();
         $journalQuery = $query('financial_v2_journals')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
             ->whereIn('transaction_id', $transactions->pluck('id'))
             ->where('journal_status', 'posted');
         $journals = ($lock ? $journalQuery->lockForUpdate() : $journalQuery)->get();
-        $journalLineQuery = $query('financial_v2_journal_lines')->whereIn('journal_id', $journals->pluck('id'));
+        $journalLineQuery = $query('financial_v2_journal_lines')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
+            ->whereIn('journal_id', $journals->pluck('id'));
         $journalLines = ($lock ? $journalLineQuery->lockForUpdate() : $journalLineQuery)->get();
-        $ledgerQuery = $query('financial_v2_ledger_entries')->whereIn('journal_line_id', $journalLines->pluck('id'));
+        $ledgerQuery = $query('financial_v2_ledger_entries')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
+            ->whereIn('journal_line_id', $journalLines->pluck('id'));
         $ledgerEntries = ($lock ? $ledgerQuery->lockForUpdate() : $ledgerQuery)->get();
 
         $directTransactionQuery = $query('financial_v2_transactions')
+            ->where('accounting_entity_id', $version->accounting_entity_id)
             ->where('policy_version_ref', $version->id)
             ->whereBetween('accounting_date', [$from, $to]);
         $directTransactions = ($lock ? $directTransactionQuery->lockForUpdate() : $directTransactionQuery)->get();
         $directJournalLineQuery = $query('financial_v2_journal_lines as line')
             ->join('financial_v2_journals as journal', 'journal.id', '=', 'line.journal_id')
             ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'journal.transaction_id')
+            ->where('line.accounting_entity_id', $version->accounting_entity_id)
             ->where('line.policy_version_ref', $version->id)
             ->whereBetween('transaction.accounting_date', [$from, $to])
             ->select('line.*');
