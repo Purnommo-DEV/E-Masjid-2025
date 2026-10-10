@@ -501,6 +501,9 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/aturan-dana', [FinancialMasterDataController::class, 'storePolicy'])->name('policies.store');
             Route::put('/aturan-dana/{policyVersion}', [FinancialMasterDataController::class, 'updatePolicy'])->name('policies.update');
             Route::post('/aturan-dana/{policyVersion}/berlakukan', [FinancialMasterDataController::class, 'makePolicyEffective'])->name('policies.effective');
+            Route::put('/aturan-dana/{policyVersion}/koreksi-periode', [FinancialMasterDataController::class, 'correctEffectivePolicyPeriod'])
+                ->middleware('role:SuperAdmin')
+                ->name('policies.correct-effective-period');
             Route::post('/aturan-dana/{policyVersion}/successor', [FinancialMasterDataController::class, 'clonePolicySuccessor'])->name('policies.successor');
             Route::post('/aturan-dana/{policyVersion}/pulihkan-approval', [FinancialMasterDataController::class, 'recoverPolicyApprovalMetadata'])
                 ->middleware('role:SuperAdmin')

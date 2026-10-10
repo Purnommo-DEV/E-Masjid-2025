@@ -32,6 +32,20 @@
                         <article id="policy-version-{{ $version->id }}" class="p-5 scroll-mt-24">
                             <div class="flex flex-wrap items-start justify-between gap-3"><div><p class="font-semibold">{{ $version->fund?->name }}</p><p class="text-sm text-base-content/60">Versi {{ $version->version_no }} · {{ $version->effective_from?->format('d/m/Y') }}@if($version->effective_to) — {{ $version->effective_to->format('d/m/Y') }}@endif</p></div><span class="badge {{ $version->status === 'effective' ? 'badge-success' : 'badge-ghost' }}">{{ $version->status === 'effective' ? 'Berlaku' : ($version->status === 'replaced_unused' ? 'Diganti · belum digunakan' : ucfirst($version->status)) }}</span></div>
                             <p class="mt-3 text-sm text-base-content/65">Dokumen: {{ $version->policy_document_ref }}@if($version->allowed_matrix_ref) · Matriks: {{ $version->allowed_matrix_ref }}@endif</p>
+                            @if ($version->status === 'effective' && $canCorrectEffectivePolicyPeriod)
+                                <details class="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                                    <summary class="cursor-pointer text-sm font-semibold">Ubah Periode Berlaku</summary>
+                                    <p class="mt-2 text-xs leading-5">Koreksi ini mengubah resolusi policy berdasarkan tanggal tanpa membuat nomor versi baru. Server hanya mengizinkan perubahan bila tidak overlap dan zero-usage terverifikasi untuk rentang tujuan. Transaksi, jurnal, dan ledger tidak diubah.</p>
+                                    <form method="post" action="{{ route('financial-v2.masters.policies.correct-effective-period', $version) }}" data-financial-ajax class="mt-4 grid gap-3 sm:grid-cols-2" onsubmit="return confirm('Koreksi periode Fund Policy Version {{ $version->version_no }}? Perubahan ini memengaruhi resolusi Allocation dan Realisasi berdasarkan tanggal.')">
+                                        @csrf @method('PUT')
+                                        <input type="hidden" name="entity" value="{{ $entity->id }}">
+                                        <label class="form-control"><span class="label-text text-xs">Berlaku mulai</span><input required type="date" name="effective_from" value="{{ $version->effective_from?->toDateString() }}" class="input input-bordered input-sm"></label>
+                                        <label class="form-control"><span class="label-text text-xs">Berlaku sampai</span><input type="date" name="effective_to" value="{{ $version->effective_to?->toDateString() }}" class="input input-bordered input-sm"><span class="mt-1 text-xs">Kosongkan untuk Berlaku sampai diubah.</span></label>
+                                        <label class="form-control sm:col-span-2"><span class="label-text text-xs">Alasan koreksi</span><textarea required name="audit_reason" rows="3" maxlength="2000" class="textarea textarea-bordered textarea-sm" placeholder="Jelaskan dasar koreksi periode dan dokumen persetujuannya."></textarea></label>
+                                        <button class="btn btn-warning btn-sm sm:col-span-2">Simpan Koreksi Periode</button>
+                                    </form>
+                                </details>
+                            @endif
                             @if ($version->status === 'draft')
                                 @if ($version->rules->isNotEmpty())
                                     <div class="mt-4 flex flex-wrap gap-2"><form method="post" action="{{ route('financial-v2.masters.policies.effective', $version) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-success btn-sm">Berlakukan versi</button></form></div>

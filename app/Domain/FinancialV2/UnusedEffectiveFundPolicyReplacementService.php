@@ -180,10 +180,10 @@ final class UnusedEffectiveFundPolicyReplacementService
     }
 
     /** @return array<string, int> */
-    private function usage(FundPolicyVersion $version, bool $lock = false): array
+    public function usage(FundPolicyVersion $version, bool $lock = false, ?string $fromOverride = null, ?string $toOverride = null): array
     {
-        $from = $version->effective_from->toDateString();
-        $to = $version->effective_to?->toDateString() ?? '9999-12-31';
+        $from = $fromOverride ?? $version->effective_from->toDateString();
+        $to = $toOverride ?? $version->effective_to?->toDateString() ?? '9999-12-31';
         $query = fn (string $table) => DB::table($table);
 
         $fundingQuery = $query('financial_v2_budget_allocation_fundings')->where('fund_id', $version->fund_id);
@@ -221,9 +221,16 @@ final class UnusedEffectiveFundPolicyReplacementService
         $ledgerQuery = $query('financial_v2_ledger_entries')->whereIn('journal_line_id', $journalLines->pluck('id'));
         $ledgerEntries = ($lock ? $ledgerQuery->lockForUpdate() : $ledgerQuery)->get();
 
-        $directTransactionQuery = $query('financial_v2_transactions')->where('policy_version_ref', $version->id);
+        $directTransactionQuery = $query('financial_v2_transactions')
+            ->where('policy_version_ref', $version->id)
+            ->whereBetween('accounting_date', [$from, $to]);
         $directTransactions = ($lock ? $directTransactionQuery->lockForUpdate() : $directTransactionQuery)->get();
-        $directJournalLineQuery = $query('financial_v2_journal_lines')->where('policy_version_ref', $version->id);
+        $directJournalLineQuery = $query('financial_v2_journal_lines as line')
+            ->join('financial_v2_journals as journal', 'journal.id', '=', 'line.journal_id')
+            ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'journal.transaction_id')
+            ->where('line.policy_version_ref', $version->id)
+            ->whereBetween('transaction.accounting_date', [$from, $to])
+            ->select('line.*');
         $directJournalLines = ($lock ? $directJournalLineQuery->lockForUpdate() : $directJournalLineQuery)->get();
 
         return [

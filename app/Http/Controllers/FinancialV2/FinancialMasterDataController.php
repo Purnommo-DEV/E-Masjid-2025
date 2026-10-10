@@ -5,6 +5,7 @@ namespace App\Http\Controllers\FinancialV2;
 use App\Domain\FinancialV2\ConfigureMrjFidyahAllocationService;
 use App\Domain\FinancialV2\ConfigureMrjHistoricalDhuafaReceiptService;
 use App\Domain\FinancialV2\CorrectMrjLegacyProgramLifecycleService;
+use App\Domain\FinancialV2\EffectiveFundPolicyPeriodCorrectionService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
 use App\Domain\FinancialV2\FundPolicyApprovalMetadataRecoveryService;
@@ -47,6 +48,7 @@ final class FinancialMasterDataController
         private readonly FundPolicyVersionDeletionService $policyDeletion,
         private readonly FundPolicySuccessorService $policySuccessor,
         private readonly FundPolicyApprovalMetadataRecoveryService $policyApprovalRecovery,
+        private readonly EffectiveFundPolicyPeriodCorrectionService $policyPeriodCorrection,
         private readonly UnusedEffectiveFundPolicyReplacementService $unusedPolicyReplacement,
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
         private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
@@ -399,6 +401,7 @@ final class FinancialMasterDataController
             'policyReplacementEligibility' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->with('rules')->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->unusedPolicyReplacement->eligibility($version)]) : collect(),
             'canReplaceUnusedEffectivePolicy' => $request->user()?->hasRole('SuperAdmin') ?? false,
             'canRecoverFundPolicyApproval' => $request->user()?->hasRole('SuperAdmin') ?? false,
+            'canCorrectEffectivePolicyPeriod' => $request->user()?->hasRole('SuperAdmin') ?? false,
         ]);
     }
 
@@ -434,6 +437,31 @@ final class FinancialMasterDataController
             $version = $this->governance->makeFundPolicyVersionEffective($policyVersion, $request->user()?->id);
 
             return ['Versi Aturan Dana kini berlaku. Perubahan berikutnya harus dibuat sebagai versi baru.', ['fund_policy_version_id' => $version->id]];
+        });
+    }
+
+    public function correctEffectivePolicyPeriod(Request $request, string $policyVersion)
+    {
+        return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request, $policyVersion) {
+            $this->ensureScoped(FundPolicyVersion::class, $entity->id, $policyVersion);
+            $data = $request->validate([
+                'effective_from' => ['required', 'date_format:Y-m-d'],
+                'effective_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:effective_from'],
+                'audit_reason' => ['required', 'string', 'max:2000'],
+            ], $this->messages());
+            $version = $this->policyPeriodCorrection->correct(
+                $entity->id,
+                $policyVersion,
+                $data['effective_from'],
+                $data['effective_to'] ?? null,
+                $data['audit_reason'],
+                $request->user()?->id,
+            );
+
+            return ['Periode Fund Policy effective berhasil dikoreksi dan dicatat dalam audit trail.', [
+                'fund_policy_version_id' => $version->id,
+                'focus_policy_version_id' => $version->id,
+            ]];
         });
     }
 
