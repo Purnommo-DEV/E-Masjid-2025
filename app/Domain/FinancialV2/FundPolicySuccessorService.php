@@ -25,13 +25,9 @@ final class FundPolicySuccessorService
                 ->findOrFail($predecessorId);
             Fund::query()->whereKey($predecessor->fund_id)->lockForUpdate()->firstOrFail();
 
-            if (! in_array($predecessor->status, ['effective', 'superseded'], true) || ! $predecessor->approved_at) {
-                throw new FinancialDomainException('E-FUND-POLICY-SUCCESSOR-STATUS', 'Successor hanya dapat dibuat dari Fund Policy yang sudah disetujui.');
+            if ($predecessor->status !== 'effective' || ! $predecessor->approved_at) {
+                throw new FinancialDomainException('E-FUND-POLICY-SUCCESSOR-STATUS', 'Draft penerus hanya dapat dibuat dari Fund Policy effective terakhir. Versi historis atau superseded harus dilanjutkan melalui penerus yang sudah ada.');
             }
-            if ($predecessor->rules->isEmpty()) {
-                throw new FinancialDomainException('E-FUND-POLICY-SUCCESSOR-RULES', 'Predecessor tidak memiliki rule yang dapat disalin.');
-            }
-
             $effectiveFrom = CarbonImmutable::parse($data['effective_from'])->startOfDay();
             if ($effectiveFrom->lte($predecessor->effective_from)) {
                 throw new FinancialDomainException('E-FUND-POLICY-SUCCESSOR-DATE', 'Tanggal successor harus setelah tanggal mulai predecessor.');

@@ -7,6 +7,7 @@ use App\Domain\FinancialV2\ConfigureMrjHistoricalDhuafaReceiptService;
 use App\Domain\FinancialV2\CorrectMrjLegacyProgramLifecycleService;
 use App\Domain\FinancialV2\FinancialDomainException;
 use App\Domain\FinancialV2\FinancialMasterDataService;
+use App\Domain\FinancialV2\FundPolicyApprovalMetadataRecoveryService;
 use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
 use App\Domain\FinancialV2\FundPolicySuccessorService;
 use App\Domain\FinancialV2\MasterDataGovernanceService;
@@ -45,6 +46,7 @@ final class FinancialMasterDataController
         private readonly MasterDataGovernanceService $governance,
         private readonly FundPolicyVersionDeletionService $policyDeletion,
         private readonly FundPolicySuccessorService $policySuccessor,
+        private readonly FundPolicyApprovalMetadataRecoveryService $policyApprovalRecovery,
         private readonly UnusedEffectiveFundPolicyReplacementService $unusedPolicyReplacement,
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
         private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
@@ -391,6 +393,7 @@ final class FinancialMasterDataController
             'policyUsage' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->policyDeletion->usage($version)]) : collect(),
             'policyReplacementEligibility' => $entityId ? FundPolicyVersion::query()->forEntity($entityId)->with('rules')->get()->mapWithKeys(fn (FundPolicyVersion $version): array => [$version->id => $this->unusedPolicyReplacement->eligibility($version)]) : collect(),
             'canReplaceUnusedEffectivePolicy' => $request->user()?->hasRole('SuperAdmin') ?? false,
+            'canRecoverFundPolicyApproval' => $request->user()?->hasRole('SuperAdmin') ?? false,
         ]);
     }
 
@@ -436,6 +439,19 @@ final class FinancialMasterDataController
             return ['Versi berikutnya dibuat sebagai draft dengan seluruh rule predecessor.', [
                 'fund_policy_version_id' => $successor->id,
                 'predecessor_fund_policy_version_id' => $policyVersion,
+                'focus_policy_version_id' => $successor->id,
+            ]];
+        });
+    }
+
+    public function recoverPolicyApprovalMetadata(Request $request, string $policyVersion)
+    {
+        return $this->perform($request, 'policies', function (AccountingEntity $entity) use ($request, $policyVersion) {
+            $this->ensureScoped(FundPolicyVersion::class, $entity->id, $policyVersion);
+            $version = $this->policyApprovalRecovery->recover($entity->id, $policyVersion, $request->user()?->id);
+
+            return ['Metadata approval dipulihkan dari audit event aktivasi yang tervalidasi.', [
+                'fund_policy_version_id' => $version->id,
             ]];
         });
     }
@@ -784,7 +800,12 @@ final class FinancialMasterDataController
     /** @param array<string, mixed> $payload */
     private function success(Request $request, string $page, string $entityId, string $message, array $payload = [])
     {
-        $redirect = route('financial-v2.masters.'.$page.'.index', ['entity' => $entityId]);
+        $focusPolicyVersionId = $payload['focus_policy_version_id'] ?? null;
+        unset($payload['focus_policy_version_id']);
+        $redirect = route('financial-v2.masters.'.$page.'.index', array_filter([
+            'entity' => $entityId,
+            'edit_rules' => $focusPolicyVersionId,
+        ])).($focusPolicyVersionId ? '#policy-version-'.$focusPolicyVersionId : '');
         if ($request->expectsJson()) {
             return response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect] + $payload);
         }

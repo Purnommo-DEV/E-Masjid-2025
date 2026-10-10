@@ -44,17 +44,23 @@
                             @php($existingSuccessor = $laterVersions->first())
                             @php($hasEditableSuccessor = $laterVersions->count() === 1 && $existingSuccessor?->version_no === $version->version_no + 1 && $existingSuccessor?->status === 'draft')
                             @php($canReuseEmptyDraft = $laterVersions->count() === 1 && $existingSuccessor?->version_no === $version->version_no + 1 && $existingSuccessor?->status === 'draft' && $existingSuccessor?->rules->isEmpty())
-                            @php($successorBlocked = $laterVersions->isNotEmpty() && ! $hasEditableSuccessor)
-                            @if (in_array($version->status, ['effective', 'superseded'], true) && $version->approved_at && $version->rules->isNotEmpty() && $hasEditableSuccessor && $existingSuccessor->rules->isNotEmpty())
+                            @php($lineageContinuation = $laterVersions->last())
+                            @if ($version->status === 'effective' && ! $version->approved_at)
+                                <div class="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                                    <p class="text-sm font-semibold">Metadata approval belum lengkap</p>
+                                    <p class="mt-2 text-xs leading-5">Kolom <code>approved_at</code> tidak tersedia meskipun status policy effective. Pemulihan hanya boleh dilakukan bila audit event aktivasi yang immutable tersedia dan integrity hash-nya valid; jika bukti itu tidak ada, server menolak perubahan.</p>
+                                    @if($canRecoverFundPolicyApproval)<form method="post" action="{{ route('financial-v2.masters.policies.recover-approval', $version) }}" data-financial-ajax class="mt-3">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-warning btn-sm">Pulihkan dari Bukti Audit</button></form>@else<p class="mt-2 text-xs font-semibold">Hubungi SuperAdmin untuk menjalankan pemulihan governance.</p>@endif
+                                </div>
+                            @elseif ($version->status === 'effective' && $hasEditableSuccessor && $existingSuccessor->rules->isNotEmpty())
                                 <div class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
                                     <p class="text-sm font-semibold">Tambah Aturan Penggunaan</p>
                                     <p class="mt-2 text-xs leading-5">Version {{ $existingSuccessor->version_no }} sudah menjadi draft penerus. Tambahkan seluruh aturan yang diperlukan pada draft yang sama, lalu review sebelum diberlakukan. Versi {{ $version->version_no }} yang sedang berlaku tidak diubah.</p>
                                     <a class="btn btn-success btn-sm mt-3" href="{{ route('financial-v2.masters.policies.index', ['entity' => $entity->id, 'edit_rules' => $existingSuccessor->id]) }}#policy-version-{{ $existingSuccessor->id }}">Lanjutkan di Draft Version {{ $existingSuccessor->version_no }}</a>
                                 </div>
-                            @elseif (in_array($version->status, ['effective', 'superseded'], true) && $version->approved_at && $version->rules->isNotEmpty() && ! $successorBlocked)
+                            @elseif ($version->status === 'effective' && ($laterVersions->isEmpty() || $canReuseEmptyDraft))
                                 <details class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-950">
                                     <summary class="cursor-pointer text-sm font-semibold">Tambah Aturan Penggunaan</summary>
-                                    <p class="mt-2 text-xs leading-5">Versi yang sudah berlaku tetap immutable. @if($canReuseEmptyDraft)Draft Version {{ $existingSuccessor->version_no }} yang masih kosong akan digunakan kembali.@else Satu draft successor akan dibuat.@endif Seluruh rule versi ini disalin tanpa perubahan dalam satu transaction; aturan tambahan kemudian dimasukkan ke draft yang sama sebelum aktivasi.</p>
+                                    <p class="mt-2 text-xs leading-5">Versi yang sudah berlaku tetap immutable. @if($canReuseEmptyDraft)Draft Version {{ $existingSuccessor->version_no }} yang masih kosong akan digunakan kembali.@else Satu draft successor akan dibuat.@endif @if($version->rules->isEmpty())Policy effective ini memang tidak memiliki baseline rule; successor dimulai kosong dan tidak dapat diberlakukan sebelum admin menambahkan rule yang valid.@else Seluruh rule versi ini disalin tanpa perubahan dalam satu transaction.@endif Aturan tambahan dimasukkan ke draft yang sama sebelum aktivasi.</p>
                                     <form method="post" action="{{ route('financial-v2.masters.policies.successor', $version) }}" data-financial-ajax class="mt-4 grid gap-3 sm:grid-cols-2">
                                         @csrf
                                         <input type="hidden" name="entity" value="{{ $entity->id }}">
@@ -66,6 +72,18 @@
                                         <button class="btn btn-success btn-sm sm:col-span-2">Siapkan Draft untuk Tambah Aturan</button>
                                     </form>
                                 </details>
+                            @elseif ($version->status === 'effective' && $laterVersions->isNotEmpty())
+                                <div class="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sky-950">
+                                    <p class="text-sm font-semibold">Lineage policy ini sudah berlanjut</p>
+                                    <p class="mt-2 text-xs leading-5">Version {{ $version->version_no }} tidak dapat membuat cabang baru karena sudah memiliki penerus. Tambahkan aturan melalui version terakhir yang masih dapat dilanjutkan.</p>
+                                    @if($lineageContinuation)<a class="btn btn-outline btn-sm mt-3" href="#policy-version-{{ $lineageContinuation->id }}">Buka Version {{ $lineageContinuation->version_no }} · {{ $lineageContinuation->status === 'effective' ? 'Berlaku' : ucfirst($lineageContinuation->status) }}</a>@endif
+                                </div>
+                            @elseif ($version->status === 'superseded')
+                                <div class="mt-4 rounded-xl border border-base-300 bg-base-200 p-4">
+                                    <p class="text-sm font-semibold">Versi historis — tidak dapat dibuat cabang baru</p>
+                                    <p class="mt-2 text-xs leading-5 text-base-content/70">Aturan pada Version {{ $version->version_no }} tetap dipertahankan untuk audit. Penambahan harus dilakukan dari penerus pada lineage yang sama.</p>
+                                    @if($lineageContinuation)<a class="btn btn-ghost btn-sm mt-3" href="#policy-version-{{ $lineageContinuation->id }}">Buka Version {{ $lineageContinuation->version_no }}</a>@endif
+                                </div>
                             @endif
 
                             @php($usage = $policyUsage->get($version->id))
