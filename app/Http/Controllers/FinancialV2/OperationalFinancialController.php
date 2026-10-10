@@ -15,6 +15,7 @@ use App\Domain\FinancialV2\FinancialTransactionConfigurationResolver;
 use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\FundPolicyCompatibilityService;
 use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
+use App\Domain\FinancialV2\PostingEngine;
 use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\FundGroupingReadService;
@@ -82,6 +83,7 @@ final class OperationalFinancialController
         private readonly DraftTransactionReadService $draftTransactions,
         private readonly FinancialTransactionConfigurationResolver $configurationResolver,
         private readonly FundPolicyCompatibilityService $allocationPolicies,
+        private readonly PostingEngine $postingEngine,
     ) {}
 
     public function dashboard(Request $request)
@@ -325,6 +327,59 @@ final class OperationalFinancialController
             $result = $this->lifecycle->post($transaction->id, $postKey, hash('sha256', $postKey), $actorId);
 
             return $this->success($request, 'Transaksi sudah dicatat secara resmi.', route('financial-v2.transactions.show', $transaction), [
+                'transaction_id' => $transaction->id,
+                'journal_id' => $result->journalId,
+                'voucher_id' => $result->voucherId,
+            ]);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function previewControlledBackdated(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $this->activeEntity($transaction->accounting_entity_id);
+        $input = $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        try {
+            $validation = $this->postingEngine->previewControlledBackdated(
+                $transaction->id,
+                $input['reason'],
+                (int) $request->user()->id,
+            );
+
+            return response()->json(['ok' => true, 'validation' => $validation]);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function postControlledBackdated(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $this->activeEntity($transaction->accounting_entity_id);
+        $input = $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+            'confirmed' => ['accepted'],
+        ]);
+        $actorId = (int) $request->user()->id;
+        $reason = trim($input['reason']);
+        $reasonHash = hash('sha256', $reason);
+        $postKey = 'ux-controlled-post:'.$transaction->id.':'.substr($reasonHash, 0, 16);
+
+        try {
+            $result = $this->lifecycle->postControlledBackdated(
+                $transaction->id,
+                $postKey,
+                hash('sha256', implode('|', [$transaction->id, $transaction->accounting_date->toDateString(), $reasonHash])),
+                $reason,
+                $actorId,
+            );
+
+            return $this->success($request, 'Transaksi historis sudah dicatat setelah seluruh saldo berjalan dinyatakan aman.', route('financial-v2.transactions.show', $transaction), [
                 'transaction_id' => $transaction->id,
                 'journal_id' => $result->journalId,
                 'voucher_id' => $result->voucherId,

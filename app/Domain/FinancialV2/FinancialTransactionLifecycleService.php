@@ -285,6 +285,18 @@ final class FinancialTransactionLifecycleService
         return app(PostingEngine::class)->post($transaction->id, $idempotencyKey, $fingerprint, $actorUserId);
     }
 
+    public function postControlledBackdated(string $transactionId, string $idempotencyKey, string $fingerprint, string $reason, int $actorUserId): PostingResult
+    {
+        $transaction = FinancialTransaction::query()->findOrFail($transactionId);
+        $this->assertRealizationParentApproved($transaction);
+        $this->auditTrail->record($transaction->accounting_entity_id, 'controlled_backdated_posting_requested', 'transaction', $transaction->id, $transaction->correlation_id, $actorUserId, ['status' => $transaction->status], [
+            'accounting_date' => $transaction->accounting_date->toDateString(),
+            'reason' => trim($reason),
+        ]);
+
+        return app(PostingEngine::class)->post($transaction->id, $idempotencyKey, $fingerprint, $actorUserId, $reason);
+    }
+
     private function transition(string $transactionId, string $from, string $to, string $eventType, ?int $actorUserId): FinancialTransaction
     {
         return $this->transactions->run(function () use ($transactionId, $from, $to, $eventType, $actorUserId): FinancialTransaction {

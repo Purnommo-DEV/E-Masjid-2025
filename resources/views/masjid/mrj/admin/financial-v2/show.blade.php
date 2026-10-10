@@ -112,6 +112,20 @@
             @elseif (! $realizationParentInactive && ! $isRealization && ! $isBankMutation && in_array($transaction->status, ['submitted', 'verified', 'approved'], true))
                 <form method="POST" action="{{ route('financial-v2.transactions.post', $transaction) }}" data-financial-ajax>@csrf<button class="btn btn-primary w-full">Catat resmi</button></form>
             @endif
+            @if ($transaction->status === 'approved' && auth()->user()?->hasRole('SuperAdmin'))
+                <details class="rounded-2xl border border-warning/40 bg-warning/5 p-3" data-controlled-backdated>
+                    <summary class="cursor-pointer text-sm font-semibold">Controlled backdated posting</summary>
+                    <p class="mt-2 text-xs leading-5 text-base-content/65">Gunakan hanya jika tanggal faktual benar. Sistem akan memeriksa saldo pada tanggal transaksi dan setiap aktivitas posted sesudahnya.</p>
+                    <form class="mt-3 space-y-3" method="POST" action="{{ route('financial-v2.transactions.controlled-backdated.post', $transaction) }}" data-controlled-backdated-form>
+                        @csrf
+                        <label class="form-control"><span class="label-text text-xs font-semibold">Alasan koreksi historis</span><textarea class="textarea textarea-bordered textarea-sm" name="reason" minlength="10" maxlength="2000" required></textarea></label>
+                        <button class="btn btn-outline btn-sm w-full" type="button" data-controlled-backdated-preview data-preview-url="{{ route('financial-v2.transactions.controlled-backdated.preview', $transaction) }}">Periksa seluruh saldo berjalan</button>
+                        <div class="hidden rounded-xl bg-base-200 p-3 text-xs" data-controlled-backdated-result></div>
+                        <label class="hidden items-start gap-2 text-xs" data-controlled-backdated-confirm><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya memahami bahwa transaksi akan dicatat pada tanggal historis setelah validasi diulang di server.</span></label>
+                        <button class="btn btn-warning btn-sm hidden w-full" type="submit" data-controlled-backdated-submit>Catat dengan kontrol historis</button>
+                    </form>
+                </details>
+            @endif
             @if ($isBankMutation && $transaction->status === 'draft')
                 <form method="POST" action="{{ route('financial-v2.bank-mutations.destroy', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf @method('DELETE')<button class="btn btn-ghost btn-sm w-full text-error">Batalkan draft</button></form>
             @elseif (! $isBankMutation && ! $realizationParentInactive && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
@@ -131,3 +145,40 @@
         </div></details>
     </section>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.querySelector('[data-controlled-backdated]');
+    if (!root) return;
+    const form = root.querySelector('[data-controlled-backdated-form]');
+    const preview = root.querySelector('[data-controlled-backdated-preview]');
+    const result = root.querySelector('[data-controlled-backdated-result]');
+    const confirm = root.querySelector('[data-controlled-backdated-confirm]');
+    const submit = root.querySelector('[data-controlled-backdated-submit]');
+    const escapeHtml = value => String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]);
+    preview.addEventListener('click', async () => {
+        result.classList.remove('hidden');
+        result.textContent = 'Memeriksa saldo berjalan…';
+        confirm.classList.add('hidden'); submit.classList.add('hidden');
+        try {
+            const response = await fetch(preview.dataset.previewUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value }, body: new FormData(form) });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(payload.message || 'Validasi tidak dapat diselesaikan.');
+            const checks = payload.validation || [];
+            result.innerHTML = checks.map(check => {
+                const rows = (check.timeline || []).map(row => `<li>${escapeHtml(row.accounting_date)}${row.posting_sequence ? ` · urutan ${escapeHtml(row.posting_sequence)}` : ''}: saldo ${escapeHtml(row.current_balance)}, proyeksi ${escapeHtml(row.projected_balance)}</li>`).join('');
+                return `<p class="font-semibold">Minimum ${escapeHtml(check.minimum_projected_balance)} pada ${escapeHtml(check.minimum_projected_date)}</p><ul class="mt-1 list-disc pl-4">${rows}</ul>`;
+            }).join('');
+            confirm.classList.remove('hidden'); confirm.classList.add('flex'); submit.classList.remove('hidden');
+        } catch (error) {
+            result.textContent = error.message;
+        }
+    });
+    form.querySelector('[name="reason"]').addEventListener('input', () => {
+        confirm.classList.add('hidden'); submit.classList.add('hidden'); result.classList.add('hidden');
+        form.querySelector('[name="confirmed"]').checked = false;
+    });
+});
+</script>
+@endpush

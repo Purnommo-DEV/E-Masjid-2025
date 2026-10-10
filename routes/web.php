@@ -548,6 +548,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/transaksi/{transaction}/setujui-realisasi', [OperationalFinancialController::class, 'approveRealization'])->name('realizations.approve');
         Route::post('/transaksi/{transaction}/ajukan', [OperationalFinancialController::class, 'submit'])->name('transactions.submit');
         Route::post('/transaksi/{transaction}/catat', [OperationalFinancialController::class, 'post'])->name('transactions.post');
+        Route::post('/transaksi/{transaction}/catat-mundur/pratinjau', [OperationalFinancialController::class, 'previewControlledBackdated'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.controlled-backdated.preview');
+        Route::post('/transaksi/{transaction}/catat-mundur', [OperationalFinancialController::class, 'postControlledBackdated'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.controlled-backdated.post');
         Route::post('/transaksi/{transaction}/batalkan', [OperationalFinancialController::class, 'cancel'])->name('transactions.cancel');
         Route::get('/transaksi/{transaction}', [OperationalFinancialController::class, 'show'])->name('transactions.show');
     });

@@ -154,9 +154,9 @@ final class FundFinancialAccountCompositionReadService
      * Proves a proposed backdated effect against every later posted balance.
      *
      * The effect is applied to the balance on its accounting date and remains
-     * part of every later balance. Checking every date with posted custody or
-     * attribution activity prevents a historical posting from making an
-     * intermediate Fund/account position fall below its configured minimum.
+     * part of every later balance. Checking every posted custody or attribution
+     * activity in posting-sequence order prevents a historical posting from
+     * making an intra-day Fund/account position fall below its minimum.
      *
      * @return array{minimum_projected_balance:string,minimum_projected_date:string}
      */
@@ -167,45 +167,139 @@ final class FundFinancialAccountCompositionReadService
         string $accountingDate,
         string $effect,
     ): array {
-        $dates = $this->postedLedger->ledger($entityId, '9999-12-31')
+        $projection = $this->backdatedProjection(
+            $entityId,
+            $fundId,
+            $financialAccountId,
+            $accountingDate,
+            $effect,
+        );
+
+        return [
+            'minimum_projected_balance' => $projection['minimum_projected_balance'],
+            'minimum_projected_date' => $projection['minimum_projected_date'],
+        ];
+    }
+
+    /**
+     * Canonical, auditable projection used by controlled backdated posting.
+     *
+     * @return array{minimum_projected_balance:string,minimum_projected_date:string,timeline:array<int,array{accounting_date:string,current_balance:string,effect:string,projected_balance:string}>,activity:array<int,array<string,mixed>>}
+     */
+    public function backdatedProjection(
+        string $entityId,
+        string $fundId,
+        string $financialAccountId,
+        string $accountingDate,
+        string $effect,
+    ): array {
+        $effect = DecimalAmount::normalize($effect);
+        $runningBalance = $this->currentBalance($entityId, $fundId, $financialAccountId, $accountingDate);
+        $minimumBalance = DecimalAmount::add($runningBalance, $effect);
+        $minimumDate = $accountingDate;
+        $timeline = [[
+            'accounting_date' => $accountingDate,
+            'posting_sequence' => null,
+            'activity_kind' => 'proposed_date',
+            'activity_reference' => null,
+            'current_balance' => $runningBalance,
+            'effect' => $effect,
+            'projected_balance' => $minimumBalance,
+        ]];
+
+        $ledgerActivity = $this->postedLedger->ledger($entityId, '9999-12-31')
             ->where('ledger.fund_id', $fundId)
             ->where('ledger.financial_account_id', $financialAccountId)
             ->where('ledger.accounting_date', '>', $accountingDate)
-            ->distinct()
-            ->pluck('ledger.accounting_date')
-            ->map(fn ($date): string => (string) $date);
+            ->select([
+                'ledger.id as ledger_entry_id',
+                'ledger.journal_line_id',
+                'journal.id as journal_id',
+                'financial_transaction.id as transaction_id',
+                'financial_transaction.source_reference',
+                'ledger.accounting_date',
+                'ledger.posting_sequence',
+                'ledger.signed_amount',
+            ])
+            ->orderBy('ledger.accounting_date')
+            ->orderBy('ledger.posting_sequence')
+            ->orderBy('ledger.line_no')
+            ->get()
+            ->map(fn (object $row): array => [
+                'kind' => 'ledger',
+                'ledger_entry_id' => $row->ledger_entry_id,
+                'journal_line_id' => $row->journal_line_id,
+                'journal_id' => $row->journal_id,
+                'transaction_id' => $row->transaction_id,
+                'source_reference' => $row->source_reference,
+                'accounting_date' => (string) $row->accounting_date,
+                'posting_sequence' => (int) $row->posting_sequence,
+                'signed_amount' => DecimalAmount::normalize((string) $row->signed_amount),
+                'balance_effect' => DecimalAmount::normalize((string) $row->signed_amount),
+            ]);
 
-        $attributionDates = $this->attributionEvents(
+        $attributionActivity = $this->attributionEvents(
             $entityId,
             '9999-12-31',
             $fundId,
             $financialAccountId,
             afterAccountingDate: $accountingDate,
-        )->pluck('accounting_date')->map(fn ($date): string => (string) $date);
+        )->map(function (object $row) use ($fundId): array {
+            $amount = DecimalAmount::normalize((string) $row->attribution_amount);
+            $balanceEffect = '0.00';
+            if ($row->source_fund_id === $fundId) {
+                $balanceEffect = DecimalAmount::subtract($balanceEffect, $amount);
+            }
+            if ($row->destination_fund_id === $fundId) {
+                $balanceEffect = DecimalAmount::add($balanceEffect, $amount);
+            }
 
-        $dates = $dates
-            ->merge($attributionDates)
-            ->push($accountingDate)
-            ->unique()
-            ->sort()
+            return [
+                'kind' => 'fund_attribution',
+                'journal_id' => $row->journal_id,
+                'source_reference' => $row->source_reference,
+                'accounting_date' => (string) $row->accounting_date,
+                'posting_sequence' => (int) $row->posting_sequence,
+                'source_fund_id' => $row->source_fund_id,
+                'destination_fund_id' => $row->destination_fund_id,
+                'financial_account_id' => $row->financial_account_id,
+                'attribution_amount' => $amount,
+                'balance_effect' => $balanceEffect,
+            ];
+        });
+
+        $activity = $ledgerActivity
+            ->concat($attributionActivity)
+            ->sortBy(fn (array $row): string => implode('|', [
+                $row['accounting_date'],
+                str_pad((string) $row['posting_sequence'], 20, '0', STR_PAD_LEFT),
+                $row['kind'],
+            ]))
             ->values();
 
-        $minimumBalance = null;
-        $minimumDate = $accountingDate;
-        foreach ($dates as $date) {
-            $projected = DecimalAmount::add(
-                $this->currentBalance($entityId, $fundId, $financialAccountId, $date),
-                $effect,
-            );
-            if ($minimumBalance === null || DecimalAmount::compare($projected, $minimumBalance) < 0) {
+        foreach ($activity as $row) {
+            $runningBalance = DecimalAmount::add($runningBalance, $row['balance_effect']);
+            $projected = DecimalAmount::add($runningBalance, $effect);
+            $timeline[] = [
+                'accounting_date' => $row['accounting_date'],
+                'posting_sequence' => $row['posting_sequence'],
+                'activity_kind' => $row['kind'],
+                'activity_reference' => $row['ledger_entry_id'] ?? $row['journal_id'],
+                'current_balance' => $runningBalance,
+                'effect' => $effect,
+                'projected_balance' => $projected,
+            ];
+            if (DecimalAmount::compare($projected, $minimumBalance) < 0) {
                 $minimumBalance = $projected;
-                $minimumDate = $date;
+                $minimumDate = $row['accounting_date'];
             }
         }
 
         return [
-            'minimum_projected_balance' => $minimumBalance ?? DecimalAmount::normalize($effect),
+            'minimum_projected_balance' => $minimumBalance,
             'minimum_projected_date' => $minimumDate,
+            'timeline' => $timeline,
+            'activity' => $activity->all(),
         ];
     }
 
@@ -241,6 +335,7 @@ final class FundFinancialAccountCompositionReadService
             ->when($financialAccountId, fn (Builder $query, string $id) => $query->where('attribution_account.id', $id))
             ->select([
                 'journal.id as journal_id',
+                'journal.posting_sequence',
                 'journal.accounting_date',
                 'journal.reversal_of_journal_id',
                 'financial_transaction.source_reference',

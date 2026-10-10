@@ -49,10 +49,10 @@ final class PostingEngine
         private readonly FinancialTransactionConfigurationResolver $configurationResolver,
     ) {}
 
-    public function post(string $transactionId, string $idempotencyKey, string $fingerprint, ?int $actorUserId = null): PostingResult
+    public function post(string $transactionId, string $idempotencyKey, string $fingerprint, ?int $actorUserId = null, ?string $controlledBackdatedReason = null): PostingResult
     {
         try {
-            return $this->transactions->run(function () use ($transactionId, $idempotencyKey, $fingerprint, $actorUserId): PostingResult {
+            return $this->transactions->run(function () use ($transactionId, $idempotencyKey, $fingerprint, $actorUserId, $controlledBackdatedReason): PostingResult {
                 $transaction = FinancialTransaction::query()->with(['splits', 'type', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization'])->lockForUpdate()->findOrFail($transactionId);
                 $idempotency = $this->reserveIdempotencyKey($transaction->accounting_entity_id, 'transaction-posting', $idempotencyKey, $fingerprint, $actorUserId);
                 if ($idempotency['result']) {
@@ -82,7 +82,7 @@ final class PostingEngine
 
                 $lines = $this->validateLines($transaction, $lines, $resolvedConfiguration);
                 $this->validateOperationalLines($transaction, $lines);
-                $this->validateFundLiquidityBalances($transaction, $lines);
+                $backdatedValidation = $this->validateFundLiquidityBalances($transaction, $lines, $controlledBackdatedReason, $actorUserId);
                 $this->validateFundRealization($transaction);
 
                 return $this->commitPosting(
@@ -93,6 +93,7 @@ final class PostingEngine
                     $lines,
                     $actorUserId,
                     $originalJournal,
+                    $backdatedValidation,
                 );
             });
         } catch (FinancialPostingException $exception) {
@@ -108,6 +109,52 @@ final class PostingEngine
 
             throw $exception;
         }
+    }
+
+    /**
+     * Read-only preflight. The posting action repeats these checks while
+     * holding the same entity/transaction locks before writing any fact.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function previewControlledBackdated(string $transactionId, string $reason, int $actorUserId): array
+    {
+        return $this->transactions->run(function () use ($transactionId, $reason, $actorUserId): array {
+            $transaction = FinancialTransaction::query()
+                ->with(['splits', 'type', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization'])
+                ->lockForUpdate()
+                ->findOrFail($transactionId);
+            if ($transaction->status !== 'approved') {
+                throw new FinancialPostingException('E-TRANSACTION-STATE', 'Only an approved transaction can be evaluated for controlled backdated posting.');
+            }
+
+            $this->lockEntity($transaction->accounting_entity_id);
+            $this->eligiblePeriodFor($transaction);
+            $resolvedConfiguration = $this->configurationResolver->supports($transaction->type?->code)
+                ? $this->configurationResolver->resolveTransaction($transaction)
+                : null;
+            $version = $resolvedConfiguration?->postingRuleVersion
+                ?? $this->configurationResolver->resolvePostingRuleVersionForTransaction($transaction);
+            $this->validateTransactionType($transaction, $version);
+            $this->validateOperationalTransaction($transaction);
+            $this->validateSplits($transaction);
+            $this->validateApprovalsAndEvidence($transaction, $version, $resolvedConfiguration);
+            $this->validateCorrectionTransaction($transaction);
+
+            $originalJournal = $this->reversalOriginalJournal($transaction);
+            $lines = $originalJournal
+                ? $this->compileReversalLines($transaction, $originalJournal)
+                : $this->compileLines($transaction, $version);
+            $lines = $this->validateLines($transaction, $lines, $resolvedConfiguration);
+            $this->validateOperationalLines($transaction, $lines);
+
+            $validations = $this->validateFundLiquidityBalances($transaction, $lines, $reason, $actorUserId);
+            if ($validations === []) {
+                throw new FinancialPostingException('E-BACKDATED-NOT-REQUIRED', 'No controlled backdated liquidity exception is required for this transaction.');
+            }
+
+            return $validations;
+        });
     }
 
     /**
@@ -778,7 +825,7 @@ final class PostingEngine
     }
 
     /** @param array<int, array<string, mixed>> $lines */
-    private function validateFundLiquidityBalances(FinancialTransaction $transaction, array $lines): void
+    private function validateFundLiquidityBalances(FinancialTransaction $transaction, array $lines, ?string $controlledReason = null, ?int $actorUserId = null): array
     {
         $this->validateInterfundAttributionBalance($transaction);
 
@@ -799,6 +846,7 @@ final class PostingEngine
             $proposedEffects[$key]['amount'] = DecimalAmount::add($proposedEffects[$key]['amount'], $signedAmount);
         }
 
+        $controlledValidations = [];
         foreach ($proposedEffects as $effect) {
             $fund = Fund::query()->findOrFail($effect['fund_id']);
             if ($fund->allow_negative_balance) {
@@ -815,11 +863,15 @@ final class PostingEngine
                 // Ordinary backdated reductions remain fail-closed. An exact,
                 // effective bank-mutation policy may proceed only after every
                 // later running balance has been proven safe.
-                if (! $this->configurationResolver->bankMutationPolicyForTransaction($transaction, $effect['fund_id'])) {
+                $bankMutationPolicy = $this->configurationResolver->bankMutationPolicyForTransaction($transaction, $effect['fund_id']);
+                if (! $bankMutationPolicy && blank($controlledReason)) {
                     throw new FinancialPostingException('E-BACKDATED-LIQUIDITY', 'A backdated liquidity reduction is blocked because later posted activity exists for the same Fund and Financial Account.');
                 }
+                if (! $bankMutationPolicy && (! $actorUserId || mb_strlen(trim((string) $controlledReason)) < 10)) {
+                    throw new FinancialPostingException('E-BACKDATED-AUTHORIZATION', 'Controlled backdated posting requires an authorized actor and a correction reason of at least 10 characters.');
+                }
 
-                $projected = $this->fundFinancialAccounts->projectedMinimumBalanceAfterBackdatedEffect(
+                $projected = $this->fundFinancialAccounts->backdatedProjection(
                     $transaction->accounting_entity_id,
                     $effect['fund_id'],
                     $effect['financial_account_id'],
@@ -828,7 +880,17 @@ final class PostingEngine
                 );
                 $minimum = DecimalAmount::normalize($fund->minimum_balance_policy ?? 0);
                 if (DecimalAmount::compare($projected['minimum_projected_balance'], $minimum) < 0) {
-                    throw new FinancialPostingException('E-FUND-INSUFFICIENT', 'The backdated bank mutation would breach the Fund liquidity balance policy on a later accounting date.');
+                    throw new FinancialPostingException('E-FUND-INSUFFICIENT', 'The backdated posting would breach the Fund liquidity balance policy on '.$projected['minimum_projected_date'].'.');
+                }
+                if (! $bankMutationPolicy) {
+                    $controlledValidations[] = array_merge($projected, [
+                        'fund_id' => $effect['fund_id'],
+                        'financial_account_id' => $effect['financial_account_id'],
+                        'account_id' => $effect['account_id'],
+                        'effect' => $effect['amount'],
+                        'minimum_balance_policy' => $minimum,
+                        'reason' => trim((string) $controlledReason),
+                    ]);
                 }
             }
             // Use the same posted attribution projection as reporting. Raw
@@ -845,6 +907,8 @@ final class PostingEngine
                 throw new FinancialPostingException('E-FUND-INSUFFICIENT', 'Proposed posting breaches the Fund liquidity balance policy.');
             }
         }
+
+        return $controlledValidations;
     }
 
     private function validateInterfundAttributionBalance(FinancialTransaction $transaction): void
@@ -951,10 +1015,10 @@ final class PostingEngine
     }
 
     /** @param array<int, array<string, mixed>> $lines */
-    private function commitPosting(FinancialTransaction $transaction, IdempotencyKey $key, PostingRuleVersion $version, AccountingPeriod $period, array $lines, ?int $actorUserId, ?Journal $reversalOf = null): PostingResult
+    private function commitPosting(FinancialTransaction $transaction, IdempotencyKey $key, PostingRuleVersion $version, AccountingPeriod $period, array $lines, ?int $actorUserId, ?Journal $reversalOf = null, array $backdatedValidation = []): PostingResult
     {
-        return FinancialFactWriteGuard::withinPosting(function () use ($transaction, $key, $version, $period, $lines, $actorUserId, $reversalOf): PostingResult {
-            return FinancialTransactionStateGuard::withinLifecycle(function () use ($transaction, $key, $version, $period, $lines, $actorUserId, $reversalOf): PostingResult {
+        return FinancialFactWriteGuard::withinPosting(function () use ($transaction, $key, $version, $period, $lines, $actorUserId, $reversalOf, $backdatedValidation): PostingResult {
+            return FinancialTransactionStateGuard::withinLifecycle(function () use ($transaction, $key, $version, $period, $lines, $actorUserId, $reversalOf, $backdatedValidation): PostingResult {
                 $attempt = PostingAttempt::create([
                     'accounting_entity_id' => $transaction->accounting_entity_id,
                     'transaction_id' => $transaction->id,
@@ -1034,6 +1098,20 @@ final class PostingEngine
                     'after_summary' => json_encode(['voucher_id' => $voucher->id, 'posting_rule_version_id' => $version->id, 'reversal_of_journal_id' => $reversalOf?->id]),
                     'created_at' => now(),
                 ]);
+                if ($backdatedValidation !== []) {
+                    AuditEvent::create([
+                        'accounting_entity_id' => $transaction->accounting_entity_id,
+                        'event_at' => now(),
+                        'event_type' => 'controlled_backdated_posting_committed',
+                        'target_type' => 'transaction',
+                        'target_id' => $transaction->id,
+                        'actor_user_id' => $actorUserId,
+                        'correlation_id' => $transaction->correlation_id,
+                        'before_summary' => json_encode(['status' => 'approved', 'accounting_date' => $transaction->accounting_date->toDateString()]),
+                        'after_summary' => json_encode(['status' => 'posted', 'journal_id' => $journal->id, 'validations' => $backdatedValidation], JSON_THROW_ON_ERROR),
+                        'created_at' => now(),
+                    ]);
+                }
 
                 if ($transaction->realization) {
                     $transaction->realization->update(['status' => 'recorded', 'recorded_at' => now(), 'updated_by_user_id' => $actorUserId]);

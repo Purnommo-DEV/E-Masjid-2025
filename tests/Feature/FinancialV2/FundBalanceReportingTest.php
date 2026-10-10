@@ -7,6 +7,7 @@ use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\PostingEngine;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Models\FinancialV2\ApprovalDecision;
+use App\Models\FinancialV2\AuditEvent;
 use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\DocumentSequence;
@@ -19,6 +20,7 @@ use App\Models\FinancialV2\PostingRuleVersion;
 use App\Models\FinancialV2\ReasonCode;
 use App\Models\FinancialV2\TransactionSplit;
 use App\Models\FinancialV2\TransactionType;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Tests\Support\UatFinancialFixture;
 
@@ -281,6 +283,90 @@ test('Inter-Fund Transfer requires account attribution and rejects a reduction b
     expect(fn () => UatFinancialFixture::post($backdatedIft, 'phase125-backdated-attribution'))
         ->toThrow(FinancialPostingException::class, 'backdated Fund attribution reduction is blocked');
 });
+
+test('controlled backdated PAY posts only after every later running balance remains valid', function () {
+    $context = UatFinancialFixture::context();
+    $actor = User::factory()->create();
+    $lifecycle = app(FinancialTransactionLifecycleService::class);
+
+    $receipt = UatFinancialFixture::receipt($context, '100.00');
+    UatFinancialFixture::advance($receipt);
+    UatFinancialFixture::post($receipt, 'controlled-backdated-opening');
+
+    $later = controlledBackdatedPayment($context, now()->addDay()->toDateString(), '20.00');
+    UatFinancialFixture::advance($later);
+    UatFinancialFixture::post($later, 'controlled-backdated-later');
+
+    // An unposted later source record must not enter the canonical activity set.
+    controlledBackdatedPayment($context, now()->addDay()->toDateString(), '999.00');
+
+    $backdated = controlledBackdatedPayment($context, $context['today'], '30.00');
+    UatFinancialFixture::advance($backdated);
+    expect(fn () => UatFinancialFixture::post($backdated, 'ordinary-backdated-pay'))
+        ->toThrow(FinancialPostingException::class, 'backdated liquidity reduction is blocked');
+
+    $reason = 'Tanggal faktual telah diverifikasi dari invoice dan bukti pembayaran.';
+    $preview = app(PostingEngine::class)->previewControlledBackdated($backdated->id, $reason, $actor->id);
+    expect($preview)->toHaveCount(1)
+        ->and($preview[0]['minimum_projected_balance'])->toBe('50.00')
+        ->and($preview[0]['activity'])->toHaveCount(1)
+        ->and($preview[0]['activity'][0]['transaction_id'])->toBe($later->id);
+
+    $key = 'controlled-backdated-post-'.Str::uuid();
+    $fingerprint = hash('sha256', $key);
+    $result = $lifecycle->postControlledBackdated($backdated->id, $key, $fingerprint, $reason, $actor->id);
+    $retry = $lifecycle->postControlledBackdated($backdated->id, $key, $fingerprint, $reason, $actor->id);
+    expect($backdated->fresh()->status)->toBe('posted')
+        ->and($result->journalId)->not->toBeEmpty()
+        ->and($retry->journalId)->toBe($result->journalId)
+        ->and(Journal::query()->where('transaction_id', $backdated->id)->count())->toBe(1)
+        ->and(AuditEvent::query()->where('target_id', $backdated->id)->where('event_type', 'controlled_backdated_posting_committed')->exists())->toBeTrue();
+});
+
+test('controlled backdated PAY rejects an unsafe intermediate running balance', function () {
+    $context = UatFinancialFixture::context();
+    $actor = User::factory()->create();
+
+    $receipt = UatFinancialFixture::receipt($context, '100.00');
+    UatFinancialFixture::advance($receipt);
+    UatFinancialFixture::post($receipt, 'controlled-backdated-unsafe-opening');
+
+    $later = controlledBackdatedPayment($context, now()->addDay()->toDateString(), '90.00');
+    UatFinancialFixture::advance($later);
+    UatFinancialFixture::post($later, 'controlled-backdated-unsafe-later');
+
+    $backdated = controlledBackdatedPayment($context, $context['today'], '20.00');
+    UatFinancialFixture::advance($backdated);
+
+    expect(fn () => app(PostingEngine::class)->previewControlledBackdated(
+        $backdated->id,
+        'Tanggal faktual benar tetapi seluruh saldo berikutnya wajib aman.',
+        $actor->id,
+    ))->toThrow(FinancialPostingException::class, 'would breach the Fund liquidity balance policy');
+    expect($backdated->fresh()->status)->toBe('approved');
+});
+
+/** @param array<string, mixed> $context */
+function controlledBackdatedPayment(array $context, string $date, string $amount): FinancialTransaction
+{
+    return app(FinancialTransactionLifecycleService::class)->createPayment([
+        'accounting_entity_id' => $context['entity']->id,
+        'transaction_type_id' => $context['paymentType']->id,
+        'business_date' => $date,
+        'accounting_date' => $date,
+        'gross_amount' => $amount,
+        'source_reference' => 'CONTROLLED-BACKDATED-'.Str::uuid(),
+        'idempotency_key' => 'controlled-backdated-source-'.Str::uuid(),
+        'primary_financial_account_id' => $context['accountA']->id,
+        'counterparty_id' => $context['supplier']->id,
+        'category_id' => $context['paymentCategory']->id,
+        'description' => 'Controlled backdated posting regression fixture.',
+    ], [[
+        'account_id' => $context['expense']->id,
+        'split_amount' => $amount,
+        'fund_id' => $context['fund']->id,
+    ]]);
+}
 
 /** @param array<string, mixed> $context */
 function phase125TaggedIftReversal(array $context, FinancialTransaction $original): FinancialTransaction
