@@ -8,7 +8,12 @@ class Counterparty extends FinancialV2Model
 
     public function getBeneficiaryTypeLabelAttribute(): string
     {
-        return match ($this->beneficiary_type) {
+        return self::beneficiaryTypeLabel($this->beneficiary_type);
+    }
+
+    public static function beneficiaryTypeLabel(?string $type): string
+    {
+        return match ($type) {
             'YATIM' => 'Yatim',
             'DHUAFA' => 'Dhuafa',
             'YATIM_DHUAFA' => 'Yatim yang Dhuafa',

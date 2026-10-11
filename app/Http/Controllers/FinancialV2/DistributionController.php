@@ -372,7 +372,7 @@ final class DistributionController
     {
         $entity = $this->context($request);
         $distribution = Distribution::forEntity($entity->id)->with([
-            'program', 'items.beneficiary', 'items.latestIdentityCorrection', 'items.identityCorrections.correctedBeneficiary', 'items.identityCorrections.correctedBy', 'copiedFrom.items.latestIdentityCorrection',
+            'program', 'items.distribution', 'items.beneficiary', 'items.latestIdentityCorrection.correctedBeneficiary', 'items.identityCorrections.correctedBeneficiary', 'items.identityCorrections.correctedBy', 'copiedFrom.items.latestIdentityCorrection',
             'realization.transaction.splits.fund',
             'realization.budgetAllocationVersion.allocation.program',
             'realization.budgetAllocationVersion.fundings.fund',

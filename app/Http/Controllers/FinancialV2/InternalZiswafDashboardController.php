@@ -170,7 +170,7 @@ final class InternalZiswafDashboardController
                     ->on('identity_correction.correction_no', '=', 'latest_identity_correction_no.correction_no');
             })
             ->select('financial_v2_distribution_items.*')
-            ->with('latestIdentityCorrection')
+            ->with(['distribution', 'beneficiary', 'latestIdentityCorrection.correctedBeneficiary'])
             ->orderByRaw("COALESCE({$snapshotValue('rw')}, '')")
             ->orderByRaw("COALESCE({$snapshotValue('rt')}, '')")
             ->orderByRaw("COALESCE({$snapshotValue('display_name')}, '')")
