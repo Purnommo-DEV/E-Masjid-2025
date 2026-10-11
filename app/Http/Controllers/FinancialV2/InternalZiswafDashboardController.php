@@ -34,10 +34,24 @@ final class InternalZiswafDashboardController
         private readonly ZiswafRunningBalanceService $runningBalances,
     ) {}
 
+    public function preview()
+    {
+        return $this->landingResponse();
+    }
+
     public function access(Request $request, string $token)
     {
+        $this->assertValidAccessToken($token);
+
+        return $this->landingResponse($token);
+    }
+
+    public function exchange(Request $request)
+    {
+        $token = (string) $request->input('token');
+        abort_unless(preg_match('/^[A-HJ-NP-Za-km-z2-9]{5,10}$/', $token), 404);
+        $this->assertValidAccessToken($token);
         $hash = strtolower(trim((string) config('financial_reporting.internal_ziswaf_dashboard.token_hash')));
-        abort_unless(preg_match('/^[a-f0-9]{64}$/', $hash) && hash_equals($hash, hash('sha256', $token)), 404);
         $request->session()->regenerate();
         $request->session()->put(InternalZiswafDashboardAccess::SESSION_KEY, [
             'fingerprint' => hash('sha256', $hash),
@@ -45,6 +59,28 @@ final class InternalZiswafDashboardController
         ]);
 
         return redirect()->route('internal.ziswaf.dashboard');
+    }
+
+    private function assertValidAccessToken(string $token): void
+    {
+        $hash = strtolower(trim((string) config('financial_reporting.internal_ziswaf_dashboard.token_hash')));
+        abort_unless(preg_match('/^[a-f0-9]{64}$/', $hash) && hash_equals($hash, hash('sha256', $token)), 404);
+    }
+
+    private function landingResponse(?string $token = null)
+    {
+        $response = response()->view('masjid.mrj.guest.financial-v2.internal-ziswaf-access', [
+            'accessToken' => $token,
+        ]);
+        $response->headers->set('Cache-Control', $token === null ? 'public, max-age=3600' : 'private, no-store, max-age=0');
+        if ($token !== null) {
+            $response->headers->set('Pragma', 'no-cache');
+        }
+        $response->headers->set('Referrer-Policy', 'no-referrer');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', "default-src 'self'; img-src 'self'; style-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+
+        return $response;
     }
 
     public function index(Request $request)
