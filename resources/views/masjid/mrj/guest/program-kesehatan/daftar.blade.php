@@ -3,12 +3,12 @@
 @push('head')
     {{-- BASIC SEO --}}
     <title>Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE</title>
-    <meta name="description" content="Daftarkan diri Anda untuk program kesehatan gratis: Donor Darah, Cek Gula Darah, Kolesterol, Asam Urat, Tensi Darah, dan Kesehatan Mata di Masjid Raudhotul Jannah TCE.">
+    <meta name="description" content="Daftarkan diri Anda untuk program kesehatan gratis: Donor Darah, Cek Gula Darah, Kolesterol, Asam Urat, Tensi Darah, dan Pemeriksaan Mata Katarak di Masjid Raudhotul Jannah TCE.">
 
     {{-- OPEN GRAPH (WA & FB) --}}
     <meta property="og:type" content="website">
     <meta property="og:title" content="Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE">
-    <meta property="og:description" content="Program Kesehatan: Donor Darah, Cek Gula Darah, Kolesterol, Asam Urat, Tensi Darah, dan Kesehatan Mata.">
+    <meta property="og:description" content="Program Kesehatan: Donor Darah, Cek Gula Darah, Kolesterol, Asam Urat, Tensi Darah, dan Pemeriksaan Mata Katarak.">
     <meta property="og:image" content="{{ secure_url('storage/mrj/mrj.webp') }}">
     <meta property="og:url" content="{{ url()->current() }}">
     <meta property="og:site_name" content="Masjid Raudhotul Jannah TCE">
@@ -21,7 +21,7 @@
     {{-- TWITTER --}}
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Pendaftaran Program Kesehatan | Masjid Raudhotul Jannah TCE">
-    <meta name="twitter:description" content="Donor Darah, Cek Gula Darah, Kolesterol, Asam Urat, Tensi Darah, dan Kesehatan Mata gratis di Masjid Raudhotul Jannah TCE.">
+    <meta name="twitter:description" content="Donor Darah, Cek Gula Darah, Kolesterol, Asam Urat, Tensi Darah, dan Pemeriksaan Mata Katarak gratis di Masjid Raudhotul Jannah TCE.">
     <meta name="twitter:image" content="{{ secure_url('storage/mrj/mrj.webp') }}">
 @endpush
 
@@ -239,8 +239,8 @@
                                     <label class="flex gap-3 p-4 border border-emerald-100 hover:border-emerald-400 rounded-xl cursor-pointer transition-all">
                                         <input type="checkbox" name="cek_mata_katarak" class="w-5 h-5 accent-emerald-600 mt-1">
                                         <div class="flex-1">
-                                            <div class="font-semibold text-sm text-emerald-800">Kesehatan Mata</div>
-                                            <p class="text-slate-500 text-xs mt-1">Pemeriksaan mata untuk mendeteksi dini tanda-tanda katarak dan gangguan penglihatan lainnya.</p>
+                                            <div class="font-semibold text-sm text-emerald-800">Pemeriksaan Mata Katarak</div>
+                                            <p class="text-slate-500 text-xs mt-1">Deteksi dini katarak untuk membantu menjaga kesehatan dan kualitas penglihatan.</p>
                                         </div>
                                     </label>
 

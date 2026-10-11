@@ -162,7 +162,7 @@
 
                                             @if($item->cek_mata_katarak)
                                                 <span class="badge badge-info">
-                                                    Kesehatan Mata
+                                                    Pemeriksaan Mata Katarak
                                                 </span>
                                             @endif
 
@@ -275,7 +275,7 @@
                                     <th class="text-center">Kolesterol</th>
                                     <th class="text-center">Asam Urat</th>
                                     <th class="text-center">Tensi Darah</th>
-                                    <th class="text-center">Kesehatan Mata</th>
+                                    <th class="text-center">Pemeriksaan Mata Katarak</th>
                                     <th>Alamat</th>
                                 </tr>
                             </thead>
