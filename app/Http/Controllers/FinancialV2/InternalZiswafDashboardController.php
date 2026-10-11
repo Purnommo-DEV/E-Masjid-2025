@@ -16,6 +16,7 @@ use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\Distribution;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\TransactionType;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -86,14 +87,14 @@ final class InternalZiswafDashboardController
     public function index(Request $request)
     {
         $input = $this->validated($request);
-        $entity = $this->entity();
-        $latest = $this->ledger->latestAccountingDate($entity->id) ?: now()->toDateString();
-        $through = $input['through'] ?? $latest;
-        $from = $input['from'] ?? CarbonImmutable::parse($through)->startOfMonth()->toDateString();
-        $ziswafFundIds = $this->fundScope->ids($entity);
-        $report = $this->reports->report($entity, $from, $through, $ziswafFundIds, $input);
-        $positionReport = $this->publicReports->reportForEntity($entity, $from, $through);
-        $runningBalance = $this->runningBalances->report($entity, $from, $through, $report['funds'] === [] ? [] : collect($report['funds'])->pluck('fund_id')->all(), $input['type'] ?? null);
+        $summary = $this->summaryContext($input);
+        $entity = $summary['entity'];
+        $latest = $summary['latest'];
+        $from = $summary['from'];
+        $through = $summary['through'];
+        $report = $summary['report'];
+        $positionReport = $summary['positionReport'];
+        $runningBalance = $summary['runningBalance'];
         $balancePage = max(1, (int) ($input['balance_page'] ?? 1));
         $balancePerPage = 15;
         $balanceRows = collect($runningBalance['rows']);
@@ -117,18 +118,51 @@ final class InternalZiswafDashboardController
             'path' => $request->url(), 'query' => $request->query(),
         ]);
 
-        $allocation = DecimalAmount::sum(collect($report['programs'])->pluck('allocation'));
-        $realization = DecimalAmount::sum(collect($report['programs'])->pluck('realization'));
-
         return view('masjid.mrj.guest.financial-v2.internal-ziswaf-dashboard', [
             'entity' => $entity, 'filters' => $input + compact('from', 'through'), 'report' => $report,
             'positionReport' => $positionReport, 'latestDate' => $latest,
             'runningBalance' => $runningBalance, 'runningBalanceRows' => $runningBalancePaginator,
-            'allocation' => $allocation, 'realization' => $realization,
-            'remainingAllocation' => DecimalAmount::subtract($allocation, $realization),
+            'allocation' => $summary['allocation'], 'realization' => $summary['realization'],
+            'remainingAllocation' => $summary['remainingAllocation'],
             'transactions' => $paginator,
             'options' => $this->options($entity),
         ]);
+    }
+
+    public function summaryPdf(Request $request)
+    {
+        $input = $this->validated($request);
+        $summary = $this->summaryContext($input);
+        $generatedAt = now();
+        $logoPath = public_path('pwa/mrj-logo.png');
+        $logoDataUri = is_file($logoPath)
+            ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
+            : null;
+
+        $pdf = Pdf::loadView('masjid.mrj.guest.financial-v2.internal-ziswaf-summary-pdf', [
+            ...$summary,
+            'filters' => $input + ['from' => $summary['from'], 'through' => $summary['through']],
+            'generatedAt' => $generatedAt,
+            'logoDataUri' => $logoDataUri,
+        ])->setPaper('a4', 'portrait');
+        $pdf->render();
+
+        $canvas = $pdf->getDomPDF()->getCanvas();
+        $font = $pdf->getDomPDF()->getFontMetrics()->getFont('DejaVu Sans', 'normal');
+        $printedAt = $generatedAt->format('d/m/Y H:i').' WIB';
+        $period = CarbonImmutable::parse($summary['from'])->format('d/m/Y').' - '.CarbonImmutable::parse($summary['through'])->format('d/m/Y');
+        $canvas->page_script(static function (int $pageNumber, int $pageCount, $pageCanvas) use ($font, $printedAt, $period): void {
+            $pageCanvas->line(36, 790, 559, 790, [0.82, 0.88, 0.85], 0.5);
+            $pageCanvas->text(36, 801, 'Masjid Raudhotul Jannah - Dicetak '.$printedAt, $font, 6.5, [0.35, 0.42, 0.39]);
+            $pageCanvas->text(350, 801, sprintf('%s - Hal. %d/%d', $period, $pageNumber, $pageCount), $font, 6.5, [0.35, 0.42, 0.39]);
+        });
+
+        $response = $pdf->download('ringkasan-ziswaf-'.$summary['from'].'-sampai-'.$summary['through'].'.pdf');
+        $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+
+        return $response;
     }
 
     public function transaction(Request $request, FinancialTransaction $transaction)
@@ -242,6 +276,34 @@ final class InternalZiswafDashboardController
             'type' => ['nullable', 'string', 'max:40'], 'status' => ['nullable', Rule::in(['posted'])],
             'page' => ['nullable', 'integer', 'min:1'], 'balance_page' => ['nullable', 'integer', 'min:1'],
         ]);
+    }
+
+    private function summaryContext(array $input): array
+    {
+        $entity = $this->entity();
+        $latest = $this->ledger->latestAccountingDate($entity->id) ?: now()->toDateString();
+        $through = $input['through'] ?? $latest;
+        $from = $input['from'] ?? CarbonImmutable::parse($through)->startOfMonth()->toDateString();
+        $ziswafFundIds = $this->fundScope->ids($entity);
+        $report = $this->reports->report($entity, $from, $through, $ziswafFundIds, $input);
+        $positionReport = $this->publicReports->reportForEntity($entity, $from, $through);
+        $reportFundIds = $report['funds'] === [] ? [] : collect($report['funds'])->pluck('fund_id')->all();
+        $runningBalance = $this->runningBalances->report($entity, $from, $through, $reportFundIds, $input['type'] ?? null);
+        $allocation = DecimalAmount::sum(collect($report['programs'])->pluck('allocation'));
+        $realization = DecimalAmount::sum(collect($report['programs'])->pluck('realization'));
+
+        return [
+            'entity' => $entity,
+            'latest' => $latest,
+            'from' => $from,
+            'through' => $through,
+            'report' => $report,
+            'positionReport' => $positionReport,
+            'runningBalance' => $runningBalance,
+            'allocation' => $allocation,
+            'realization' => $realization,
+            'remainingAllocation' => DecimalAmount::subtract($allocation, $realization),
+        ];
     }
 
     private function options(AccountingEntity $entity): array

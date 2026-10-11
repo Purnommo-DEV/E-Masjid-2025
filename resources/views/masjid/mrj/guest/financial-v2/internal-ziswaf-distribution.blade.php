@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive"><title>Detail Penyaluran ZISWAF</title>@vite(['resources/css/app.css','resources/js/app.js'])</head>
 <body class="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
+@include(guest_layout('_navbar'))
 @php
 $rp=static fn($n)=>'Rp'.number_format((float)$n,0,',','.');
 $transaction=$distribution->realization?->transaction;

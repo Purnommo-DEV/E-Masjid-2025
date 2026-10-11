@@ -312,6 +312,7 @@ Route::post('/internal/ziswaf/access', [InternalZiswafDashboardController::class
     ->middleware('throttle:5,1')->name('internal.ziswaf.exchange');
 Route::middleware(['internal.ziswaf', 'throttle:120,1'])->prefix('internal/ziswaf')->name('internal.ziswaf.')->group(function () {
     Route::get('/', [InternalZiswafDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/ringkasan.pdf', [InternalZiswafDashboardController::class, 'summaryPdf'])->name('summary.pdf');
     Route::get('/transaksi/{transaction}', [InternalZiswafDashboardController::class, 'transaction'])->name('transactions.show');
     Route::get('/penyaluran/{distribution}', [InternalZiswafDashboardController::class, 'distribution'])->name('distributions.show');
     Route::get('/transaksi/{transaction}/dokumen/{attachment}/{disposition?}', [InternalZiswafDashboardController::class, 'attachment'])

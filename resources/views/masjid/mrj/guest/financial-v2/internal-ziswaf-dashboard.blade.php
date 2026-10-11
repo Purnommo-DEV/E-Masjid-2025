@@ -8,11 +8,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
+@include(guest_layout('_navbar'))
 @php
     $rp = static fn ($n) => 'Rp' . number_format((float) $n, 0, ',', '.');
     $positionRupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
     $positionDate = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
     $query = collect($filters)->except('page')->filter(fn ($v) => $v !== null && $v !== '')->all();
+    $exportQuery = collect($filters)->only(['from', 'through', 'fund_id', 'program_id', 'category_id', 'type', 'status'])
+        ->filter(fn ($v) => $v !== null && $v !== '')->all();
     $allocationRate = (float) $allocation > 0
         ? min(100, ((float) $realization / (float) $allocation) * 100)
         : 0;
@@ -33,14 +36,21 @@
                 <h1 class="mt-4 text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl">Ringkasan ZISWAF</h1>
                 <p class="mt-2 text-sm text-emerald-100 sm:text-base">{{ $entity->name }}</p>
             </div>
-            <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm sm:min-w-64">
-                <p class="text-xs font-medium uppercase tracking-wider text-emerald-200">Periode laporan</p>
-                <p class="mt-1.5 text-sm font-semibold sm:text-base">
-                    {{ \Carbon\Carbon::parse($filters['from'])->format('d M Y') }}
-                    <span class="mx-1 text-emerald-200">—</span>
-                    {{ \Carbon\Carbon::parse($filters['through'])->format('d M Y') }}
-                </p>
-                <p class="mt-1 text-xs text-emerald-100/80">Saldo terkini per {{ \Carbon\Carbon::parse($latestDate)->format('d M Y') }}</p>
+            <div class="flex flex-col gap-3 sm:items-stretch">
+                <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm sm:min-w-64">
+                    <p class="text-xs font-medium uppercase tracking-wider text-emerald-200">Periode laporan</p>
+                    <p class="mt-1.5 text-sm font-semibold sm:text-base">
+                        {{ \Carbon\Carbon::parse($filters['from'])->format('d M Y') }}
+                        <span class="mx-1 text-emerald-200">—</span>
+                        {{ \Carbon\Carbon::parse($filters['through'])->format('d M Y') }}
+                    </p>
+                    <p class="mt-1 text-xs text-emerald-100/80">Saldo terkini per {{ \Carbon\Carbon::parse($latestDate)->format('d M Y') }}</p>
+                </div>
+                <a href="{{ route('internal.ziswaf.summary.pdf', $exportQuery) }}"
+                    class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white px-4 py-2.5 text-sm font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-white/25">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+                    Unduh Ringkasan PDF
+                </a>
             </div>
         </div>
     </div>
