@@ -30,10 +30,10 @@
         </form>
 
         <div class="overflow-x-auto rounded-2xl bg-base-100 shadow-sm ring-1 ring-base-300">
-            <table class="table"><thead><tr><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th>Rekening</th><th>Dana</th><th class="text-right">Nominal</th><th>Status</th><th class="text-right">Aksi</th></tr></thead>
+            <table class="table"><thead><tr><th>Tanggal mutasi</th><th>Tanggal akuntansi</th><th>Jenis</th><th>Keterangan</th><th>Rekening</th><th>Dana</th><th class="text-right">Nominal</th><th>Status</th><th class="text-right">Aksi</th></tr></thead>
             <tbody>@forelse($transactions as $transaction)
                 @php $isReceipt = $transaction->type?->code === 'RCV'; @endphp
-                <tr><td>{{ $transaction->accounting_date->format('d/m/Y') }}</td><td class="font-medium">{{ \App\Domain\FinancialV2\BankMutationService::CATEGORY_CODES[$transaction->category?->code] ?? $transaction->category?->name }}</td><td><div class="max-w-xs"><p class="truncate">{{ $transaction->description }}</p><p class="font-mono text-[11px] text-base-content/50">{{ $transaction->source_reference }}</p></div></td><td>{{ $transaction->primaryFinancialAccount?->name }}</td><td>{{ $transaction->splits->first()?->fund?->name ?? '—' }}</td><td class="text-right font-bold {{ $isReceipt ? 'text-emerald-700' : 'text-rose-700' }}">{{ $isReceipt ? '+' : '-' }}{{ $rupiah($transaction->gross_amount) }}</td><td><span class="badge badge-outline">{{ $statusLabel($transaction->status) }}</span></td><td><div class="flex justify-end gap-1 whitespace-nowrap">
+                <tr><td><span class="font-medium">{{ $transaction->effective_business_date->format('d/m/Y') }}</span>@if($transaction->latestDateCorrection)<span class="badge badge-info badge-sm ml-1">Dikoreksi</span>@endif</td><td>{{ $transaction->accounting_date->format('d/m/Y') }}</td><td class="font-medium">{{ \App\Domain\FinancialV2\BankMutationService::CATEGORY_CODES[$transaction->category?->code] ?? $transaction->category?->name }}</td><td><div class="max-w-xs"><p class="truncate">{{ $transaction->description }}</p><p class="font-mono text-[11px] text-base-content/50">{{ $transaction->source_reference }}</p></div></td><td>{{ $transaction->primaryFinancialAccount?->name }}</td><td>{{ $transaction->splits->first()?->fund?->name ?? '—' }}</td><td class="text-right font-bold {{ $isReceipt ? 'text-emerald-700' : 'text-rose-700' }}">{{ $isReceipt ? '+' : '-' }}{{ $rupiah($transaction->gross_amount) }}</td><td><span class="badge badge-outline">{{ $statusLabel($transaction->status) }}</span></td><td><div class="flex justify-end gap-1 whitespace-nowrap"><a class="btn btn-ghost btn-xs" href="{{ route('financial-v2.transactions.show', ['transaction' => $transaction, 'entity' => $entity->id]) }}">Detail</a>
                     @if($transaction->status === 'draft')
                         @if($editableBatchIds->contains($transaction->correlation_id))
                             <a class="btn btn-ghost btn-xs" href="{{ route('financial-v2.bank-mutations.batches.edit', ['batch' => $transaction->correlation_id, 'entity' => $entity->id]) }}">Ubah batch</a>
@@ -48,10 +48,9 @@
                         <form method="POST" action="{{ route('financial-v2.bank-mutations.approve', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf<button class="btn btn-primary btn-xs">Setujui</button></form>
                     @elseif($transaction->status === 'approved')
                         <form method="POST" action="{{ route('financial-v2.bank-mutations.post', ['transaction' => $transaction, 'entity' => $entity->id]) }}" onsubmit="return confirm('Catat resmi transaksi ini? Data posted tidak dapat diubah atau dihapus.')">@csrf<button class="btn btn-success btn-xs">Catat resmi</button></form>
-                    @else <span class="text-xs text-base-content/45">—</span>
                     @endif
                 </div></td></tr>
-            @empty<tr><td colspan="8" class="py-10 text-center text-sm text-base-content/60">Belum ada Mutasi Bank yang cocok.</td></tr>@endforelse</tbody></table>
+            @empty<tr><td colspan="9" class="py-10 text-center text-sm text-base-content/60">Belum ada Mutasi Bank yang cocok.</td></tr>@endforelse</tbody></table>
         </div>
         <div class="mt-5">{{ $transactions->links() }}</div>
     @endif

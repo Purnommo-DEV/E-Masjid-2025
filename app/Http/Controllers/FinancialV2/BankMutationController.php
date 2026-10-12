@@ -51,7 +51,7 @@ final class BankMutationController extends Controller
         if ($entity) {
             $categoryIds = $options['categories']->pluck('id');
             $query = FinancialTransaction::query()
-                ->with(['type', 'category', 'primaryFinancialAccount', 'splits.fund'])
+                ->with(['type', 'category', 'primaryFinancialAccount', 'splits.fund', 'latestDateCorrection'])
                 ->where('accounting_entity_id', $entity->id)
                 ->whereIn('category_id', $categoryIds);
             if ($filters['year'] ?? null) {

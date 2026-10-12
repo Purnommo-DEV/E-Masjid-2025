@@ -436,6 +436,7 @@ final class OperationalFinancialController
             'reason' => ['required', 'string', 'min:10', 'max:2000'],
             'attachment_id' => ['required', 'uuid'],
             'idempotency_key' => ['required', 'uuid'],
+            'bank_batch_confirmed' => ['nullable', 'accepted'],
         ];
         if ($confirmationRequired) {
             $rules['confirmed'] = ['accepted'];

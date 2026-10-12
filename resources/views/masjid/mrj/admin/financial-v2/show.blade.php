@@ -18,6 +18,8 @@
         $realizationParentInactive = $isRealization && ($realizationVersion?->status !== 'approved' || $realizationAllocation?->status !== 'approved');
         $canEdit = ! $isBankMutation && ! $realizationParentInactive && $transaction->status === 'draft' && in_array($operation, ['receipt', 'payment', 'realization'], true);
         $canEditBankMutation = $isBankMutation && $transaction->status === 'draft';
+        $activeDateCorrectionAttachments = $attachments->where('attachment_status', 'active');
+        $dateCorrectionAttachments = $isBankMutation ? $activeDateCorrectionAttachments->where('evidence_type', 'statement') : $activeDateCorrectionAttachments;
         $isGenericDraftPage = ! $isRealization && ! in_array($transaction->status, ['posted', 'reversed'], true);
         $backUrl = $isGenericDraftPage
             ? route('financial-v2.transactions.drafts', ['entity' => $entity->id, 'year' => $transaction->accounting_date->year, 'status' => $transaction->status])
@@ -130,12 +132,13 @@
                     </form>
                 </details>
             @endif
-            @if (! $isBankMutation && $transaction->status === 'posted' && auth()->user()?->hasRole('SuperAdmin'))
+            @if ($transaction->status === 'posted' && auth()->user()?->hasRole('SuperAdmin'))
                 <details class="rounded-2xl border border-info/40 bg-info/5 p-3" data-date-correction>
                     <summary class="cursor-pointer text-sm font-semibold">Koreksi Tanggal</summary>
                     <p class="mt-2 text-xs leading-5 text-base-content/65">Koreksi tanggal aktual bersifat append-only. Tanggal akuntansi ditampilkan terpisah dan tidak dapat diubah sampai alur reversal dan transaksi pengganti tersedia.</p>
-                    @if ($attachments->isEmpty())
-                        <div class="alert alert-warning mt-3 py-2 text-xs">Transaksi belum memiliki lampiran aktif yang dapat dijadikan bukti koreksi.</div>
+                    @if ($isBankMutation)<p class="mt-2 text-xs leading-5 text-info">Untuk Mutasi Bank, tanggal baru harus merupakan tanggal debit/kredit sebenarnya pada rekening koran, bukan periode layanan biaya.</p>@endif
+                    @if ($dateCorrectionAttachments->isEmpty())
+                        <div class="alert alert-warning mt-3 py-2 text-xs">{{ $isBankMutation ? 'Transaksi belum memiliki lampiran rekening koran aktif (statement).' : 'Transaksi belum memiliki lampiran aktif yang dapat dijadikan bukti koreksi.' }}</div>
                     @else
                         <form class="mt-3 space-y-3" method="POST" action="{{ route('financial-v2.transactions.date-corrections.store', $transaction) }}" data-date-correction-form>
                             @csrf
@@ -144,10 +147,11 @@
                             <label class="form-control"><span class="label-text text-xs font-semibold">Tanggal aktual transaksi</span><input class="input input-bordered input-sm" type="date" name="business_date" value="{{ $transaction->effective_business_date->toDateString() }}" required><span class="mt-1 text-xs text-base-content/55">Saat ini {{ $transaction->effective_business_date->format('d/m/Y') }}</span></label>
                             <label class="form-control"><span class="label-text text-xs font-semibold">Tanggal akuntansi</span><input class="input input-bordered input-sm" type="date" name="accounting_date" value="{{ $transaction->accounting_date->toDateString() }}" required><span class="mt-1 text-xs text-base-content/55">Perubahan nilai ini akan ditolak karena memerlukan koreksi akuntansi resmi.</span></label>
                             <label class="form-control"><span class="label-text text-xs font-semibold">Alasan koreksi</span><textarea class="textarea textarea-bordered textarea-sm" name="reason" minlength="10" maxlength="2000" required></textarea></label>
-                            <label class="form-control"><span class="label-text text-xs font-semibold">Bukti pendukung</span><select class="select select-bordered select-sm" name="attachment_id" required><option value="">Pilih lampiran aktif</option>@foreach($attachments as $attachment)<option value="{{ $attachment->attachment_id }}">{{ $attachment->original_filename }}</option>@endforeach</select></label>
+                            <label class="form-control"><span class="label-text text-xs font-semibold">{{ $isBankMutation ? 'Rekening koran pendukung' : 'Bukti pendukung' }}</span><select class="select select-bordered select-sm" name="attachment_id" required><option value="">Pilih lampiran aktif</option>@foreach($dateCorrectionAttachments as $attachment)<option value="{{ $attachment->attachment_id }}">{{ $attachment->original_filename }}</option>@endforeach</select></label>
                             <button class="btn btn-outline btn-sm w-full" type="button" data-date-correction-preview data-preview-url="{{ route('financial-v2.transactions.date-corrections.preview', $transaction) }}">Pratinjau dampak</button>
                             <div class="hidden rounded-xl bg-base-200 p-3 text-xs leading-5" data-date-correction-result></div>
                             <label class="hidden items-start gap-2 text-xs" data-date-correction-confirm><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya sudah memeriksa tanggal, alasan, bukti, dan dampak koreksi ini.</span></label>
+                            <label class="hidden items-start gap-2 rounded-xl border border-warning/30 bg-warning/5 p-3 text-xs" data-bank-batch-confirm><input class="checkbox checkbox-sm" type="checkbox" name="bank_batch_confirmed" value="1"><span>Saya memahami koreksi ini hanya mengubah tanggal aktual efektif baris Mutasi Bank yang dipilih; baris lain dalam batch tidak berubah.</span></label>
                             <button class="btn btn-info btn-sm hidden w-full" type="submit" data-date-correction-submit>Simpan koreksi tanggal aktual</button>
                         </form>
                     @endif
@@ -224,9 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const result = root.querySelector('[data-date-correction-result]');
     const confirm = root.querySelector('[data-date-correction-confirm]');
     const submit = root.querySelector('[data-date-correction-submit]');
+    const batchConfirm = root.querySelector('[data-bank-batch-confirm]');
     const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]);
-    const resetPreview = () => { result.classList.add('hidden'); confirm.classList.add('hidden'); submit.classList.add('hidden'); form.querySelector('[name="confirmed"]').checked = false; };
-    form.querySelectorAll('input, textarea, select').forEach(field => { if (!['_token', 'idempotency_key', 'confirmed'].includes(field.name)) field.addEventListener('input', resetPreview); });
+    const resetPreview = () => { result.classList.add('hidden'); confirm.classList.add('hidden'); submit.classList.add('hidden'); batchConfirm?.classList.add('hidden'); form.querySelector('[name="confirmed"]').checked = false; if (batchConfirm) { const field = batchConfirm.querySelector('input'); field.checked = false; field.required = false; } };
+    form.querySelectorAll('input, textarea, select').forEach(field => { if (!['_token', 'idempotency_key', 'confirmed', 'bank_batch_confirmed'].includes(field.name)) field.addEventListener('input', resetPreview); });
     preview.addEventListener('click', async () => {
         result.classList.remove('hidden'); result.textContent = 'Memeriksa koreksi…'; confirm.classList.add('hidden'); submit.classList.add('hidden');
         try {
@@ -234,7 +239,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const payload = await response.json();
             if (!response.ok || !payload.ok) throw new Error(payload.message || 'Pratinjau tidak dapat diselesaikan.');
             const item = payload.preview;
-            result.innerHTML = `<p class="font-semibold">Transaksi ${escapeHtml(item.transaction_id)} · ${escapeHtml(item.status)}</p><p>Aktual: ${escapeHtml(item.old_business_date)} → ${escapeHtml(item.new_business_date)}</p><p>Akuntansi: ${escapeHtml(item.old_accounting_date)} → ${escapeHtml(item.new_accounting_date)} (periode ${escapeHtml(item.accounting_period)})</p><p>Nominal tetap Rp${escapeHtml(item.amount)}</p><p class="mt-2">${escapeHtml(item.ledger_impact)}</p><p>${escapeHtml(item.balance_validation)}</p><p class="mt-2">Jurnal ${escapeHtml(item.journal_id)} · posted ${escapeHtml(item.journal_posted_at)}</p>`;
+            const bank = item.bank_mutation;
+            const batch = bank?.batch;
+            const reconciliations = (bank?.reconciliations?.items || []).map(reconciliation => `<li>${escapeHtml(reconciliation.period || 'Periode tidak diketahui')} · ${escapeHtml(reconciliation.status)}${reconciliation.matched_by_source_reference ? ' · cocok berdasarkan source reference' : ' · kandidat berdasarkan rekening/periode'}${reconciliation.completed_warning ? `<br><span class="text-warning">${escapeHtml(reconciliation.completed_warning)}</span>` : ''}</li>`).join('');
+            result.innerHTML = `<p class="font-semibold">Transaksi ${escapeHtml(item.transaction_id)} · ${escapeHtml(item.status)}</p><p>Aktual: ${escapeHtml(item.old_business_date)} → ${escapeHtml(item.new_business_date)}</p><p>Akuntansi: ${escapeHtml(item.old_accounting_date)} → ${escapeHtml(item.new_accounting_date)} (periode ${escapeHtml(item.accounting_period)})</p><p>Nominal tetap Rp${escapeHtml(item.amount)}</p><p class="mt-2">${escapeHtml(item.ledger_impact)}</p><p>${escapeHtml(item.balance_validation)}</p><p class="mt-2">Jurnal ${escapeHtml(item.journal_id)} · posted ${escapeHtml(item.journal_posted_at)}</p>${bank ? `<div class="mt-2 border-t border-base-300 pt-2"><p>${escapeHtml(bank.statement_note)}</p><p class="mt-1">${batch.is_batch ? `Bagian batch; ${escapeHtml(batch.other_count)} baris lain tidak ikut berubah.` : 'Bukan bagian batch dengan baris lain.'}</p><p class="mt-1">Keterkaitan rekonsiliasi: ${escapeHtml(bank.reconciliations.match_basis)}.</p>${reconciliations ? `<ul class="mt-1 list-disc pl-4">${reconciliations}</ul>` : '<p class="mt-1">Rekonsiliasi terkait tidak ditemukan.</p>'}</div>` : ''}`;
+            if (batchConfirm && batch?.is_batch) { const field = batchConfirm.querySelector('input'); field.required = true; batchConfirm.classList.remove('hidden'); batchConfirm.classList.add('flex'); }
             confirm.classList.remove('hidden'); confirm.classList.add('flex'); submit.classList.remove('hidden');
         } catch (error) { result.textContent = error.message; }
     });
