@@ -190,7 +190,7 @@
             <table class="w-full min-w-[900px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th scope="col" class="px-5 py-3.5 sm:px-6">Tanggal</th>
+                        <th scope="col" class="px-5 py-3.5 sm:px-6">Tanggal akuntansi</th>
                         <th scope="col" class="px-4 py-3.5">Uraian transaksi</th>
                         <th scope="col" class="px-4 py-3.5">Pos/Fund</th>
                         <th scope="col" class="px-4 py-3.5 text-right">Pemasukan</th>
@@ -317,7 +317,7 @@
             <table class="w-full min-w-[980px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th scope="col" class="px-5 py-3.5">Tanggal</th>
+                        <th scope="col" class="px-5 py-3.5">Tanggal aktual</th>
                         <th scope="col" class="px-4 py-3.5">Uraian</th>
                         <th scope="col" class="px-4 py-3.5">Fund</th>
                         <th scope="col" class="px-4 py-3.5">Jenis</th>
@@ -330,7 +330,17 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($transactions as $t)
                         <tr class="transition hover:bg-slate-50/80">
-                            <td class="whitespace-nowrap px-5 py-4 text-slate-600">{{ \Carbon\Carbon::parse($t['date'])->format('d/m/Y') }}</td>
+                            <td class="whitespace-nowrap px-5 py-4 text-slate-600">
+                                @if ($t['effective_business_date'])
+                                    <span class="block font-semibold text-slate-700">{{ \Carbon\Carbon::parse($t['effective_business_date'])->format('d/m/Y') }}</span>
+                                    @if ($t['business_date_corrected'])
+                                        <span class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Tanggal aktual dikoreksi</span>
+                                    @endif
+                                @else
+                                    <span class="block">—</span>
+                                @endif
+                                <span class="mt-1 block text-xs text-slate-400">Akuntansi {{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</span>
+                            </td>
                             <td class="max-w-xs px-4 py-4">
                                 <a class="font-semibold leading-5 text-emerald-800 underline-offset-4 transition hover:text-emerald-950 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-600"
                                    href="{{ route('internal.ziswaf.transactions.show', $t['transaction_id']) }}?{{ http_build_query($query) }}">

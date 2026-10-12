@@ -107,11 +107,26 @@ final class InternalZiswafDashboardController
         );
 
         $transactions = collect($report['transactions']);
+        $transactionDates = FinancialTransaction::query()
+            ->where('accounting_entity_id', $entity->id)
+            ->whereIn('id', $transactions->pluck('transaction_id')->filter()->unique())
+            ->with('latestDateCorrection')
+            ->get(['id', 'business_date', 'accounting_date'])
+            ->keyBy('id');
         $attachmentCounts = AttachmentLink::query()->where('accounting_entity_id', $entity->id)
             ->where('target_type', 'transaction')->where('status', 'active')
             ->whereIn('target_id', $transactions->pluck('transaction_id'))->select('target_id')
             ->selectRaw('COUNT(*) as aggregate')->groupBy('target_id')->pluck('aggregate', 'target_id');
-        $transactions = $transactions->map(fn (array $row) => $row + ['attachment_count' => (int) $attachmentCounts->get($row['transaction_id'], 0)]);
+        $transactions = $transactions->map(function (array $row) use ($attachmentCounts, $transactionDates): array {
+            $transaction = $transactionDates->get($row['transaction_id']);
+
+            return $row + [
+                'effective_business_date' => $transaction?->effective_business_date?->toDateString(),
+                'accounting_date' => $transaction?->accounting_date?->toDateString() ?? $row['date'],
+                'business_date_corrected' => $transaction?->latestDateCorrection !== null,
+                'attachment_count' => (int) $attachmentCounts->get($row['transaction_id'], 0),
+            ];
+        });
         $page = max(1, (int) ($input['page'] ?? 1));
         $perPage = 15;
         $paginator = new LengthAwarePaginator($transactions->forPage($page, $perPage)->values(), $transactions->count(), $perPage, $page, [
@@ -169,7 +184,7 @@ final class InternalZiswafDashboardController
     {
         $entity = $this->entity();
         abort_unless($transaction->accounting_entity_id === $entity->id, 404);
-        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'realization.budgetAllocationVersion.allocation.program']);
+        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'latestDateCorrection', 'realization.budgetAllocationVersion.allocation.program']);
         $attachments = AttachmentLink::query()->where('financial_v2_attachment_links.accounting_entity_id', $entity->id)
             ->where('target_type', 'transaction')->where('target_id', $transaction->id)->where('financial_v2_attachment_links.status', 'active')
             ->join('financial_v2_attachments as attachment', 'attachment.id', '=', 'financial_v2_attachment_links.attachment_id')
@@ -190,7 +205,7 @@ final class InternalZiswafDashboardController
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
         $distribution->load([
-            'program', 'realization.transaction.type', 'realization.transaction.splits.fund',
+            'program', 'realization.transaction.type', 'realization.transaction.splits.fund', 'realization.transaction.latestDateCorrection',
             'realization.budgetAllocationVersion.allocation.program',
         ]);
         $latestCorrectionNumbers = DB::table('financial_v2_distribution_item_identity_corrections')
