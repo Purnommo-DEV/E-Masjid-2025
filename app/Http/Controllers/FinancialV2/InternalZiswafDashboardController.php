@@ -98,6 +98,27 @@ final class InternalZiswafDashboardController
         $balancePage = max(1, (int) ($input['balance_page'] ?? 1));
         $balancePerPage = 15;
         $balanceRows = collect($runningBalance['rows']);
+        $transactions = collect($report['transactions']);
+        $transactionIds = $transactions->pluck('transaction_id')
+            ->merge($balanceRows->pluck('transaction_id'))
+            ->filter()
+            ->unique()
+            ->values();
+        $transactionDates = FinancialTransaction::query()
+            ->where('accounting_entity_id', $entity->id)
+            ->whereIn('id', $transactionIds)
+            ->with('latestDateCorrection')
+            ->get(['id', 'business_date', 'accounting_date'])
+            ->keyBy('id');
+        $balanceRows = $balanceRows->map(function (array $row) use ($transactionDates): array {
+            $transaction = $transactionDates->get($row['transaction_id']);
+
+            return $row + [
+                'effective_business_date' => $transaction?->effective_business_date?->toDateString(),
+                'accounting_date' => $transaction?->accounting_date?->toDateString() ?? $row['date'],
+                'business_date_corrected' => $transaction?->latestDateCorrection !== null,
+            ];
+        });
         $runningBalancePaginator = new LengthAwarePaginator(
             $balanceRows->forPage($balancePage, $balancePerPage)->values(),
             $balanceRows->count(),
@@ -106,13 +127,6 @@ final class InternalZiswafDashboardController
             ['path' => $request->url(), 'pageName' => 'balance_page', 'query' => $request->query()],
         );
 
-        $transactions = collect($report['transactions']);
-        $transactionDates = FinancialTransaction::query()
-            ->where('accounting_entity_id', $entity->id)
-            ->whereIn('id', $transactions->pluck('transaction_id')->filter()->unique())
-            ->with('latestDateCorrection')
-            ->get(['id', 'business_date', 'accounting_date'])
-            ->keyBy('id');
         $attachmentCounts = AttachmentLink::query()->where('accounting_entity_id', $entity->id)
             ->where('target_type', 'transaction')->where('status', 'active')
             ->whereIn('target_id', $transactions->pluck('transaction_id'))->select('target_id')
@@ -126,7 +140,13 @@ final class InternalZiswafDashboardController
                 'business_date_corrected' => $transaction?->latestDateCorrection !== null,
                 'attachment_count' => (int) $attachmentCounts->get($row['transaction_id'], 0),
             ];
-        });
+        })->sort(function (array $left, array $right): int {
+            $dateOrder = strcmp((string) $right['effective_business_date'], (string) $left['effective_business_date']);
+
+            return $dateOrder !== 0
+                ? $dateOrder
+                : strcmp((string) $right['transaction_id'], (string) $left['transaction_id']);
+        })->values();
         $page = max(1, (int) ($input['page'] ?? 1));
         $perPage = 15;
         $paginator = new LengthAwarePaginator($transactions->forPage($page, $perPage)->values(), $transactions->count(), $perPage, $page, [

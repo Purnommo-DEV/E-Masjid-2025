@@ -190,7 +190,7 @@
             <table class="w-full min-w-[900px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th scope="col" class="px-5 py-3.5 sm:px-6">Tanggal akuntansi</th>
+                        <th scope="col" class="px-5 py-3.5 sm:px-6">Tanggal transaksi</th>
                         <th scope="col" class="px-4 py-3.5">Uraian transaksi</th>
                         <th scope="col" class="px-4 py-3.5">Pos/Fund</th>
                         <th scope="col" class="px-4 py-3.5 text-right">Pemasukan</th>
@@ -201,7 +201,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @if ($runningBalanceRows->currentPage() === 1)
                         <tr class="bg-emerald-50/60">
-                            <td class="whitespace-nowrap px-5 py-4 font-medium text-slate-600 sm:px-6">{{ $positionDate($filters['from']) }}</td>
+                            <td class="whitespace-nowrap px-5 py-4 font-medium text-slate-600 sm:px-6"><span class="block text-xs text-slate-400">Awal periode akuntansi</span>{{ $positionDate($filters['from']) }}</td>
                             <td class="px-4 py-4 font-bold text-emerald-950">Saldo Awal Periode</td>
                             <td class="px-4 py-4 text-slate-500">{{ $filters['fund_id'] ?? null ? data_get(collect($report['funds'])->firstWhere('fund_id', $filters['fund_id']), 'name', 'Dana terpilih') : 'Seluruh Dana ZISWAF' }}</td>
                             <td class="px-4 py-4 text-right text-slate-400">—</td>
@@ -211,7 +211,17 @@
                     @endif
                     @forelse ($runningBalanceRows as $row)
                         <tr class="transition hover:bg-slate-50/80">
-                            <td class="whitespace-nowrap px-5 py-4 text-slate-600 sm:px-6">{{ $positionDate($row['date']) }}</td>
+                            <td class="whitespace-nowrap px-5 py-4 text-slate-600 sm:px-6">
+                                @if ($row['effective_business_date'])
+                                    <span class="block font-semibold text-slate-700">Aktual {{ $positionDate($row['effective_business_date']) }}</span>
+                                    @if ($row['business_date_corrected'])
+                                        <span class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Tanggal aktual dikoreksi</span>
+                                    @endif
+                                @else
+                                    <span class="block text-slate-400">Aktual —</span>
+                                @endif
+                                <span class="mt-1 block text-xs text-slate-400">Akuntansi {{ $positionDate($row['accounting_date']) }}</span>
+                            </td>
                             <td class="max-w-xs px-4 py-4 align-top">
                                 <a class="font-semibold text-emerald-800 hover:text-emerald-950 hover:underline" href="{{ route('internal.ziswaf.transactions.show', $row['transaction_id']) }}">{{ $row['description'] }}</a>
                                 <p class="mt-1 text-xs text-slate-400">Urutan posting {{ $row['posting_sequence'] }}</p>
