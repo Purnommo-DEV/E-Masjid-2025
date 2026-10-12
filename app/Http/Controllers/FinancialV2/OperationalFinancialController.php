@@ -436,7 +436,7 @@ final class OperationalFinancialController
             'reason' => ['required', 'string', 'min:10', 'max:2000'],
             'attachment_id' => ['required', 'uuid'],
             'idempotency_key' => ['required', 'uuid'],
-            'bank_batch_confirmed' => ['nullable', 'accepted'],
+            'bank_batch_confirmed' => ['sometimes', 'accepted'],
         ];
         if ($confirmationRequired) {
             $rules['confirmed'] = ['accepted'];
@@ -591,6 +591,16 @@ final class OperationalFinancialController
     public function show(Request $request, FinancialTransaction $transaction)
     {
         $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.fundings.fund', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program', 'latestDateCorrection', 'dateCorrections.evidence']);
+        $isBankMutation = array_key_exists((string) $transaction->category?->code, BankMutationService::CATEGORY_CODES);
+        $bankMutationBatchOtherCount = $isBankMutation
+            ? FinancialTransaction::query()
+                ->where('accounting_entity_id', $transaction->accounting_entity_id)
+                ->where('correlation_id', $transaction->correlation_id)
+                ->where('id', '!=', $transaction->id)
+                ->where('status', '!=', 'cancelled')
+                ->whereHas('category', fn (Builder $query) => $query->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES)))
+                ->count()
+            : 0;
         $entity = $this->activeEntity($transaction->accounting_entity_id);
         $context = $this->contextForEntity($entity->id);
         $journal = Journal::query()->with('lines')->where('transaction_id', $transaction->id)->where('journal_status', 'posted')->first();
@@ -624,7 +634,8 @@ final class OperationalFinancialController
             'options' => $this->formOptions($entity),
             'transaction' => $transaction,
             'operation' => $this->operationForTransaction($transaction),
-            'isBankMutation' => array_key_exists((string) $transaction->category?->code, BankMutationService::CATEGORY_CODES),
+            'isBankMutation' => $isBankMutation,
+            'bankMutationBatchOtherCount' => $bankMutationBatchOtherCount,
             'journal' => $journal,
             'voucher' => $voucher,
             'ledgerReferences' => $ledgerReferences,

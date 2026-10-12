@@ -151,7 +151,7 @@
                             <button class="btn btn-outline btn-sm w-full" type="button" data-date-correction-preview data-preview-url="{{ route('financial-v2.transactions.date-corrections.preview', $transaction) }}">Pratinjau dampak</button>
                             <div class="hidden rounded-xl bg-base-200 p-3 text-xs leading-5" data-date-correction-result></div>
                             <label class="hidden items-start gap-2 text-xs" data-date-correction-confirm><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya sudah memeriksa tanggal, alasan, bukti, dan dampak koreksi ini.</span></label>
-                            <label class="hidden items-start gap-2 rounded-xl border border-warning/30 bg-warning/5 p-3 text-xs" data-bank-batch-confirm><input class="checkbox checkbox-sm" type="checkbox" name="bank_batch_confirmed" value="1"><span>Saya memahami koreksi ini hanya mengubah tanggal aktual efektif baris Mutasi Bank yang dipilih; baris lain dalam batch tidak berubah.</span></label>
+                            <label @class(['items-start gap-2 rounded-xl border border-warning/30 bg-warning/5 p-3 text-xs', 'flex' => $bankMutationBatchOtherCount > 0, 'hidden' => $bankMutationBatchOtherCount === 0]) data-bank-batch-confirm data-required="{{ $bankMutationBatchOtherCount > 0 ? 'true' : 'false' }}"><input class="checkbox checkbox-sm" type="checkbox" name="bank_batch_confirmed" value="1" @required($bankMutationBatchOtherCount > 0)><span>Saya memahami koreksi ini hanya mengubah tanggal aktual efektif transaksi yang dipilih; {{ $bankMutationBatchOtherCount }} baris Mutasi Bank lain dalam batch tidak berubah.</span></label>
                             <button class="btn btn-info btn-sm hidden w-full" type="submit" data-date-correction-submit>Simpan koreksi tanggal aktual</button>
                         </form>
                     @endif
@@ -229,8 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirm = root.querySelector('[data-date-correction-confirm]');
     const submit = root.querySelector('[data-date-correction-submit]');
     const batchConfirm = root.querySelector('[data-bank-batch-confirm]');
+    const batchConfirmationRequired = batchConfirm?.dataset.required === 'true';
     const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]);
-    const resetPreview = () => { result.classList.add('hidden'); confirm.classList.add('hidden'); submit.classList.add('hidden'); batchConfirm?.classList.add('hidden'); form.querySelector('[name="confirmed"]').checked = false; if (batchConfirm) { const field = batchConfirm.querySelector('input'); field.checked = false; field.required = false; } };
+    const resetPreview = () => { result.classList.add('hidden'); confirm.classList.add('hidden'); submit.classList.add('hidden'); form.querySelector('[name="confirmed"]').checked = false; if (batchConfirm) { const field = batchConfirm.querySelector('input'); field.checked = false; field.required = batchConfirmationRequired; batchConfirm.classList.toggle('hidden', !batchConfirmationRequired); batchConfirm.classList.toggle('flex', batchConfirmationRequired); } };
     form.querySelectorAll('input, textarea, select').forEach(field => { if (!['_token', 'idempotency_key', 'confirmed', 'bank_batch_confirmed'].includes(field.name)) field.addEventListener('input', resetPreview); });
     preview.addEventListener('click', async () => {
         result.classList.remove('hidden'); result.textContent = 'Memeriksa koreksi…'; confirm.classList.add('hidden'); submit.classList.add('hidden');

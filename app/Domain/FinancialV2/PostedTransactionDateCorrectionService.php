@@ -212,6 +212,7 @@ final class PostedTransactionDateCorrectionService
             ->where('accounting_entity_id', $transaction->accounting_entity_id)
             ->where('correlation_id', $transaction->correlation_id)
             ->where('id', '!=', $transaction->id)
+            ->where('status', '!=', 'cancelled')
             ->whereHas('category', fn ($query) => $query->whereIn('code', array_keys(BankMutationService::CATEGORY_CODES)))
             ->pluck('id')
             ->values()
