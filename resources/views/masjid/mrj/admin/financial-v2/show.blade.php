@@ -33,7 +33,7 @@
         };
     @endphp
     <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div><a class="link text-sm text-base-content/60" href="{{ $backUrl }}">← Kembali ke {{ $backLabel }}</a><p class="mt-3 text-sm font-medium text-emerald-700">{{ $isBankMutation ? 'Mutasi Bank' : $transaction->type?->name }}</p><h1 class="mt-1 text-3xl font-bold">{{ $rupiah($transaction->gross_amount) }}</h1><p class="mt-2 text-sm text-base-content/65">{{ $transaction->accounting_date->format('d/m/Y') }}</p></div>
+        <div><a class="link text-sm text-base-content/60" href="{{ $backUrl }}">← Kembali ke {{ $backLabel }}</a><p class="mt-3 text-sm font-medium text-emerald-700">{{ $isBankMutation ? 'Mutasi Bank' : $transaction->type?->name }}</p><h1 class="mt-1 text-3xl font-bold">{{ $rupiah($transaction->gross_amount) }}</h1><p class="mt-2 text-sm text-base-content/65">Tanggal aktual {{ $transaction->effective_business_date->format('d/m/Y') }} · Tanggal akuntansi {{ $transaction->accounting_date->format('d/m/Y') }}</p></div>
         <span @class(['badge badge-lg', 'badge-success' => $transaction->status === 'posted', 'badge-warning' => in_array($transaction->status, ['draft', 'submitted', 'verified']), 'badge-error' => in_array($transaction->status, ['reversed', 'rejected', 'cancelled'])])>{{ $statusLabel }}</span>
     </div>
 
@@ -62,6 +62,10 @@
         <section class="rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
             <h2 class="font-bold">Ringkasan</h2>
             <dl class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div><dt class="text-xs text-base-content/55">Tanggal aktual berlaku</dt><dd class="mt-1 font-semibold">{{ $transaction->effective_business_date->format('d/m/Y') }}</dd>@if($transaction->latestDateCorrection)<p class="mt-1 text-xs text-info">Dikoreksi melalui histori append-only.</p>@endif</div>
+                <div><dt class="text-xs text-base-content/55">Tanggal akuntansi</dt><dd class="mt-1 font-semibold">{{ $transaction->accounting_date->format('d/m/Y') }}</dd><p class="mt-1 text-xs text-base-content/55">Dasar periode laporan dan ledger.</p></div>
+                <div><dt class="text-xs text-base-content/55">Dicatat ke sistem</dt><dd class="mt-1 font-semibold">{{ $transaction->created_at?->format('d/m/Y H:i') ?? '—' }}</dd></div>
+                <div><dt class="text-xs text-base-content/55">Diposting resmi</dt><dd class="mt-1 font-semibold">{{ $journal?->posted_at?->format('d/m/Y H:i') ?? '—' }}</dd></div>
                 <div><dt class="text-xs text-base-content/55">{{ $financialAccountLabel }}</dt><dd class="mt-1 font-semibold">{{ $transaction->primaryFinancialAccount?->name ?? '—' }}</dd>@if($operation === 'interfund' && $transaction->primaryFinancialAccount)<p class="mt-1 text-xs text-base-content/55">Menjelaskan atribusi lokasi likuiditas; saldo kas/rekening tidak dipindahkan.</p>@endif</div>
                 <div><dt class="text-xs text-base-content/55">Dana</dt><dd class="mt-1 space-y-1 font-semibold">@forelse($fundingSplits as $funding)<span class="block">{{ $funding['fund']?->name ?? 'Dana' }}{{ $fundingSplits->count() > 1 ? ' · '.$rupiah($funding['amount']) : '' }}</span>@empty{{ $transaction->interfundTransfer ? 'Pindah dana' : '—' }}@endforelse</dd></div>
                 @if ($transaction->category)<div><dt class="text-xs text-base-content/55">Kategori</dt><dd class="mt-1 font-semibold">{{ $transaction->category->name }}</dd></div>@endif
@@ -126,6 +130,29 @@
                     </form>
                 </details>
             @endif
+            @if (! $isBankMutation && $transaction->status === 'posted' && auth()->user()?->hasRole('SuperAdmin'))
+                <details class="rounded-2xl border border-info/40 bg-info/5 p-3" data-date-correction>
+                    <summary class="cursor-pointer text-sm font-semibold">Koreksi Tanggal</summary>
+                    <p class="mt-2 text-xs leading-5 text-base-content/65">Koreksi tanggal aktual bersifat append-only. Tanggal akuntansi ditampilkan terpisah dan tidak dapat diubah sampai alur reversal dan transaksi pengganti tersedia.</p>
+                    @if ($attachments->isEmpty())
+                        <div class="alert alert-warning mt-3 py-2 text-xs">Transaksi belum memiliki lampiran aktif yang dapat dijadikan bukti koreksi.</div>
+                    @else
+                        <form class="mt-3 space-y-3" method="POST" action="{{ route('financial-v2.transactions.date-corrections.store', $transaction) }}" data-date-correction-form>
+                            @csrf
+                            <input type="hidden" name="entity" value="{{ $entity->id }}">
+                            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                            <label class="form-control"><span class="label-text text-xs font-semibold">Tanggal aktual transaksi</span><input class="input input-bordered input-sm" type="date" name="business_date" value="{{ $transaction->effective_business_date->toDateString() }}" required><span class="mt-1 text-xs text-base-content/55">Saat ini {{ $transaction->effective_business_date->format('d/m/Y') }}</span></label>
+                            <label class="form-control"><span class="label-text text-xs font-semibold">Tanggal akuntansi</span><input class="input input-bordered input-sm" type="date" name="accounting_date" value="{{ $transaction->accounting_date->toDateString() }}" required><span class="mt-1 text-xs text-base-content/55">Perubahan nilai ini akan ditolak karena memerlukan koreksi akuntansi resmi.</span></label>
+                            <label class="form-control"><span class="label-text text-xs font-semibold">Alasan koreksi</span><textarea class="textarea textarea-bordered textarea-sm" name="reason" minlength="10" maxlength="2000" required></textarea></label>
+                            <label class="form-control"><span class="label-text text-xs font-semibold">Bukti pendukung</span><select class="select select-bordered select-sm" name="attachment_id" required><option value="">Pilih lampiran aktif</option>@foreach($attachments as $attachment)<option value="{{ $attachment->attachment_id }}">{{ $attachment->original_filename }}</option>@endforeach</select></label>
+                            <button class="btn btn-outline btn-sm w-full" type="button" data-date-correction-preview data-preview-url="{{ route('financial-v2.transactions.date-corrections.preview', $transaction) }}">Pratinjau dampak</button>
+                            <div class="hidden rounded-xl bg-base-200 p-3 text-xs leading-5" data-date-correction-result></div>
+                            <label class="hidden items-start gap-2 text-xs" data-date-correction-confirm><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya sudah memeriksa tanggal, alasan, bukti, dan dampak koreksi ini.</span></label>
+                            <button class="btn btn-info btn-sm hidden w-full" type="submit" data-date-correction-submit>Simpan koreksi tanggal aktual</button>
+                        </form>
+                    @endif
+                </details>
+            @endif
             @if ($isBankMutation && $transaction->status === 'draft')
                 <form method="POST" action="{{ route('financial-v2.bank-mutations.destroy', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf @method('DELETE')<button class="btn btn-ghost btn-sm w-full text-error">Batalkan draft</button></form>
             @elseif (! $isBankMutation && ! $realizationParentInactive && in_array($transaction->status, ['draft', 'submitted', 'verified', 'approved'], true))
@@ -144,6 +171,13 @@
             @endif
         </div></details>
     </section>
+
+    @if ($transaction->dateCorrections->isNotEmpty())
+        <section class="mt-5 rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
+            <h2 class="font-bold">Riwayat Koreksi Tanggal Aktual</h2>
+            <div class="mt-4 space-y-3">@foreach($transaction->dateCorrections as $correction)<div class="rounded-xl border border-base-300 p-3 text-sm"><p class="font-semibold">{{ $correction->original_business_date->format('d/m/Y') }} → {{ $correction->corrected_business_date->format('d/m/Y') }}</p><p class="mt-1 text-xs text-base-content/60">Tanggal akuntansi tetap {{ $correction->accounting_date->format('d/m/Y') }} · {{ $correction->corrected_at->format('d/m/Y H:i') }}</p><p class="mt-2 whitespace-pre-line">{{ $correction->reason }}</p><p class="mt-2 text-xs text-base-content/55">Bukti: {{ $correction->evidence?->original_filename ?? $correction->evidence_attachment_id }}</p></div>@endforeach</div>
+        </section>
+    @endif
 @endsection
 
 @push('scripts')
@@ -178,6 +212,31 @@ document.addEventListener('DOMContentLoaded', () => {
     form.querySelector('[name="reason"]').addEventListener('input', () => {
         confirm.classList.add('hidden'); submit.classList.add('hidden'); result.classList.add('hidden');
         form.querySelector('[name="confirmed"]').checked = false;
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.querySelector('[data-date-correction]');
+    if (!root) return;
+    const form = root.querySelector('[data-date-correction-form]');
+    if (!form) return;
+    const preview = root.querySelector('[data-date-correction-preview]');
+    const result = root.querySelector('[data-date-correction-result]');
+    const confirm = root.querySelector('[data-date-correction-confirm]');
+    const submit = root.querySelector('[data-date-correction-submit]');
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]);
+    const resetPreview = () => { result.classList.add('hidden'); confirm.classList.add('hidden'); submit.classList.add('hidden'); form.querySelector('[name="confirmed"]').checked = false; };
+    form.querySelectorAll('input, textarea, select').forEach(field => { if (!['_token', 'idempotency_key', 'confirmed'].includes(field.name)) field.addEventListener('input', resetPreview); });
+    preview.addEventListener('click', async () => {
+        result.classList.remove('hidden'); result.textContent = 'Memeriksa koreksi…'; confirm.classList.add('hidden'); submit.classList.add('hidden');
+        try {
+            const response = await fetch(preview.dataset.previewUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value }, body: new FormData(form) });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(payload.message || 'Pratinjau tidak dapat diselesaikan.');
+            const item = payload.preview;
+            result.innerHTML = `<p class="font-semibold">Transaksi ${escapeHtml(item.transaction_id)} · ${escapeHtml(item.status)}</p><p>Aktual: ${escapeHtml(item.old_business_date)} → ${escapeHtml(item.new_business_date)}</p><p>Akuntansi: ${escapeHtml(item.old_accounting_date)} → ${escapeHtml(item.new_accounting_date)} (periode ${escapeHtml(item.accounting_period)})</p><p>Nominal tetap Rp${escapeHtml(item.amount)}</p><p class="mt-2">${escapeHtml(item.ledger_impact)}</p><p>${escapeHtml(item.balance_validation)}</p><p class="mt-2">Jurnal ${escapeHtml(item.journal_id)} · posted ${escapeHtml(item.journal_posted_at)}</p>`;
+            confirm.classList.remove('hidden'); confirm.classList.add('flex'); submit.classList.remove('hidden');
+        } catch (error) { result.textContent = error.message; }
     });
 });
 </script>

@@ -16,6 +16,7 @@ use App\Domain\FinancialV2\FinancialTransactionLifecycleService;
 use App\Domain\FinancialV2\FundPolicyCompatibilityService;
 use App\Domain\FinancialV2\MrjZiswafOpeningPosition;
 use App\Domain\FinancialV2\PostingEngine;
+use App\Domain\FinancialV2\PostedTransactionDateCorrectionService;
 use App\Domain\FinancialV2\RealizationDraftReadService;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\FundGroupingReadService;
@@ -84,6 +85,7 @@ final class OperationalFinancialController
         private readonly FinancialTransactionConfigurationResolver $configurationResolver,
         private readonly FundPolicyCompatibilityService $allocationPolicies,
         private readonly PostingEngine $postingEngine,
+        private readonly PostedTransactionDateCorrectionService $dateCorrections,
     ) {}
 
     public function dashboard(Request $request)
@@ -389,6 +391,59 @@ final class OperationalFinancialController
         }
     }
 
+    public function previewPostedDateCorrection(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $this->validatedPostedDateCorrection($request, false);
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+
+        try {
+            return response()->json(['ok' => true, 'preview' => $this->dateCorrections->preview($transaction, $input)]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function storePostedDateCorrection(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $this->validatedPostedDateCorrection($request, true);
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+
+        try {
+            $correction = $this->dateCorrections->correct($transaction, $input, (int) $request->user()->id);
+
+            return $this->success(
+                $request,
+                'Tanggal aktual transaksi sudah dikoreksi tanpa mengubah tanggal akuntansi, jurnal, ledger, atau saldo.',
+                route('financial-v2.transactions.show', ['transaction' => $transaction, 'entity' => $entity->id]),
+                ['correction_id' => $correction->id],
+            );
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function validatedPostedDateCorrection(Request $request, bool $confirmationRequired): array
+    {
+        $rules = [
+            'entity' => ['required', 'uuid'],
+            'business_date' => ['required', 'date_format:Y-m-d'],
+            'accounting_date' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+            'attachment_id' => ['required', 'uuid'],
+            'idempotency_key' => ['required', 'uuid'],
+        ];
+        if ($confirmationRequired) {
+            $rules['confirmed'] = ['accepted'];
+        }
+
+        return $request->validate($rules, $this->validationMessages());
+    }
+
     public function submitRealization(Request $request, FinancialTransaction $transaction)
     {
         return $this->advanceRealization($request, $transaction, 'submit');
@@ -534,7 +589,7 @@ final class OperationalFinancialController
 
     public function show(Request $request, FinancialTransaction $transaction)
     {
-        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.fundings.fund', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program']);
+        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.fundings.fund', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program', 'latestDateCorrection', 'dateCorrections.evidence']);
         $entity = $this->activeEntity($transaction->accounting_entity_id);
         $context = $this->contextForEntity($entity->id);
         $journal = Journal::query()->with('lines')->where('transaction_id', $transaction->id)->where('journal_status', 'posted')->first();
@@ -2009,6 +2064,7 @@ final class OperationalFinancialController
                 'splits.fund',
                 'interfundTransfer.sourceFund',
                 'interfundTransfer.destinationFund',
+                'latestDateCorrection',
             ])
             ->where('accounting_entity_id', $entity->id)
             ->latest('accounting_date')->latest('created_at');

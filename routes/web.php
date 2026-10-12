@@ -573,6 +573,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/transaksi/{transaction}/catat-mundur', [OperationalFinancialController::class, 'postControlledBackdated'])
             ->middleware('role:SuperAdmin')
             ->name('transactions.controlled-backdated.post');
+        Route::post('/transaksi/{transaction}/koreksi-tanggal/pratinjau', [OperationalFinancialController::class, 'previewPostedDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.date-corrections.preview');
+        Route::post('/transaksi/{transaction}/koreksi-tanggal', [OperationalFinancialController::class, 'storePostedDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.date-corrections.store');
         Route::post('/transaksi/{transaction}/batalkan', [OperationalFinancialController::class, 'cancel'])->name('transactions.cancel');
         Route::get('/transaksi/{transaction}', [OperationalFinancialController::class, 'show'])->name('transactions.show');
     });
