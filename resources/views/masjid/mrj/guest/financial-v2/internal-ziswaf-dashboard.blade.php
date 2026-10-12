@@ -212,15 +212,15 @@
                     @forelse ($runningBalanceRows as $row)
                         <tr class="transition hover:bg-slate-50/80">
                             <td class="whitespace-nowrap px-5 py-4 text-slate-600 sm:px-6">
+                                <span class="block font-semibold text-slate-700">Akuntansi {{ $positionDate($row['accounting_date']) }}</span>
                                 @if ($row['effective_business_date'])
-                                    <span class="block font-semibold text-slate-700">Aktual {{ $positionDate($row['effective_business_date']) }}</span>
+                                    <span class="mt-1 block text-xs text-slate-500">Aktual {{ $positionDate($row['effective_business_date']) }}</span>
                                     @if ($row['business_date_corrected'])
                                         <span class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Tanggal aktual dikoreksi</span>
                                     @endif
                                 @else
-                                    <span class="block text-slate-400">Aktual —</span>
+                                    <span class="mt-1 block text-xs text-slate-400">Aktual —</span>
                                 @endif
-                                <span class="mt-1 block text-xs text-slate-400">Akuntansi {{ $positionDate($row['accounting_date']) }}</span>
                             </td>
                             <td class="max-w-xs px-4 py-4 align-top">
                                 <a class="font-semibold text-emerald-800 hover:text-emerald-950 hover:underline" href="{{ route('internal.ziswaf.transactions.show', $row['transaction_id']) }}">{{ $row['description'] }}</a>
