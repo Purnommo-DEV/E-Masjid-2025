@@ -310,6 +310,49 @@ final class FinancialMasterDataService
         }, 3);
     }
 
+    /**
+     * Renames only the display name of a Fund through the governed master-data
+     * path. Every identity, configuration dimension, and financial relation is
+     * deliberately left untouched.
+     */
+    public function renameFund(string $entityId, string $fundId, string $name, string $reason, ?int $actorUserId = null): Fund
+    {
+        return DB::transaction(function () use ($entityId, $fundId, $name, $reason, $actorUserId): Fund {
+            DB::table('financial_v2_accounting_entities')->where('id', $entityId)->lockForUpdate()->first();
+            $fund = $this->modelForEntity(Fund::class, $entityId, $fundId, 'Dana');
+            $name = preg_replace('/\s+/u', ' ', trim($name)) ?? '';
+            $reason = preg_replace('/\s+/u', ' ', trim($reason)) ?? '';
+
+            if ($fund->status === 'closed') {
+                throw new FinancialDomainException('E-MASTER-CLOSED', 'Dana yang sudah ditutup tidak dapat diubah namanya.');
+            }
+            if ($name === '' || Str::length($name) > 160 || $reason === '') {
+                throw new FinancialDomainException('E-MASTER-RENAME-INPUT', 'Perubahan nama Dana memerlukan nama valid dan alasan audit.');
+            }
+
+            $normalizedName = Str::lower($name);
+            $duplicate = Fund::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('id', '<>', $fund->id)
+                ->get(['name'])
+                ->contains(fn (Fund $candidate): bool => Str::lower(preg_replace('/\s+/u', ' ', trim($candidate->name)) ?? '') === $normalizedName);
+            if ($duplicate) {
+                throw new FinancialDomainException('E-MASTER-FUND-NAME-DUPLICATE', 'Nama Dana sudah digunakan pada Entity yang dipilih.');
+            }
+            if ($fund->name === $name) {
+                return $fund->fresh(['type', 'restriction']);
+            }
+
+            $before = $this->fundSummary($fund);
+            $fund->update(['name' => $name, 'updated_by_user_id' => $actorUserId]);
+            $after = $this->fundSummary($fund->fresh());
+            $after['rename_reason'] = $reason;
+            $this->record($entityId, 'fund_renamed', 'fund', $fund, $actorUserId, $before, $after);
+
+            return $fund->fresh(['type', 'restriction']);
+        }, 3);
+    }
+
     public function deactivateFund(string $entityId, string $fundId, string $effectiveDate, ?int $actorUserId = null): Fund
     {
         return DB::transaction(function () use ($entityId, $fundId, $effectiveDate, $actorUserId): Fund {

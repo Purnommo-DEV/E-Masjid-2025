@@ -537,6 +537,13 @@ final class FinancialMasterDataController
     public function updateFund(Request $request, string $fund)
     {
         return $this->perform($request, 'funds', function (AccountingEntity $entity) use ($request, $fund) {
+            if ($request->input('edit_scope') === 'name') {
+                $input = $this->fundNameInput($request, $entity->id, $fund);
+                $fund = $this->masters->renameFund($entity->id, $fund, $input['name'], $input['reason'], $request->user()?->id);
+
+                return ['Nama Dana berhasil diperbarui. ID, kode, relasi, dan histori keuangan tetap sama.', ['fund_id' => $fund->id]];
+            }
+
             $fund = $this->masters->updateFund($entity->id, $fund, $this->fundInput($request), $request->user()?->id);
 
             return ['Dana diperbarui.', ['fund_id' => $fund->id]];
@@ -906,6 +913,27 @@ final class FinancialMasterDataController
             'valid_from' => ['nullable', 'date_format:Y-m-d'],
             'valid_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:valid_from'],
         ], $this->messages()) + ['allow_negative_balance' => $request->boolean('allow_negative_balance')];
+    }
+
+    /** @return array{name: string, reason: string} */
+    private function fundNameInput(Request $request, string $entityId, string $fundId): array
+    {
+        $request->merge([
+            'name' => preg_replace('/\s+/u', ' ', trim((string) $request->input('name'))),
+            'reason' => preg_replace('/\s+/u', ' ', trim((string) $request->input('reason'))),
+        ]);
+
+        return $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:160',
+                Rule::unique('financial_v2_funds', 'name')
+                    ->where(fn ($query) => $query->where('accounting_entity_id', $entityId))
+                    ->ignore($fundId),
+            ],
+            'reason' => ['required', 'string', 'max:500'],
+        ], $this->messages(), ['name' => 'Nama Dana', 'reason' => 'Alasan perubahan']);
     }
 
     /** @return array<string, mixed> */
