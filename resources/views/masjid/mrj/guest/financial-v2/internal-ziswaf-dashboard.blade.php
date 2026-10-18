@@ -13,7 +13,7 @@
     $rp = static fn ($n) => 'Rp' . number_format((float) $n, 0, ',', '.');
     $positionRupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
     $positionDate = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
-    $query = collect($filters)->except('page')->filter(fn ($v) => $v !== null && $v !== '')->all();
+    $query = collect($filters)->except(['page', 'balance_page'])->filter(fn ($v) => $v !== null && $v !== '')->all();
     $exportQuery = collect($filters)->only(['from', 'through', 'fund_id', 'program_id', 'category_id', 'type', 'status'])
         ->filter(fn ($v) => $v !== null && $v !== '')->all();
     $allocationRate = (float) $allocation > 0
@@ -40,13 +40,9 @@
                 <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm sm:min-w-64">
                     <p class="text-xs font-medium uppercase tracking-wider text-emerald-200">Periode laporan</p>
                     <p class="mt-1.5 text-sm font-semibold sm:text-base">
-                        @if ($dateFilterApplied)
-                            {{ \Carbon\Carbon::parse($periodFrom)->format('d M Y') }}
-                            <span class="mx-1 text-emerald-200">—</span>
-                            {{ \Carbon\Carbon::parse($periodThrough)->format('d M Y') }}
-                        @else
-                            Seluruh periode
-                        @endif
+                        {{ \Carbon\Carbon::parse($periodFrom)->format('d M Y') }}
+                        <span class="mx-1 text-emerald-200">—</span>
+                        {{ \Carbon\Carbon::parse($periodThrough)->format('d M Y') }}
                     </p>
                     <p class="mt-1 text-xs text-emerald-100/80">Saldo terkini per {{ \Carbon\Carbon::parse($latestDate)->format('d M Y') }}</p>
                 </div>
@@ -183,18 +179,19 @@
             <div>
                 <p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">Pergerakan dana</p>
                 <h2 id="running-balance-heading" class="mt-1 text-xl font-extrabold text-slate-900">Saldo Berjalan</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500">Saldo dihitung dari pergerakan efektif transaksi POSTED berdasarkan tanggal akuntansi; koreksi yang selesai ditampilkan melalui replacement-nya.</p>
+                <p class="mt-1 text-sm leading-6 text-slate-500">Seluruh pergerakan efektif transaksi POSTED ditampilkan secara kumulatif berdasarkan kronologi akuntansi; filter tanggal laporan tidak membatasi daftar ini.</p>
             </div>
             <span class="mt-2 inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:mt-0">
                 Saldo akhir {{ $positionRupiah($runningBalance['closing_balance']) }}
             </span>
         </div>
 
-        <x-horizontal-scroll-table>
-            <table class="w-full min-w-[900px] text-left text-sm">
+        <div data-scroll-region="running-balance" class="overflow-y-auto overscroll-y-contain" style="max-height: 36rem;">
+            <x-horizontal-scroll-table>
+                <table class="w-full min-w-[900px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th scope="col" class="px-5 py-3.5 sm:px-6">Tanggal transaksi</th>
+                        <th scope="col" class="px-5 py-3.5 sm:px-6">Tanggal</th>
                         <th scope="col" class="px-4 py-3.5">Uraian transaksi</th>
                         <th scope="col" class="px-4 py-3.5">Pos/Fund</th>
                         <th scope="col" class="px-4 py-3.5 text-right">Pemasukan</th>
@@ -203,30 +200,17 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    @if ($runningBalanceRows->currentPage() === 1)
-                        <tr class="bg-emerald-50/60">
-                            <td class="whitespace-nowrap px-5 py-4 font-medium text-slate-600 sm:px-6"><span class="block text-xs text-slate-400">Awal periode akuntansi</span>{{ $positionDate($periodFrom) }}</td>
+                    <tr class="bg-emerald-50/60">
+                            <td class="whitespace-nowrap px-5 py-4 font-medium text-slate-600 sm:px-6">{{ $positionDate($runningBalanceFrom) }}</td>
                             <td class="px-4 py-4 font-bold text-emerald-950">Saldo Awal Periode</td>
                             <td class="px-4 py-4 text-slate-500">{{ $filters['fund_id'] ?? null ? data_get(collect($report['funds'])->firstWhere('fund_id', $filters['fund_id']), 'name', 'Dana terpilih') : 'Seluruh Dana ZISWAF' }}</td>
                             <td class="px-4 py-4 text-right text-slate-400">—</td>
                             <td class="px-4 py-4 text-right text-slate-400">—</td>
                             <td class="whitespace-nowrap px-5 py-4 text-right font-bold tabular-nums text-emerald-950 sm:px-6">{{ $positionRupiah($runningBalance['opening_balance']) }}</td>
-                        </tr>
-                    @endif
+                    </tr>
                     @forelse ($runningBalanceRows as $row)
                         <tr class="transition hover:bg-slate-50/80">
-                            <td class="whitespace-nowrap px-5 py-4 text-slate-600 sm:px-6">
-                                @if ($row['business_date_corrected'])
-                                    <span class="block font-semibold text-slate-700">{{ $positionDate($row['accounting_date']) }}</span>
-                                @else
-                                    <span class="block font-semibold text-slate-700">Akuntansi {{ $positionDate($row['accounting_date']) }}</span>
-                                    @if ($row['effective_business_date'])
-                                        <span class="mt-1 block text-xs text-slate-500">Aktual {{ $positionDate($row['effective_business_date']) }}</span>
-                                    @else
-                                        <span class="mt-1 block text-xs text-slate-400">Aktual —</span>
-                                    @endif
-                                @endif
-                            </td>
+                            <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-700 sm:px-6">{{ $positionDate($row['accounting_date']) }}</td>
                             <td class="max-w-xs px-4 py-4 align-top">
                                 <a class="font-semibold text-emerald-800 hover:text-emerald-950 hover:underline" href="{{ route('internal.ziswaf.transactions.show', $row['transaction_id']) }}">{{ $row['description'] }}</a>
                                 <p class="mt-1 text-xs text-slate-400">Urutan posting {{ $row['posting_sequence'] }}</p>
@@ -237,16 +221,12 @@
                             <td class="whitespace-nowrap px-5 py-4 text-right font-mono font-bold tabular-nums text-slate-900 sm:px-6">{{ $positionRupiah($row['running_balance']) }}</td>
                         </tr>
                     @empty
-                        @if ($runningBalanceRows->currentPage() !== 1)
-                            <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Halaman saldo berjalan tidak memiliki transaksi.</td></tr>
-                        @endif
+                        <tr><td colspan="6" class="px-5 py-10 text-center text-slate-500">Tidak ada transaksi pada periode yang dipilih.</td></tr>
                     @endforelse
                 </tbody>
-            </table>
-        </x-horizontal-scroll-table>
-        @if ($runningBalanceRows->hasPages())
-            <div class="border-t border-slate-100 px-5 py-4 sm:px-6">{{ $runningBalanceRows->onEachSide(1)->links() }}</div>
-        @endif
+                </table>
+            </x-horizontal-scroll-table>
+        </div>
     </section>
 
     {{-- Allocation dan realisasi --}}
@@ -328,11 +308,12 @@
             <span class="inline-flex w-fit items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Ledger resmi · POSTED</span>
         </div>
 
-        <x-horizontal-scroll-table>
-            <table class="w-full min-w-[980px] text-left text-sm">
+        <div data-scroll-region="transaction-history" class="overflow-y-auto overscroll-y-contain" style="max-height: 36rem;">
+            <x-horizontal-scroll-table>
+                <table class="w-full min-w-[980px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
-                        <th scope="col" class="px-5 py-3.5">Tanggal aktual</th>
+                        <th scope="col" class="px-5 py-3.5">Tanggal</th>
                         <th scope="col" class="px-4 py-3.5">Uraian</th>
                         <th scope="col" class="px-4 py-3.5">Fund</th>
                         <th scope="col" class="px-4 py-3.5">Jenis</th>
@@ -345,21 +326,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @forelse ($transactions as $t)
                         <tr class="transition hover:bg-slate-50/80">
-                            <td class="whitespace-nowrap px-5 py-4 text-slate-600">
-                                @if ($t['accounting_date_corrected'])
-                                    <span class="block font-semibold text-slate-700">{{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</span>
-                                @elseif ($t['effective_business_date'])
-                                    <span class="block font-semibold text-slate-700">{{ \Carbon\Carbon::parse($t['effective_business_date'])->format('d/m/Y') }}</span>
-                                    @if ($t['business_date_corrected'])
-                                        <span class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Tanggal aktual dikoreksi</span>
-                                    @endif
-                                @else
-                                    <span class="block">—</span>
-                                @endif
-                                @if (! $t['accounting_date_corrected'])
-                                    <span class="mt-1 block text-xs text-slate-400">Akuntansi {{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</span>
-                                @endif
-                            </td>
+                            <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-700">{{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</td>
                             <td class="max-w-xs px-4 py-4">
                                 <a class="font-semibold leading-5 text-emerald-800 underline-offset-4 transition hover:text-emerald-950 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-600"
                                    href="{{ route('internal.ziswaf.transactions.show', $t['transaction_id']) }}?{{ http_build_query($query) }}">
@@ -394,10 +361,8 @@
                         </tr>
                     @endforelse
                 </tbody>
-            </table>
-        </x-horizontal-scroll-table>
-        <div class="border-t border-slate-100 px-5 py-4 sm:px-6">
-            {{ $transactions->links() }}
+                </table>
+            </x-horizontal-scroll-table>
         </div>
     </section>
 

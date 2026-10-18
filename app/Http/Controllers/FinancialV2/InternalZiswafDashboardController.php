@@ -19,7 +19,6 @@ use App\Models\FinancialV2\TransactionType;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -87,7 +86,7 @@ final class InternalZiswafDashboardController
     public function index(Request $request)
     {
         $input = $this->validated($request);
-        $summary = $this->summaryContext($input);
+        $summary = $this->summaryContext($input, true);
         $entity = $summary['entity'];
         $latest = $summary['latest'];
         $from = $summary['from'];
@@ -95,8 +94,6 @@ final class InternalZiswafDashboardController
         $report = $summary['report'];
         $positionReport = $summary['positionReport'];
         $runningBalance = $summary['runningBalance'];
-        $balancePage = max(1, (int) ($input['balance_page'] ?? 1));
-        $balancePerPage = 15;
         $balanceRows = collect($runningBalance['rows']);
         $transactions = collect($report['transactions']);
         $transactionIds = $transactions->pluck('transaction_id')
@@ -119,14 +116,6 @@ final class InternalZiswafDashboardController
                 'business_date_corrected' => $transaction?->latestDateCorrection !== null,
             ];
         });
-        $runningBalancePaginator = new LengthAwarePaginator(
-            $balanceRows->forPage($balancePage, $balancePerPage)->values(),
-            $balanceRows->count(),
-            $balancePerPage,
-            $balancePage,
-            ['path' => $request->url(), 'pageName' => 'balance_page', 'query' => $request->query()],
-        );
-
         $attachmentCounts = AttachmentLink::query()->where('accounting_entity_id', $entity->id)
             ->where('target_type', 'transaction')->where('status', 'active')
             ->whereIn('target_id', $transactions->pluck('transaction_id'))->select('target_id')
@@ -150,21 +139,15 @@ final class InternalZiswafDashboardController
                 ? $dateOrder
                 : strcmp((string) $right['transaction_id'], (string) $left['transaction_id']);
         })->values();
-        $page = max(1, (int) ($input['page'] ?? 1));
-        $perPage = 15;
-        $paginator = new LengthAwarePaginator($transactions->forPage($page, $perPage)->values(), $transactions->count(), $perPage, $page, [
-            'path' => $request->url(), 'query' => $request->query(),
-        ]);
-
         return view('masjid.mrj.guest.financial-v2.internal-ziswaf-dashboard', [
-            'entity' => $entity, 'filters' => $input, 'report' => $report,
+            'entity' => $entity, 'filters' => $input + ['from' => $from, 'through' => $through], 'report' => $report,
             'periodFrom' => $from, 'periodThrough' => $through,
-            'dateFilterApplied' => $summary['dateFilterApplied'],
+            'runningBalanceFrom' => $summary['runningBalanceFrom'],
             'positionReport' => $positionReport, 'latestDate' => $latest,
-            'runningBalance' => $runningBalance, 'runningBalanceRows' => $runningBalancePaginator,
+            'runningBalance' => $runningBalance, 'runningBalanceRows' => $balanceRows,
             'allocation' => $summary['allocation'], 'realization' => $summary['realization'],
             'remainingAllocation' => $summary['remainingAllocation'],
-            'transactions' => $paginator,
+            'transactions' => $transactions,
             'options' => $this->options($entity),
         ]);
     }
@@ -314,35 +297,43 @@ final class InternalZiswafDashboardController
             'from' => ['nullable', 'date_format:Y-m-d'], 'through' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
             'fund_id' => ['nullable', 'uuid'], 'program_id' => ['nullable', 'uuid'], 'category_id' => ['nullable', 'uuid'],
             'type' => ['nullable', 'string', 'max:40'], 'status' => ['nullable', Rule::in(['posted'])],
-            'page' => ['nullable', 'integer', 'min:1'], 'balance_page' => ['nullable', 'integer', 'min:1'],
         ]);
     }
 
-    private function summaryContext(array $input): array
+    private function summaryContext(array $input, bool $allTimeRunningBalance = false): array
     {
         $entity = $this->entity();
         $latest = $this->ledger->latestAccountingDate($entity->id) ?: now()->toDateString();
-        $earliest = $this->ledger->earliestAccountingDate($entity->id) ?: $latest;
-        $dateFilterApplied = filled($input['from'] ?? null) || filled($input['through'] ?? null);
-        $through = $input['through'] ?? $latest;
-        $from = $input['from'] ?? $earliest;
+        $today = CarbonImmutable::today();
+        $from = $input['from'] ?? $today->startOfMonth()->toDateString();
+        $through = $input['through'] ?? $today->endOfMonth()->toDateString();
         $ziswafFundIds = $this->fundScope->ids($entity);
         $report = $this->reports->report($entity, $from, $through, $ziswafFundIds, $input);
         $positionReport = $this->publicReports->reportForEntity($entity, $from, $through);
         $reportFundIds = $report['funds'] === [] ? [] : collect($report['funds'])->pluck('fund_id')->all();
-        $runningBalance = $this->runningBalances->report($entity, $from, $through, $reportFundIds, $input['type'] ?? null);
+        $runningBalanceFrom = $allTimeRunningBalance
+            ? ($this->ledger->earliestAccountingDate($entity->id) ?: $latest)
+            : $from;
+        $runningBalanceThrough = $allTimeRunningBalance ? $latest : $through;
+        $runningBalance = $this->runningBalances->report(
+            $entity,
+            $runningBalanceFrom,
+            $runningBalanceThrough,
+            $reportFundIds,
+            $input['type'] ?? null,
+        );
         $allocation = DecimalAmount::sum(collect($report['programs'])->pluck('allocation'));
         $realization = DecimalAmount::sum(collect($report['programs'])->pluck('realization'));
 
         return [
             'entity' => $entity,
             'latest' => $latest,
-            'dateFilterApplied' => $dateFilterApplied,
             'from' => $from,
             'through' => $through,
             'report' => $report,
             'positionReport' => $positionReport,
             'runningBalance' => $runningBalance,
+            'runningBalanceFrom' => $runningBalanceFrom,
             'allocation' => $allocation,
             'realization' => $realization,
             'remainingAllocation' => DecimalAmount::subtract($allocation, $realization),

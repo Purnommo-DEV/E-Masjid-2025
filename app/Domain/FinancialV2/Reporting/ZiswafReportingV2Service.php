@@ -416,7 +416,7 @@ final class ZiswafReportingV2Service
             $query->whereRaw($effectiveType.' = ?', [$type]);
         }
 
-        return $query->orderByDesc('journal.accounting_date')->orderByDesc('journal.posting_sequence')->limit(100)->get()
+        return $query->orderByDesc('journal.accounting_date')->orderByDesc('journal.posting_sequence')->get()
             ->map(function (object $row) use ($cashIn, $replacementCorrectionTransactions): array {
                 $type = $row->original_transaction_type_code ?: $row->transaction_type_code;
                 $amount = $this->amount($row->total_debit);
