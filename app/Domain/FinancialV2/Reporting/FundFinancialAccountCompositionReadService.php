@@ -99,15 +99,30 @@ final class FundFinancialAccountCompositionReadService
         string $financialAccountId,
         string $throughAccountingDate,
     ): string {
-        $ledgerBalance = $this->postedLedger->ledger($entityId, $throughAccountingDate)
+        return $this->balance($entityId, $fundId, $financialAccountId, $throughAccountingDate, true);
+    }
+
+    /** Repeatable-read balance for read-only plans; never use for posting authorization. */
+    public function snapshotBalance(
+        string $entityId,
+        string $fundId,
+        string $financialAccountId,
+        string $throughAccountingDate,
+    ): string {
+        return $this->balance($entityId, $fundId, $financialAccountId, $throughAccountingDate, false);
+    }
+
+    private function balance(string $entityId, string $fundId, string $financialAccountId, string $throughAccountingDate, bool $lockingRead): string
+    {
+        $query = $this->postedLedger->ledger($entityId, $throughAccountingDate)
             ->where('ledger.fund_id', $fundId)
             ->where('ledger.financial_account_id', $financialAccountId)
-            ->selectRaw('COALESCE(SUM(ledger.signed_amount), 0) as balance')
-            ->lockForUpdate()
-            ->value('balance');
+            ->selectRaw('COALESCE(SUM(ledger.signed_amount), 0) as balance');
+        if ($lockingRead) $query->lockForUpdate();
+        $ledgerBalance = $query->value('balance');
         $balance = DecimalAmount::normalize((string) $ledgerBalance);
 
-        foreach ($this->attributionEvents($entityId, $throughAccountingDate, $fundId, $financialAccountId, true) as $event) {
+        foreach ($this->attributionEvents($entityId, $throughAccountingDate, $fundId, $financialAccountId, $lockingRead) as $event) {
             $amount = DecimalAmount::normalize((string) $event->attribution_amount);
             if ($event->source_fund_id === $fundId) {
                 $balance = DecimalAmount::subtract($balance, $amount);
@@ -192,9 +207,12 @@ final class FundFinancialAccountCompositionReadService
         string $financialAccountId,
         string $accountingDate,
         string $effect,
+        bool $consistentSnapshot = false,
     ): array {
         $effect = DecimalAmount::normalize($effect);
-        $runningBalance = $this->currentBalance($entityId, $fundId, $financialAccountId, $accountingDate);
+        $runningBalance = $consistentSnapshot
+            ? $this->snapshotBalance($entityId, $fundId, $financialAccountId, $accountingDate)
+            : $this->currentBalance($entityId, $fundId, $financialAccountId, $accountingDate);
         $minimumBalance = DecimalAmount::add($runningBalance, $effect);
         $minimumDate = $accountingDate;
         $timeline = [[
@@ -301,6 +319,195 @@ final class FundFinancialAccountCompositionReadService
             'timeline' => $timeline,
             'activity' => $activity->all(),
         ];
+    }
+
+    /**
+     * Read-only projection for a bounded correction effect: replacement starts
+     * at the target date and reversal removes the original effect at source.
+     * Existing posted activity remains ordered by accounting date and posting
+     * sequence; proposed entries are deliberately marked without a sequence.
+     *
+     * @return array<string,mixed>
+     */
+    public function accountingDateCorrectionProjection(
+        string $entityId,
+        string $fundId,
+        string $financialAccountId,
+        string $targetDate,
+        string $sourceDate,
+        string $replacementEffect,
+        string $reversalEffect,
+        ?string $sourceJournalId = null,
+    ): array {
+        $replacementEffect = DecimalAmount::normalize($replacementEffect);
+        $reversalEffect = DecimalAmount::normalize($reversalEffect);
+        $base = $this->backdatedProjection($entityId, $fundId, $financialAccountId, $targetDate, '0.00', true);
+        return $this->replayAccountingDateCorrectionTimeline($base['timeline'][0]['current_balance'], $base['activity'], $targetDate, $sourceDate, $replacementEffect, $reversalEffect, $sourceJournalId);
+    }
+
+    /**
+     * Canonical projection for one atomic correction unit that may contain
+     * several source journals on the same Fund/account dimension. Each
+     * reversal is applied immediately before its immutable source journal is
+     * replayed, so the projection never invents a transient double outflow.
+     *
+     * @param list<array{source_date:string,source_journal_id:string,reversal_effect:string}> $reversals
+     * @return array<string,mixed>
+     */
+    public function accountingDateCorrectionBatchProjection(
+        string $entityId,
+        string $fundId,
+        string $financialAccountId,
+        string $targetDate,
+        string $replacementEffect,
+        array $reversals,
+    ): array {
+        $base = $this->backdatedProjection($entityId, $fundId, $financialAccountId, $targetDate, '0.00', true);
+
+        return $this->replayAccountingDateCorrectionBatchTimeline(
+            $base['timeline'][0]['current_balance'],
+            $base['activity'],
+            $targetDate,
+            $replacementEffect,
+            $reversals,
+        );
+    }
+
+    /** @param array<int,array<string,mixed>> $activity @param list<array{source_date:string,source_journal_id:string,reversal_effect:string}> $reversals */
+    public function replayAccountingDateCorrectionBatchTimeline(string $openingBalance, array $activity, string $targetDate, string $replacementEffect, array $reversals): array
+    {
+        $running = DecimalAmount::normalize($openingBalance);
+        $correctionEffect = DecimalAmount::normalize($replacementEffect);
+        $projected = DecimalAmount::add($running, $correctionEffect);
+        $minimum = $projected;
+        $minimumDate = $targetDate;
+        $pending = collect($reversals)->map(fn (array $row): array => [
+            'source_date' => $row['source_date'],
+            'source_journal_id' => $row['source_journal_id'],
+            'reversal_effect' => DecimalAmount::normalize($row['reversal_effect']),
+            'applied' => false,
+        ])->values()->all();
+        $timeline = [[
+            'accounting_date' => $targetDate,
+            'posting_sequence' => null,
+            'activity_kind' => 'proposed_replacement_batch',
+            'activity_reference' => null,
+            'current_balance' => $running,
+            'correction_effect' => $correctionEffect,
+            'projected_balance' => $projected,
+        ]];
+
+        foreach ($activity as $row) {
+            foreach ($pending as $index => $reversal) {
+                if ($reversal['applied']) continue;
+                if (($row['journal_id'] ?? null) === $reversal['source_journal_id'] || $row['accounting_date'] > $reversal['source_date']) {
+                    $correctionEffect = DecimalAmount::add($correctionEffect, $reversal['reversal_effect']);
+                    $this->appendCorrectionProjectionPoint($timeline, $reversal['source_date'], 'proposed_reversal', $running, $correctionEffect, $minimum, $minimumDate);
+                    $pending[$index]['applied'] = true;
+                }
+            }
+            $running = DecimalAmount::add($running, $row['balance_effect']);
+            $projected = DecimalAmount::add($running, $correctionEffect);
+            $timeline[] = [
+                'accounting_date' => $row['accounting_date'],
+                'posting_sequence' => $row['posting_sequence'],
+                'activity_kind' => $row['kind'],
+                'activity_reference' => $row['ledger_entry_id'] ?? $row['journal_id'],
+                'current_balance' => $running,
+                'correction_effect' => $correctionEffect,
+                'projected_balance' => $projected,
+            ];
+            if (DecimalAmount::compare($projected, $minimum) < 0) {
+                $minimum = $projected;
+                $minimumDate = $row['accounting_date'];
+            }
+        }
+        foreach ($pending as $reversal) {
+            if ($reversal['applied']) continue;
+            $correctionEffect = DecimalAmount::add($correctionEffect, $reversal['reversal_effect']);
+            $this->appendCorrectionProjectionPoint($timeline, $reversal['source_date'], 'proposed_reversal', $running, $correctionEffect, $minimum, $minimumDate);
+        }
+
+        return [
+            'opening_balance_at_target' => DecimalAmount::normalize($openingBalance),
+            'replacement_effect' => DecimalAmount::normalize($replacementEffect),
+            'reversal_effect' => DecimalAmount::sum(array_column($reversals, 'reversal_effect')),
+            'ending_cumulative_effect' => $correctionEffect,
+            'minimum_projected_balance' => $minimum,
+            'minimum_projected_date' => $minimumDate,
+            'timeline' => $timeline,
+        ];
+    }
+
+    /** @param array<int,array<string,mixed>> $activity @return array<string,mixed> */
+    public function replayAccountingDateCorrectionTimeline(string $openingBalance, array $activity, string $targetDate, string $sourceDate, string $replacementEffect, string $reversalEffect, ?string $sourceJournalId): array
+    {
+        $running=DecimalAmount::normalize($openingBalance);$correctionEffect=DecimalAmount::normalize($replacementEffect);$reversalEffect=DecimalAmount::normalize($reversalEffect);
+        $projected=DecimalAmount::add($running,$correctionEffect);$minimum=$projected;$minimumDate=$targetDate;$reversalApplied=false;
+        $timeline=[['accounting_date'=>$targetDate,'posting_sequence'=>null,'activity_kind'=>'proposed_replacement','activity_reference'=>null,'current_balance'=>$running,'correction_effect'=>$correctionEffect,'projected_balance'=>$projected]];
+        foreach ($activity as $index => $row) {
+            // The governed reversal and the source journal form one atomic
+            // correction pair. Apply the reversal immediately before replaying
+            // the source journal's liquidity entry; otherwise the replay
+            // invents a transient double-outflow between the original line and
+            // its reversal and can report a false negative minimum balance.
+            if (! $reversalApplied && $sourceJournalId !== null && ($row['journal_id'] ?? null) === $sourceJournalId) {
+                $correctionEffect = DecimalAmount::add($correctionEffect, $reversalEffect);
+                $this->appendCorrectionProjectionPoint($timeline, $sourceDate, 'proposed_reversal', $running, $correctionEffect, $minimum, $minimumDate);
+                $reversalApplied = true;
+            }
+            if (! $reversalApplied && $row['accounting_date'] > $sourceDate) {
+                $correctionEffect = DecimalAmount::add($correctionEffect, $reversalEffect);
+                $this->appendCorrectionProjectionPoint($timeline, $sourceDate, 'proposed_reversal', $running, $correctionEffect, $minimum, $minimumDate);
+                $reversalApplied = true;
+            }
+            $running = DecimalAmount::add($running, $row['balance_effect']);
+            $projected = DecimalAmount::add($running, $correctionEffect);
+            $timeline[] = [
+                'accounting_date' => $row['accounting_date'],
+                'posting_sequence' => $row['posting_sequence'],
+                'activity_kind' => $row['kind'],
+                'activity_reference' => $row['ledger_entry_id'] ?? $row['journal_id'],
+                'current_balance' => $running,
+                'correction_effect' => $correctionEffect,
+                'projected_balance' => $projected,
+            ];
+            if (DecimalAmount::compare($projected, $minimum) < 0) {
+                $minimum = $projected;
+                $minimumDate = $row['accounting_date'];
+            }
+            $nextDate = $activity[$index + 1]['accounting_date'] ?? null;
+            if (! $reversalApplied && $sourceJournalId === null && $row['accounting_date'] === $sourceDate && $nextDate !== $sourceDate) {
+                $correctionEffect = DecimalAmount::add($correctionEffect, $reversalEffect);
+                $this->appendCorrectionProjectionPoint($timeline, $sourceDate, 'proposed_reversal', $running, $correctionEffect, $minimum, $minimumDate);
+                $reversalApplied = true;
+            }
+        }
+        if (! $reversalApplied) {
+            $correctionEffect = DecimalAmount::add($correctionEffect, $reversalEffect);
+            $this->appendCorrectionProjectionPoint($timeline, $sourceDate, 'proposed_reversal', $running, $correctionEffect, $minimum, $minimumDate);
+        }
+
+        return [
+            'opening_balance_at_target' => DecimalAmount::normalize($openingBalance),
+            'replacement_effect' => $replacementEffect,
+            'reversal_effect' => $reversalEffect,
+            'ending_cumulative_effect' => $correctionEffect,
+            'minimum_projected_balance' => $minimum,
+            'minimum_projected_date' => $minimumDate,
+            'timeline' => $timeline,
+        ];
+    }
+
+    /** @param array<int,array<string,mixed>> $timeline */
+    private function appendCorrectionProjectionPoint(array &$timeline, string $date, string $kind, string $running, string $effect, string &$minimum, string &$minimumDate): void
+    {
+        $projected = DecimalAmount::add($running, $effect);
+        $timeline[] = ['accounting_date' => $date, 'posting_sequence' => null, 'activity_kind' => $kind, 'activity_reference' => null, 'current_balance' => $running, 'correction_effect' => $effect, 'projected_balance' => $projected];
+        if (DecimalAmount::compare($projected, $minimum) < 0) {
+            $minimum = $projected;
+            $minimumDate = $date;
+        }
     }
 
     /** @return Collection<int, object> */

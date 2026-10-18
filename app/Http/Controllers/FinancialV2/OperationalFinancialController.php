@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\AllocationHistoryReadService;
+use App\Domain\FinancialV2\AccountingDateCorrectionWorkflowService;
+use App\Domain\FinancialV2\AccountingDateCorrectionExecutionOrchestrator;
+use App\Domain\FinancialV2\AccountingDateCorrectionBatchWorkflowService;
 use App\Domain\FinancialV2\BalanceInquiryService;
 use App\Domain\FinancialV2\BankMutationService;
 use App\Domain\FinancialV2\BudgetAllocationService;
@@ -25,6 +28,8 @@ use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\TransactionEvidenceStatusService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
 use App\Models\FinancialV2\AccountingEntity;
+use App\Models\FinancialV2\AccountingDateCorrectionRequest;
+use App\Models\FinancialV2\AccountingDateCorrectionBatch;
 use App\Models\FinancialV2\AccountingPeriod;
 use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\AttachmentLink;
@@ -86,6 +91,9 @@ final class OperationalFinancialController
         private readonly FundPolicyCompatibilityService $allocationPolicies,
         private readonly PostingEngine $postingEngine,
         private readonly PostedTransactionDateCorrectionService $dateCorrections,
+        private readonly AccountingDateCorrectionWorkflowService $accountingDateCorrections,
+        private readonly AccountingDateCorrectionExecutionOrchestrator $accountingDateCorrectionExecutor,
+        private readonly AccountingDateCorrectionBatchWorkflowService $accountingDateCorrectionBatches,
     ) {}
 
     public function dashboard(Request $request)
@@ -445,6 +453,234 @@ final class OperationalFinancialController
         return $request->validate($rules, $this->validationMessages());
     }
 
+    public function previewAccountingDateCorrection(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $this->validatedAccountingDateCorrection($request, false);
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+
+        try {
+            return response()->json(['ok' => true, 'preview' => $this->accountingDateCorrections->preview($transaction, $input, (int) $request->user()->id)]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function requestAccountingDateCorrection(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $this->validatedAccountingDateCorrection($request, true);
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+
+        try {
+            $correction = $this->accountingDateCorrections->request($transaction, $input, (int) $request->user()->id);
+            $message = $correction->status === 'blocked'
+                ? 'Permintaan tersimpan sebagai blocked. Tidak ada reversal, replacement, jurnal, atau ledger yang dibuat.'
+                : 'Permintaan koreksi tersimpan dan menunggu persetujuan SuperAdmin lain. Belum ada posting ke jurnal atau ledger.';
+            return $this->success($request, $message, route('financial-v2.transactions.show', ['transaction' => $transaction, 'entity' => $entity->id]), ['accounting_date_correction_id' => $correction->id, 'status' => $correction->status]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function approveAccountingDateCorrection(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $request->validate(['entity' => ['required', 'uuid'], 'notes' => ['nullable', 'string', 'max:2000'], 'confirmed' => ['accepted']], $this->validationMessages());
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($accountingCorrection->accounting_entity_id === $entity->id, 404);
+        try {
+            $approved = $this->accountingDateCorrections->approve($accountingCorrection, (int) $request->user()->id, $input['notes'] ?? null);
+            return $this->success($request, 'Permintaan mendapat governance approval. Status ini bukan execution-ready; reversal dan replacement belum tersedia dan tidak dijalankan.', route('financial-v2.transactions.show', ['transaction' => $approved->original_transaction_id, 'entity' => $entity->id]), ['accounting_date_correction_id' => $approved->id, 'status' => $approved->status]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function rejectAccountingDateCorrection(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $request->validate(['entity' => ['required', 'uuid'], 'notes' => ['required', 'string', 'min:10', 'max:2000']], $this->validationMessages());
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($accountingCorrection->accounting_entity_id === $entity->id, 404);
+        try {
+            $rejected = $this->accountingDateCorrections->reject($accountingCorrection, (int) $request->user()->id, $input['notes']);
+            return $this->success($request, 'Permintaan koreksi ditolak dan keputusan disimpan append-only.', route('financial-v2.transactions.show', ['transaction' => $rejected->original_transaction_id, 'entity' => $entity->id]), ['accounting_date_correction_id' => $rejected->id, 'status' => $rejected->status]);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function reevaluateAccountingDateCorrection(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $request->validate(['entity' => ['required', 'uuid']], $this->validationMessages());
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($accountingCorrection->accounting_entity_id === $entity->id, 404);
+        try {
+            $evaluated = $this->accountingDateCorrections->reevaluate($accountingCorrection, (int) $request->user()->id);
+            return $this->success($request, 'Request telah dievaluasi ulang; snapshot evaluasi baru disimpan tanpa mengubah snapshot lama.', route('financial-v2.transactions.show', ['transaction' => $evaluated->original_transaction_id, 'entity' => $entity->id]), ['status' => $evaluated->status]);
+        } catch (FinancialDomainException $exception) { return $this->failure($request, $exception); }
+    }
+
+    public function cancelAccountingDateCorrection(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input = $request->validate(['entity' => ['required', 'uuid'], 'confirmed' => ['accepted']], $this->validationMessages());
+        $entity = $this->activeEntity($input['entity']);
+        abort_unless($accountingCorrection->accounting_entity_id === $entity->id, 404);
+        try {
+            $cancelled = $this->accountingDateCorrections->cancel($accountingCorrection, (int) $request->user()->id);
+            return $this->success($request, 'Request dibatalkan tanpa menghapus histori.', route('financial-v2.transactions.show', ['transaction' => $cancelled->original_transaction_id, 'entity' => $entity->id]), ['status' => $cancelled->status]);
+        } catch (FinancialDomainException $exception) { return $this->failure($request, $exception); }
+    }
+
+    public function previewAccountingDateCorrectionExecution(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        $context = $this->context($request);
+        $entity = $context['entity'];
+        abort_unless($entity && $accountingCorrection->accounting_entity_id === $entity->id, 404);
+
+        try {
+            return response()->json([
+                'ok' => true,
+                'assessment' => $this->accountingDateCorrectionExecutor->assessIndividual(
+                    $entity->id,
+                    $accountingCorrection->id,
+                    (int) $request->user()->id,
+                ),
+            ]);
+        } catch (\Throwable $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function executeAccountingDateCorrection(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        $context = $this->context($request);
+        $entity = $context['entity'];
+        abort_unless($entity && $accountingCorrection->accounting_entity_id === $entity->id, 404);
+        $input = $request->validate([
+            'idempotency_key' => ['required', 'uuid'],
+            'confirmed' => ['accepted'],
+        ]);
+
+        try {
+            $result = $this->accountingDateCorrectionExecutor->executeIndividual(
+                $entity->id,
+                $accountingCorrection->id,
+                $input['idempotency_key'],
+                (int) $request->user()->id,
+            );
+
+            return $this->success($request, 'Koreksi tanggal akuntansi selesai melalui workflow canonical.', route('financial-v2.transactions.show', ['transaction' => $accountingCorrection->original_transaction_id, 'entity' => $entity->id]), ['execution' => $result]);
+        } catch (\Throwable $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function stageAccountingDateCorrection(Request $request, AccountingDateCorrectionRequest $accountingCorrection)
+    {
+        $context = $this->context($request);
+        $entity = $context['entity'];
+        abort_unless($entity && $accountingCorrection->accounting_entity_id === $entity->id, 404);
+        $input = $request->validate(['idempotency_key' => ['required', 'uuid'], 'confirmed' => ['accepted']]);
+
+        try {
+            $result = $this->accountingDateCorrectionExecutor->stageIndividual($entity->id, $accountingCorrection->id, $input['idempotency_key'], (int) $request->user()->id);
+            return $this->success($request, 'Pasangan reversal/replacement telah distage tanpa posting jurnal atau ledger.', route('financial-v2.transactions.show', ['transaction' => $accountingCorrection->original_transaction_id, 'entity' => $entity->id]), ['staging' => $result]);
+        } catch (\Throwable $exception) { return $this->failure($request, $exception); }
+    }
+
+    public function previewAccountingDateCorrectionBatchExecution(Request $request, AccountingDateCorrectionBatch $accountingCorrectionBatch)
+    {
+        $context = $this->context($request);
+        $entity = $context['entity'];
+        abort_unless($entity && $accountingCorrectionBatch->accounting_entity_id === $entity->id, 404);
+
+        try {
+            return response()->json([
+                'ok' => true,
+                'assessment' => $this->accountingDateCorrectionExecutor->assessBatch(
+                    $entity->id,
+                    $accountingCorrectionBatch->id,
+                    (int) $request->user()->id,
+                ),
+            ]);
+        } catch (\Throwable $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function provisionAccountingDateCorrectionBatch(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $input=$request->validate(['entity'=>['required','uuid'],'confirmed'=>['accepted']]);
+        $entity=$this->activeEntity($input['entity']);
+        abort_unless($transaction->accounting_entity_id===$entity->id&&$transaction->correlation_id,404);
+        try{
+            $batch=AccountingDateCorrectionBatch::query()->where('accounting_entity_id',$entity->id)->where('active_group_guard',$transaction->correlation_id)->first();
+            if($batch&&$batch->status==='approved'&&!$this->accountingDateCorrectionBatches->executionReadiness($batch)['execution_ready']){
+                $this->accountingDateCorrectionBatches->cancel($entity->id,$batch->id,(int)$request->user()->id,'Snapshot batch diperbarui setelah seluruh scoped policy exception anggota tervalidasi.');
+                $batch=null;
+            }
+            if(!$batch)$batch=$this->accountingDateCorrectionBatches->createDraft($entity->id,$transaction->correlation_id,'2026-09-30',(string)Str::uuid(),(int)$request->user()->id,5);
+            if($batch->status==='draft')$batch=$this->accountingDateCorrectionBatches->submit($entity->id,$batch->id,(int)$request->user()->id);
+            if($batch->status==='pending_review')$batch=$this->accountingDateCorrectionBatches->approve($entity->id,$batch->id,(int)$request->user()->id,'Persetujuan bulat G-01–G-08; scoped SuperAdmin Override untuk batch lima transaksi bank.');
+            return $this->success($request,'Batch koreksi bank telah dimaterialisasi melalui workflow resmi; belum ada posting.',route('financial-v2.transactions.show',['transaction'=>$transaction,'entity'=>$entity->id]),['batch_id'=>$batch->id,'status'=>$batch->status]);
+        }catch(\Throwable$exception){return $this->failure($request,$exception);}
+    }
+
+    public function executeAccountingDateCorrectionBatch(Request $request, AccountingDateCorrectionBatch $accountingCorrectionBatch)
+    {
+        $context = $this->context($request);
+        $entity = $context['entity'];
+        abort_unless($entity && $accountingCorrectionBatch->accounting_entity_id === $entity->id, 404);
+        $input = $request->validate(['idempotency_key' => ['required', 'uuid'], 'confirmed' => ['accepted']]);
+
+        try {
+            $result = $this->accountingDateCorrectionExecutor->executeBatch(
+                $entity->id,
+                $accountingCorrectionBatch->id,
+                $input['idempotency_key'],
+                (int) $request->user()->id,
+            );
+
+            return $this->success($request, 'Batch koreksi tanggal akuntansi selesai secara atomik melalui workflow canonical.', route('financial-v2.dashboard', ['entity' => $entity->id]), ['execution' => $result]);
+        } catch (\Throwable $exception) {
+            return $this->failure($request, $exception);
+        }
+    }
+
+    public function stageAccountingDateCorrectionBatch(Request $request, AccountingDateCorrectionBatch $accountingCorrectionBatch)
+    {
+        $context=$this->context($request);$entity=$context['entity'];
+        abort_unless($entity&&$accountingCorrectionBatch->accounting_entity_id===$entity->id,404);
+        $input=$request->validate(['idempotency_key'=>['required','uuid'],'confirmed'=>['accepted']]);
+        try{
+            $result=$this->accountingDateCorrectionExecutor->stageBatch($entity->id,$accountingCorrectionBatch->id,$input['idempotency_key'],(int)$request->user()->id);
+            return $this->success($request,'Kelima pasangan batch telah distage dan ditautkan tanpa posting jurnal atau ledger.',route('financial-v2.transactions.show',['transaction'=>$accountingCorrectionBatch->items()->orderBy('item_no')->value('transaction_id'),'entity'=>$entity->id]),['staging'=>$result]);
+        }catch(\Throwable$exception){return $this->failure($request,$exception);}
+    }
+
+    /** @return array<string,mixed> */
+    private function validatedAccountingDateCorrection(Request $request, bool $confirmationRequired): array
+    {
+        $rules = [
+            'entity' => ['required', 'uuid'],
+            'target_accounting_date' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['required', 'string', 'min:20', 'max:4000'],
+            'attachment_id' => ['required', 'uuid'],
+            'idempotency_key' => ['required', 'uuid'],
+        ];
+        if ($confirmationRequired) {
+            $rules['confirmed'] = ['accepted'];
+        }
+        return $request->validate($rules, $this->validationMessages());
+    }
+
     public function submitRealization(Request $request, FinancialTransaction $transaction)
     {
         return $this->advanceRealization($request, $transaction, 'submit');
@@ -590,7 +826,7 @@ final class OperationalFinancialController
 
     public function show(Request $request, FinancialTransaction $transaction)
     {
-        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.fundings.fund', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program', 'latestDateCorrection', 'dateCorrections.evidence']);
+        $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'treasuryTransfer', 'interfundTransfer', 'realization.budgetAllocationVersion.fundings.fund', 'realization.budgetAllocationVersion.allocation.fund', 'realization.budgetAllocationVersion.allocation.program', 'latestDateCorrection', 'dateCorrections.evidence', 'accountingDateCorrectionRequests.approval', 'accountingDateCorrectionRequests.lineage', 'accountingDateCorrectionRequests.evaluations']);
         $isBankMutation = array_key_exists((string) $transaction->category?->code, BankMutationService::CATEGORY_CODES);
         $bankMutationBatchOtherCount = $isBankMutation
             ? FinancialTransaction::query()
@@ -627,6 +863,9 @@ final class OperationalFinancialController
                 'attachment.status as attachment_status',
             ]);
         $evidenceStatus = $this->evidenceStatusForTransaction($transaction);
+        $accountingDateCorrectionBatch = $isBankMutation
+            ? AccountingDateCorrectionBatch::query()->where('accounting_entity_id',$entity->id)->where('correlation_id',$transaction->correlation_id)->where('status','approved')->latest('created_at')->first()
+            : null;
 
         return view('masjid.mrj.admin.financial-v2.show', [
             'entities' => $context['entities'],
@@ -647,6 +886,7 @@ final class OperationalFinancialController
                 : null,
             'labels' => $journal ? $this->journalLabels($journal) : $this->emptyJournalLabels(),
             'configurationStatus' => $this->configurationStatusForTransaction($entity, $transaction),
+            'accountingDateCorrectionBatch' => $accountingDateCorrectionBatch,
         ]);
     }
 
@@ -2292,6 +2532,9 @@ final class OperationalFinancialController
 
     private function failure(Request $request, \Throwable $exception)
     {
+        if (! $exception instanceof FinancialDomainException && ! $exception instanceof FinancialPostingException) {
+            report($exception);
+        }
         $message = $this->humanMessage($exception);
         if ($request->expectsJson()) {
             $payload = ['ok' => false, 'message' => $message, 'code' => $exception instanceof FinancialDomainException || $exception instanceof FinancialPostingException ? $exception->failureCode : 'E-UX-UNKNOWN'];

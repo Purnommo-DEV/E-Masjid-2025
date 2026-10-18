@@ -1,0 +1,3 @@
+<?php
+namespace App\Models\FinancialV2;use DomainException;
+final class AccountingDateCorrectionBatchApproval extends FinancialV2Model{public $timestamps=false;protected $table='financial_v2_accounting_date_correction_batch_approvals';protected $casts=['batch_snapshot'=>'array','decided_at'=>'datetime','created_at'=>'datetime'];protected static function booted():void{static::creating(fn()=>throw new DomainException('Decision batch hanya dibuat service canonical.'));static::updating(fn()=>throw new DomainException('Decision batch append-only.'));static::deleting(fn()=>throw new DomainException('Decision batch disimpan permanen.'));}}

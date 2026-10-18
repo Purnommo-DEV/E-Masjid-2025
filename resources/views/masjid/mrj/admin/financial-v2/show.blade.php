@@ -156,6 +156,26 @@
                         </form>
                     @endif
                 </details>
+                <details class="rounded-2xl border border-warning/40 bg-warning/5 p-3" data-accounting-date-correction>
+                    <summary class="cursor-pointer text-sm font-semibold">Ajukan Koreksi Tanggal Akuntansi</summary>
+                    <p class="mt-2 text-xs leading-5 text-base-content/65">Tahap ini hanya menyimpan permintaan governance, preview, blocker, dan lineage. Persetujuan tidak menjalankan reversal atau replacement sampai orkestrator PostingEngine atomik tersedia.</p>
+                    @if (($isBankMutation ? $dateCorrectionAttachments : $activeDateCorrectionAttachments)->isEmpty())
+                        <div class="alert alert-warning mt-3 py-2 text-xs">Transaksi belum memiliki lampiran aktif sebagai bukti koreksi.</div>
+                    @else
+                        <form class="mt-3 space-y-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.request', $transaction) }}" data-accounting-date-correction-form>
+                            @csrf
+                            <input type="hidden" name="entity" value="{{ $entity->id }}">
+                            <input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}">
+                            <label class="form-control"><span class="label-text text-xs font-semibold">Tanggal akuntansi target</span><input class="input input-bordered input-sm" type="date" name="target_accounting_date" value="{{ $transaction->effective_business_date->toDateString() }}" required><span class="mt-1 text-xs text-base-content/55">Tanggal akuntansi saat ini {{ $transaction->accounting_date->format('d/m/Y') }}</span></label>
+                            <label class="form-control"><span class="label-text text-xs font-semibold">Alasan dan dasar pengakuan periode</span><textarea class="textarea textarea-bordered textarea-sm" name="reason" minlength="20" maxlength="4000" required></textarea></label>
+                            <label class="form-control"><span class="label-text text-xs font-semibold">{{ $isBankMutation ? 'Rekening koran pendukung' : 'Bukti pendukung' }}</span><select class="select select-bordered select-sm" name="attachment_id" required><option value="">Pilih lampiran aktif</option>@foreach(($isBankMutation ? $dateCorrectionAttachments : $activeDateCorrectionAttachments) as $attachment)<option value="{{ $attachment->attachment_id }}">{{ $attachment->original_filename }}</option>@endforeach</select></label>
+                            <button class="btn btn-outline btn-sm w-full" type="button" data-accounting-date-correction-preview data-preview-url="{{ route('financial-v2.transactions.accounting-date-corrections.preview', $transaction) }}">Pratinjau governance dan dampak</button>
+                            <div class="hidden rounded-xl bg-base-200 p-3 text-xs leading-5" data-accounting-date-correction-result></div>
+                            <label class="hidden items-start gap-2 text-xs" data-accounting-date-correction-confirm><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya memahami permintaan ini belum mengubah transaksi, jurnal, ledger, saldo, Realization, atau Distribution.</span></label>
+                            <button class="btn btn-warning btn-sm hidden w-full" type="submit" data-accounting-date-correction-submit>Simpan permintaan koreksi</button>
+                        </form>
+                    @endif
+                </details>
             @endif
             @if ($isBankMutation && $transaction->status === 'draft')
                 <form method="POST" action="{{ route('financial-v2.bank-mutations.destroy', ['transaction' => $transaction, 'entity' => $entity->id]) }}">@csrf @method('DELETE')<button class="btn btn-ghost btn-sm w-full text-error">Batalkan draft</button></form>
@@ -180,6 +200,47 @@
         <section class="mt-5 rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
             <h2 class="font-bold">Riwayat Koreksi Tanggal Aktual</h2>
             <div class="mt-4 space-y-3">@foreach($transaction->dateCorrections as $correction)<div class="rounded-xl border border-base-300 p-3 text-sm"><p class="font-semibold">{{ $correction->original_business_date->format('d/m/Y') }} → {{ $correction->corrected_business_date->format('d/m/Y') }}</p><p class="mt-1 text-xs text-base-content/60">Tanggal akuntansi tetap {{ $correction->accounting_date->format('d/m/Y') }} · {{ $correction->corrected_at->format('d/m/Y H:i') }}</p><p class="mt-2 whitespace-pre-line">{{ $correction->reason }}</p><p class="mt-2 text-xs text-base-content/55">Bukti: {{ $correction->evidence?->original_filename ?? $correction->evidence_attachment_id }}</p></div>@endforeach</div>
+        </section>
+    @endif
+
+    @if ($transaction->accountingDateCorrectionRequests->isNotEmpty())
+        <section class="mt-5 rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
+            <h2 class="font-bold">Workflow Koreksi Tanggal Akuntansi</h2>
+            <div class="mt-4 space-y-3">
+                @foreach($transaction->accountingDateCorrectionRequests as $correction)
+                    <div class="rounded-xl border border-base-300 p-3 text-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-2"><p class="font-semibold">{{ $correction->original_accounting_date->format('d/m/Y') }} → {{ $correction->target_accounting_date->format('d/m/Y') }}</p><span @class(['badge badge-sm', 'badge-warning' => $correction->status === 'blocked', 'badge-info' => $correction->status === 'pending_approval', 'badge-success' => $correction->status === 'governance_approved'])>{{ $correction->status }}</span></div>
+                        <p class="mt-2 whitespace-pre-line">{{ $correction->reason }}</p>
+                        <p class="mt-2 break-all text-xs text-base-content/55">Request {{ $correction->id }} · jurnal asli {{ $correction->original_journal_id }}</p>
+                        @if($correction->blocking_reasons)<ul class="mt-2 list-disc pl-5 text-xs text-warning">@foreach($correction->blocking_reasons as $blocker)<li>{{ $blocker['message'] ?? $blocker['code'] }}</li>@endforeach</ul>@endif
+                        @if($correction->status === 'governance_approved')<div class="alert alert-warning mt-3 py-2 text-xs">Governance approved, tetapi belum execution-ready. Preview likuiditas, aturan posting, reversal, dan replacement canonical belum tersedia.</div>@endif
+                        @if($correction->status === 'governance_approved' && !$correction->executionPair)
+                            <form class="mt-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.execution.stage', $correction) }}">@csrf<input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}"><label class="flex items-start gap-2 text-xs"><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Stage pasangan reversal/replacement dan lineage tanpa posting jurnal atau ledger.</span></label><button class="btn btn-warning btn-sm mt-2 w-full">Stage tanpa posting</button></form>
+                        @endif
+                        @if(in_array($correction->status, ['governance_approved', 'execution_ready'], true) && $correction->executionPair?->status === 'execution_ready')
+                            <form class="mt-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.execute', $correction) }}">@csrf<input type="hidden" name="idempotency_key" value="{{ $correction->executionPair->idempotency_key }}"><label class="flex items-start gap-2 text-xs"><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Posting reversal dan replacement melalui executor canonical. Tindakan ini membuat jurnal dan ledger.</span></label><button class="btn btn-error btn-sm mt-2 w-full">Posting koreksi sekarang</button></form>
+                        @endif
+                        @if($correction->evaluations->isNotEmpty())<p class="mt-2 text-xs text-base-content/55">Evaluasi ulang tersimpan: {{ $correction->evaluations->count() }} snapshot append-only.</p>@endif
+                        @if(in_array($correction->status, ['blocked', 'governance_approved'], true))<form class="mt-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.reevaluate', $correction) }}">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><button class="btn btn-outline btn-sm w-full">{{ $correction->status === 'blocked' ? 'Evaluasi ulang blocker' : 'Revalidasi dan otorisasi ulang plan' }}</button></form>@endif
+                        @if($correction->status === 'pending_approval')
+                            <form class="mt-3 space-y-2" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.approve', $correction) }}">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><label class="form-control"><span class="label-text text-xs">Catatan approver</span><textarea class="textarea textarea-bordered textarea-sm" name="notes" maxlength="2000"></textarea></label><label class="flex items-start gap-2 text-xs"><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya sudah meninjau bukti, periode, Allocation, batch bank, dan preview. Jika maker dan approver sama, backend wajib mencatat scoped SuperAdmin Override. Persetujuan ini belum mengeksekusi posting.</span></label><button class="btn btn-success btn-sm w-full">Setujui fondasi workflow</button></form>
+                            <form class="mt-2 flex flex-col gap-2 sm:flex-row" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.reject', $correction) }}">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input class="input input-bordered input-sm flex-1" name="notes" minlength="10" maxlength="2000" placeholder="Alasan penolakan" required><button class="btn btn-error btn-sm">Tolak</button></form>
+                        @endif
+                        @if(in_array($correction->status, ['blocked', 'pending_approval'], true))<form class="mt-2" method="POST" action="{{ route('financial-v2.transactions.accounting-date-corrections.cancel', $correction) }}">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="confirmed" value="1"><button class="btn btn-ghost btn-sm w-full text-error">Batalkan request tanpa menghapus histori</button></form>@endif
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+    @if($transaction->correlation_id === \App\Domain\FinancialV2\AccountingDateCorrectionGovernancePolicy::BANK_CORRELATION_ID)
+        <section class="mt-5 rounded-2xl bg-base-100 p-5 shadow-sm ring-1 ring-base-300">
+            <h2 class="font-bold">Batch Koreksi Mutasi Bank</h2>
+            <p class="mt-2 text-sm text-base-content/65">Lima transaksi pada correlation ID ini wajib dimaterialisasi dan diproses sebagai satu unit atomik.</p>
+            <form class="mt-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-correction-batches.provision', $transaction) }}">@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><label class="flex items-start gap-2 text-xs"><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Saya menyetujui materialisasi batch governance; tindakan ini belum melakukan posting.</span></label><button class="btn btn-warning btn-sm mt-3 w-full">Materialisasi batch lima transaksi</button></form>
+            @if(($accountingDateCorrectionBatch ?? null)?->status === 'approved')
+                <form class="mt-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-correction-batches.execution.stage', $accountingDateCorrectionBatch) }}">@csrf<input type="hidden" name="idempotency_key" value="{{ (string) \Illuminate\Support\Str::uuid() }}"><label class="flex items-start gap-2 text-xs"><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Stage tepat lima pasangan dan linkage batch tanpa posting jurnal atau ledger.</span></label><button class="btn btn-warning btn-sm mt-3 w-full">Stage batch tanpa posting</button></form>
+                <form class="mt-3" method="POST" action="{{ route('financial-v2.transactions.accounting-date-correction-batches.execute', $accountingDateCorrectionBatch) }}">@csrf<input type="hidden" name="idempotency_key" value="{{ $accountingDateCorrectionBatch->id }}"><label class="flex items-start gap-2 text-xs"><input class="checkbox checkbox-sm" type="checkbox" name="confirmed" value="1" required><span>Posting kelima reversal/replacement sebagai satu transaksi batch atomik.</span></label><button class="btn btn-error btn-sm mt-3 w-full">Posting batch lima transaksi</button></form>
+            @endif
         </section>
     @endif
 @endsection
@@ -245,6 +306,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const reconciliations = (bank?.reconciliations?.items || []).map(reconciliation => `<li>${escapeHtml(reconciliation.period || 'Periode tidak diketahui')} · ${escapeHtml(reconciliation.status)}${reconciliation.matched_by_source_reference ? ' · cocok berdasarkan source reference' : ' · kandidat berdasarkan rekening/periode'}${reconciliation.completed_warning ? `<br><span class="text-warning">${escapeHtml(reconciliation.completed_warning)}</span>` : ''}</li>`).join('');
             result.innerHTML = `<p class="font-semibold">Transaksi ${escapeHtml(item.transaction_id)} · ${escapeHtml(item.status)}</p><p>Aktual: ${escapeHtml(item.old_business_date)} → ${escapeHtml(item.new_business_date)}</p><p>Akuntansi: ${escapeHtml(item.old_accounting_date)} → ${escapeHtml(item.new_accounting_date)} (periode ${escapeHtml(item.accounting_period)})</p><p>Nominal tetap Rp${escapeHtml(item.amount)}</p><p class="mt-2">${escapeHtml(item.ledger_impact)}</p><p>${escapeHtml(item.balance_validation)}</p><p class="mt-2">Jurnal ${escapeHtml(item.journal_id)} · posted ${escapeHtml(item.journal_posted_at)}</p>${bank ? `<div class="mt-2 border-t border-base-300 pt-2"><p>${escapeHtml(bank.statement_note)}</p><p class="mt-1">${batch.is_batch ? `Bagian batch; ${escapeHtml(batch.other_count)} baris lain tidak ikut berubah.` : 'Bukan bagian batch dengan baris lain.'}</p><p class="mt-1">Keterkaitan rekonsiliasi: ${escapeHtml(bank.reconciliations.match_basis)}.</p>${reconciliations ? `<ul class="mt-1 list-disc pl-4">${reconciliations}</ul>` : '<p class="mt-1">Rekonsiliasi terkait tidak ditemukan.</p>'}</div>` : ''}`;
             if (batchConfirm && batch?.is_batch) { const field = batchConfirm.querySelector('input'); field.required = true; batchConfirm.classList.remove('hidden'); batchConfirm.classList.add('flex'); }
+            confirm.classList.remove('hidden'); confirm.classList.add('flex'); submit.classList.remove('hidden');
+        } catch (error) { result.textContent = error.message; }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const root = document.querySelector('[data-accounting-date-correction]');
+    const form = root?.querySelector('[data-accounting-date-correction-form]');
+    if (!form) return;
+    const previewButton = root.querySelector('[data-accounting-date-correction-preview]');
+    const result = root.querySelector('[data-accounting-date-correction-result]');
+    const confirm = root.querySelector('[data-accounting-date-correction-confirm]');
+    const submit = root.querySelector('[data-accounting-date-correction-submit]');
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]);
+    const reset = () => { result.classList.add('hidden'); confirm.classList.add('hidden'); submit.classList.add('hidden'); form.querySelector('[name="confirmed"]').checked = false; };
+    form.querySelectorAll('input, textarea, select').forEach(field => { if (!['_token', 'idempotency_key', 'confirmed'].includes(field.name)) field.addEventListener('input', reset); });
+    previewButton.addEventListener('click', async () => {
+        result.classList.remove('hidden'); result.textContent = 'Memeriksa periode, Allocation, batch, rekonsiliasi, dan lineage…';
+        try {
+            const response = await fetch(previewButton.dataset.previewUrl, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': form.querySelector('[name="_token"]').value }, body: new FormData(form) });
+            const payload = await response.json();
+            if (!response.ok || !payload.ok) throw new Error(payload.message || 'Pratinjau tidak dapat diselesaikan.');
+            const item = payload.preview;
+            const blockers = (item.blocking_reasons || []).map(blocker => `<li>${escapeHtml(blocker.message || blocker.code)}</li>`).join('');
+            const lines = (item.journal_impact?.lines || []).map(line => `<li>Baris ${escapeHtml(line.line_no)} · debit ${escapeHtml(line.debit)} · kredit ${escapeHtml(line.credit)} · Fund ${escapeHtml(line.fund_id || '—')} · rekening ${escapeHtml(line.financial_account_id || '—')}</li>`).join('');
+            result.innerHTML = `<p class="font-semibold">Akuntansi ${escapeHtml(item.original_accounting_date)} → ${escapeHtml(item.target_accounting_date)}</p><p>Jurnal ${escapeHtml(item.original_journal_id)} · debit ${escapeHtml(item.journal_impact?.total_debit)} · kredit ${escapeHtml(item.journal_impact?.total_credit)}</p><ul class="mt-2 list-disc pl-4">${lines}</ul><p class="mt-2">Periode asal: ${escapeHtml(item.source_period?.status || 'tidak ditemukan')} · target: ${escapeHtml(item.target_period?.status || 'tidak ditemukan')}</p><p>Validasi finansial: ${escapeHtml(item.financial_validation?.status)}; likuiditas belum diperiksa.</p>${item.bank_batch ? `<p class="mt-2">Batch canonical ${escapeHtml(item.bank_batch.correlation_id || 'tidak tersedia')} · ${escapeHtml(item.bank_batch.transaction_count ?? '—')} transaksi.</p>` : ''}${blockers ? `<div class="mt-2 text-warning"><p class="font-semibold">Blocker:</p><ul class="list-disc pl-4">${blockers}</ul></div>` : '<p class="mt-2 text-success">Tidak ada blocker governance yang terdeteksi.</p>'}<p class="mt-2 font-semibold">Governance approval bukan execution-ready. Posting reversal/replacement belum tersedia.</p>`;
             confirm.classList.remove('hidden'); confirm.classList.add('flex'); submit.classList.remove('hidden');
         } catch (error) { result.textContent = error.message; }
     });

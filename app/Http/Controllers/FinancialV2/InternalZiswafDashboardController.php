@@ -133,15 +133,18 @@ final class InternalZiswafDashboardController
             ->selectRaw('COUNT(*) as aggregate')->groupBy('target_id')->pluck('aggregate', 'target_id');
         $transactions = $transactions->map(function (array $row) use ($attachmentCounts, $transactionDates): array {
             $transaction = $transactionDates->get($row['transaction_id']);
+            $accountingDate = $transaction?->accounting_date?->toDateString() ?? $row['date'];
+            $effectiveBusinessDate = $transaction?->effective_business_date?->toDateString();
 
             return $row + [
-                'effective_business_date' => $transaction?->effective_business_date?->toDateString(),
-                'accounting_date' => $transaction?->accounting_date?->toDateString() ?? $row['date'],
+                'effective_business_date' => $effectiveBusinessDate,
+                'accounting_date' => $accountingDate,
+                'display_date' => ($row['accounting_date_corrected'] ?? false) ? $accountingDate : $effectiveBusinessDate,
                 'business_date_corrected' => $transaction?->latestDateCorrection !== null,
                 'attachment_count' => (int) $attachmentCounts->get($row['transaction_id'], 0),
             ];
         })->sort(function (array $left, array $right): int {
-            $dateOrder = strcmp((string) $right['effective_business_date'], (string) $left['effective_business_date']);
+            $dateOrder = strcmp((string) $right['display_date'], (string) $left['display_date']);
 
             return $dateOrder !== 0
                 ? $dateOrder
@@ -154,7 +157,9 @@ final class InternalZiswafDashboardController
         ]);
 
         return view('masjid.mrj.guest.financial-v2.internal-ziswaf-dashboard', [
-            'entity' => $entity, 'filters' => $input + compact('from', 'through'), 'report' => $report,
+            'entity' => $entity, 'filters' => $input, 'report' => $report,
+            'periodFrom' => $from, 'periodThrough' => $through,
+            'dateFilterApplied' => $summary['dateFilterApplied'],
             'positionReport' => $positionReport, 'latestDate' => $latest,
             'runningBalance' => $runningBalance, 'runningBalanceRows' => $runningBalancePaginator,
             'allocation' => $summary['allocation'], 'realization' => $summary['realization'],
@@ -317,8 +322,10 @@ final class InternalZiswafDashboardController
     {
         $entity = $this->entity();
         $latest = $this->ledger->latestAccountingDate($entity->id) ?: now()->toDateString();
+        $earliest = $this->ledger->earliestAccountingDate($entity->id) ?: $latest;
+        $dateFilterApplied = filled($input['from'] ?? null) || filled($input['through'] ?? null);
         $through = $input['through'] ?? $latest;
-        $from = $input['from'] ?? CarbonImmutable::parse($through)->startOfMonth()->toDateString();
+        $from = $input['from'] ?? $earliest;
         $ziswafFundIds = $this->fundScope->ids($entity);
         $report = $this->reports->report($entity, $from, $through, $ziswafFundIds, $input);
         $positionReport = $this->publicReports->reportForEntity($entity, $from, $through);
@@ -330,6 +337,7 @@ final class InternalZiswafDashboardController
         return [
             'entity' => $entity,
             'latest' => $latest,
+            'dateFilterApplied' => $dateFilterApplied,
             'from' => $from,
             'through' => $through,
             'report' => $report,

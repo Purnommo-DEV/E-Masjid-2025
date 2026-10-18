@@ -3,6 +3,7 @@
 namespace App\Domain\FinancialV2;
 
 use App\Models\FinancialV2\AttachmentLink;
+use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\FinancialTransaction;
 use Illuminate\Support\Collection;
 
@@ -31,15 +32,18 @@ final class TransactionEvidenceStatusService
             ->where('financial_v2_attachment_links.target_type', 'transaction')
             ->where('financial_v2_attachment_links.target_id', $transaction->id)
             ->where('financial_v2_attachment_links.status', 'active')
-            ->join('financial_v2_attachments as attachment', 'attachment.id', '=', 'financial_v2_attachment_links.attachment_id')
             ->orderBy('financial_v2_attachment_links.created_at')
             ->get([
                 'financial_v2_attachment_links.id as link_id',
                 'financial_v2_attachment_links.evidence_type',
                 'financial_v2_attachment_links.status',
-                'attachment.id as attachment_id',
-                'attachment.original_filename',
+                'financial_v2_attachment_links.attachment_id',
             ]);
+        $attachments = Attachment::query()->whereIn('id', $links->pluck('attachment_id')->unique())
+            ->get(['id', 'original_filename'])->keyBy('id');
+        $links->each(function ($link) use ($attachments): void {
+            $link->original_filename = $attachments->get($link->attachment_id)?->original_filename;
+        });
 
         $counts = $links->countBy('evidence_type');
         $required = $requirements->map(function ($requirement) use ($counts): array {

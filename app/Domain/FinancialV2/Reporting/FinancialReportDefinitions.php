@@ -40,6 +40,19 @@ final class FinancialReportDefinitions
         return $this->codes('adjustment_transaction_type_codes');
     }
 
+    /** Canonical semantic classification shared by reports and read-only planners. */
+    public function statementKind(string $effectiveTransactionType, string $accountClass): string
+    {
+        if ($accountClass === 'revenue' && in_array($effectiveTransactionType, $this->cashInTypes(), true)) {
+            return 'receipt';
+        }
+        if ($accountClass === 'expense' && in_array($effectiveTransactionType, $this->cashOutTypes(), true)) {
+            return 'usage';
+        }
+
+        return 'ledger_effect';
+    }
+
     /** @return array{key: string, label: string, cash_in_transaction_type_codes: array<int, string>, cash_out_transaction_type_codes: array<int, string>, internal_transfer_transaction_type_codes: array<int, string>} */
     public function friday(string $key = 'default'): array
     {

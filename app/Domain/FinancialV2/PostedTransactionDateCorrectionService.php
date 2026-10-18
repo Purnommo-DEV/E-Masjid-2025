@@ -2,6 +2,7 @@
 
 namespace App\Domain\FinancialV2;
 
+use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\FinancialTransaction;
 use App\Models\FinancialV2\Journal;
@@ -144,16 +145,15 @@ final class PostedTransactionDateCorrectionService
         }
 
         $evidence = AttachmentLink::query()
-            ->join('financial_v2_attachments as attachment', 'attachment.id', '=', 'financial_v2_attachment_links.attachment_id')
             ->where('financial_v2_attachment_links.accounting_entity_id', $transaction->accounting_entity_id)
             ->where('financial_v2_attachment_links.target_type', 'transaction')
             ->where('financial_v2_attachment_links.target_id', $transaction->id)
             ->where('financial_v2_attachment_links.attachment_id', $input['attachment_id'])
             ->where('financial_v2_attachment_links.status', 'active')
-            ->where('attachment.status', 'active')
             ->select('financial_v2_attachment_links.evidence_type')
             ->first();
-        if (! $evidence) {
+        $attachmentIsActive = $evidence && Attachment::query()->whereKey($input['attachment_id'])->where('status', 'active')->exists();
+        if (! $evidence || ! $attachmentIsActive) {
             throw new FinancialDomainException('E-DATE-CORRECTION-EVIDENCE', 'Bukti yang dipilih bukan lampiran aktif milik transaksi ini.');
         }
         if ($isBankMutation) {

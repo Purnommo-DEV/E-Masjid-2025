@@ -10,6 +10,8 @@ use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\InterfundTransfer;
 use App\Models\FinancialV2\TransactionSplit;
 use App\Models\FinancialV2\TransactionType;
+use App\Models\FinancialV2\Attachment;
+use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\TreasuryTransfer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,6 +43,24 @@ final class FinancialTransactionLifecycleService
         $this->requireFields($input, ['primary_financial_account_id', 'counterparty_id', 'category_id']);
 
         return $this->createStandardTransaction(TransactionTypeCode::Payment, $input, $splits, $actorUserId);
+    }
+
+    /**
+     * Internal canonical factory entry point for governed accounting-date
+     * correction drafts. It deliberately supports only REV/PAY/RCV and still
+     * applies the normal entity, period, dimension, amount, and split rules.
+     * Governance services remain responsible for evidence and approvals.
+     *
+     * @param array<string,mixed> $input
+     * @param array<int,array<string,mixed>> $splits
+     */
+    public function createAccountingDateCorrectionDraft(TransactionTypeCode $type, array $input, array $splits, int $actorUserId): FinancialTransaction
+    {
+        if (! in_array($type, [TransactionTypeCode::Reversal, TransactionTypeCode::Payment, TransactionTypeCode::Receipt], true)) {
+            throw new FinancialDomainException('E-CORRECTION-FACTORY-TYPE', 'Factory koreksi hanya mendukung REV, PAY, dan RCV.');
+        }
+
+        return $this->createStandardTransaction($type, $input, $splits, $actorUserId);
     }
 
     /** @param array<string, mixed> $input @param array<int, array<string, mixed>> $splits */
@@ -219,6 +239,22 @@ final class FinancialTransactionLifecycleService
         return $this->transition($transactionId, 'draft', 'submitted', 'transaction_submitted', $actorUserId);
     }
 
+    /**
+     * Submit a replacement draft whose ordinary historical Fund Policy is
+     * intentionally unavailable at the corrected date. This is not a generic
+     * resolver bypass: the approved, immutable correction exception must match
+     * every financial dimension and its active evidence before transition.
+     *
+     * @param array<string,mixed> $policyException
+     */
+    public function submitAccountingDateCorrectionReplacement(string $transactionId, array $policyException, ?int $actorUserId = null): FinancialTransaction
+    {
+        $transaction = FinancialTransaction::query()->with(['type', 'splits'])->findOrFail($transactionId);
+        $this->assertAccountingDateCorrectionReplacement($transaction, $policyException);
+
+        return $this->transition($transactionId, 'draft', 'submitted', 'transaction_submitted', $actorUserId);
+    }
+
     public function verify(string $transactionId, ?int $actorUserId = null): FinancialTransaction
     {
         return $this->transition($transactionId, 'submitted', 'verified', 'transaction_verified', $actorUserId);
@@ -236,6 +272,25 @@ final class FinancialTransactionLifecycleService
             $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
             if (ApprovalDecision::query()->where('transaction_id', $transaction->id)->where('decision', 'approved')->count() < $required) {
                 throw new FinancialDomainException('E-APPROVAL-REQUIRED', 'Configured approval requirements are incomplete.');
+            }
+
+            return $this->changeStatus($transaction, 'approved', 'transaction_approved', $actorUserId);
+        });
+    }
+
+    /** @param array<string,mixed> $policyException */
+    public function approveAccountingDateCorrectionReplacement(string $transactionId, array $policyException, ?int $actorUserId = null): FinancialTransaction
+    {
+        return $this->transactions->run(function () use ($transactionId, $policyException, $actorUserId): FinancialTransaction {
+            $transaction = FinancialTransaction::query()->with(['type', 'splits'])->lockForUpdate()->findOrFail($transactionId);
+            if ($transaction->status !== 'verified') {
+                throw new FinancialDomainException('E-TRANSACTION-STATE', 'Only Verified transactions may be approved.');
+            }
+            $this->assertAccountingDateCorrectionReplacement($transaction, $policyException);
+            $this->assertRealizationParentApproved($transaction);
+            $this->assertTransactionWorkPeriod($transaction->accounting_entity_id, $transaction->accounting_date->toDateString(), $transaction->type?->code);
+            if (ApprovalDecision::query()->where('transaction_id', $transaction->id)->where('decision', 'approved')->count() < 1) {
+                throw new FinancialDomainException('E-APPROVAL-REQUIRED', 'Governed correction replacement approval is incomplete.');
             }
 
             return $this->changeStatus($transaction, 'approved', 'transaction_approved', $actorUserId);
@@ -539,6 +594,41 @@ final class FinancialTransactionLifecycleService
         if ($transaction->type?->code !== TransactionTypeCode::InterfundTransfer->value
             && (! $transaction->splits()->exists() || ! DecimalAmount::equals(DecimalAmount::sum($transaction->splits()->pluck('split_amount')), $transaction->gross_amount))) {
             throw new FinancialDomainException('E-SPLIT-UNBALANCED', 'Draft transaction splits must equal the gross amount before submission.');
+        }
+    }
+
+    /** @param array<string,mixed> $exception */
+    private function assertAccountingDateCorrectionReplacement(FinancialTransaction $transaction, array $exception): void
+    {
+        $this->assertSubmittable($transaction);
+        if (($exception['scope'] ?? null) !== 'accounting_date_correction'
+            || ! str_ends_with((string) $transaction->source_reference, ':REPLACEMENT')
+            || ($exception['target_accounting_date'] ?? null) !== $transaction->accounting_date->toDateString()
+            || ! DecimalAmount::equals((string) ($exception['gross_amount'] ?? '0'), $transaction->gross_amount)) {
+            throw new FinancialDomainException('E-CORRECTION-POLICY-FINGERPRINT', 'Correction replacement tidak cocok dengan policy exception yang disetujui.');
+        }
+
+        $expectedFunds = collect($exception['fund_ids'] ?? [])->filter()->sort()->values()->all();
+        $actualFunds = $transaction->splits->pluck('fund_id')->filter()->unique()->sort()->values()->all();
+        $expectedPrograms = collect($exception['program_ids'] ?? [])->filter()->sort()->values()->all();
+        $actualPrograms = $transaction->splits->pluck('program_id')->filter()->unique()->sort()->values()->all();
+        $expectedCounterparty = $exception['counterparty']['replacement_id'] ?? null;
+        if ($expectedFunds !== $actualFunds || $expectedPrograms !== $actualPrograms || $expectedCounterparty !== $transaction->counterparty_id) {
+            throw new FinancialDomainException('E-CORRECTION-POLICY-DIMENSION', 'Dimensi replacement berubah dari policy exception yang disetujui.');
+        }
+
+        $evidence = $exception['evidence'] ?? [];
+        $attachmentId = $evidence['attachment_id'] ?? null;
+        $attachment = $attachmentId ? Attachment::query()
+            ->where('accounting_entity_id', $transaction->accounting_entity_id)
+            ->where('status', 'active')->find($attachmentId) : null;
+        $link = $attachment ? AttachmentLink::query()
+            ->where('accounting_entity_id', $transaction->accounting_entity_id)
+            ->where('attachment_id', $attachment->id)
+            ->where('target_type', 'transaction')->where('target_id', $transaction->id)
+            ->where('status', 'active')->first() : null;
+        if (! $attachment || ! $link || ! hash_equals((string) ($evidence['content_hash'] ?? ''), (string) $attachment->content_hash)) {
+            throw new FinancialDomainException('E-EVIDENCE-REQUIRED', 'Evidence aktif replacement tidak cocok dengan policy exception yang disetujui.');
         }
     }
 

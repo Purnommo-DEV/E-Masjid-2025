@@ -21,6 +21,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->bind(
+            \App\Domain\FinancialV2\AccountingDateCorrectionFinancialPreviewContract::class,
+            \App\Domain\FinancialV2\CanonicalAccountingDateCorrectionFinancialPreview::class,
+        );
         $this->app->singleton(\App\Services\JadwalSholatService::class);
 
         // Binding MasjidRepositoryInterface dinamis

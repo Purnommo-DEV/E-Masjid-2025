@@ -146,6 +146,7 @@ final class FinancialTransactionConfigurationResolver
         }
 
         $version = $this->postingRuleVersion($entity->id, $type, $category, $bankPolicy, $date, $accounts, $funds);
+        $this->assertCompilationStrategy($version, $type);
         $lines = PostingRuleLine::query()->with('account')->where('posting_rule_version_id', $version->id)->orderBy('line_no')->get();
         if ($lines->count() < 2 || $lines->contains(fn (PostingRuleLine $line): bool => ! $line->account
             || $line->account->accounting_entity_id !== $entity->id
@@ -243,8 +244,11 @@ final class FinancialTransactionConfigurationResolver
             throw new FinancialPostingException('E-RULE-AMBIGUOUS', 'Lebih dari satu konfigurasi pencatatan berlaku pada tanggal transaksi.');
         }
 
-        return $versions->first()
+        $version = $versions->first()
             ?? throw new FinancialPostingException('E-RULE-NOT-EFFECTIVE', 'Konfigurasi pencatatan belum tersedia pada tanggal transaksi.');
+        $this->assertCompilationStrategy($version, $transaction->type);
+
+        return $version;
     }
 
     public function requiredApprovalStepsForTransaction(FinancialTransaction $transaction): int
@@ -271,6 +275,18 @@ final class FinancialTransactionConfigurationResolver
             ->where('posting_rule_version_id', $version->id)
             ->orderBy('evidence_type')
             ->get();
+    }
+
+    private function assertCompilationStrategy(PostingRuleVersion $version, ?TransactionType $type): void
+    {
+        $strategy = blank($version->compilation_strategy) ? PostingRuleVersion::STRATEGY_RULE_LINES : (string) $version->compilation_strategy;
+        if (! in_array($strategy, [PostingRuleVersion::STRATEGY_RULE_LINES, PostingRuleVersion::STRATEGY_SOURCE_JOURNAL_REVERSAL], true)
+            || ($strategy === PostingRuleVersion::STRATEGY_SOURCE_JOURNAL_REVERSAL && $type?->code !== 'REV')
+            || ($type?->code === 'REV' && $strategy !== PostingRuleVersion::STRATEGY_SOURCE_JOURNAL_REVERSAL)
+            || ($strategy === PostingRuleVersion::STRATEGY_SOURCE_JOURNAL_REVERSAL
+                && PostingRuleLine::query()->where('posting_rule_version_id', $version->id)->exists())) {
+            throw new FinancialPostingException('E-POSTING-STRATEGY', 'Compilation strategy tidak kompatibel dengan Transaction Type.');
+        }
     }
 
     /** @param array<string, mixed> $line */

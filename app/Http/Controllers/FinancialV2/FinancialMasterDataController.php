@@ -12,21 +12,29 @@ use App\Domain\FinancialV2\FundPolicyApprovalMetadataRecoveryService;
 use App\Domain\FinancialV2\FundPolicyVersionDeletionService;
 use App\Domain\FinancialV2\FundPolicySuccessorService;
 use App\Domain\FinancialV2\MasterDataGovernanceService;
+use App\Domain\FinancialV2\GovernanceDocumentWorkflowService;
+use App\Domain\FinancialV2\ReversalConfigurationWorkflowService;
+use App\Domain\FinancialV2\ReversalPrerequisiteWorkflowService;
 use App\Domain\FinancialV2\UnusedEffectiveFundPolicyReplacementService;
 use App\Models\FinancialV2\Account;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\ApprovalRequirement;
+use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\BankMutationPolicy;
 use App\Models\FinancialV2\Category;
 use App\Models\FinancialV2\CostCenter;
 use App\Models\FinancialV2\Counterparty;
+use App\Models\FinancialV2\DocumentSequence;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\FundPolicyVersion;
 use App\Models\FinancialV2\FundRestriction;
 use App\Models\FinancialV2\FundType;
+use App\Models\FinancialV2\GovernanceDocument;
 use App\Models\FinancialV2\PostingRule;
 use App\Models\FinancialV2\Program;
+use App\Models\FinancialV2\ReversalConfigurationRequest;
+use App\Models\FinancialV2\ReversalPrerequisiteProposal;
 use App\Models\FinancialV2\TransactionType;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -53,6 +61,9 @@ final class FinancialMasterDataController
         private readonly ConfigureMrjHistoricalDhuafaReceiptService $historicalDhuafa,
         private readonly ConfigureMrjFidyahAllocationService $fidyahAllocation,
         private readonly CorrectMrjLegacyProgramLifecycleService $legacyProgramLifecycle,
+        private readonly ReversalConfigurationWorkflowService $reversalConfiguration,
+        private readonly GovernanceDocumentWorkflowService $governanceDocuments,
+        private readonly ReversalPrerequisiteWorkflowService $reversalPrerequisites,
     ) {}
 
     public function configuration(Request $request)
@@ -74,6 +85,28 @@ final class FinancialMasterDataController
                 ->orderBy('name')
                 ->get() : collect(),
             'approvalRequirements' => $entityId ? ApprovalRequirement::query()->forEntity($entityId)->orderByDesc('effective_from')->get() : collect(),
+            'reversalConfigurationRequests' => $entityId ? ReversalConfigurationRequest::query()
+                ->forEntity($entityId)
+                ->with('decisions')
+                ->orderByDesc('created_at')
+                ->get() : collect(),
+            'governanceDocuments' => $entityId ? GovernanceDocument::query()->forEntity($entityId)->with('decisions')->where('purpose', 'reversal_master_configuration')->orderByDesc('created_at')->get() : collect(),
+            'reversalPrerequisiteProposals' => $entityId ? ReversalPrerequisiteProposal::query()->forEntity($entityId)->with(['decisions', 'governanceDocument', 'transactionType', 'documentSequence'])->orderByDesc('created_at')->get() : collect(),
+            'approvedGovernanceDocuments' => $entityId ? GovernanceDocument::query()->forEntity($entityId)->where('purpose', 'reversal_master_configuration')->where('status', 'approved')->orderByDesc('approved_at')->get() : collect(),
+            'materializedReversalPrerequisites' => $entityId ? ReversalPrerequisiteProposal::query()->forEntity($entityId)->where('status', 'materialized')->with(['transactionType', 'documentSequence'])->orderByDesc('materialized_at')->get() : collect(),
+            'reversalDocumentSequences' => $entityId ? DocumentSequence::query()
+                ->forEntity($entityId)
+                ->with('transactionType')
+                ->where('status', 'active')
+                ->whereHas('transactionType', fn ($query) => $query->where('code', 'REV')->where('status', 'draft'))
+                ->orderBy('name')
+                ->get() : collect(),
+            'governanceAttachments' => $entityId ? Attachment::query()
+                ->forEntity($entityId)
+                ->where('status', 'active')
+                ->orderByDesc('received_at')
+                ->limit(100)
+                ->get() : collect(),
             'bankPolicies' => $entityId ? BankMutationPolicy::query()
                 ->where('accounting_entity_id', $entityId)
                 ->with(['transactionType', 'financialAccount', 'fund', 'category', 'postingRuleVersion'])
@@ -90,6 +123,160 @@ final class FinancialMasterDataController
             'fidyahAllocationStatus' => $context['entity']?->code === ConfigureMrjFidyahAllocationService::ENTITY_CODE ? $this->fidyahAllocation->status() : null,
             'legacyProgramLifecycleStatus' => $context['entity']?->code === CorrectMrjLegacyProgramLifecycleService::ENTITY_CODE ? $this->legacyProgramLifecycle->status() : null,
         ]);
+    }
+
+    public function storeReversalConfiguration(Request $request)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->requiredEntity($request);
+        $input = $request->validate([
+            'prerequisite_proposal_id' => ['required', 'uuid'],
+            'posting_rule_code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/'],
+            'posting_rule_name' => ['required', 'string', 'max:160'],
+            'effective_from' => ['required', 'date_format:Y-m-d'],
+            'effective_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:effective_from'],
+            'input_contract_ref' => ['required', 'string', 'max:500'],
+            'journal_template_ref' => ['required', 'string', 'max:500'],
+            'business_rule_refs' => ['required', 'string'],
+            'reason_code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/'],
+            'reason_name' => ['required', 'string', 'max:160'],
+            'required_approval_steps' => ['required', 'integer', 'min:1', 'max:10'],
+            'evidence_requirements' => ['required', 'array', 'min:1'],
+            'evidence_requirements.*.evidence_type' => ['nullable', Rule::in(['receipt', 'invoice', 'transfer_proof', 'statement', 'cash_count', 'approval', 'policy', 'other'])],
+            'evidence_requirements.*.minimum_count' => ['nullable', 'required_with:evidence_requirements.*.evidence_type', 'integer', 'min:1', 'max:20'],
+            'idempotency_key' => ['required', 'string', 'max:120'],
+        ], $this->messages());
+
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalConfiguration->createDraft($entity->id, $input, (int) $request->user()->id), 'Draft paket konfigurasi REV berhasil disimpan. Belum ada master aktif atau pembukuan yang dibuat.');
+    }
+
+    public function storeReversalGovernanceDocument(Request $request)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->requiredEntity($request);
+        $input = $request->validate([
+            'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:10240'],
+            'document_basis' => ['required', 'string', 'max:500'],
+            'idempotency_key' => ['required', 'string', 'max:120'],
+        ], $this->messages());
+
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->governanceDocuments->createDraft($entity->id, $input['document'], 'reversal_master_configuration', $input['document_basis'], $input['idempotency_key'], (int) $request->user()->id), 'Draft dokumen governance tersimpan. Dokumen belum disetujui.');
+    }
+
+    public function submitReversalGovernanceDocument(Request $request, string $governanceDocument)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->governanceDocuments->submit($entity->id, $governanceDocument, (int) $request->user()->id), 'Dokumen governance diajukan untuk review.');
+    }
+
+    public function approveReversalGovernanceDocument(Request $request, string $governanceDocument)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['note' => ['nullable', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->governanceDocuments->approve($entity->id, $governanceDocument, (int) $request->user()->id, $input['note'] ?? null), 'Dokumen governance disetujui melalui maker-checker.');
+    }
+
+    public function rejectReversalGovernanceDocument(Request $request, string $governanceDocument)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['note' => ['required', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->governanceDocuments->reject($entity->id, $governanceDocument, (int) $request->user()->id, $input['note']), 'Dokumen governance ditolak; histori tetap disimpan.');
+    }
+
+    public function cancelReversalGovernanceDocument(Request $request, string $governanceDocument)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['reason' => ['required', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->governanceDocuments->cancel($entity->id, $governanceDocument, (int) $request->user()->id, $input['reason']), 'Dokumen governance dibatalkan; histori tetap disimpan.');
+    }
+
+    public function storeReversalPrerequisite(Request $request)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request);
+        $input = $request->validate([
+            'governance_document_id' => ['required', 'uuid'],
+            'transaction_type_code' => ['required', Rule::in(['REV'])],
+            'transaction_type_name' => ['required', 'string', 'max:160'],
+            'transaction_type_description' => ['required', 'string', 'max:500'],
+            'voucher_prefix' => ['required', 'string', 'max:10', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'sequence_code' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]*$/'],
+            'sequence_name' => ['required', 'string', 'max:160'],
+            'scope_key' => ['required', 'string', 'max:120'],
+            'reset_rule' => ['required', Rule::in(['never', 'yearly', 'monthly'])],
+            'initial_number' => ['required', 'integer', 'min:1'],
+            'effective_from' => ['required', 'date_format:Y-m-d'],
+            'effective_to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:effective_from'],
+            'activation_separation_rule' => ['required', Rule::in(['maker_checker', 'three_distinct', 'superadmin_override'])],
+            'idempotency_key' => ['required', 'string', 'max:120'],
+        ], $this->messages());
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalPrerequisites->createDraft($entity->id, $input, (int) $request->user()->id), 'Draft prerequisite REV tersimpan. Belum ada master yang dibuat.');
+    }
+
+    public function submitReversalPrerequisite(Request $request, string $reversalPrerequisite)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalPrerequisites->submit($entity->id, $reversalPrerequisite, (int) $request->user()->id), 'Proposal prerequisite diajukan untuk review.');
+    }
+
+    public function approveReversalPrerequisite(Request $request, string $reversalPrerequisite)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['note' => ['nullable', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalPrerequisites->approve($entity->id, $reversalPrerequisite, (int) $request->user()->id, $input['note'] ?? null), 'Proposal prerequisite disetujui. Master masih belum dibuat.');
+    }
+
+    public function rejectReversalPrerequisite(Request $request, string $reversalPrerequisite)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['note' => ['required', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalPrerequisites->reject($entity->id, $reversalPrerequisite, (int) $request->user()->id, $input['note']), 'Proposal prerequisite ditolak; histori tetap disimpan.');
+    }
+
+    public function materializeReversalPrerequisite(Request $request, string $reversalPrerequisite)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalPrerequisites->materialize($entity->id, $reversalPrerequisite, (int) $request->user()->id), 'Pasangan Transaction Type dan Document Sequence dibuat sebagai draft/nonaktif.');
+    }
+
+    public function cancelReversalPrerequisite(Request $request, string $reversalPrerequisite)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['reason' => ['required', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalPrerequisites->cancel($entity->id, $reversalPrerequisite, (int) $request->user()->id, $input['reason']), 'Proposal prerequisite dibatalkan; histori tetap disimpan.');
+    }
+
+    public function submitReversalConfiguration(Request $request, string $reversalConfiguration)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->requiredEntity($request);
+
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalConfiguration->submit($entity->id, $reversalConfiguration, (int) $request->user()->id), 'Draft REV diajukan untuk review maker-checker.');
+    }
+
+    public function approveReversalConfiguration(Request $request, string $reversalConfiguration)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->requiredEntity($request);
+        $input = $request->validate(['note' => ['nullable', 'string', 'max:2000']]);
+
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalConfiguration->approve($entity->id, $reversalConfiguration, (int) $request->user()->id, $input['note'] ?? null), 'Governance konfigurasi REV disetujui. Master masih belum aktif.');
+    }
+
+    public function rejectReversalConfiguration(Request $request, string $reversalConfiguration)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->requiredEntity($request);
+        $input = $request->validate(['note' => ['required', 'string', 'max:2000']]);
+
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalConfiguration->reject($entity->id, $reversalConfiguration, (int) $request->user()->id, $input['note']), 'Draft konfigurasi REV ditolak dan histori keputusan dipertahankan.');
+    }
+
+    public function activateReversalConfiguration(Request $request, string $reversalConfiguration)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $entity = $this->requiredEntity($request);
+
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalConfiguration->activate($entity->id, $reversalConfiguration, (int) $request->user()->id), 'Konfigurasi master REV diaktifkan tanpa membuat transaksi, jurnal, atau ledger.');
+    }
+
+    public function cancelReversalConfiguration(Request $request, string $reversalConfiguration)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403); $entity = $this->requiredEntity($request); $input = $request->validate(['reason' => ['required', 'string', 'max:2000']]);
+        return $this->reversalConfigurationAction($request, $entity, fn () => $this->reversalConfiguration->cancel($entity->id, $reversalConfiguration, (int) $request->user()->id, $input['reason']), 'Workflow konfigurasi REV dibatalkan; histori tetap disimpan.');
     }
 
     public function provisionFidyahAllocation(Request $request)
@@ -901,6 +1088,22 @@ final class FinancialMasterDataController
         }
 
         return back()->withInput()->withErrors(['financial' => $message]);
+    }
+
+    private function reversalConfigurationAction(Request $request, AccountingEntity $entity, callable $action, string $message)
+    {
+        try {
+            $record = $action();
+            $redirect = route('financial-v2.configuration.index', ['entity' => $entity->id]).'#reversal-configuration';
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => true, 'message' => $message, 'request_id' => $record->id, 'redirect' => $redirect])
+                : redirect($redirect)->with('success', $message);
+        } catch (FinancialDomainException $exception) {
+            return $this->failure($request, $exception);
+        } catch (QueryException) {
+            return $this->failure($request, new FinancialDomainException('E-REV-CONFIG-CONFLICT', 'Konfigurasi REV berubah atau berbenturan dengan master lain. Muat ulang halaman dan periksa kembali.'));
+        }
     }
 
     /** @return array<string, string> */

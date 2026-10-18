@@ -40,9 +40,13 @@
                 <div class="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm sm:min-w-64">
                     <p class="text-xs font-medium uppercase tracking-wider text-emerald-200">Periode laporan</p>
                     <p class="mt-1.5 text-sm font-semibold sm:text-base">
-                        {{ \Carbon\Carbon::parse($filters['from'])->format('d M Y') }}
-                        <span class="mx-1 text-emerald-200">—</span>
-                        {{ \Carbon\Carbon::parse($filters['through'])->format('d M Y') }}
+                        @if ($dateFilterApplied)
+                            {{ \Carbon\Carbon::parse($periodFrom)->format('d M Y') }}
+                            <span class="mx-1 text-emerald-200">—</span>
+                            {{ \Carbon\Carbon::parse($periodThrough)->format('d M Y') }}
+                        @else
+                            Seluruh periode
+                        @endif
                     </p>
                     <p class="mt-1 text-xs text-emerald-100/80">Saldo terkini per {{ \Carbon\Carbon::parse($latestDate)->format('d M Y') }}</p>
                 </div>
@@ -71,13 +75,13 @@
         <form method="get" class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-5">
             <label class="block text-sm font-semibold text-slate-700">
                 Tanggal mulai
-                <input type="date" name="from" value="{{ $filters['from'] }}"
+                <input type="date" name="from" value="{{ $filters['from'] ?? '' }}"
                     class="mt-1.5 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10">
             </label>
 
             <label class="block text-sm font-semibold text-slate-700">
                 Tanggal akhir
-                <input type="date" name="through" value="{{ $filters['through'] }}"
+                <input type="date" name="through" value="{{ $filters['through'] ?? '' }}"
                     class="mt-1.5 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-4 focus:ring-emerald-600/10">
             </label>
 
@@ -179,7 +183,7 @@
             <div>
                 <p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">Pergerakan dana</p>
                 <h2 id="running-balance-heading" class="mt-1 text-xl font-extrabold text-slate-900">Saldo Berjalan</h2>
-                <p class="mt-1 text-sm leading-6 text-slate-500">Saldo dihitung berurutan dari transaksi POSTED berdasarkan tanggal akuntansi dan urutan posting resmi.</p>
+                <p class="mt-1 text-sm leading-6 text-slate-500">Saldo dihitung dari pergerakan efektif transaksi POSTED berdasarkan tanggal akuntansi; koreksi yang selesai ditampilkan melalui replacement-nya.</p>
             </div>
             <span class="mt-2 inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:mt-0">
                 Saldo akhir {{ $positionRupiah($runningBalance['closing_balance']) }}
@@ -201,7 +205,7 @@
                 <tbody class="divide-y divide-slate-100">
                     @if ($runningBalanceRows->currentPage() === 1)
                         <tr class="bg-emerald-50/60">
-                            <td class="whitespace-nowrap px-5 py-4 font-medium text-slate-600 sm:px-6"><span class="block text-xs text-slate-400">Awal periode akuntansi</span>{{ $positionDate($filters['from']) }}</td>
+                            <td class="whitespace-nowrap px-5 py-4 font-medium text-slate-600 sm:px-6"><span class="block text-xs text-slate-400">Awal periode akuntansi</span>{{ $positionDate($periodFrom) }}</td>
                             <td class="px-4 py-4 font-bold text-emerald-950">Saldo Awal Periode</td>
                             <td class="px-4 py-4 text-slate-500">{{ $filters['fund_id'] ?? null ? data_get(collect($report['funds'])->firstWhere('fund_id', $filters['fund_id']), 'name', 'Dana terpilih') : 'Seluruh Dana ZISWAF' }}</td>
                             <td class="px-4 py-4 text-right text-slate-400">—</td>
@@ -212,14 +216,15 @@
                     @forelse ($runningBalanceRows as $row)
                         <tr class="transition hover:bg-slate-50/80">
                             <td class="whitespace-nowrap px-5 py-4 text-slate-600 sm:px-6">
-                                <span class="block font-semibold text-slate-700">Akuntansi {{ $positionDate($row['accounting_date']) }}</span>
-                                @if ($row['effective_business_date'])
-                                    <span class="mt-1 block text-xs text-slate-500">Aktual {{ $positionDate($row['effective_business_date']) }}</span>
-                                    @if ($row['business_date_corrected'])
-                                        <span class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Tanggal aktual dikoreksi</span>
-                                    @endif
+                                @if ($row['business_date_corrected'])
+                                    <span class="block font-semibold text-slate-700">{{ $positionDate($row['accounting_date']) }}</span>
                                 @else
-                                    <span class="mt-1 block text-xs text-slate-400">Aktual —</span>
+                                    <span class="block font-semibold text-slate-700">Akuntansi {{ $positionDate($row['accounting_date']) }}</span>
+                                    @if ($row['effective_business_date'])
+                                        <span class="mt-1 block text-xs text-slate-500">Aktual {{ $positionDate($row['effective_business_date']) }}</span>
+                                    @else
+                                        <span class="mt-1 block text-xs text-slate-400">Aktual —</span>
+                                    @endif
                                 @endif
                             </td>
                             <td class="max-w-xs px-4 py-4 align-top">
@@ -341,7 +346,9 @@
                     @forelse ($transactions as $t)
                         <tr class="transition hover:bg-slate-50/80">
                             <td class="whitespace-nowrap px-5 py-4 text-slate-600">
-                                @if ($t['effective_business_date'])
+                                @if ($t['accounting_date_corrected'])
+                                    <span class="block font-semibold text-slate-700">{{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</span>
+                                @elseif ($t['effective_business_date'])
                                     <span class="block font-semibold text-slate-700">{{ \Carbon\Carbon::parse($t['effective_business_date'])->format('d/m/Y') }}</span>
                                     @if ($t['business_date_corrected'])
                                         <span class="mt-1 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800">Tanggal aktual dikoreksi</span>
@@ -349,7 +356,9 @@
                                 @else
                                     <span class="block">—</span>
                                 @endif
-                                <span class="mt-1 block text-xs text-slate-400">Akuntansi {{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</span>
+                                @if (! $t['accounting_date_corrected'])
+                                    <span class="mt-1 block text-xs text-slate-400">Akuntansi {{ \Carbon\Carbon::parse($t['accounting_date'])->format('d/m/Y') }}</span>
+                                @endif
                             </td>
                             <td class="max-w-xs px-4 py-4">
                                 <a class="font-semibold leading-5 text-emerald-800 underline-offset-4 transition hover:text-emerald-950 hover:underline focus:outline-none focus:ring-2 focus:ring-emerald-600"

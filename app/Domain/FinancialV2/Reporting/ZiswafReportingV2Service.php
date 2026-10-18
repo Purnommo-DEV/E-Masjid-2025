@@ -29,6 +29,7 @@ final class ZiswafReportingV2Service
         private readonly FinancialReportDefinitions $definitions,
         private readonly DistributionReportingService $distributions,
         private readonly ZiswafFundScope $fundScope,
+        private readonly AccountingDateCorrectionOperationalVisibility $correctionVisibility,
     ) {}
 
     /**
@@ -387,6 +388,15 @@ final class ZiswafReportingV2Service
                 'financial_transaction.id as transaction_id', 'transaction_type.name as transaction_type_name', 'transaction_type.code as transaction_type_code',
                 'original_transaction_type.code as original_transaction_type_code', 'category.name as category_name', 'dimensions.fund_names', 'dimensions.program_names', 'voucher.voucher_number',
             ]);
+        $correctionProjection = $this->correctionVisibility->operationalProjection($entity->id);
+        $hiddenCorrectionTransactions = $correctionProjection['hidden_transaction_ids'];
+        $replacementCorrectionTransactions = $correctionProjection['replacement_transaction_ids'];
+        if ($hiddenCorrectionTransactions !== []) {
+            // Presentation-only: retain all journals in canonical totals and
+            // running balances, but collapse a completed correction to its
+            // posted replacement in the operational history.
+            $query->whereNotIn('financial_transaction.id', $hiddenCorrectionTransactions);
+        }
         if ($fundId = $this->filterId($filters, 'fund_id')) {
             $query->whereExists(function (Builder $scope) use ($fundId): void {
                 $scope->selectRaw('1')->from('financial_v2_journal_lines as scoped_fund_line')
@@ -407,7 +417,7 @@ final class ZiswafReportingV2Service
         }
 
         return $query->orderByDesc('journal.accounting_date')->orderByDesc('journal.posting_sequence')->limit(100)->get()
-            ->map(function (object $row) use ($cashIn): array {
+            ->map(function (object $row) use ($cashIn, $replacementCorrectionTransactions): array {
                 $type = $row->original_transaction_type_code ?: $row->transaction_type_code;
                 $amount = $this->amount($row->total_debit);
                 if ($row->reversal_of_journal_id) {
@@ -420,6 +430,7 @@ final class ZiswafReportingV2Service
                     'category' => $row->category_name ?: '—', 'type' => $type, 'status' => 'POSTED',
                     'in' => in_array($type, $cashIn, true) ? $amount : '0.00',
                     'out' => in_array($type, $cashIn, true) ? '0.00' : $amount,
+                    'accounting_date_corrected' => in_array($row->transaction_id, $replacementCorrectionTransactions, true),
                 ];
             })->all();
     }

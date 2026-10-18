@@ -67,6 +67,11 @@ class FinancialTransaction extends FinancialV2Model
         return $this->hasOne(TransactionDateCorrection::class, 'transaction_id')->ofMany('correction_no', 'max');
     }
 
+    public function accountingDateCorrectionRequests(): HasMany
+    {
+        return $this->hasMany(AccountingDateCorrectionRequest::class, 'original_transaction_id')->orderByDesc('requested_at');
+    }
+
     public function getEffectiveBusinessDateAttribute()
     {
         return $this->latestDateCorrection?->corrected_business_date ?? $this->business_date;

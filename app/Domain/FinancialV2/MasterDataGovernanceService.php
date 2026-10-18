@@ -3,12 +3,14 @@
 namespace App\Domain\FinancialV2;
 
 use App\Models\FinancialV2\Account;
+use App\Models\FinancialV2\DocumentSequence;
 use App\Models\FinancialV2\FinancialAccount;
 use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\FundPolicyVersion;
 use App\Models\FinancialV2\PostingRuleLine;
 use App\Models\FinancialV2\PostingRuleVersion;
 use App\Models\FinancialV2\Program;
+use App\Models\FinancialV2\TransactionType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -97,12 +99,21 @@ final class MasterDataGovernanceService
     public function makePostingRuleVersionEffective(string $versionId, ?int $actorUserId = null): PostingRuleVersion
     {
         return DB::transaction(function () use ($versionId, $actorUserId): PostingRuleVersion {
-            $version = PostingRuleVersion::query()->with('rule')->lockForUpdate()->findOrFail($versionId);
+            $version = PostingRuleVersion::query()->with('rule.transactionType')->lockForUpdate()->findOrFail($versionId);
             if (! $version->rule || $version->rule->accounting_entity_id !== $version->accounting_entity_id || $version->rule->status !== 'active') {
                 throw new FinancialDomainException('E-POSTING-RULE-GOVERNANCE', 'Posting Rule Version must belong to an active rule in the same AccountingEntity.');
             }
             $lines = PostingRuleLine::query()->where('posting_rule_version_id', $version->id)->orderBy('line_no')->get();
-            if ($lines->count() < 2) {
+            $strategy = blank($version->compilation_strategy) ? PostingRuleVersion::STRATEGY_RULE_LINES : (string) $version->compilation_strategy;
+            if (! in_array($strategy, [PostingRuleVersion::STRATEGY_RULE_LINES, PostingRuleVersion::STRATEGY_SOURCE_JOURNAL_REVERSAL], true)) {
+                throw new FinancialDomainException('E-POSTING-RULE-GOVERNANCE', 'Compilation strategy Posting Rule Version tidak dikenal.');
+            }
+            $isSourceJournalReversal = $strategy === PostingRuleVersion::STRATEGY_SOURCE_JOURNAL_REVERSAL;
+            if ($isSourceJournalReversal
+                && ($version->rule->transactionType?->code !== 'REV' || $version->rule->rule_family !== 'reversal' || $lines->isNotEmpty())) {
+                throw new FinancialDomainException('E-POSTING-RULE-GOVERNANCE', 'Source-journal reversal hanya berlaku untuk REV dan tidak boleh memiliki Posting Rule Lines.');
+            }
+            if (! $isSourceJournalReversal && $lines->count() < 2) {
                 throw new FinancialDomainException('E-POSTING-RULE-GOVERNANCE', 'An effective Posting Rule Version requires at least two deterministic rule lines.');
             }
             foreach ($lines as $line) {

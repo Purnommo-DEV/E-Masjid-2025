@@ -1,0 +1,3 @@
+<?php
+namespace App\Models\FinancialV2;use DomainException;use Illuminate\Database\Eloquent\Relations\HasOne;
+final class AccountingDateCorrectionBatchItem extends FinancialV2Model{protected $table='financial_v2_accounting_date_correction_batch_items';protected $casts=['item_snapshot'=>'array','blockers'=>'array'];protected static function booted():void{static::creating(fn()=>throw new DomainException('Item batch hanya dibuat service canonical.'));static::updating(fn()=>throw new DomainException('Item batch immutable.'));static::deleting(fn()=>throw new DomainException('Item batch disimpan permanen.'));}public function executionPairLink():HasOne{return$this->hasOne(AccountingDateCorrectionBatchItemExecutionPair::class,'batch_item_id');}}

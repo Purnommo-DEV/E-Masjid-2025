@@ -396,6 +396,23 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/keuangan-v2')->name('financial-v2.')->group(function () {
         Route::get('/', [OperationalFinancialController::class, 'dashboard'])->name('dashboard');
         Route::get('/konfigurasi', [FinancialMasterDataController::class, 'configuration'])->name('configuration.index');
+        Route::post('/konfigurasi/reversal/dokumen', [FinancialMasterDataController::class, 'storeReversalGovernanceDocument'])->middleware('role:SuperAdmin')->name('configuration.reversal.documents.store');
+        Route::post('/konfigurasi/reversal/dokumen/{governanceDocument}/ajukan', [FinancialMasterDataController::class, 'submitReversalGovernanceDocument'])->whereUuid('governanceDocument')->middleware('role:SuperAdmin')->name('configuration.reversal.documents.submit');
+        Route::post('/konfigurasi/reversal/dokumen/{governanceDocument}/setujui', [FinancialMasterDataController::class, 'approveReversalGovernanceDocument'])->whereUuid('governanceDocument')->middleware('role:SuperAdmin')->name('configuration.reversal.documents.approve');
+        Route::post('/konfigurasi/reversal/dokumen/{governanceDocument}/tolak', [FinancialMasterDataController::class, 'rejectReversalGovernanceDocument'])->whereUuid('governanceDocument')->middleware('role:SuperAdmin')->name('configuration.reversal.documents.reject');
+        Route::post('/konfigurasi/reversal/dokumen/{governanceDocument}/batalkan', [FinancialMasterDataController::class, 'cancelReversalGovernanceDocument'])->whereUuid('governanceDocument')->middleware('role:SuperAdmin')->name('configuration.reversal.documents.cancel');
+        Route::post('/konfigurasi/reversal/prerequisite', [FinancialMasterDataController::class, 'storeReversalPrerequisite'])->middleware('role:SuperAdmin')->name('configuration.reversal.prerequisites.store');
+        Route::post('/konfigurasi/reversal/prerequisite/{reversalPrerequisite}/ajukan', [FinancialMasterDataController::class, 'submitReversalPrerequisite'])->whereUuid('reversalPrerequisite')->middleware('role:SuperAdmin')->name('configuration.reversal.prerequisites.submit');
+        Route::post('/konfigurasi/reversal/prerequisite/{reversalPrerequisite}/setujui', [FinancialMasterDataController::class, 'approveReversalPrerequisite'])->whereUuid('reversalPrerequisite')->middleware('role:SuperAdmin')->name('configuration.reversal.prerequisites.approve');
+        Route::post('/konfigurasi/reversal/prerequisite/{reversalPrerequisite}/tolak', [FinancialMasterDataController::class, 'rejectReversalPrerequisite'])->whereUuid('reversalPrerequisite')->middleware('role:SuperAdmin')->name('configuration.reversal.prerequisites.reject');
+        Route::post('/konfigurasi/reversal/prerequisite/{reversalPrerequisite}/materialisasi', [FinancialMasterDataController::class, 'materializeReversalPrerequisite'])->whereUuid('reversalPrerequisite')->middleware('role:SuperAdmin')->name('configuration.reversal.prerequisites.materialize');
+        Route::post('/konfigurasi/reversal/prerequisite/{reversalPrerequisite}/batalkan', [FinancialMasterDataController::class, 'cancelReversalPrerequisite'])->whereUuid('reversalPrerequisite')->middleware('role:SuperAdmin')->name('configuration.reversal.prerequisites.cancel');
+        Route::post('/konfigurasi/reversal', [FinancialMasterDataController::class, 'storeReversalConfiguration'])->middleware('role:SuperAdmin')->name('configuration.reversal.store');
+        Route::post('/konfigurasi/reversal/{reversalConfiguration}/ajukan', [FinancialMasterDataController::class, 'submitReversalConfiguration'])->whereUuid('reversalConfiguration')->middleware('role:SuperAdmin')->name('configuration.reversal.submit');
+        Route::post('/konfigurasi/reversal/{reversalConfiguration}/setujui', [FinancialMasterDataController::class, 'approveReversalConfiguration'])->whereUuid('reversalConfiguration')->middleware('role:SuperAdmin')->name('configuration.reversal.approve');
+        Route::post('/konfigurasi/reversal/{reversalConfiguration}/tolak', [FinancialMasterDataController::class, 'rejectReversalConfiguration'])->whereUuid('reversalConfiguration')->middleware('role:SuperAdmin')->name('configuration.reversal.reject');
+        Route::post('/konfigurasi/reversal/{reversalConfiguration}/aktifkan', [FinancialMasterDataController::class, 'activateReversalConfiguration'])->whereUuid('reversalConfiguration')->middleware('role:SuperAdmin')->name('configuration.reversal.activate');
+        Route::post('/konfigurasi/reversal/{reversalConfiguration}/batalkan', [FinancialMasterDataController::class, 'cancelReversalConfiguration'])->whereUuid('reversalConfiguration')->middleware('role:SuperAdmin')->name('configuration.reversal.cancel');
         Route::post('/konfigurasi/provision-fidyah-allocation', [FinancialMasterDataController::class, 'provisionFidyahAllocation'])->name('configuration.provision-fidyah-allocation');
         Route::post('/konfigurasi/correct-legacy-program-lifecycle', [FinancialMasterDataController::class, 'correctLegacyProgramLifecycle'])->name('configuration.correct-legacy-program-lifecycle');
         // Temporary production-safe provisioning endpoint. Remove after the
@@ -579,6 +596,45 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/transaksi/{transaction}/koreksi-tanggal', [OperationalFinancialController::class, 'storePostedDateCorrection'])
             ->middleware('role:SuperAdmin')
             ->name('transactions.date-corrections.store');
+        Route::post('/transaksi/{transaction}/koreksi-tanggal-akuntansi/pratinjau', [OperationalFinancialController::class, 'previewAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.preview');
+        Route::post('/transaksi/{transaction}/koreksi-tanggal-akuntansi', [OperationalFinancialController::class, 'requestAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.request');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/setujui', [OperationalFinancialController::class, 'approveAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.approve');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/tolak', [OperationalFinancialController::class, 'rejectAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.reject');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/evaluasi-ulang', [OperationalFinancialController::class, 'reevaluateAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.reevaluate');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/batalkan', [OperationalFinancialController::class, 'cancelAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.cancel');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/eksekusi/pratinjau', [OperationalFinancialController::class, 'previewAccountingDateCorrectionExecution'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.execution.preview');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/eksekusi/stage', [OperationalFinancialController::class, 'stageAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.execution.stage');
+        Route::post('/koreksi-tanggal-akuntansi/{accountingCorrection}/eksekusi', [OperationalFinancialController::class, 'executeAccountingDateCorrection'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-corrections.execute');
+        Route::post('/koreksi-tanggal-akuntansi-batch/{accountingCorrectionBatch}/eksekusi/pratinjau', [OperationalFinancialController::class, 'previewAccountingDateCorrectionBatchExecution'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-correction-batches.execution.preview');
+        Route::post('/koreksi-tanggal-akuntansi-batch/{accountingCorrectionBatch}/eksekusi/stage', [OperationalFinancialController::class, 'stageAccountingDateCorrectionBatch'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-correction-batches.execution.stage');
+        Route::post('/transaksi/{transaction}/koreksi-tanggal-akuntansi-batch/provision', [OperationalFinancialController::class, 'provisionAccountingDateCorrectionBatch'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-correction-batches.provision');
+        Route::post('/koreksi-tanggal-akuntansi-batch/{accountingCorrectionBatch}/eksekusi', [OperationalFinancialController::class, 'executeAccountingDateCorrectionBatch'])
+            ->middleware('role:SuperAdmin')
+            ->name('transactions.accounting-date-correction-batches.execute');
         Route::post('/transaksi/{transaction}/batalkan', [OperationalFinancialController::class, 'cancel'])->name('transactions.cancel');
         Route::get('/transaksi/{transaction}', [OperationalFinancialController::class, 'show'])->name('transactions.show');
     });

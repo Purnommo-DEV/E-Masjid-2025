@@ -5,6 +5,7 @@ namespace App\Models\FinancialV2;
 use App\Domain\FinancialV2\DistributionDeletionGuard;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Distribution extends FinancialV2Model
 {
@@ -49,5 +50,10 @@ class Distribution extends FinancialV2Model
     public function copiedFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'copied_from_id');
+    }
+
+    public function correctionLineage(): HasOne
+    {
+        return $this->hasOne(DistributionCorrectionLineage::class, 'original_distribution_id');
     }
 }

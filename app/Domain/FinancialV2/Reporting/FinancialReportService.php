@@ -1026,12 +1026,8 @@ final class FinancialReportService
     private function fundMovementKind(object $row): string
     {
         $type = $row->original_transaction_type_code ?: $row->transaction_type_code;
-        if (in_array($type, $this->definitions->cashInTypes(), true) && $row->account_class === 'revenue') {
-            return 'receipt';
-        }
-        if (in_array($type, $this->definitions->cashOutTypes(), true) && $row->account_class === 'expense') {
-            return 'usage';
-        }
+        $statementKind = $this->definitions->statementKind($type, $row->account_class);
+        if ($statementKind !== 'ledger_effect') return $statementKind;
         if (in_array($type, $this->definitions->fundTransferTypes(), true) && $row->account_class === 'transfer') {
             return DecimalAmount::compare($this->amount($row->debit_amount), $this->amount($row->credit_amount)) > 0 ? 'transfer_in' : 'transfer_out';
         }
