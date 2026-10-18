@@ -242,7 +242,7 @@ final class ZiswafReportingV2Service
                     ->where(fn ($effective) => $effective->whereNull('effective_to')->orWhereDate('effective_to', '>=', $from));
             })
             ->get();
-        $realized = $this->postedRealizationByVersion($entity->id, $from, $through);
+        $realized = $this->postedRealizationByVersion($entity->id, $through);
 
         return $allocations->flatMap(function (BudgetAllocation $allocation) use ($from, $through, $fundIds, $realized): Collection {
             return $allocation->versions
@@ -285,7 +285,7 @@ final class ZiswafReportingV2Service
     }
 
     /** @return Collection<string, string> */
-    private function postedRealizationByVersion(string $entityId, string $from, string $through): Collection
+    private function postedRealizationByVersion(string $entityId, string $through): Collection
     {
         $cashOutTypes = $this->definitions->cashOutTypes();
         $placeholders = implode(', ', array_fill(0, max(1, count($cashOutTypes)), '?'));
@@ -294,7 +294,6 @@ final class ZiswafReportingV2Service
         return $this->postedLedger->ledger($entityId, $through)
             ->join('financial_v2_fund_realizations as realization', 'realization.transaction_id', '=', 'financial_transaction.id')
             ->join('financial_v2_accounts as account', 'account.id', '=', 'ledger.account_id')
-            ->where('ledger.accounting_date', '>=', $from)
             ->where('account.account_class', 'expense')
             ->where('realization.status', 'recorded')
             ->whereNotNull('realization.budget_allocation_version_id')
@@ -456,13 +455,13 @@ final class ZiswafReportingV2Service
         if ($planStatus === null) {
             return $actual !== '0.00' ? 'POSTED' : strtoupper($programStatus ?? 'DRAFT');
         }
+        if (DecimalAmount::compare($allocation, '0.00') > 0 && DecimalAmount::compare($realization, $allocation) >= 0) {
+            return 'COMPLETED';
+        }
         if (DecimalAmount::equals($actual, '0.00')) {
             return match ($planStatus) {
                 'draft' => 'DRAFT', 'submitted' => 'SUBMITTED', default => 'BELUM DIREALISASIKAN'
             };
-        }
-        if (DecimalAmount::compare($realization, $allocation) >= 0) {
-            return 'COMPLETED';
         }
 
         return 'BERJALAN';
