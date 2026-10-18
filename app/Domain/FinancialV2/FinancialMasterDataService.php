@@ -155,6 +155,49 @@ final class FinancialMasterDataService
         }, 3);
     }
 
+    /**
+     * Renames only the display name of a Financial Account. Its identity,
+     * custody configuration, lifecycle, balances, and financial relations are
+     * deliberately left untouched.
+     */
+    public function renameFinancialAccount(string $entityId, string $financialAccountId, string $name, string $reason, ?int $actorUserId = null): FinancialAccount
+    {
+        return DB::transaction(function () use ($entityId, $financialAccountId, $name, $reason, $actorUserId): FinancialAccount {
+            DB::table('financial_v2_accounting_entities')->where('id', $entityId)->lockForUpdate()->first();
+            $financialAccount = $this->modelForEntity(FinancialAccount::class, $entityId, $financialAccountId, 'Rekening/Kas');
+            $name = preg_replace('/\s+/u', ' ', trim($name)) ?? '';
+            $reason = preg_replace('/\s+/u', ' ', trim($reason)) ?? '';
+
+            if ($financialAccount->status === 'closed') {
+                throw new FinancialDomainException('E-MASTER-CLOSED', 'Rekening/Kas yang sudah ditutup tidak dapat diubah namanya.');
+            }
+            if ($name === '' || Str::length($name) > 160 || $reason === '') {
+                throw new FinancialDomainException('E-MASTER-RENAME-INPUT', 'Perubahan nama Rekening/Kas memerlukan nama valid dan alasan audit.');
+            }
+
+            $normalizedName = Str::lower($name);
+            $duplicate = FinancialAccount::query()
+                ->where('accounting_entity_id', $entityId)
+                ->where('id', '<>', $financialAccount->id)
+                ->get(['name'])
+                ->contains(fn (FinancialAccount $candidate): bool => Str::lower(preg_replace('/\s+/u', ' ', trim($candidate->name)) ?? '') === $normalizedName);
+            if ($duplicate) {
+                throw new FinancialDomainException('E-MASTER-FINANCIAL-ACCOUNT-NAME-DUPLICATE', 'Nama Rekening/Kas sudah digunakan pada Entity yang dipilih.');
+            }
+            if ($financialAccount->name === $name) {
+                return $financialAccount->fresh(['account', 'bankDetail', 'cashDetail']);
+            }
+
+            $before = $this->financialAccountSummary($financialAccount);
+            $financialAccount->update(['name' => $name, 'updated_by_user_id' => $actorUserId]);
+            $after = $this->financialAccountSummary($financialAccount->fresh());
+            $after['rename_reason'] = $reason;
+            $this->record($entityId, 'financial_account_renamed', 'financial_account', $financialAccount, $actorUserId, $before, $after);
+
+            return $financialAccount->fresh(['account', 'bankDetail', 'cashDetail']);
+        }, 3);
+    }
+
     public function deactivateFinancialAccount(string $entityId, string $financialAccountId, string $effectiveDate, ?int $actorUserId = null): FinancialAccount
     {
         return DB::transaction(function () use ($entityId, $financialAccountId, $effectiveDate, $actorUserId): FinancialAccount {

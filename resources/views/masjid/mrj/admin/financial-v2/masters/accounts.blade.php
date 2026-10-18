@@ -59,6 +59,9 @@
                                 @else Tidak ada rincian kustodian tambahan. @endif
                             </p>
                             <div class="mt-4 flex flex-wrap gap-2">
+                                @if ($financialAccount->status !== 'closed')
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('rename-financial-account-{{ $financialAccount->id }}').showModal()">Ubah Nama</button>
+                                @endif
                                 @if ($financialAccount->status !== 'active' && $financialAccount->status !== 'closed')
                                     <form method="post" action="{{ route('financial-v2.masters.accounts.activate', $financialAccount) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="effective_date" value="{{ now()->toDateString() }}"><button class="btn btn-success btn-sm">Aktifkan</button></form>
                                 @endif
@@ -66,6 +69,33 @@
                                     <form method="post" action="{{ route('financial-v2.masters.accounts.deactivate', $financialAccount) }}" data-financial-ajax>@csrf<input type="hidden" name="entity" value="{{ $entity->id }}"><input type="hidden" name="effective_date" value="{{ now()->toDateString() }}"><button class="btn btn-outline btn-sm">Nonaktifkan</button></form>
                                 @endif
                             </div>
+                            @if ($financialAccount->status !== 'closed')
+                                <dialog id="rename-financial-account-{{ $financialAccount->id }}" class="modal modal-bottom sm:modal-middle">
+                                    <div class="modal-box w-full max-w-lg p-5 sm:p-6">
+                                        <form method="dialog"><button class="btn btn-circle btn-ghost btn-sm absolute right-3 top-3" aria-label="Tutup">✕</button></form>
+                                        <h3 class="pr-10 text-lg font-bold">Ubah Nama Rekening / Kas</h3>
+                                        <p class="mt-1 text-sm text-base-content/65">Perubahan hanya mengganti nama tampilan. ID, kode <strong>{{ $financialAccount->code }}</strong>, Entity, saldo, transaksi, jurnal, ledger, dan histori tetap sama.</p>
+                                        <form method="post" action="{{ route('financial-v2.masters.accounts.update', $financialAccount) }}" data-financial-ajax class="mt-5 space-y-4">
+                                            @csrf @method('PUT')
+                                            <input type="hidden" name="entity" value="{{ $entity->id }}">
+                                            <input type="hidden" name="edit_scope" value="name">
+                                            <label class="form-control">
+                                                <span class="label-text text-sm">Nama Rekening / Kas</span>
+                                                <input required name="name" maxlength="160" value="{{ $financialAccount->name }}" class="input input-bordered w-full" autocomplete="off">
+                                            </label>
+                                            <label class="form-control">
+                                                <span class="label-text text-sm">Alasan perubahan</span>
+                                                <textarea required name="reason" maxlength="500" rows="3" class="textarea textarea-bordered w-full" placeholder="Jelaskan alasan perubahan nama untuk audit trail."></textarea>
+                                            </label>
+                                            <div class="modal-action grid grid-cols-1 gap-2 sm:flex sm:flex-row">
+                                                <button type="button" class="btn btn-ghost w-full sm:w-auto" onclick="document.getElementById('rename-financial-account-{{ $financialAccount->id }}').close()">Batal</button>
+                                                <button class="btn btn-primary w-full sm:w-auto">Simpan nama</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    <form method="dialog" class="modal-backdrop"><button aria-label="Tutup dialog">close</button></form>
+                                </dialog>
+                            @endif
                             @if ($financialAccount->status !== 'active')
                                 <details class="mt-4 rounded-xl bg-base-200 p-4">
                                     <summary class="cursor-pointer text-sm font-semibold">Ubah draft</summary>

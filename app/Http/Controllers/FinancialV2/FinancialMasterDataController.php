@@ -448,6 +448,13 @@ final class FinancialMasterDataController
     public function updateAccount(Request $request, string $financialAccount)
     {
         return $this->perform($request, 'accounts', function (AccountingEntity $entity) use ($request, $financialAccount) {
+            if ($request->input('edit_scope') === 'name') {
+                $input = $this->financialAccountNameInput($request, $entity->id, $financialAccount);
+                $account = $this->masters->renameFinancialAccount($entity->id, $financialAccount, $input['name'], $input['reason'], $request->user()?->id);
+
+                return ['Nama Rekening/Kas berhasil diperbarui. ID, kode, relasi, saldo, dan histori keuangan tetap sama.', ['financial_account_id' => $account->id]];
+            }
+
             $account = $this->masters->updateFinancialAccount($entity->id, $financialAccount, $this->financialAccountInput($request), $request->user()?->id);
 
             return ['Rekening/Kas diperbarui.', ['financial_account_id' => $account->id]];
@@ -868,6 +875,27 @@ final class FinancialMasterDataController
             'cash_count_frequency' => [Rule::requiredIf(in_array($request->input('account_type'), ['cash', 'petty_cash'], true)), 'nullable', Rule::in(['daily', 'weekly', 'monthly', 'ad_hoc'])],
             'petty_cash_limit' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
         ], $this->messages());
+    }
+
+    /** @return array{name: string, reason: string} */
+    private function financialAccountNameInput(Request $request, string $entityId, string $financialAccountId): array
+    {
+        $request->merge([
+            'name' => preg_replace('/\s+/u', ' ', trim((string) $request->input('name'))),
+            'reason' => preg_replace('/\s+/u', ' ', trim((string) $request->input('reason'))),
+        ]);
+
+        return $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:160',
+                Rule::unique('financial_v2_financial_accounts', 'name')
+                    ->where(fn ($query) => $query->where('accounting_entity_id', $entityId))
+                    ->ignore($financialAccountId),
+            ],
+            'reason' => ['required', 'string', 'max:500'],
+        ], $this->messages(), ['name' => 'Nama Rekening/Kas', 'reason' => 'Alasan perubahan']);
     }
 
     /** @return array<string, mixed> */
