@@ -437,6 +437,8 @@ Route::middleware(['auth'])->group(function () {
         });
         Route::get('/draft-transaksi', [OperationalFinancialController::class, 'draftTransactions'])->name('transactions.drafts');
         Route::get('/riwayat', [OperationalFinancialController::class, 'history'])->name('transactions.index');
+        Route::patch('/riwayat/{transaction}/keterangan', [OperationalFinancialController::class, 'amendDescription'])
+            ->whereUuid('transaction')->middleware('role:SuperAdmin')->name('transactions.description.update');
         // Financial V2 reports are isolated from legacy /admin/keuangan
         // reporting and read only the immutable Posted V2 ledger/journals.
         Route::get('/laporan', [FinancialReportController::class, 'index'])->name('reports.index');

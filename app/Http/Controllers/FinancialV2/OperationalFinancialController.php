@@ -27,6 +27,7 @@ use App\Domain\FinancialV2\Reporting\FundHistoryReadService;
 use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\TransactionEvidenceStatusService;
 use App\Domain\FinancialV2\TransactionEvidenceUploadService;
+use App\Domain\FinancialV2\TransactionDescriptionAmendmentService;
 use App\Models\FinancialV2\AccountingEntity;
 use App\Models\FinancialV2\AccountingDateCorrectionRequest;
 use App\Models\FinancialV2\AccountingDateCorrectionBatch;
@@ -94,6 +95,7 @@ final class OperationalFinancialController
         private readonly AccountingDateCorrectionWorkflowService $accountingDateCorrections,
         private readonly AccountingDateCorrectionExecutionOrchestrator $accountingDateCorrectionExecutor,
         private readonly AccountingDateCorrectionBatchWorkflowService $accountingDateCorrectionBatches,
+        private readonly TransactionDescriptionAmendmentService $descriptionAmendments,
     ) {}
 
     public function dashboard(Request $request)
@@ -815,6 +817,13 @@ final class OperationalFinancialController
             ? $this->historyQuery($entity, $filters)->paginate(20)->withQueryString()
             : FinancialTransaction::query()->whereRaw('1 = 0')->paginate(20)->withQueryString();
 
+        if ($entity) {
+            $amendments = $this->descriptionAmendments->latestDescriptions($entity->id, $transactions->getCollection()->pluck('id'));
+            $transactions->getCollection()->each(function (FinancialTransaction $transaction) use ($amendments): void {
+                $transaction->setAttribute('display_description', $amendments->get($transaction->id, $transaction->description));
+            });
+        }
+
         return view('masjid.mrj.admin.financial-v2.history', [
             'entities' => $context['entities'],
             'entity' => $entity,
@@ -822,6 +831,35 @@ final class OperationalFinancialController
             'filters' => $filters,
             'transactions' => $transactions,
         ]);
+    }
+
+    public function amendDescription(Request $request, FinancialTransaction $transaction)
+    {
+        abort_unless($request->user()?->hasRole('SuperAdmin'), 403);
+        $data = $request->validate([
+            'entity' => ['required', 'uuid'],
+            'description' => ['required', 'string', 'max:2000'],
+        ], [
+            'description.required' => 'Keterangan wajib diisi.',
+            'description.max' => 'Keterangan maksimal 2.000 karakter.',
+        ]);
+        $entity = $this->activeEntity($data['entity']);
+        abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+
+        try {
+            $this->descriptionAmendments->amend(
+                $entity->id,
+                $transaction->id,
+                trim($data['description']),
+                (int) $request->user()->id,
+            );
+        } catch (FinancialDomainException $exception) {
+            return back()->withInput()->withErrors(['description' => $exception->getMessage()]);
+        }
+
+        return redirect()
+            ->route('financial-v2.transactions.index', ['entity' => $entity->id])
+            ->with('success', 'Keterangan transaksi berhasil diperbarui. Fakta transaksi dan ledger tetap tidak berubah.');
     }
 
     public function show(Request $request, FinancialTransaction $transaction)
