@@ -125,7 +125,7 @@ final class BankMutationController extends Controller
             ->with('success', $result['changed'] ? 'Konfigurasi Mutasi Bank berhasil diaktifkan.' : 'Konfigurasi Mutasi Bank sudah aktif.');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $input = $this->validatedBatch($request, proofRequired: true);
         try {
@@ -150,18 +150,34 @@ final class BankMutationController extends Controller
                 return $result;
             }, 3);
         } catch (FinancialDomainException|FinancialPostingException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $exception->getMessage(), 'errors' => ['financial' => [$exception->getMessage()]]], 422);
+            }
+
             return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->withInput()->withErrors(['financial' => 'Batch Mutasi Bank belum dapat disimpan. Tidak ada data yang diubah; silakan coba lagi atau hubungi administrator.']);
+            $message = 'Batch Mutasi Bank belum dapat disimpan. Tidak ada data yang diubah; silakan coba lagi atau hubungi administrator.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message, 'errors' => ['financial' => [$message]]], 500);
+            }
+
+            return back()->withInput()->withErrors(['financial' => $message]);
         }
 
         $message = $result['replayed']
             ? 'Batch Mutasi Bank sudah pernah disimpan; tidak ada transaksi duplikat.'
             : $result['transactions']->count().' draft Mutasi Bank disimpan dengan satu bukti bersama.';
 
-        return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $input['common']['accounting_entity_id']])->with('success', $message);
+        $redirect = route('financial-v2.bank-mutations.index', ['entity' => $input['common']['accounting_entity_id']]);
+        if ($request->expectsJson()) {
+            $request->session()->flash('success', $message);
+
+            return response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect]);
+        }
+
+        return redirect($redirect)->with('success', $message);
     }
 
     public function edit(Request $request, FinancialTransaction $transaction): RedirectResponse
@@ -195,7 +211,7 @@ final class BankMutationController extends Controller
         ]);
     }
 
-    public function updateBatch(Request $request, string $batch): RedirectResponse
+    public function updateBatch(Request $request, string $batch): RedirectResponse|JsonResponse
     {
         abort_unless(Str::isUuid($batch), 404);
         $input = $this->validatedBatch($request, proofRequired: false, expectedBatchId: $batch);
@@ -237,15 +253,31 @@ final class BankMutationController extends Controller
                 return $transactions;
             }, 3);
         } catch (FinancialDomainException|FinancialPostingException $exception) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $exception->getMessage(), 'errors' => ['financial' => [$exception->getMessage()]]], 422);
+            }
+
             return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
         } catch (Throwable $exception) {
             report($exception);
 
-            return back()->withInput()->withErrors(['financial' => 'Perubahan batch Mutasi Bank belum dapat disimpan. Tidak ada data yang diubah; silakan coba lagi atau hubungi administrator.']);
+            $message = 'Perubahan batch Mutasi Bank belum dapat disimpan. Tidak ada data yang diubah; silakan coba lagi atau hubungi administrator.';
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $message, 'errors' => ['financial' => [$message]]], 500);
+            }
+
+            return back()->withInput()->withErrors(['financial' => $message]);
         }
 
-        return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $input['common']['accounting_entity_id']])
-            ->with('success', $transactions->count().' draft dalam batch Mutasi Bank diperbarui.');
+        $message = $transactions->count().' draft dalam batch Mutasi Bank diperbarui.';
+        $redirect = route('financial-v2.bank-mutations.index', ['entity' => $input['common']['accounting_entity_id']]);
+        if ($request->expectsJson()) {
+            $request->session()->flash('success', $message);
+
+            return response()->json(['ok' => true, 'message' => $message, 'redirect' => $redirect]);
+        }
+
+        return redirect($redirect)->with('success', $message);
     }
 
     public function destroyBatch(Request $request, string $batch): RedirectResponse

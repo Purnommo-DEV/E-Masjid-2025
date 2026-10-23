@@ -366,9 +366,9 @@
             invalid?.reportValidity();
         }
     });
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
         if (form.dataset.configurationReady !== 'true' || form.dataset.submitting === 'true') {
-            event.preventDefault();
             if (form.dataset.submitting === 'true') {
                 showSubmitMessage('Permintaan sedang diproses. Mohon tunggu.');
             } else {
@@ -382,6 +382,46 @@
         submitMessage.classList.remove('alert-warning');
         submitMessage.classList.add('alert-info');
         showSubmitMessage('Menyimpan batch Mutasi Bank…');
+
+        const requestController = new AbortController();
+        const requestTimeout = window.setTimeout(() => requestController.abort(), 90000);
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(form),
+                signal: requestController.signal,
+            });
+            const contentType = response.headers.get('content-type') || '';
+            const data = contentType.includes('application/json') ? await response.json() : null;
+            if (!response.ok) {
+                const validationMessage = data?.errors
+                    ? Object.values(data.errors).flat().find(Boolean)
+                    : null;
+                throw new Error(validationMessage || data?.message || `Penyimpanan gagal dengan HTTP ${response.status}.`);
+            }
+            if (!data?.redirect) throw new Error('Server tidak memberikan tujuan setelah penyimpanan. Periksa daftar Mutasi Bank sebelum mencoba kembali.');
+
+            showSubmitMessage(data.message || 'Batch tersimpan. Membuka daftar Mutasi Bank…');
+            window.location.assign(data.redirect);
+            return;
+        } catch (error) {
+            submitMessage.classList.remove('alert-info');
+            submitMessage.classList.add('alert-warning');
+            const offline = navigator.onLine === false;
+            showSubmitMessage(error.name === 'AbortError'
+                ? 'Server belum memberi respons setelah 90 detik. Hasil penyimpanan belum dapat dipastikan; periksa daftar Mutasi Bank sebelum mencoba kembali.'
+                : (offline
+                    ? 'Koneksi terputus. Hasil penyimpanan belum dapat dipastikan; periksa daftar Mutasi Bank sebelum mencoba kembali.'
+                    : (error.message || 'Respons penyimpanan tidak dapat dibaca. Periksa daftar Mutasi Bank sebelum mencoba kembali.')));
+        } finally {
+            window.clearTimeout(requestTimeout);
+        }
+
+        form.dataset.submitting = 'false';
+        submit.disabled = false;
+        submit.textContent = submitLabel;
     });
 
     window.addEventListener('pageshow', () => {
