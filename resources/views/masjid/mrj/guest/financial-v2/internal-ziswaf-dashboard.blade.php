@@ -196,7 +196,7 @@
         <div class="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
             <div>
                 <p class="text-xs font-bold uppercase tracking-[.18em] text-emerald-700">Pergerakan dana</p>
-                <h2 id="running-balance-heading" class="mt-1 text-xl font-extrabold text-slate-900">Saldo Berjalan</h2>
+                <h2 id="running-balance-heading" class="mt-1 text-xl font-extrabold text-slate-900">Saldo Berjalan — Seluruh Riwayat</h2>
                 <p class="mt-1 text-sm leading-6 text-slate-500">Seluruh pergerakan efektif transaksi POSTED ditampilkan secara kumulatif berdasarkan kronologi akuntansi; filter tanggal laporan tidak membatasi daftar ini.</p>
             </div>
             <span class="mt-2 inline-flex w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 sm:mt-0">

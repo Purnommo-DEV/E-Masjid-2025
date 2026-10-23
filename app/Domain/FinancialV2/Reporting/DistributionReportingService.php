@@ -10,7 +10,11 @@ use Illuminate\Support\Facades\DB;
 /** Aggregate DTOs only: never select recipient identity or operational notes. */
 final class DistributionReportingService
 {
-    public function __construct(private readonly PostedLedgerQuery $ledger, private readonly FinancialReportDefinitions $definitions) {}
+    public function __construct(
+        private readonly PostedLedgerQuery $ledger,
+        private readonly FinancialReportDefinitions $definitions,
+        private readonly DistributionCorrectionReadService $distributionCorrections,
+    ) {}
 
     public function report(string $entityId, string $from, string $through, array $fundIds, ?string $programId = null, bool $public = false, bool $fundFiltered = false): array
     {
@@ -24,13 +28,44 @@ final class DistributionReportingService
             ->where('distribution.accounting_entity_id', $entityId)
             ->where('distribution.starts_on', '<=', $through)->where('distribution.ends_on', '>=', $from)
             ->when($programId, fn ($q) => $q->where('distribution.program_id', $programId))
-            ->select('distribution.id', 'distribution.program_id', 'program.name as program_name', 'distribution.period_label', 'distribution.starts_on', 'distribution.ends_on', 'distribution.status', 'items.recipient_count', 'items.operational_total', 'transaction.id as transaction_id', 'transaction.status as financial_status', 'transaction.gross_amount', 'realization.status as realization_status')
+            ->select('distribution.id', 'distribution.program_id', 'distribution.realization_id', 'program.name as program_name', 'distribution.period_label', 'distribution.starts_on', 'distribution.ends_on', 'distribution.status', 'items.recipient_count', 'items.operational_total', 'transaction.id as transaction_id', 'transaction.status as financial_status', 'transaction.gross_amount', 'realization.status as realization_status')
             ->orderBy('distribution.starts_on')->orderBy('distribution.id')->get();
 
+        $effectiveRealizationIds = $this->distributionCorrections->verifiedEffectiveRealizationIds(
+            $entityId,
+            $events->pluck('id')->all(),
+        );
+        $realizationFacts = DB::table('financial_v2_fund_realizations as realization')
+            ->join('financial_v2_transactions as transaction', 'transaction.id', '=', 'realization.transaction_id')
+            ->where('transaction.accounting_entity_id', $entityId)
+            ->whereIn('realization.id', $events->map(
+                fn (object $event): string => (string) ($effectiveRealizationIds->get($event->id) ?? $event->realization_id)
+            )->filter()->unique()->all())
+            ->get([
+                'realization.id', 'realization.status as realization_status',
+                'transaction.id as transaction_id', 'transaction.status as financial_status', 'transaction.gross_amount',
+            ])->keyBy('id');
+        $events->each(function (object $event) use ($effectiveRealizationIds, $realizationFacts): void {
+            $effectiveRealizationId = $effectiveRealizationIds->get($event->id) ?? $event->realization_id;
+            $fact = $realizationFacts->get($effectiveRealizationId);
+            if ($fact === null) {
+                return;
+            }
+
+            $event->transaction_id = $fact->transaction_id;
+            $event->financial_status = $fact->financial_status;
+            $event->gross_amount = $fact->gross_amount;
+            $event->realization_status = $fact->realization_status;
+        });
+
         // Same expense/type source as canonical programExpenseFunding, never item amounts as actuals.
+        // A Distribution selected by its operational period may be backed by an
+        // accounting-date replacement before $from. Its linked realization is
+        // therefore cumulative through $through, while still constrained to
+        // the one verified effective transaction resolved above.
         $facts = $this->ledger->ledger($entityId, $through)
             ->join('financial_v2_accounts as account', 'account.id', '=', 'ledger.account_id')
-            ->where('ledger.accounting_date', '>=', $from)->where('account.account_class', 'expense')
+            ->where('account.account_class', 'expense')
             ->whereIn('transaction_type.code', $this->definitions->cashOutTypes())
             ->whereIn('financial_transaction.id', $events->pluck('transaction_id')->filter())
             ->select('financial_transaction.id as transaction_id', 'ledger.program_id', 'ledger.fund_id')

@@ -133,10 +133,15 @@ final class InternalZiswafDashboardController
                 'attachment_count' => (int) $attachmentCounts->get($row['transaction_id'], 0),
             ];
         })->sort(function (array $left, array $right): int {
-            $dateOrder = strcmp((string) $right['display_date'], (string) $left['display_date']);
+            $dateOrder = strcmp((string) $right['accounting_date'], (string) $left['accounting_date']);
+            if ($dateOrder !== 0) {
+                return $dateOrder;
+            }
 
-            return $dateOrder !== 0
-                ? $dateOrder
+            $sequenceOrder = ((int) ($right['posting_sequence'] ?? 0)) <=> ((int) ($left['posting_sequence'] ?? 0));
+
+            return $sequenceOrder !== 0
+                ? $sequenceOrder
                 : strcmp((string) $right['transaction_id'], (string) $left['transaction_id']);
         })->values();
         return view('masjid.mrj.guest.financial-v2.internal-ziswaf-dashboard', [

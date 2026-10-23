@@ -124,7 +124,7 @@
 </div>
 
 <div class="section page-break">
-    <h2 class="section-title">Saldo Berjalan</h2>
+    <h2 class="section-title">Pergerakan dalam Periode Laporan</h2>
     <p class="section-note">Urutan mengikuti tanggal akuntansi dan urutan posting resmi. Saldo awal {{ $rupiah($runningBalance['opening_balance']) }} · saldo akhir {{ $rupiah($runningBalance['closing_balance']) }}.</p>
     <table class="data"><thead><tr><th style="width:11%">Tanggal</th><th>Uraian</th><th style="width:18%">Dana</th><th class="right">Masuk</th><th class="right">Keluar</th><th class="right">Saldo</th></tr></thead><tbody>
         <tr><td>{{ $date($from) }}</td><td class="strong">Saldo Awal Periode</td><td>{{ $selectedFund }}</td><td class="right">—</td><td class="right">—</td><td class="right money strong">{{ $rupiah($runningBalance['opening_balance']) }}</td></tr>

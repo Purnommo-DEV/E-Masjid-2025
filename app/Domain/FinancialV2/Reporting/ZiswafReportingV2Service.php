@@ -425,6 +425,7 @@ final class ZiswafReportingV2Service
 
                 return [
                     'journal_id' => $row->journal_id, 'transaction_id' => $row->transaction_id, 'date' => $row->accounting_date,
+                    'posting_sequence' => (int) $row->posting_sequence,
                     'description' => $row->description, 'fund' => $row->fund_names ?: '—', 'program' => $row->program_names ?: 'Non-Program',
                     'category' => $row->category_name ?: '—', 'type' => $type, 'status' => 'POSTED',
                     'in' => in_array($type, $cashIn, true) ? $amount : '0.00',
