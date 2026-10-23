@@ -6,6 +6,24 @@
     <meta name="robots" content="noindex,nofollow,noarchive">
     <title>Dashboard ZISWAF Internal</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        .ziswaf-card-scroll {
+            max-height: min(40rem, 72vh);
+            scrollbar-gutter: stable;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .ziswaf-mobile-copy {
+            overflow-wrap: break-word;
+            word-break: normal;
+        }
+
+        @media (min-width: 640px) {
+            .ziswaf-card-scroll {
+                max-height: 36rem;
+            }
+        }
+    </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
 @include(guest_layout('_navbar'))
@@ -56,7 +74,7 @@
     </div>
 </header>
 
-<main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+<main class="mx-auto max-w-7xl space-y-6 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:py-8">
     {{-- Filter laporan --}}
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
@@ -186,8 +204,59 @@
             </span>
         </div>
 
-        <div data-scroll-region="running-balance" class="overflow-y-auto overscroll-y-contain" style="max-height: 36rem;">
-            <x-horizontal-scroll-table>
+        <div data-scroll-region="running-balance" class="ziswaf-card-scroll min-h-0 overflow-y-auto overscroll-y-contain">
+            <div class="divide-y divide-slate-100 sm:hidden">
+                <article class="bg-emerald-50/60 p-4">
+                    <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">{{ $positionDate($runningBalanceFrom) }}</p>
+                    <p class="mt-1 font-bold text-emerald-950">Saldo Awal Periode</p>
+                    <p class="ziswaf-mobile-copy mt-1 text-xs leading-5 text-slate-500">{{ $filters['fund_id'] ?? null ? data_get(collect($report['funds'])->firstWhere('fund_id', $filters['fund_id']), 'name', 'Dana terpilih') : 'Seluruh Dana ZISWAF' }}</p>
+                    <div class="mt-3 rounded-xl bg-white/80 px-3 py-2.5">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Saldo berjalan</p>
+                        <p class="mt-0.5 whitespace-nowrap font-mono text-base font-bold tabular-nums text-emerald-950">{{ $positionRupiah($runningBalance['opening_balance']) }}</p>
+                    </div>
+                </article>
+
+                @forelse ($runningBalanceRows as $row)
+                    <article class="p-4 transition hover:bg-slate-50/80">
+                        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $positionDate($row['accounting_date']) }}</p>
+                        <a class="ziswaf-mobile-copy mt-1 block text-sm font-semibold leading-5 text-emerald-800 underline-offset-4 hover:text-emerald-950 hover:underline"
+                           href="{{ route('internal.ziswaf.transactions.show', $row['transaction_id']) }}">
+                            {{ $row['description'] }}
+                        </a>
+                        <p class="mt-1 text-[11px] text-slate-400">Urutan posting {{ $row['posting_sequence'] }}</p>
+
+                        @php($mobileFund = $row['fund'] ?: '—')
+                        <details class="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                            <summary class="cursor-pointer list-none font-medium marker:hidden">
+                                <span class="text-slate-400">Pos/Fund</span>
+                                <span class="ziswaf-mobile-copy ml-1">{{ Illuminate\Support\Str::limit($mobileFund, 52) }}</span>
+                                <span class="ml-1 text-emerald-700" aria-hidden="true">▾</span>
+                            </summary>
+                            <p class="ziswaf-mobile-copy mt-2 border-t border-slate-200 pt-2 leading-5">{{ $mobileFund }}</p>
+                        </details>
+
+                        <dl class="mt-3 grid min-w-0 grid-cols-2 gap-2 text-xs">
+                            <div class="min-w-0 rounded-xl bg-emerald-50 px-3 py-2.5">
+                                <dt class="font-semibold text-emerald-700">Pemasukan</dt>
+                                <dd class="mt-1 whitespace-nowrap font-mono font-bold tabular-nums text-emerald-800">{{ $row['in'] !== '0.00' ? $positionRupiah($row['in']) : '—' }}</dd>
+                            </div>
+                            <div class="min-w-0 rounded-xl bg-rose-50 px-3 py-2.5 text-right">
+                                <dt class="font-semibold text-rose-700">Pengeluaran</dt>
+                                <dd class="mt-1 whitespace-nowrap font-mono font-bold tabular-nums text-rose-800">{{ $row['out'] !== '0.00' ? $positionRupiah($row['out']) : '—' }}</dd>
+                            </div>
+                            <div class="col-span-2 min-w-0 rounded-xl bg-slate-100 px-3 py-2.5">
+                                <dt class="font-semibold text-slate-500">Saldo berjalan</dt>
+                                <dd class="mt-1 whitespace-nowrap font-mono text-sm font-bold tabular-nums text-slate-900">{{ $positionRupiah($row['running_balance']) }}</dd>
+                            </div>
+                        </dl>
+                    </article>
+                @empty
+                    <p class="p-6 text-center text-sm text-slate-500">Tidak ada transaksi pada periode yang dipilih.</p>
+                @endforelse
+            </div>
+
+            <div class="hidden sm:block">
+                <x-horizontal-scroll-table>
                 <table class="w-full min-w-[900px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
@@ -225,19 +294,20 @@
                     @endforelse
                 </tbody>
                 </table>
-            </x-horizontal-scroll-table>
+                </x-horizontal-scroll-table>
+            </div>
         </div>
     </section>
 
     {{-- Allocation dan realisasi --}}
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-100 p-5 sm:p-6">
+        <div class="border-b border-slate-100 p-4 sm:p-6">
             <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h2 class="text-lg font-bold tracking-tight text-slate-900">Allocation dibanding Realisasi</h2>
                     <p class="mt-1 text-sm text-slate-500">Pantau penggunaan rencana dana untuk setiap program.</p>
                 </div>
-                <div class="grid min-w-0 grid-cols-1 gap-3 sm:min-w-80 sm:grid-cols-2">
+                <div class="grid min-w-0 grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:min-w-80">
                     <div class="min-w-0 rounded-xl bg-slate-50 px-4 py-3">
                         <p class="text-xs font-medium text-slate-500">Total allocation</p>
                         <p class="mt-1 whitespace-nowrap text-sm font-bold tabular-nums text-slate-900 min-[360px]:text-base">{{ $rp($allocation) }}</p>
@@ -261,8 +331,43 @@
             </div>
         </div>
 
-        <x-horizontal-scroll-table>
-            <table class="w-full min-w-[720px] text-left text-sm">
+        <div class="divide-y divide-slate-100 sm:hidden">
+            @forelse ($report['programs'] as $p)
+                <article class="min-w-0 p-4">
+                    <div class="flex min-w-0 items-start justify-between gap-3">
+                        <h3 class="ziswaf-mobile-copy min-w-0 font-bold leading-5 text-slate-900">{{ $p['name'] }}</h3>
+                        <span class="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-700">{{ $p['status'] }}</span>
+                    </div>
+                    <dl class="mt-3 grid min-w-0 grid-cols-2 gap-2 text-xs">
+                        <div class="min-w-0 rounded-xl bg-slate-50 px-3 py-2.5">
+                            <dt class="text-slate-500">Allocation</dt>
+                            <dd class="mt-1 whitespace-nowrap font-mono font-bold tabular-nums text-slate-800">{{ $rp($p['allocation']) }}</dd>
+                        </div>
+                        <div class="min-w-0 rounded-xl bg-emerald-50 px-3 py-2.5">
+                            <dt class="text-emerald-700">Realisasi</dt>
+                            <dd class="mt-1 whitespace-nowrap font-mono font-bold tabular-nums text-emerald-800">{{ $rp($p['realization']) }}</dd>
+                        </div>
+                        <div class="min-w-0 rounded-xl bg-rose-50 px-3 py-2.5">
+                            <dt class="text-rose-700">Pengeluaran aktual</dt>
+                            <dd class="mt-1 whitespace-nowrap font-mono font-bold tabular-nums text-rose-800">{{ $rp($p['actual_expense']) }}</dd>
+                        </div>
+                        <div class="min-w-0 rounded-xl bg-slate-100 px-3 py-2.5">
+                            <dt class="text-slate-500">Sisa</dt>
+                            <dd class="mt-1 whitespace-nowrap font-mono font-bold tabular-nums text-slate-800">{{ $rp($p['remaining']) }}</dd>
+                        </div>
+                    </dl>
+                </article>
+            @empty
+                <div class="p-8 text-center">
+                    <p class="font-semibold text-slate-700">Belum ada allocation</p>
+                    <p class="mt-1 text-sm text-slate-500">Tidak ada allocation dalam cakupan periode yang dipilih.</p>
+                </div>
+            @endforelse
+        </div>
+
+        <div class="hidden sm:block">
+            <x-horizontal-scroll-table>
+                <table class="w-full min-w-[720px] text-left text-sm">
                 <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
                     <tr>
                         <th scope="col" class="px-5 py-3.5 sm:px-6">Program</th>
@@ -294,8 +399,9 @@
                         </tr>
                     @endforelse
                 </tbody>
-            </table>
-        </x-horizontal-scroll-table>
+                </table>
+            </x-horizontal-scroll-table>
+        </div>
     </section>
 
     {{-- Histori transaksi --}}
@@ -409,7 +515,7 @@
         </div>
     </section>
 
-    <footer class="pb-5 pt-1 text-center">
+    <footer class="pt-1 text-center" style="padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));">
         <p class="text-xs leading-5 text-slate-400">Actual bersumber dari Financial V2 posted ledger. Dashboard ini bersifat read-only dan tidak menyediakan operasi tulis.</p>
     </footer>
 </main>
