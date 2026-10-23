@@ -130,28 +130,32 @@ final class BankMutationController extends Controller
         $input = $this->validatedBatch($request, proofRequired: true);
         try {
             $this->resolveBatch($input['common'], $input['mutations']);
-        } catch (FinancialPostingException $exception) {
-            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
-        }
-        $result = DB::transaction(function () use ($input, $request): array {
-            $result = $this->bankMutations->createBatch(
-                $input['common'],
-                $input['mutations'],
-                $input['batch_id'],
-                $request->user()?->id,
-            );
-            if (! $result['replayed']) {
-                $this->uploads->attachToMany(
-                    $input['common']['accounting_entity_id'],
-                    $result['transactions']->pluck('id')->all(),
-                    $request->file('proof'),
-                    'statement',
+            $result = DB::transaction(function () use ($input, $request): array {
+                $result = $this->bankMutations->createBatch(
+                    $input['common'],
+                    $input['mutations'],
+                    $input['batch_id'],
                     $request->user()?->id,
                 );
-            }
+                if (! $result['replayed']) {
+                    $this->uploads->attachToMany(
+                        $input['common']['accounting_entity_id'],
+                        $result['transactions']->pluck('id')->all(),
+                        $request->file('proof'),
+                        'statement',
+                        $request->user()?->id,
+                    );
+                }
 
-            return $result;
-        }, 3);
+                return $result;
+            }, 3);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->withErrors(['financial' => 'Batch Mutasi Bank belum dapat disimpan. Tidak ada data yang diubah; silakan coba lagi atau hubungi administrator.']);
+        }
 
         $message = $result['replayed']
             ? 'Batch Mutasi Bank sudah pernah disimpan; tidak ada transaksi duplikat.'
@@ -197,44 +201,48 @@ final class BankMutationController extends Controller
         $input = $this->validatedBatch($request, proofRequired: false, expectedBatchId: $batch);
         try {
             $this->resolveBatch($input['common'], $input['mutations']);
-        } catch (FinancialPostingException $exception) {
-            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
-        }
-        $transactions = DB::transaction(function () use ($input, $batch, $request) {
-            $existingTransactionIds = $this->bankMutations
-                ->batchTransactions($input['common']['accounting_entity_id'], $batch)
-                ->pluck('id')
-                ->all();
-            $transactions = $this->bankMutations->updateDraftBatch(
-                $input['common']['accounting_entity_id'],
-                $batch,
-                $input['common'],
-                $input['mutations'],
-                $request->user()?->id,
-            );
-            if ($request->hasFile('proof')) {
-                $this->uploads->attachToMany(
+            $transactions = DB::transaction(function () use ($input, $batch, $request) {
+                $existingTransactionIds = $this->bankMutations
+                    ->batchTransactions($input['common']['accounting_entity_id'], $batch)
+                    ->pluck('id')
+                    ->all();
+                $transactions = $this->bankMutations->updateDraftBatch(
                     $input['common']['accounting_entity_id'],
-                    $transactions->pluck('id')->all(),
-                    $request->file('proof'),
-                    'statement',
+                    $batch,
+                    $input['common'],
+                    $input['mutations'],
                     $request->user()?->id,
                 );
-            } else {
-                $newTransactionIds = $transactions->pluck('id')->diff($existingTransactionIds)->values()->all();
-                if ($newTransactionIds !== []) {
-                    $this->uploads->shareExistingToMany(
+                if ($request->hasFile('proof')) {
+                    $this->uploads->attachToMany(
                         $input['common']['accounting_entity_id'],
-                        $existingTransactionIds,
-                        $newTransactionIds,
+                        $transactions->pluck('id')->all(),
+                        $request->file('proof'),
                         'statement',
                         $request->user()?->id,
                     );
+                } else {
+                    $newTransactionIds = $transactions->pluck('id')->diff($existingTransactionIds)->values()->all();
+                    if ($newTransactionIds !== []) {
+                        $this->uploads->shareExistingToMany(
+                            $input['common']['accounting_entity_id'],
+                            $existingTransactionIds,
+                            $newTransactionIds,
+                            'statement',
+                            $request->user()?->id,
+                        );
+                    }
                 }
-            }
 
-            return $transactions;
-        }, 3);
+                return $transactions;
+            }, 3);
+        } catch (FinancialDomainException|FinancialPostingException $exception) {
+            return back()->withInput()->withErrors(['financial' => $exception->getMessage()]);
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->withErrors(['financial' => 'Perubahan batch Mutasi Bank belum dapat disimpan. Tidak ada data yang diubah; silakan coba lagi atau hubungi administrator.']);
+        }
 
         return redirect()->route('financial-v2.bank-mutations.index', ['entity' => $input['common']['accounting_entity_id']])
             ->with('success', $transactions->count().' draft dalam batch Mutasi Bank diperbarui.');

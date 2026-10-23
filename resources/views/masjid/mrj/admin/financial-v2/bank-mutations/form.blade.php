@@ -90,8 +90,9 @@
 
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <a class="btn btn-ghost" href="{{ route('financial-v2.bank-mutations.index', ['entity' => $entity->id]) }}">Batal</a>
-                    <button class="btn btn-primary" data-bank-submit disabled>{{ $isEdit ? 'Simpan perubahan batch' : 'Simpan batch sebagai draft' }}</button>
+                    <button type="submit" class="btn btn-primary" data-bank-submit>{{ $isEdit ? 'Simpan perubahan batch' : 'Simpan batch sebagai draft' }}</button>
                 </div>
+                <div class="alert alert-warning hidden text-sm" role="alert" aria-live="assertive" data-bank-submit-message></div>
             </div>
 
             <aside class="min-w-0 space-y-4">
@@ -146,6 +147,8 @@
     const initialRows = @json($initialRows);
     const defaultFundId = @json($options['defaultFundId']);
     const submit = form.querySelector('[data-bank-submit]');
+    const submitMessage = form.querySelector('[data-bank-submit-message]');
+    const submitLabel = submit.textContent;
     const currency = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' });
     const suffixes = { BANK_INTEREST: 'JASA-GIRO', BANK_WHT_PPH: 'PPH', BANK_ACCOUNT_FEE: 'ADM-REK', BANK_CARD_FEE: 'ADM-KARTU', BANK_TRANSFER_FEE: 'TRANSFER-FEE' };
     let nextIndex = 0;
@@ -229,8 +232,16 @@
         status.className = `rounded-2xl border p-4 text-sm ${tones[state]}`;
         status.querySelector('[data-bank-configuration-message]').textContent = message;
         missingAction?.classList.toggle('hidden', state !== 'missing');
-        submit.disabled = state !== 'ready';
+        submit.classList.toggle('opacity-60', state !== 'ready');
+        submit.classList.toggle('cursor-not-allowed', state !== 'ready');
+        submit.setAttribute('aria-disabled', state === 'ready' ? 'false' : 'true');
         form.dataset.configurationReady = state === 'ready' ? 'true' : 'false';
+    };
+
+    const showSubmitMessage = (message) => {
+        submitMessage.textContent = message;
+        submitMessage.classList.remove('hidden');
+        submitMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
 
     const refresh = () => {
@@ -337,6 +348,46 @@
             suggestedReference(row);
         }
         refresh();
+    });
+    submit.addEventListener('click', (event) => {
+        submitMessage.classList.add('hidden');
+        if (form.dataset.configurationReady !== 'true') {
+            event.preventDefault();
+            showSubmitMessage(form.querySelector('[data-bank-configuration-message]')?.textContent || 'Konfigurasi transaksi belum siap.');
+            return;
+        }
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            const invalid = form.querySelector(':invalid');
+            const message = invalid?.name === 'proof'
+                ? 'Bukti rekening koran wajib dipilih sebelum batch baru disimpan.'
+                : 'Lengkapi field wajib yang masih kosong atau tidak valid.';
+            showSubmitMessage(message);
+            invalid?.reportValidity();
+        }
+    });
+    form.addEventListener('submit', (event) => {
+        if (form.dataset.configurationReady !== 'true' || form.dataset.submitting === 'true') {
+            event.preventDefault();
+            if (form.dataset.submitting === 'true') {
+                showSubmitMessage('Permintaan sedang diproses. Mohon tunggu.');
+            } else {
+                showSubmitMessage(form.querySelector('[data-bank-configuration-message]')?.textContent || 'Konfigurasi transaksi belum siap.');
+            }
+            return;
+        }
+        form.dataset.submitting = 'true';
+        submit.disabled = true;
+        submit.textContent = 'Menyimpan…';
+        submitMessage.classList.remove('alert-warning');
+        submitMessage.classList.add('alert-info');
+        showSubmitMessage('Menyimpan batch Mutasi Bank…');
+    });
+
+    window.addEventListener('pageshow', () => {
+        form.dataset.submitting = 'false';
+        submit.disabled = false;
+        submit.textContent = submitLabel;
     });
 
     initialRows.forEach(addRow);
