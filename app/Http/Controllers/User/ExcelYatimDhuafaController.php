@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SantunanParticipation;
 use App\Models\SantunanPerson;
 use App\Services\SantunanIdentityMatcher;
+use App\Services\SantunanAgeValidationService;
 use App\Services\SantunanRamadhanExportService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -155,7 +156,7 @@ class ExcelYatimDhuafaController extends Controller
     public function exportBySumber(Request $request, SantunanRamadhanExportService $exporter)
     {
         $validated = $request->validate([
-            'tahun_program' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'tahun_program' => ['required', 'integer', Rule::in(config('santunan.available_years', []))],
             'sumber_informasi' => [
                 'required', 'string', 'max:255',
                 Rule::exists('santunan_participations', 'sumber_informasi')
@@ -166,7 +167,11 @@ class ExcelYatimDhuafaController extends Controller
             'sumber_informasi.exists' => 'Sumber informasi tidak memiliki data pada tahun yang dipilih.',
         ]);
 
-        $export = $exporter->create($validated['sumber_informasi'], (int) $validated['tahun_program']);
+        $export = $exporter->create(
+            $validated['sumber_informasi'],
+            (int) $validated['tahun_program'],
+            $this->validatedExportFilters($request),
+        );
 
         if ($export['record_count'] === 0) {
             throw ValidationException::withMessages(['sumber_informasi' => 'Sumber informasi tidak memiliki data pada tahun yang dipilih.']);
@@ -178,9 +183,11 @@ class ExcelYatimDhuafaController extends Controller
     public function exportAll(Request $request, SantunanRamadhanExportService $exporter)
     {
         $validated = $request->validate([
-            'tahun_program' => ['required', 'integer', 'min:2000', 'max:2100'],
+            'tahun_program' => ['required', 'integer', Rule::in(config('santunan.available_years', []))],
         ]);
-        $export = $exporter->createAll((int) $validated['tahun_program']);
+        $filters = $this->validatedExportFilters($request);
+        $filters['sumber_informasi'] = $request->input('active_sumber_informasi');
+        $export = $exporter->createAll((int) $validated['tahun_program'], $filters);
 
         if ($export['record_count'] === 0) {
             throw ValidationException::withMessages(['export_mode' => 'Belum ada data pada tahun yang dipilih.']);
@@ -198,6 +205,25 @@ class ExcelYatimDhuafaController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Cache-Control' => 'max-age=0',
             'Pragma' => 'public',
+        ]);
+    }
+
+    private function validatedExportFilters(Request $request): array
+    {
+        return $request->validate([
+            'kategori' => ['nullable', Rule::in(SantunanParticipation::CATEGORIES)],
+            'rt' => ['nullable', 'string', 'max:5'],
+            'rw' => ['nullable', 'string', 'max:5'],
+            'search' => ['nullable', 'string', 'max:150'],
+            'umur_value' => ['nullable', 'integer', 'min:0'],
+            'umur_satuan' => ['nullable', Rule::in(['tahun', 'bulan', 'hari'])],
+            'jenis_kelamin' => ['nullable', Rule::in(['L', 'P'])],
+            'active_sumber_informasi' => ['nullable', 'string', 'max:255'],
+            'status_usia' => ['nullable', Rule::in([
+                SantunanAgeValidationService::ELIGIBLE,
+                SantunanAgeValidationService::OVER_LIMIT,
+                SantunanAgeValidationService::NEEDS_VERIFICATION,
+            ])],
         ]);
     }
 

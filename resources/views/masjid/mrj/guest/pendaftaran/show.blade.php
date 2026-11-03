@@ -49,6 +49,43 @@
                 </div>
             </div>
 
+            <section class="mb-10 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm" aria-labelledby="ageValidationHeading">
+                <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-amber-700">Validasi usia anak yatim</p>
+                        <h2 id="ageValidationHeading" class="mt-1 text-xl font-bold text-slate-900">
+                            <span id="agePeriodLabel">{{ $ageSetting->periode_ramadhan }}</span>
+                        </h2>
+                        <p class="mt-2 text-sm text-slate-600">Tanggal acuan aktif: <strong id="activeReferenceDate">{{ $ageSetting->tanggal_acuan->format('d/m/Y') }}</strong>. Batas usia 13 tahun 11 bulan.</p>
+                        <p id="ageConfigurationStatus" class="mt-1 text-xs font-semibold {{ $ageSetting->exists ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ $ageSetting->exists ? 'Konfigurasi tersimpan.' : 'Belum dikonfigurasi — tanggal yang tampil adalah default sementara dan belum tersimpan.' }}
+                        </p>
+                        <p class="mt-2 max-w-3xl text-xs leading-relaxed text-slate-500">Validasi usia dihitung berdasarkan tanggal acuan Ramadhan. Status ini merupakan indikator verifikasi dan bukan keputusan otomatis kelayakan penerima santunan.</p>
+                    </div>
+                    <form id="ageSettingForm" class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <input id="ageSettingYear" name="tahun_program" type="hidden" value="{{ $selectedYear }}">
+                        <div>
+                            <label for="ageReferenceDate" class="mb-1 block text-sm font-semibold text-slate-700">Tanggal acuan</label>
+                            <div id="ageReferenceDatePicker" class="relative cursor-pointer">
+                                <input id="ageReferenceDate" type="text" readonly value="{{ $ageSetting->tanggal_acuan->format('d/m/Y') }}"
+                                       class="min-h-12 cursor-pointer rounded-xl border-2 border-slate-300 bg-white px-4 py-2 pr-11 text-slate-900">
+                                <button id="ageReferenceDatePickerButton" type="button" aria-label="Buka kalender"
+                                        class="absolute right-3 top-1/2 z-10 -translate-y-1/2 p-1 text-lg">📅</button>
+                                <input id="ageReferenceDateValue" name="tanggal_acuan" type="date" required value="{{ $ageSetting->tanggal_acuan->toDateString() }}"
+                                       aria-label="Pilih tanggal acuan" class="pointer-events-none absolute bottom-0 left-0 h-px w-px opacity-0">
+                            </div>
+                        </div>
+                        <button type="submit" class="min-h-12 rounded-xl !bg-emerald-600 px-6 py-3 font-bold !text-white transition hover:!bg-emerald-700">Simpan</button>
+                    </form>
+                </div>
+                <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    <div class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-semibold text-slate-500">Total anak yatim</p><strong id="ageTotal" class="mt-1 block text-2xl text-slate-900">—</strong></div>
+                    <div class="rounded-xl bg-emerald-50 p-4"><p class="text-xs font-semibold text-emerald-700">Memenuhi batas</p><strong id="ageEligible" class="mt-1 block text-2xl text-emerald-800">—</strong></div>
+                    <div class="rounded-xl bg-red-50 p-4"><p class="text-xs font-semibold text-red-700">Melebihi batas</p><strong id="ageOverLimit" class="mt-1 block text-2xl text-red-800">—</strong></div>
+                    <div class="rounded-xl bg-amber-50 p-4"><p class="text-xs font-semibold text-amber-700">Perlu verifikasi</p><strong id="ageNeedsVerification" class="mt-1 block text-2xl text-amber-800">—</strong></div>
+                </div>
+            </section>
+
             <!-- Filter Section (UI baru sesuai referensi) -->
             <div id="filterDataCard" class="bg-white rounded-2xl shadow-lg border border-emerald-100/60 p-6 lg:p-10 mb-10">
                 <div class="mb-6">
@@ -59,13 +96,22 @@
                     </p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5 items-end">
                     <div class="form-control">
                         <label class="label pb-1" for="filterTahun"><span class="label-text font-semibold text-slate-800">Tahun Program</span></label>
                         <select id="filterTahun" class="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
                             @foreach($yearOptions as $year)
                                 <option value="{{ $year }}" @selected($year === $selectedYear)>{{ $year }}</option>
                             @endforeach
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label class="label pb-1" for="filterStatusUsia"><span class="label-text font-semibold text-slate-800">Status Usia</span></label>
+                        <select id="filterStatusUsia" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
+                            <option value="">Semua</option>
+                            <option value="eligible">Memenuhi batas umur</option>
+                            <option value="over_limit">Melebihi batas umur</option>
+                            <option value="needs_verification">Perlu verifikasi</option>
                         </select>
                     </div>
                     <div class="form-control">
@@ -214,6 +260,12 @@
                           class="flex flex-1 flex-col gap-4">
                         @csrf
                         <input id="exportYear" type="hidden" name="tahun_program" value="{{ $selectedYear }}">
+                        <input type="hidden" name="active_sumber_informasi" id="exportActiveSource">
+                        <input type="hidden" name="kategori" id="exportKategori">
+                        <input type="hidden" name="rt" id="exportRt">
+                        <input type="hidden" name="rw" id="exportRw">
+                        <input type="hidden" name="search" id="exportSearch">
+                        <input type="hidden" name="status_usia" id="exportStatusUsia">
 
                         <fieldset class="space-y-2">
                             <legend class="mb-1 text-sm font-semibold text-slate-700">Mode Export</legend>
@@ -824,6 +876,12 @@
     $('#formExportSantunan').on('submit', function (event) {
         const mode = $('input[name="export_mode"]:checked').val();
         const source = $('#filterSumberExport').val();
+        $('#exportActiveSource').val($('#filterSumber').val() || '');
+        $('#exportKategori').val($('#filterKategori').val() || '');
+        $('#exportRt').val($('#filterRt').val() || '');
+        $('#exportRw').val($('#filterRw').val() || '');
+        $('#exportSearch').val($('#globalSearch').val().trim());
+        $('#exportStatusUsia').val($('#filterStatusUsia').val() || '');
 
         if (mode !== 'all' && !source) {
             event.preventDefault();
@@ -928,6 +986,7 @@
             kategori: $('#filterKategori').val() || null,
             rw: $('#filterRw').val() || null,
             rt: $('#filterRt').val() || null,
+            status_usia: $('#filterStatusUsia').val() || null,
             search: $('#globalSearch').val().trim() || null
         };
     }
@@ -943,6 +1002,7 @@
             { data: 'jenis_kelamin_display', defaultContent: '-' },
             { data: 'tanggal_lahir_formatted', defaultContent: '-' },
             { data: 'umur_display', defaultContent: '-' },
+            { data: 'status_usia_display', defaultContent: '-' },
             { data: 'nama_orang_tua', defaultContent: '-' },
             { data: 'pekerjaan_orang_tua', defaultContent: '-' },
             { data: 'alamat', defaultContent: '-' },
@@ -996,6 +1056,7 @@
                 <th>Jenis Kelamin</th>
                 <th>Tanggal Lahir</th>
                 <th>Umur</th>
+                <th>Status Usia</th>
                 <th>Nama Orang Tua / Wali</th>
                 <th>Pekerjaan Orang Tua / Wali</th>
                 <th>Alamat Lengkap</th>
@@ -1078,6 +1139,7 @@
                     <td data-label="JK">${gender}</td>
                     <td data-label="Tanggal Lahir">${escapeHtml(displayValue(recipient.tanggal_lahir))}</td>
                     <td data-label="Umur">${escapeHtml(displayValue(recipient.umur))}</td>
+                    <td data-label="Status Usia"><span class="inline-block rounded-full px-2 py-1 text-xs font-bold ${recipient.status_usia?.status === 'eligible' ? 'bg-emerald-100 text-emerald-800' : recipient.status_usia?.status === 'over_limit' ? 'bg-red-100 text-red-800' : recipient.status_usia?.status === 'needs_verification' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}">${escapeHtml(recipient.status_usia?.label || 'Tidak berlaku')}</span></td>
                     <td data-label="Orang Tua / Wali">${escapeHtml(displayValue(recipient.nama_orang_tua))}</td>
                     <td data-label="Alamat">${escapeHtml(displayValue(recipient.alamat))}</td>
                     <td data-label="Aksi">
@@ -1096,7 +1158,7 @@
                     <thead>
                         <tr>
                             <th>No</th><th>Nama Anak</th><th>JK</th><th>Tanggal Lahir</th>
-                            <th>Umur</th><th>Orang Tua / Wali</th><th>Alamat</th><th>Aksi</th>
+                            <th>Umur</th><th>Status Usia</th><th>Orang Tua / Wali</th><th>Alamat</th><th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -1272,7 +1334,7 @@
     });
     $('#btnApplyFilter').on('click', refreshDataViews);
 
-    $('#filterSumber, #filterKategori, #filterRw, #filterRt').on('change', function () {
+    $('#filterSumber, #filterKategori, #filterRw, #filterRt, #filterStatusUsia').on('change', function () {
         tableDirty = true;
         groupedDirty = true;
     });
@@ -1326,7 +1388,9 @@
         $('#exportYear').val(year);
         $('#importYear').val(year);
         $('#scanYearLabel').text(year);
+        $('#ageSettingYear').val(year);
         updateStartYearContext(year);
+        loadAgeSummary(year);
 
         $.get('{{ route("santunan-ramadhan.filter-options") }}', { tahun: year })
             .done(function (response) {
@@ -1358,6 +1422,79 @@
     });
 
     initTable('responsive');
+    loadAgeSummary({{ $selectedYear }});
+
+    function syncAgeReferenceDate(value) {
+        const dateValue = String(value || '').slice(0, 10);
+        const nativeInput = document.getElementById('ageReferenceDateValue');
+        nativeInput.value = dateValue;
+        nativeInput.defaultValue = dateValue;
+
+        const [year, month, day] = dateValue.split('-');
+        $('#ageReferenceDate').val(dateValue ? `${day}/${month}/${year}` : '');
+    }
+
+    function renderAgeSummary(response) {
+        $('#agePeriodLabel').text(response.setting.periode_ramadhan);
+        $('#activeReferenceDate').text(response.setting.tanggal_acuan_display);
+        syncAgeReferenceDate(response.setting.tanggal_acuan);
+        $('#ageConfigurationStatus')
+            .text(response.setting.configured ? 'Konfigurasi tersimpan.' : 'Belum dikonfigurasi — tanggal yang tampil adalah default sementara dan belum tersimpan.')
+            .toggleClass('text-emerald-700', response.setting.configured)
+            .toggleClass('text-amber-700', !response.setting.configured);
+        $('#ageTotal').text(response.summary.total);
+        $('#ageEligible').text(response.summary.eligible);
+        $('#ageOverLimit').text(response.summary.over_limit);
+        $('#ageNeedsVerification').text(response.summary.needs_verification);
+    }
+
+    function loadAgeSummary(year) {
+        $.get('{{ route("santunan-ramadhan.age-summary") }}', { tahun: year })
+            .done(renderAgeSummary)
+            .fail(xhr => Swal.fire('Gagal', xhr.responseJSON?.message || 'Ringkasan usia tidak dapat dimuat.', 'error'));
+    }
+
+    $('#ageReferenceDateValue').on('change', function () {
+        syncAgeReferenceDate(this.value);
+    });
+
+    function openAgeReferenceDatePicker() {
+        const input = document.getElementById('ageReferenceDateValue');
+        try {
+            if (typeof input.showPicker === 'function') {
+                input.showPicker();
+                return;
+            }
+        } catch (error) {
+            // Fallback untuk browser yang membatasi showPicker().
+        }
+        input.focus();
+        input.click();
+    }
+
+    $('#ageReferenceDatePicker').on('click', function (event) {
+        if (event.target.id !== 'ageReferenceDateValue') openAgeReferenceDatePicker();
+    });
+    $('#ageReferenceDatePickerButton').on('click', function (event) {
+        event.stopPropagation();
+        openAgeReferenceDatePicker();
+    });
+
+    $('#ageSettingForm').on('submit', function (event) {
+        event.preventDefault();
+        $.ajax({
+            url: '{{ route("santunan-ramadhan.age-setting.update") }}',
+            method: 'POST',
+            data: $(this).serialize(),
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
+        }).done(function (response) {
+            renderAgeSummary(response);
+            table?.ajax.reload(null, false);
+            groupedDirty = true;
+            if (!$('#groupedViewPanel').hasClass('hidden')) loadGroupedData();
+            Swal.fire('Berhasil', response.message, 'success');
+        }).fail(xhr => Swal.fire('Gagal', xhr.responseJSON?.message || 'Tanggal acuan gagal disimpan.', 'error'));
+    });
 
     // Fungsi hapus data
     function hapusData(id) {
@@ -1394,6 +1531,7 @@
     $('#btnResetFilter').on('click', function () {
         $('#filterSumber').val('');
         $('#filterKategori').val('');
+        $('#filterStatusUsia').val('');
         $('#filterRw').val('');
         $('#filterRt').val('');
         $('#globalSearch').val('');
@@ -1472,7 +1610,8 @@
             return;
         }
 
-        const birth = new Date(dateStr);
+        const [birthYear, birthMonth, birthDay] = dateStr.split('-').map(Number);
+        const birth = new Date(birthYear, birthMonth - 1, birthDay);
         const today = new Date();
 
         if (isNaN(birth.getTime()) || birth > today) {

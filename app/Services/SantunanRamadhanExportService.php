@@ -17,21 +17,28 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class SantunanRamadhanExportService
 {
-    private const LAST_COLUMN = 'H';
+    private const LAST_COLUMN = 'I';
 
     private const SHEETS = [
         'dhuafa' => 'DHUAFA',
         'yatim_dhuafa' => 'YATIM YANG DHUAFA',
     ];
 
+    public function __construct(
+        private readonly SantunanAgeValidationService $ages,
+        private readonly SantunanParticipationQueryService $participations,
+    )
+    {
+    }
+
     /**
      * @return array{spreadsheet: Spreadsheet, filename: string, record_count: int}
      */
-    public function create(string $source, int $year): array
+    public function create(string $source, int $year, array $filters = []): array
     {
-        $records = $this->recordsQuery()
-            ->where('santunan_participations.tahun_program', $year)
-            ->where('santunan_participations.sumber_informasi', $source)
+        $setting = $this->ages->settingForYear($year);
+        $filters = array_merge($filters, ['tahun' => $year, 'sumber_informasi' => $source]);
+        $records = $this->participations->apply($this->participations->query(), $filters, $setting)
             ->whereIn('santunan_participations.kategori', array_keys(self::SHEETS))
             ->get();
 
@@ -39,7 +46,8 @@ class SantunanRamadhanExportService
         $spreadsheet->getProperties()
             ->setCreator(config('app.name'))
             ->setTitle('Data Peserta Santunan Yatim Dhuafa')
-            ->setSubject('Santunan Ramadhan - '.$source);
+            ->setSubject('Santunan Ramadhan - '.$source)
+            ->setCustomProperty('santunan_year', $year);
 
         $periodHeading = $this->periodHeading($records);
         $couponNumber = 1;
@@ -60,6 +68,7 @@ class SantunanRamadhanExportService
                 $source,
                 $periodHeading,
                 $couponNumber,
+                $setting,
             );
             $this->configurePrintLayout($sheet, $lastRow);
         }
@@ -76,11 +85,12 @@ class SantunanRamadhanExportService
     /**
      * @return array{spreadsheet: Spreadsheet, filename: string, record_count: int, source_count: int}
      */
-    public function createAll(?int $year = null): array
+    public function createAll(?int $year = null, array $filters = []): array
     {
         $year ??= now()->year;
-        $records = $this->recordsQuery()
-            ->where('santunan_participations.tahun_program', $year)
+        $setting = $this->ages->settingForYear($year);
+        $filters = array_merge($filters, ['tahun' => $year]);
+        $records = $this->participations->apply($this->participations->query(), $filters, $setting)
             ->whereIn('santunan_participations.kategori', array_keys(self::SHEETS))
             ->whereNotNull('santunan_participations.sumber_informasi')
             ->where('santunan_participations.sumber_informasi', '!=', '')
@@ -92,7 +102,8 @@ class SantunanRamadhanExportService
         $spreadsheet->getProperties()
             ->setCreator(config('app.name'))
             ->setTitle('Data Peserta Santunan Yatim Dhuafa - Semua Sumber')
-            ->setSubject('Santunan Ramadhan - Semua Sumber');
+            ->setSubject('Santunan Ramadhan - Semua Sumber')
+            ->setCustomProperty('santunan_year', $year);
 
         $couponNumber = 1;
         $usedSheetNames = [];
@@ -111,6 +122,7 @@ class SantunanRamadhanExportService
                 $source,
                 $this->periodHeading($sourceRecords),
                 $couponNumber,
+                $setting,
             );
             $this->configurePrintLayout($sheet, $lastRow);
         }
@@ -139,7 +151,8 @@ class SantunanRamadhanExportService
             'E' => 17,
             'F' => 16,
             'G' => 28,
-            'H' => 48,
+            'H' => 28,
+            'I' => 48,
         ] as $column => $width) {
             $sheet->getColumnDimension($column)->setWidth($width);
         }
@@ -167,8 +180,9 @@ class SantunanRamadhanExportService
         string $source,
         string $periodHeading,
         int &$couponNumber,
+        \App\Models\SantunanRamadhanAgeSetting $setting,
     ): int {
-        $this->writeSheetHeader($sheet, $source, $periodHeading);
+        $this->writeSheetHeader($sheet, $source, $periodHeading, $setting);
 
         if ($records->isEmpty()) {
             $this->writeEmptyMessage($sheet, 8);
@@ -176,7 +190,7 @@ class SantunanRamadhanExportService
             return 8;
         }
 
-        return $this->writeRegionTables($sheet, $records, 8, $couponNumber) - 1;
+        return $this->writeRegionTables($sheet, $records, 8, $couponNumber, $setting) - 1;
     }
 
     private function writeCombinedReport(
@@ -185,8 +199,9 @@ class SantunanRamadhanExportService
         string $source,
         string $periodHeading,
         int &$couponNumber,
+        \App\Models\SantunanRamadhanAgeSetting $setting,
     ): int {
-        $this->writeSheetHeader($sheet, $source, $periodHeading);
+        $this->writeSheetHeader($sheet, $source, $periodHeading, $setting);
         $row = 8;
 
         foreach (self::SHEETS as $categoryIndex => $categoryLabel) {
@@ -202,7 +217,7 @@ class SantunanRamadhanExportService
             if ($categoryRecords->isEmpty()) {
                 $this->writeEmptyMessage($sheet, $row++);
             } else {
-                $row = $this->writeRegionTables($sheet, $categoryRecords, $row, $couponNumber);
+                $row = $this->writeRegionTables($sheet, $categoryRecords, $row, $couponNumber, $setting);
             }
 
             if ($categoryIndex !== array_key_last(self::SHEETS)) {
@@ -213,12 +228,14 @@ class SantunanRamadhanExportService
         return $row - 1;
     }
 
-    private function writeSheetHeader(Worksheet $sheet, string $source, string $periodHeading): void
+    private function writeSheetHeader(Worksheet $sheet, string $source, string $periodHeading, \App\Models\SantunanRamadhanAgeSetting $setting): void
     {
         $this->writeMergedRow($sheet, 1, 'Data Peserta', 14, true);
         $this->writeMergedRow($sheet, 2, 'Santunan Yatim Dhuafa', 14, true);
         $this->writeMergedRow($sheet, 3, masjid_name(), 11, true);
         $this->writeMergedRow($sheet, 4, $periodHeading, 10, false);
+        $configurationNote = $setting->exists ? '' : ' (default sementara, belum tersimpan)';
+        $this->writeMergedRow($sheet, 5, 'Tanggal acuan usia: '.$setting->tanggal_acuan->format('d/m/Y').$configurationNote, 9, false);
         $this->writeMergedRow($sheet, 6, 'Sumber Informasi - '.$source, 11, true);
     }
 
@@ -227,6 +244,7 @@ class SantunanRamadhanExportService
         Collection $records,
         int $row,
         int &$couponNumber,
+        \App\Models\SantunanRamadhanAgeSetting $setting,
     ): int {
         $groups = $this->sortedRegionGroups($records);
 
@@ -249,6 +267,7 @@ class SantunanRamadhanExportService
                 'JK',
                 'TANGGAL LAHIR',
                 'UMUR',
+                'STATUS VALIDASI USIA',
                 'NAMA ORANG TUA',
                 'ALAMAT',
             ], null, 'A'.$headerRow);
@@ -268,9 +287,11 @@ class SantunanRamadhanExportService
                     $sheet->setCellValue('E'.$row, 'Belum diisi');
                 }
 
-                $sheet->setCellValue('F'.$row, $this->formatAge($record));
-                $sheet->setCellValue('G'.$row, $record->nama_orang_tua ?: 'Belum diisi');
-                $sheet->setCellValue('H'.$row, $record->alamat ?: 'Belum diisi');
+                $evaluation = $this->ages->evaluate($record, $setting);
+                $sheet->setCellValue('F'.$row, $evaluation['age'] ?? $this->formatAge($record));
+                $sheet->setCellValue('G'.$row, $evaluation['label']);
+                $sheet->setCellValue('H'.$row, $record->nama_orang_tua ?: 'Belum diisi');
+                $sheet->setCellValue('I'.$row, $record->alamat ?: 'Belum diisi');
                 $row++;
             }
 
@@ -388,7 +409,7 @@ class SantunanRamadhanExportService
         $sheet->getStyle($range)->getBorders()->getAllBorders()
             ->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FFD9E2D9');
         $sheet->getStyle('A'.$firstRow.':B'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('D'.$firstRow.':F'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D'.$firstRow.':G'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A'.$firstRow.':B'.$lastRow)->getNumberFormat()->setFormatCode('0');
 
         for ($row = $firstRow; $row <= $lastRow; $row++) {
@@ -471,19 +492,6 @@ class SantunanRamadhanExportService
         }
 
         return 'Belum diisi';
-    }
-
-    private function recordsQuery()
-    {
-        return SantunanParticipation::query()
-            ->join('santunan_persons', 'santunan_persons.id', '=', 'santunan_participations.person_id')
-            ->select([
-                'santunan_participations.*',
-                'santunan_persons.nama_lengkap',
-                'santunan_persons.nama_panggilan',
-                'santunan_persons.tanggal_lahir',
-                'santunan_persons.jenis_kelamin',
-            ]);
     }
 
     private function uniqueSheetName(string $source, array &$usedNames): string

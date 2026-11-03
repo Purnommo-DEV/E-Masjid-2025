@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\SantunanParticipation;
 use App\Models\SantunanPerson;
 use App\Services\SantunanIdentityMatcher;
+use App\Services\SantunanAgeValidationService;
+use App\Services\SantunanParticipationQueryService;
 use Carbon\Carbon;
 use Edgaras\StrSim\JaroWinkler;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,10 +32,53 @@ class PendaftaranYatimDhuafaController extends Controller
         $rwList = $filterOptions['rws'];
         $categoryList = $filterOptions['categories'];
         $registrationOpen = (bool) config('santunan.registration_open', true);
+        $ageSetting = app(SantunanAgeValidationService::class)->settingForYear($selectedYear);
 
         return view('masjid.'.masjid().'.guest.pendaftaran.show', compact(
-            'selectedYear', 'yearOptions', 'sumberList', 'rtList', 'rwList', 'categoryList', 'registrationOpen'
+            'selectedYear', 'yearOptions', 'sumberList', 'rtList', 'rwList', 'categoryList', 'registrationOpen', 'ageSetting'
         ));
+    }
+
+    public function updateAgeSetting(Request $request, SantunanAgeValidationService $ages): JsonResponse
+    {
+        $validated = $request->validate([
+            'tahun_program' => ['required', 'integer', Rule::in($this->availableYears())],
+            'tanggal_acuan' => [
+                'required', 'date_format:Y-m-d',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    if ((int) substr((string) $value, 0, 4) !== $request->integer('tahun_program')) {
+                        $fail('Tanggal acuan harus berada pada tahun program yang dipilih.');
+                    }
+                },
+            ],
+        ]);
+        $setting = $ages->updateReferenceDate(
+            (int) $validated['tahun_program'],
+            $validated['tanggal_acuan'],
+            $request->user(),
+            $request->ip(),
+            $request->userAgent(),
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tanggal acuan berhasil disimpan.',
+            'setting' => $this->ageSettingPayload($setting),
+            'summary' => $this->ageSummaryForYear((int) $validated['tahun_program'], $ages),
+        ]);
+    }
+
+    public function ageSummary(Request $request, SantunanAgeValidationService $ages): JsonResponse
+    {
+        $validated = $request->validate(['tahun' => ['required', 'integer', Rule::in($this->availableYears())]]);
+        $year = (int) $validated['tahun'];
+        $setting = $ages->settingForYear($year);
+
+        return response()->json([
+            'success' => true,
+            'setting' => $this->ageSettingPayload($setting),
+            'summary' => $this->ageSummaryForYear($year, $ages),
+        ]);
     }
 
     public function index(Request $request)
@@ -47,7 +92,7 @@ class PendaftaranYatimDhuafaController extends Controller
 
     public function filterOptions(Request $request): JsonResponse
     {
-        $validated = $request->validate(['tahun' => ['required', 'integer', 'min:2000', 'max:2100']]);
+        $validated = $request->validate(['tahun' => ['required', 'integer', Rule::in($this->availableYears())]]);
 
         return response()->json(['success' => true] + $this->filterOptionValues((int) $validated['tahun']));
     }
@@ -127,15 +172,18 @@ class PendaftaranYatimDhuafaController extends Controller
 
     public function dataTable(Request $request)
     {
+        $ages = app(SantunanAgeValidationService::class);
         $filters = $this->validatedPublicFilters($request);
         $query = $this->applyPublicFilters($this->participationQuery(), $filters);
+        $setting = $ages->settingForYear($filters['tahun']);
 
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('kategori_display', fn ($row) => $this->categoryBadge($row->kategori))
             ->addColumn('jenis_kelamin_display', fn ($row) => $row->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan')
-            ->addColumn('tanggal_lahir_formatted', fn ($row) => $row->tanggal_lahir ? Carbon::parse($row->tanggal_lahir)->format('d-m-Y') : '-')
-            ->addColumn('umur_display', fn ($row) => $this->formatUmur($row))
+            ->addColumn('tanggal_lahir_formatted', fn ($row) => $row->tanggal_lahir ? Carbon::parse($row->tanggal_lahir)->format('d/m/Y') : '-')
+            ->addColumn('umur_display', fn ($row) => $ages->evaluate($row, $setting)['age'] ?? $this->formatUmur($row))
+            ->addColumn('status_usia_display', fn ($row) => $this->ageStatusBadge($ages->evaluate($row, $setting)))
             ->editColumn('rt', fn ($row) => $row->rt ?: '-')
             ->editColumn('rw', fn ($row) => $row->rw ?: '-')
             ->editColumn('nama_rt', fn ($row) => $row->nama_rt ?: '-')
@@ -143,13 +191,15 @@ class PendaftaranYatimDhuafaController extends Controller
             ->editColumn('nama_panggilan', fn ($row) => $row->nama_panggilan ?: '-')
             ->editColumn('pekerjaan_orang_tua', fn ($row) => $row->pekerjaan_orang_tua ?: '-')
             ->editColumn('catatan_tambahan', fn ($row) => $row->catatan_tambahan ?: '-')
-            ->rawColumns(['kategori_display'])
+            ->rawColumns(['kategori_display', 'status_usia_display'])
             ->make(true);
     }
 
     public function groupedData(Request $request): JsonResponse
     {
+        $ages = app(SantunanAgeValidationService::class);
         $filters = $this->validatedPublicFilters($request);
+        $setting = $ages->settingForYear($filters['tahun']);
         $records = $this->applyPublicFilters($this->participationQuery(), $filters)
             ->orderByRaw("CASE WHEN santunan_participations.sumber_informasi IS NULL OR santunan_participations.sumber_informasi = '' THEN 1 ELSE 0 END")
             ->orderBy('santunan_participations.sumber_informasi')
@@ -167,7 +217,7 @@ class PendaftaranYatimDhuafaController extends Controller
             'success' => true,
             'tahun' => $filters['tahun'],
             'total' => $records->count(),
-            'groups' => $this->buildGroupedData($records),
+            'groups' => $this->buildGroupedData($records, $ages, $setting),
         ]);
     }
 
@@ -290,18 +340,13 @@ class PendaftaranYatimDhuafaController extends Controller
 
     private function participationQuery(): Builder
     {
-        return SantunanParticipation::query()
-            ->join('santunan_persons', 'santunan_persons.id', '=', 'santunan_participations.person_id')
-            ->select([
-                'santunan_participations.*', 'santunan_persons.nama_lengkap', 'santunan_persons.nama_panggilan',
-                'santunan_persons.tanggal_lahir', 'santunan_persons.jenis_kelamin',
-            ]);
+        return app(SantunanParticipationQueryService::class)->query();
     }
 
     private function validatedPublicFilters(Request $request): array
     {
         $filters = $request->validate([
-            'tahun' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'tahun' => ['nullable', 'integer', Rule::in($this->availableYears())],
             'sumber_informasi' => ['nullable', 'string', 'max:255'],
             'kategori' => ['nullable', Rule::in(SantunanParticipation::CATEGORIES)],
             'rt' => ['nullable', 'string', 'max:5'],
@@ -310,6 +355,11 @@ class PendaftaranYatimDhuafaController extends Controller
             'umur_value' => ['nullable', 'integer', 'min:0'],
             'umur_satuan' => ['nullable', Rule::in(['tahun', 'bulan', 'hari'])],
             'jenis_kelamin' => ['nullable', Rule::in(['L', 'P'])],
+            'status_usia' => ['nullable', Rule::in([
+                SantunanAgeValidationService::ELIGIBLE,
+                SantunanAgeValidationService::OVER_LIMIT,
+                SantunanAgeValidationService::NEEDS_VERIFICATION,
+            ])],
         ]);
         $filters['tahun'] = (int) ($filters['tahun'] ?? $this->activeYear());
 
@@ -318,25 +368,13 @@ class PendaftaranYatimDhuafaController extends Controller
 
     private function applyPublicFilters(Builder $query, array $filters): Builder
     {
-        return $query
-            ->forYear((int) $filters['tahun'])
-            ->when($filters['sumber_informasi'] ?? null, fn (Builder $query, string $value) => $query->where('santunan_participations.sumber_informasi', $value))
-            ->when($filters['kategori'] ?? null, fn (Builder $query, string $value) => $query->where('santunan_participations.kategori', $value))
-            ->when($filters['rt'] ?? null, fn (Builder $query, string $value) => $query->where('santunan_participations.rt', $value))
-            ->when($filters['rw'] ?? null, fn (Builder $query, string $value) => $query->where('santunan_participations.rw', $value))
-            ->when($filters['umur_value'] ?? null, function (Builder $query, int $value) use ($filters): void {
-                $query->where('santunan_participations.umur', $value);
-                if ($filters['umur_satuan'] ?? null) {
-                    $query->where('santunan_participations.umur_satuan', $filters['umur_satuan']);
-                }
-            })
-            ->when($filters['jenis_kelamin'] ?? null, fn (Builder $query, string $value) => $query->where('santunan_persons.jenis_kelamin', $value))
-            ->when($filters['search'] ?? null, function (Builder $query, string $value): void {
-                $search = '%'.$value.'%';
-                $query->where(fn (Builder $nameQuery) => $nameQuery
-                    ->where('santunan_persons.nama_lengkap', 'like', $search)
-                    ->orWhere('santunan_persons.nama_panggilan', 'like', $search));
-            });
+        $ages = app(SantunanAgeValidationService::class);
+
+        return app(SantunanParticipationQueryService::class)->apply(
+            $query,
+            $filters,
+            $ages->settingForYear((int) $filters['tahun']),
+        );
     }
 
     private function filterOptionValues(int $year): array
@@ -354,8 +392,9 @@ class PendaftaranYatimDhuafaController extends Controller
     private function selectedYear(Request $request): int
     {
         $year = $request->integer('tahun');
+        $available = $this->availableYears();
 
-        return $year >= 2000 && $year <= 2100 ? $year : $this->activeYear();
+        return in_array($year, $available, true) ? $year : ($available[0] ?? $this->activeYear());
     }
 
     private function activeYear(): int
@@ -365,13 +404,14 @@ class PendaftaranYatimDhuafaController extends Controller
 
     private function yearOptions(int $selectedYear, bool $includeNextYear = false): array
     {
-        $years = SantunanParticipation::query()->distinct()->pluck('tahun_program')->map(fn ($year) => (int) $year);
-        $years->push((int) now()->year, $selectedYear);
-        if ($includeNextYear) {
-            $years->push($this->activeYear() + 1);
-        }
+        return collect($this->availableYears())->push($selectedYear)->unique()->sortDesc()->values()->all();
+    }
 
-        return $years->unique()->sortDesc()->values()->all();
+    private function availableYears(): array
+    {
+        return collect(config('santunan.available_years', []))->map(fn ($year) => (int) $year)
+            ->filter(fn (int $year) => $year >= 2000 && $year <= 2100)
+            ->unique()->sortDesc()->values()->all();
     }
 
     private function registrationRules(?int $fixedYear = null): array
@@ -407,13 +447,7 @@ class PendaftaranYatimDhuafaController extends Controller
     {
         if (filled($data['tanggal_lahir'] ?? null)) {
             $birth = Carbon::parse($data['tanggal_lahir']);
-            if ($birth->isFuture()) {
-                throw ValidationException::withMessages(['tanggal_lahir' => 'Tanggal lahir tidak boleh di masa depan.']);
-            }
             $diff = $birth->diff(now());
-            if ($diff->y >= 14) {
-                throw ValidationException::withMessages(['tanggal_lahir' => 'Usia melebihi batas maksimal 13 tahun 11 bulan.']);
-            }
             [$data['umur'], $data['umur_satuan']] = $diff->y > 0
                 ? [$diff->y, 'tahun']
                 : ($diff->m > 0 ? [$diff->m, 'bulan'] : [max($diff->d, 1), 'hari']);
@@ -423,12 +457,6 @@ class PendaftaranYatimDhuafaController extends Controller
 
         if (! isset($data['umur'], $data['umur_satuan'])) {
             throw ValidationException::withMessages(['umur' => 'Umur dan satuan wajib diisi jika tanggal lahir tidak diketahui.']);
-        }
-        $estimatedYears = match ($data['umur_satuan']) {
-            'tahun' => (int) $data['umur'], 'bulan' => floor((int) $data['umur'] / 12), 'hari' => floor((int) $data['umur'] / 365),
-        };
-        if ($estimatedYears >= 14) {
-            throw ValidationException::withMessages(['umur' => 'Usia melebihi batas maksimal 13 tahun 11 bulan.']);
         }
     }
 
@@ -445,7 +473,7 @@ class PendaftaranYatimDhuafaController extends Controller
         ])->all() + ['person_id' => $personId, 'ip_address' => $ipAddress];
     }
 
-    private function buildGroupedData(Collection $records): array
+    private function buildGroupedData(Collection $records, SantunanAgeValidationService $ages, $setting): array
     {
         return $records->groupBy(fn ($row) => $this->groupKey($row->sumber_informasi))->map(fn (Collection $sourceRecords) => [
             'label' => $this->groupLabel($sourceRecords->first()->sumber_informasi, 'Sumber belum diisi'),
@@ -464,8 +492,10 @@ class PendaftaranYatimDhuafaController extends Controller
                             'total' => $coordinatorRecords->count(),
                             'recipients' => $coordinatorRecords->values()->map(fn ($row) => [
                                 'id' => $row->id, 'nama_lengkap' => $row->nama_lengkap, 'nama_panggilan' => $row->nama_panggilan,
-                                'jenis_kelamin' => $row->jenis_kelamin, 'tanggal_lahir' => $row->tanggal_lahir?->format('d-m-Y'),
-                                'umur' => $this->formatUmur($row), 'nama_orang_tua' => $row->nama_orang_tua, 'alamat' => $row->alamat,
+                                'jenis_kelamin' => $row->jenis_kelamin, 'tanggal_lahir' => $row->tanggal_lahir?->format('d/m/Y'),
+                                'umur' => $ages->evaluate($row, $setting)['age'] ?? $this->formatUmur($row),
+                                'status_usia' => $ages->evaluate($row, $setting),
+                                'nama_orang_tua' => $row->nama_orang_tua, 'alamat' => $row->alamat,
                             ])->all(),
                         ])->values()->all(),
                     ])->values()->all(),
@@ -490,6 +520,47 @@ class PendaftaranYatimDhuafaController extends Controller
     private function formatUmur($row): string
     {
         return $row->umur !== null && filled($row->umur_satuan) ? $row->umur.' '.ucfirst($row->umur_satuan) : '-';
+    }
+
+    private function ageStatusBadge(array $result): string
+    {
+        if (! $result['status']) {
+            return '<span class="text-slate-400">Tidak berlaku</span>';
+        }
+        $classes = match ($result['status']) {
+            SantunanAgeValidationService::ELIGIBLE => 'background:#dcfce7;color:#166534',
+            SantunanAgeValidationService::OVER_LIMIT => 'background:#fee2e2;color:#991b1b',
+            default => 'background:#fef3c7;color:#92400e',
+        };
+
+        return '<span style="display:inline-block;white-space:nowrap;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:700;'.$classes.'">'.e($result['label']).'</span>';
+    }
+
+    private function ageSummaryForYear(int $year, SantunanAgeValidationService $ages): array
+    {
+        $setting = $ages->settingForYear($year);
+        $records = $this->participationQuery()->forYear($year)
+            ->where('santunan_participations.kategori', SantunanAgeValidationService::CATEGORY)->get();
+        $counts = $records->countBy(fn ($row) => $ages->evaluate($row, $setting)['status']);
+
+        return [
+            'total' => $records->count(),
+            'eligible' => $counts->get(SantunanAgeValidationService::ELIGIBLE, 0),
+            'over_limit' => $counts->get(SantunanAgeValidationService::OVER_LIMIT, 0),
+            'needs_verification' => $counts->get(SantunanAgeValidationService::NEEDS_VERIFICATION, 0),
+        ];
+    }
+
+    private function ageSettingPayload($setting): array
+    {
+        return [
+            'tahun_program' => $setting->tahun_program,
+            'periode_ramadhan' => $setting->periode_ramadhan,
+            'tanggal_acuan' => $setting->tanggal_acuan->toDateString(),
+            'tanggal_acuan_display' => $setting->tanggal_acuan->format('d/m/Y'),
+            'batas_usia' => $setting->batas_tahun.' tahun '.$setting->batas_bulan.' bulan',
+            'configured' => $setting->exists,
+        ];
     }
 
     private function groupKey(?string $value): string

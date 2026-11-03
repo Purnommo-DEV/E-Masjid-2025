@@ -247,6 +247,9 @@ Route::prefix('santunan-ramadhan')->name('santunan-ramadhan.')->group(function (
     Route::get('/data', [PendaftaranYatimDhuafaController::class, 'dataTable'])->name('data');
     Route::get('/data-grouped', [PendaftaranYatimDhuafaController::class, 'groupedData'])->name('data-grouped');
     Route::get('/filter-options', [PendaftaranYatimDhuafaController::class, 'filterOptions'])->name('filter-options');
+    Route::get('/age-summary', [PendaftaranYatimDhuafaController::class, 'ageSummary'])->name('age-summary');
+    Route::post('/age-setting', [PendaftaranYatimDhuafaController::class, 'updateAgeSetting'])
+        ->middleware('throttle:10,1')->name('age-setting.update');
     Route::get('/year-candidates', [PendaftaranYatimDhuafaController::class, 'yearCandidates'])->name('year-candidates');
     Route::post('/start-year', [PendaftaranYatimDhuafaController::class, 'startYear'])->name('start-year');
     Route::post('/daftar-anak-yatim-dhuafa', [PendaftaranYatimDhuafaController::class, 'store'])->name('submit');
