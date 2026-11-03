@@ -1088,6 +1088,11 @@
                 }
             },
             columns: tableColumns(mode),
+            createdRow: function (row, data) {
+                if (data.kategori === 'yatim_dhuafa' && data.status_usia === 'over_limit') {
+                    $(row).addClass('age-over-limit-row');
+                }
+            },
             language: {
                 processing: '<div class="flex items-center gap-3 text-emerald-600"><span class="loading loading-spinner loading-md"></span> Memuat data...</div>',
                 emptyTable: 'Belum ada data',
@@ -1133,7 +1138,7 @@
             const gender = recipient.jenis_kelamin === 'L' ? 'L' : (recipient.jenis_kelamin === 'P' ? 'P' : '—');
 
             return `
-                <tr data-recipient-id="${id}" class="border-b border-slate-100 last:border-0">
+                <tr data-recipient-id="${id}" class="border-b border-slate-100 last:border-0 ${recipient.kategori === 'yatim_dhuafa' && recipient.status_usia?.status === 'over_limit' ? 'age-over-limit-row' : ''}">
                     <td data-label="No">${index + 1}</td>
                     <td data-label="Nama Anak" class="font-semibold text-slate-900">${escapeHtml(displayValue(recipient.nama_lengkap))}</td>
                     <td data-label="JK">${gender}</td>
@@ -2213,6 +2218,15 @@
     #tabelYatimDhuafa tbody tr:hover {
         background-color: #d1fae5 !important;
         transition: background-color 0.15s ease-in-out;
+    }
+
+    #tabelYatimDhuafa tbody tr.age-over-limit-row,
+    #tabelYatimDhuafa tbody tr.age-over-limit-row:hover,
+    #tabelYatimDhuafa tbody tr.age-over-limit-row + tr.child,
+    #tabelYatimDhuafa tbody tr.age-over-limit-row + tr.child:hover,
+    .grouped-recipient-table tr.age-over-limit-row,
+    .grouped-recipient-table tr.age-over-limit-row:hover {
+        background-color: rgba(254, 202, 202, 0.58) !important;
     }
 
     #tabelYatimDhuafa td.control::before {

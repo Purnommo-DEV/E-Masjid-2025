@@ -183,6 +183,7 @@ class PendaftaranYatimDhuafaController extends Controller
             ->addColumn('jenis_kelamin_display', fn ($row) => $row->jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan')
             ->addColumn('tanggal_lahir_formatted', fn ($row) => $row->tanggal_lahir ? Carbon::parse($row->tanggal_lahir)->format('d/m/Y') : '-')
             ->addColumn('umur_display', fn ($row) => $ages->evaluate($row, $setting)['age'] ?? $this->formatUmur($row))
+            ->addColumn('status_usia', fn ($row) => $ages->evaluate($row, $setting)['status'])
             ->addColumn('status_usia_display', fn ($row) => $this->ageStatusBadge($ages->evaluate($row, $setting)))
             ->editColumn('rt', fn ($row) => $row->rt ?: '-')
             ->editColumn('rw', fn ($row) => $row->rw ?: '-')
@@ -494,6 +495,7 @@ class PendaftaranYatimDhuafaController extends Controller
                                 'id' => $row->id, 'nama_lengkap' => $row->nama_lengkap, 'nama_panggilan' => $row->nama_panggilan,
                                 'jenis_kelamin' => $row->jenis_kelamin, 'tanggal_lahir' => $row->tanggal_lahir?->format('d/m/Y'),
                                 'umur' => $ages->evaluate($row, $setting)['age'] ?? $this->formatUmur($row),
+                                'kategori' => $row->kategori,
                                 'status_usia' => $ages->evaluate($row, $setting),
                                 'nama_orang_tua' => $row->nama_orang_tua, 'alamat' => $row->alamat,
                             ])->all(),
