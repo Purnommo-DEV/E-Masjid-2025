@@ -244,7 +244,7 @@ class SantunanRamadhanExportService
                 'UMUR',
                 'STATUS VALIDASI USIA',
                 'RT/RW',
-                'PIC / KOORDINATOR',
+                'KETUA RT',
                 'SUMBER INFORMASI',
                 'ALAMAT',
             ], null, 'A'.$headerRow);

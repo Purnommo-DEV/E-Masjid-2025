@@ -1137,7 +1137,7 @@
                 ${controlHeading}
                 <th>No</th>
                 <th>Sumber Informasi</th>
-                <th>PIC / Koordinator</th>
+                <th>Ketua RT</th>
                 <th>No WA</th>
                 <th>Kategori</th>
                 <th>Nama Anak</th>
