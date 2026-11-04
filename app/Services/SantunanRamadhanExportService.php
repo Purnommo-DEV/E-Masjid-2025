@@ -17,7 +17,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class SantunanRamadhanExportService
 {
-    private const LAST_COLUMN = 'I';
+    private const LAST_COLUMN = 'K';
 
     private const SHEETS = [
         'dhuafa' => 'DHUAFA',
@@ -52,26 +52,11 @@ class SantunanRamadhanExportService
         $periodHeading = $this->periodHeading($records);
         $couponNumber = 1;
 
-        foreach (self::SHEETS as $category => $sheetTitle) {
-            $sheet = $category === array_key_first(self::SHEETS)
-                ? $spreadsheet->getActiveSheet()
-                : $spreadsheet->createSheet();
-            $sheet->setTitle($sheetTitle);
-            $this->configureSheet($sheet);
-
-            $categoryRecords = $records
-                ->whereStrict('kategori', $category)
-                ->values();
-            $lastRow = $this->writeReport(
-                $sheet,
-                $categoryRecords,
-                $source,
-                $periodHeading,
-                $couponNumber,
-                $setting,
-            );
-            $this->configurePrintLayout($sheet, $lastRow);
-        }
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('PENERIMA');
+        $this->configureSheet($sheet);
+        $lastRow = $this->writeReport($sheet, $records, $source, $periodHeading, $couponNumber, $setting);
+        $this->configurePrintLayout($sheet, $lastRow);
 
         $spreadsheet->setActiveSheetIndex(0);
 
@@ -116,7 +101,7 @@ class SantunanRamadhanExportService
                 : $spreadsheet->createSheet();
             $sheet->setTitle($this->uniqueSheetName($source, $usedSheetNames));
             $this->configureSheet($sheet);
-            $lastRow = $this->writeCombinedReport(
+            $lastRow = $this->writeReport(
                 $sheet,
                 $sourceRecords,
                 $source,
@@ -144,15 +129,17 @@ class SantunanRamadhanExportService
         $sheet->getParent()->getDefaultStyle()->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
 
         foreach ([
-            'A' => 12,
-            'B' => 7,
-            'C' => 30,
+            'A' => 7,
+            'B' => 30,
+            'C' => 24,
             'D' => 9,
             'E' => 17,
-            'F' => 16,
+            'F' => 20,
             'G' => 28,
-            'H' => 28,
-            'I' => 48,
+            'H' => 18,
+            'I' => 28,
+            'J' => 28,
+            'K' => 48,
         ] as $column => $width) {
             $sheet->getColumnDimension($column)->setWidth($width);
         }
@@ -184,45 +171,33 @@ class SantunanRamadhanExportService
     ): int {
         $this->writeSheetHeader($sheet, $source, $periodHeading, $setting);
 
-        if ($records->isEmpty()) {
-            $this->writeEmptyMessage($sheet, 8);
+        $this->writeMergedRow($sheet, 7, 'Legenda: baris merah muda = MELEBIHI BATAS UMUR', 9, true);
+        $sheet->getStyle('A7:'.self::LAST_COLUMN.'7')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEE2E2');
 
-            return 8;
+        if ($records->isEmpty()) {
+            $this->writeEmptyMessage($sheet, 9);
+
+            return 9;
         }
 
-        return $this->writeRegionTables($sheet, $records, 8, $couponNumber, $setting) - 1;
-    }
+        [$overLimit, $mainRecords] = $records->partition(
+            fn ($record) => $this->ages->evaluate($record, $setting)['status'] === SantunanAgeValidationService::OVER_LIMIT
+        );
+        $overLimit = $overLimit->values();
+        $mainRecords = $mainRecords->values();
+        $row = 9;
 
-    private function writeCombinedReport(
-        Worksheet $sheet,
-        Collection $records,
-        string $source,
-        string $periodHeading,
-        int &$couponNumber,
-        \App\Models\SantunanRamadhanAgeSetting $setting,
-    ): int {
-        $this->writeSheetHeader($sheet, $source, $periodHeading, $setting);
-        $row = 8;
+        if ($mainRecords->isNotEmpty()) {
+            $this->writeSectionRow($sheet, $row++, 'BAGIAN A — DAFTAR PENERIMA ('.$mainRecords->count().')', 'FFD1FAE5', 11);
+            $row = $this->writeRegionTables($sheet, $mainRecords, $row, $couponNumber, $setting);
+        }
 
-        foreach (self::SHEETS as $categoryIndex => $categoryLabel) {
-            $categoryRecords = $records->whereStrict('kategori', $categoryIndex)->values();
-            $this->writeSectionRow(
-                $sheet,
-                $row++,
-                $categoryLabel.' — Total: '.$categoryRecords->count(),
-                'FFDDEBF7',
-                12,
-            );
-
-            if ($categoryRecords->isEmpty()) {
-                $this->writeEmptyMessage($sheet, $row++);
-            } else {
-                $row = $this->writeRegionTables($sheet, $categoryRecords, $row, $couponNumber, $setting);
-            }
-
-            if ($categoryIndex !== array_key_last(self::SHEETS)) {
+        if ($overLimit->isNotEmpty()) {
+            if ($mainRecords->isNotEmpty()) {
                 $row += 2;
             }
+            $this->writeSectionRow($sheet, $row++, 'BAGIAN B — DAFTAR MELEBIHI BATAS UMUR ('.$overLimit->count().')', 'FFFECACA', 11);
+            $row = $this->writeRegionTables($sheet, $overLimit, $row, $couponNumber, $setting);
         }
 
         return $row - 1;
@@ -246,38 +221,41 @@ class SantunanRamadhanExportService
         int &$couponNumber,
         \App\Models\SantunanRamadhanAgeSetting $setting,
     ): int {
-        $groups = $this->sortedRegionGroups($records);
+        $hasRegion = $records->contains(fn ($record) => filled($record->rt) || filled($record->rw));
+        $groups = $hasRegion ? $this->sortedRegionGroups($records) : collect([$records]);
 
         foreach ($groups as $groupIndex => $groupRecords) {
             $first = $groupRecords->first();
-            $this->writeSectionRow(
-                $sheet,
-                $row++,
-                $this->regionHeading($first->rt, $first->rw, $first->nama_rt),
-                'FFF2F2F2',
-                10,
-            );
+            if ($hasRegion) {
+                $heading = filled($first->rt) || filled($first->rw)
+                    ? 'RT '.($first->rt ?: '-').' / RW '.($first->rw ?: '-')
+                    : 'RT/RW Belum Diisi';
+                $this->writeSectionRow($sheet, $row++, $heading, 'FFF2F2F2', 10);
+            }
             $this->writeTotalRow($sheet, $row++, $groupRecords->count());
 
             $headerRow = $row++;
             $sheet->fromArray([
-                'NO. KUPON',
                 'NO.',
-                'NAMA ANAK',
+                'NAMA PENERIMA',
+                'KATEGORI',
                 'JK',
                 'TANGGAL LAHIR',
                 'UMUR',
                 'STATUS VALIDASI USIA',
-                'NAMA ORANG TUA',
+                'RT/RW',
+                'PIC / KOORDINATOR',
+                'SUMBER INFORMASI',
                 'ALAMAT',
             ], null, 'A'.$headerRow);
             $this->styleTableHeader($sheet, $headerRow);
 
             $firstDataRow = $row;
             foreach ($this->sortedRecipients($groupRecords) as $localNumber => $record) {
-                $sheet->setCellValue('A'.$row, $couponNumber++);
-                $sheet->setCellValue('B'.$row, $localNumber + 1);
-                $sheet->setCellValue('C'.$row, $record->nama_lengkap ?: 'Belum diisi');
+                $couponNumber++;
+                $sheet->setCellValue('A'.$row, $localNumber + 1);
+                $sheet->setCellValue('B'.$row, $record->nama_lengkap ?: 'Belum diisi');
+                $sheet->setCellValue('C'.$row, self::SHEETS[$record->kategori] ?? $record->kategori);
                 $sheet->setCellValue('D'.$row, $record->jenis_kelamin ?: 'Belum diisi');
 
                 if ($record->tanggal_lahir) {
@@ -289,9 +267,17 @@ class SantunanRamadhanExportService
 
                 $evaluation = $this->ages->evaluate($record, $setting);
                 $sheet->setCellValue('F'.$row, $evaluation['age'] ?? $this->formatAge($record));
-                $sheet->setCellValue('G'.$row, $evaluation['label']);
-                $sheet->setCellValue('H'.$row, $record->nama_orang_tua ?: 'Belum diisi');
-                $sheet->setCellValue('I'.$row, $record->alamat ?: 'Belum diisi');
+                $statusLabel = $evaluation['status'] === SantunanAgeValidationService::OVER_LIMIT
+                    ? 'MELEBIHI BATAS UMUR' : $evaluation['label'];
+                $sheet->setCellValue('G'.$row, $statusLabel);
+                $sheet->setCellValue('H'.$row, filled($record->rt) || filled($record->rw) ? 'RT '.($record->rt ?: '-').' / RW '.($record->rw ?: '-') : '-');
+                $sheet->setCellValue('I'.$row, $record->nama_rt ?: '-');
+                $sheet->setCellValue('J'.$row, $record->sumber_informasi ?: '-');
+                $sheet->setCellValue('K'.$row, $record->alamat ?: 'Belum diisi');
+                if ($evaluation['status'] === SantunanAgeValidationService::OVER_LIMIT) {
+                    $sheet->getStyle('A'.$row.':'.self::LAST_COLUMN.$row)
+                        ->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFEE2E2');
+                }
                 $row++;
             }
 
@@ -408,7 +394,7 @@ class SantunanRamadhanExportService
         $sheet->getStyle($range)->getAlignment()->setWrapText(true);
         $sheet->getStyle($range)->getBorders()->getAllBorders()
             ->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FFD9E2D9');
-        $sheet->getStyle('A'.$firstRow.':B'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A'.$firstRow.':A'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('D'.$firstRow.':G'.$lastRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('A'.$firstRow.':B'.$lastRow)->getNumberFormat()->setFormatCode('0');
 
@@ -421,7 +407,7 @@ class SantunanRamadhanExportService
     {
         return $records
             ->sort(function ($left, $right) {
-                foreach (['rw', 'rt', 'nama_rt'] as $field) {
+                foreach (['rw', 'rt'] as $field) {
                     $comparison = $this->compareGroupValues($left->{$field}, $right->{$field});
 
                     if ($comparison !== 0) {
@@ -434,7 +420,6 @@ class SantunanRamadhanExportService
             ->groupBy(fn ($record) => implode('|', [
                 $this->groupKey($record->rt),
                 $this->groupKey($record->rw),
-                $this->groupKey($record->nama_rt),
             ]))
             ->values();
     }
@@ -458,12 +443,11 @@ class SantunanRamadhanExportService
 
     private function sortedRecipients(Collection $records): Collection
     {
-        return $records
-            ->sortBy([
-                fn ($left, $right) => $this->genderOrder($left->jenis_kelamin) <=> $this->genderOrder($right->jenis_kelamin),
-                fn ($left, $right) => strnatcasecmp((string) $left->nama_lengkap, (string) $right->nama_lengkap),
-            ])
-            ->values();
+        return $records->sort(function ($left, $right): int {
+            $nameComparison = strnatcasecmp((string) $left->nama_lengkap, (string) $right->nama_lengkap);
+
+            return $nameComparison !== 0 ? $nameComparison : ((int) $left->id <=> (int) $right->id);
+        })->values();
     }
 
     private function genderOrder(?string $gender): int

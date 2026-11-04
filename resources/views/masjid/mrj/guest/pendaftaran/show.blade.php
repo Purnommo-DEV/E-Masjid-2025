@@ -52,7 +52,7 @@
             <section class="mb-10 rounded-2xl border border-amber-200 bg-white p-6 shadow-sm" aria-labelledby="ageValidationHeading">
                 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-widest text-amber-700">Validasi usia anak yatim</p>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-amber-700">Validasi usia penerima</p>
                         <h2 id="ageValidationHeading" class="mt-1 text-xl font-bold text-slate-900">
                             <span id="agePeriodLabel">{{ $ageSetting->periode_ramadhan }}</span>
                         </h2>
@@ -78,22 +78,51 @@
                         <button type="submit" class="min-h-12 rounded-xl !bg-emerald-600 px-6 py-3 font-bold !text-white transition hover:!bg-emerald-700">Simpan</button>
                     </form>
                 </div>
-                <div class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <div class="rounded-xl bg-slate-100 p-4"><p class="text-xs font-semibold text-slate-500">Total anak yatim</p><strong id="ageTotal" class="mt-1 block text-2xl text-slate-900">—</strong></div>
-                    <div class="rounded-xl bg-emerald-50 p-4"><p class="text-xs font-semibold text-emerald-700">Memenuhi batas</p><strong id="ageEligible" class="mt-1 block text-2xl text-emerald-800">—</strong></div>
-                    <div class="rounded-xl bg-red-50 p-4"><p class="text-xs font-semibold text-red-700">Melebihi batas</p><strong id="ageOverLimit" class="mt-1 block text-2xl text-red-800">—</strong></div>
-                    <div class="rounded-xl bg-amber-50 p-4"><p class="text-xs font-semibold text-amber-700">Perlu verifikasi</p><strong id="ageNeedsVerification" class="mt-1 block text-2xl text-amber-800">—</strong></div>
-                </div>
+                @foreach([
+                    ['key' => 'combined', 'category' => '', 'title' => 'Statistik Gabungan'],
+                    ['key' => 'dhuafa', 'category' => 'dhuafa', 'title' => 'Dhuafa'],
+                    ['key' => 'yatim_dhuafa', 'category' => 'yatim_dhuafa', 'title' => 'Anak Yatim yang Dhuafa'],
+                ] as $statGroup)
+                    <div class="mt-6">
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <h3 class="font-bold text-slate-800">{{ $statGroup['title'] }}</h3>
+                            <span class="age-filter-context text-xs font-semibold text-slate-500"></span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                            @foreach([
+                                ['status' => '', 'field' => 'total', 'label' => 'Total penerima', 'class' => 'bg-slate-100 text-slate-900'],
+                                ['status' => 'memenuhi_batas_umur', 'field' => 'memenuhi_batas_umur', 'label' => 'Memenuhi batas', 'class' => 'bg-emerald-50 text-emerald-800'],
+                                ['status' => 'melebihi_batas_umur', 'field' => 'melebihi_batas_umur', 'label' => 'Melebihi batas', 'class' => 'bg-red-50 text-red-800'],
+                                ['status' => 'perlu_verifikasi', 'field' => 'perlu_verifikasi', 'label' => 'Perlu verifikasi', 'class' => 'bg-amber-50 text-amber-800'],
+                            ] as $statCard)
+                                <button type="button"
+                                        class="age-stat-card rounded-xl p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-400 {{ $statCard['class'] }}"
+                                        data-group="{{ $statGroup['key'] }}" data-category="{{ $statGroup['category'] }}"
+                                        data-status="{{ $statCard['status'] }}" data-title="{{ $statCard['label'].' — '.$statGroup['title'] }}">
+                                    <span class="block text-xs font-semibold">{{ $statCard['label'] }}</span>
+                                    <strong data-stat-value="{{ $statGroup['key'] }}.{{ $statCard['field'] }}" class="mt-1 block text-2xl">—</strong>
+                                    <span class="mt-1 block text-[11px] opacity-70">Lihat detail</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
             </section>
 
             <!-- Filter Section (UI baru sesuai referensi) -->
             <div id="filterDataCard" class="bg-white rounded-2xl shadow-lg border border-emerald-100/60 p-6 lg:p-10 mb-10">
-                <div class="mb-6">
+                <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
                     <p class="text-xs uppercase tracking-widest text-emerald-600 font-medium mb-1">Filter Data</p>
                     <h2 class="text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Cari Data Santunan</h2>
                     <p class="text-base text-slate-600 leading-relaxed">
                         Gunakan filter di bawah untuk mencari data anak yatim & dhuafa. Ketik di pencarian untuk filter cepat.
                     </p>
+                    </div>
+                    <button id="openSourceInformationManager" type="button"
+                            class="shrink-0 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-3 font-bold !text-white transition hover:!bg-sky-800">
+                        Kelola Sumber Informasi
+                    </button>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-5 items-end">
@@ -109,9 +138,9 @@
                         <label class="label pb-1" for="filterStatusUsia"><span class="label-text font-semibold text-slate-800">Status Usia</span></label>
                         <select id="filterStatusUsia" class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-slate-900">
                             <option value="">Semua</option>
-                            <option value="eligible">Memenuhi batas umur</option>
-                            <option value="over_limit">Melebihi batas umur</option>
-                            <option value="needs_verification">Perlu verifikasi</option>
+                            <option value="memenuhi_batas_umur">Memenuhi batas umur</option>
+                            <option value="melebihi_batas_umur">Melebihi batas umur</option>
+                            <option value="perlu_verifikasi">Perlu verifikasi</option>
                         </select>
                     </div>
                     <div class="form-control">
@@ -504,10 +533,10 @@
                     <div><dt class="detail-label">Pekerjaan Orang Tua / Wali</dt><dd id="detailPekerjaanOrtu" class="detail-value"></dd></div>
                     <div><dt class="detail-label">RT</dt><dd id="detailRt" class="detail-value"></dd></div>
                     <div><dt class="detail-label">RW</dt><dd id="detailRw" class="detail-value"></dd></div>
-                    <div><dt class="detail-label">Nama RT / Koordinator</dt><dd id="detailNamaRt" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Nama Penanggung Jawab / PIC</dt><dd id="detailNamaRt" class="detail-value"></dd></div>
                     <div><dt class="detail-label">Nomor WhatsApp</dt><dd id="detailNoWa" class="detail-value"></dd></div>
                     <div class="sm:col-span-2"><dt class="detail-label">Alamat Lengkap</dt><dd id="detailAlamat" class="detail-value whitespace-pre-wrap"></dd></div>
-                    <div><dt class="detail-label">Penanggung Jawab Informasi</dt><dd id="detailSumber" class="detail-value"></dd></div>
+                    <div><dt class="detail-label">Sumber Informasi</dt><dd id="detailSumber" class="detail-value"></dd></div>
                     <div><dt class="detail-label">Tahun Program</dt><dd id="detailTahun" class="detail-value"></dd></div>
                     <div class="sm:col-span-2"><dt class="detail-label">Keterangan Tambahan</dt><dd id="detailCatatan" class="detail-value whitespace-pre-wrap"></dd></div>
                 </dl>
@@ -537,15 +566,15 @@
 
                 <div class="modal-body space-y-7">
 
-                    <!-- Penanggung Jawab Informasi -->
+                    <!-- Sumber Informasi -->
                     <div class="form-control">
                         <label class="label pb-1">
-                            <span class="label-text font-semibold text-slate-800">Penanggung Jawab Informasi <span class="text-red-500">*</span></span>
+                            <span class="label-text font-semibold text-slate-800">Sumber Informasi <span class="text-red-500">*</span></span>
                         </label>
                         <div class="relative">
                             <input type="text" name="sumber_informasi" id="editSumber" required
                                    class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
-                                   placeholder="Penanggung Jawab Informasi"/>
+                                   placeholder="Contoh: Pengurus RT, DKM, atau nama sumber"/>
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🔍</span>
                         </div>
                     </div>
@@ -653,7 +682,7 @@
                                 <span class="label-text font-semibold text-slate-800">Umur Saat Ini <span class="text-red-500">*</span></span>
                             </label>
                             <div class="relative flex items-center gap-3">
-                                <input type="number" name="umur" id="editUmur" min="0" max="13" required
+                                <input type="number" name="umur" id="editUmur" min="0" required
                                        class="w-full px-12 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 outline-none placeholder-slate-400 text-slate-900 bg-white"
                                        placeholder="Akan otomatis jika tgl lahir diisi" />
                                 <span class="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 text-xl pointer-events-none">🎂</span>
@@ -709,10 +738,10 @@
                     </div>
 
                     <div class="form-control">
-                        <label class="label pb-1" for="editNamaRt"><span class="label-text font-semibold text-slate-800">Nama RT / Koordinator (opsional)</span></label>
+                        <label class="label pb-1" for="editNamaRt"><span class="label-text font-semibold text-slate-800">Nama Penanggung Jawab / PIC (opsional)</span></label>
                         <input type="text" name="nama_rt" id="editNamaRt" maxlength="150"
                                class="w-full px-4 py-3.5 rounded-xl border-2 border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none text-slate-900 bg-white"
-                               placeholder="Contoh: Pak Parno">
+                               placeholder="Contoh: M. Fulan, S.Pd.">
                     </div>
 
                     <!-- Nama Orang Tua & Pekerjaan -->
@@ -831,6 +860,64 @@
                     <button id="startYearContinue" type="submit" disabled class="min-h-12 rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300">Lanjutkan</button>
                 </div>
             </form>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog id="ageStatisticsModal" class="modal" aria-labelledby="ageStatisticsModalTitle">
+        <div class="modal-box flex max-h-[90vh] w-[calc(100%-1rem)] max-w-7xl flex-col overflow-hidden p-0 text-slate-800 sm:w-full">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+                <div>
+                    <h3 id="ageStatisticsModalTitle" class="text-xl font-bold text-slate-900">Detail Statistik Usia</h3>
+                    <p class="mt-1 text-sm text-slate-500"><span id="ageStatisticsModalCount">0 data</span> · Tanggal acuan <strong id="ageStatisticsModalReference">-</strong></p>
+                </div>
+                <button id="closeAgeStatisticsModal" type="button" class="rounded-lg p-2 text-xl text-slate-500 hover:bg-slate-100" aria-label="Tutup">✕</button>
+            </div>
+            <div id="ageStatisticsModalLoading" class="p-10 text-center text-slate-500">Memuat data…</div>
+            <div id="ageStatisticsModalEmpty" class="hidden p-10 text-center text-slate-500">Tidak ada penerima pada statistik ini.</div>
+            <div id="ageStatisticsModalTableWrap" class="hidden flex-1 overflow-auto">
+                <table class="w-full min-w-[1050px] border-collapse text-sm">
+                    <thead class="sticky top-0 z-10 bg-emerald-700 text-white">
+                        <tr><th class="p-3 text-left">No</th><th class="p-3 text-left">Nama</th><th class="p-3 text-left">Kategori</th><th class="p-3 text-left">Jenis Kelamin</th><th class="p-3 text-left">Tanggal Lahir</th><th class="p-3 text-left">Umur</th><th class="p-3 text-left">Status</th><th class="p-3 text-left">RT/RW</th><th class="p-3 text-left">PIC</th><th class="p-3 text-left">Sumber Informasi</th></tr>
+                    </thead>
+                    <tbody id="ageStatisticsModalRows"></tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between gap-3 border-t border-slate-200 p-4">
+                <button id="ageStatisticsPrev" type="button" class="rounded-lg border border-slate-300 px-4 py-2 font-semibold disabled:opacity-40">Sebelumnya</button>
+                <span id="ageStatisticsPage" class="text-sm text-slate-600"></span>
+                <button id="ageStatisticsNext" type="button" class="rounded-lg border border-slate-300 px-4 py-2 font-semibold disabled:opacity-40">Berikutnya</button>
+            </div>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+
+    <dialog id="sourceInformationModal" class="modal" aria-labelledby="sourceInformationModalTitle">
+        <div class="modal-box flex max-h-[90vh] w-[calc(100%-1rem)] max-w-5xl flex-col overflow-hidden p-0 text-slate-800 sm:w-full">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+                <div>
+                    <h3 id="sourceInformationModalTitle" class="text-xl font-bold text-slate-900">Kelola Sumber Informasi</h3>
+                    <p id="sourceInformationSummary" class="mt-1 text-sm text-slate-500">Memuat data…</p>
+                </div>
+                <button id="closeSourceInformationModal" type="button" class="source-manager-close rounded-lg px-3 py-2 text-xl font-bold" aria-label="Tutup">✕</button>
+            </div>
+            <div class="border-b border-slate-200 bg-slate-50 px-5 py-3">
+                <label class="flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700">
+                    <input id="sourceInformationAllYears" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-sky-700">
+                    Kelola nama pada seluruh tahun program
+                </label>
+                <p class="mt-1 text-xs text-slate-500">Default hanya tahun program yang sedang dipilih.</p>
+            </div>
+            <div id="sourceInformationLoading" class="p-10 text-center text-slate-500">Memuat sumber informasi…</div>
+            <div id="sourceInformationEmpty" class="hidden p-10 text-center text-slate-500">Belum ada Sumber Informasi pada cakupan ini.</div>
+            <div id="sourceInformationTableWrap" class="hidden flex-1 overflow-auto">
+                <table class="w-full min-w-[720px] border-collapse text-sm">
+                    <thead class="sticky top-0 z-10 bg-sky-800 text-white">
+                        <tr><th class="p-3 text-left">Nama Sumber Informasi</th><th class="p-3 text-left">Jumlah Penerima</th><th class="p-3 text-left">Tahun Program</th><th class="p-3 text-center">Aksi</th></tr>
+                    </thead>
+                    <tbody id="sourceInformationRows"></tbody>
+                </table>
+            </div>
         </div>
         <form method="dialog" class="modal-backdrop"><button>close</button></form>
     </dialog>
@@ -995,6 +1082,7 @@
         const columns = [
             { data: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'sumber_informasi', defaultContent: '-' },
+            { data: 'nama_rt', defaultContent: '-' },
             { data: 'no_wa', defaultContent: '-' },
             { data: 'kategori_display', defaultContent: '-' },
             { data: 'nama_lengkap', defaultContent: '-' },
@@ -1048,7 +1136,8 @@
             <tr>
                 ${controlHeading}
                 <th>No</th>
-                <th>Penanggung Jawab Informasi</th>
+                <th>Sumber Informasi</th>
+                <th>PIC / Koordinator</th>
                 <th>No WA</th>
                 <th>Kategori</th>
                 <th>Nama Anak</th>
@@ -1089,7 +1178,7 @@
             },
             columns: tableColumns(mode),
             createdRow: function (row, data) {
-                if (data.kategori === 'yatim_dhuafa' && data.status_usia === 'over_limit') {
+                if (['dhuafa', 'yatim_dhuafa'].includes(data.kategori) && data.status_usia === 'melebihi_batas_umur') {
                     $(row).addClass('age-over-limit-row');
                 }
             },
@@ -1132,19 +1221,24 @@
             : value;
     }
 
+    function formatDateIdFromApi(value) {
+        const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return match ? `${match[3]}/${match[2]}/${match[1]}` : '-';
+    }
+
     function renderRecipientTable(recipients) {
         const rows = recipients.map((recipient, index) => {
             const id = Number(recipient.id);
             const gender = recipient.jenis_kelamin === 'L' ? 'L' : (recipient.jenis_kelamin === 'P' ? 'P' : '—');
 
             return `
-                <tr data-recipient-id="${id}" class="border-b border-slate-100 last:border-0 ${recipient.kategori === 'yatim_dhuafa' && recipient.status_usia?.status === 'over_limit' ? 'age-over-limit-row' : ''}">
+                <tr data-recipient-id="${id}" class="border-b border-slate-100 last:border-0 ${['dhuafa', 'yatim_dhuafa'].includes(recipient.kategori) && recipient.status_usia?.status === 'melebihi_batas_umur' ? 'age-over-limit-row' : ''}">
                     <td data-label="No">${index + 1}</td>
                     <td data-label="Nama Anak" class="font-semibold text-slate-900">${escapeHtml(displayValue(recipient.nama_lengkap))}</td>
                     <td data-label="JK">${gender}</td>
                     <td data-label="Tanggal Lahir">${escapeHtml(displayValue(recipient.tanggal_lahir))}</td>
                     <td data-label="Umur">${escapeHtml(displayValue(recipient.umur))}</td>
-                    <td data-label="Status Usia"><span class="inline-block rounded-full px-2 py-1 text-xs font-bold ${recipient.status_usia?.status === 'eligible' ? 'bg-emerald-100 text-emerald-800' : recipient.status_usia?.status === 'over_limit' ? 'bg-red-100 text-red-800' : recipient.status_usia?.status === 'needs_verification' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}">${escapeHtml(recipient.status_usia?.label || 'Tidak berlaku')}</span></td>
+                    <td data-label="Status Usia"><span class="inline-block rounded-full px-2 py-1 text-xs font-bold ${recipient.status_usia?.status === 'memenuhi_batas_umur' ? 'bg-emerald-100 text-emerald-800' : recipient.status_usia?.status === 'melebihi_batas_umur' ? 'bg-red-100 text-red-800' : recipient.status_usia?.status === 'perlu_verifikasi' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-500'}">${escapeHtml(recipient.status_usia?.label || 'Tidak berlaku')}</span></td>
                     <td data-label="Orang Tua / Wali">${escapeHtml(displayValue(recipient.nama_orang_tua))}</td>
                     <td data-label="Alamat">${escapeHtml(displayValue(recipient.alamat))}</td>
                     <td data-label="Aksi">
@@ -1177,7 +1271,7 @@
                 <header class="source-group-header">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Sumber Informasi</p>
-                        <h3 class="mt-1 text-2xl sm:text-3xl font-black uppercase text-white break-words">${escapeHtml(source.label)}</h3>
+                        <h3 class="mt-1 text-2xl sm:text-3xl font-black text-white break-words">${escapeHtml(source.label)}</h3>
                     </div>
                     <span class="group-total group-total-dark">${source.total} penerima</span>
                 </header>
@@ -1311,6 +1405,7 @@
     }
 
     function refreshDataViews() {
+        loadAgeSummary(Number($('#filterTahun').val()));
         if (activeDataView === 'table') {
             groupedDirty = true;
             table.ajax.reload();
@@ -1447,14 +1542,19 @@
             .text(response.setting.configured ? 'Konfigurasi tersimpan.' : 'Belum dikonfigurasi — tanggal yang tampil adalah default sementara dan belum tersimpan.')
             .toggleClass('text-emerald-700', response.setting.configured)
             .toggleClass('text-amber-700', !response.setting.configured);
-        $('#ageTotal').text(response.summary.total);
-        $('#ageEligible').text(response.summary.eligible);
-        $('#ageOverLimit').text(response.summary.over_limit);
-        $('#ageNeedsVerification').text(response.summary.needs_verification);
+        $('[data-stat-value]').each(function () {
+            const [group, field] = $(this).data('stat-value').split('.');
+            $(this).text(response.summary?.[group]?.[field] ?? 0);
+        });
+        $('.age-filter-context').text(response.filter_context
+            ? `Filter kategori: ${response.filter_context === 'dhuafa' ? 'Dhuafa' : 'Anak Yatim yang Dhuafa'}`
+            : '');
     }
 
     function loadAgeSummary(year) {
-        $.get('{{ route("santunan-ramadhan.age-summary") }}', { tahun: year })
+        const filters = currentFilterData();
+        filters.tahun = year;
+        $.get('{{ route("santunan-ramadhan.age-summary") }}', filters)
             .done(renderAgeSummary)
             .fail(xhr => Swal.fire('Gagal', xhr.responseJSON?.message || 'Ringkasan usia tidak dapat dimuat.', 'error'));
     }
@@ -1494,11 +1594,189 @@
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
         }).done(function (response) {
             renderAgeSummary(response);
+            loadAgeSummary(Number($('#filterTahun').val()));
             table?.ajax.reload(null, false);
             groupedDirty = true;
             if (!$('#groupedViewPanel').hasClass('hidden')) loadGroupedData();
             Swal.fire('Berhasil', response.message, 'success');
         }).fail(xhr => Swal.fire('Gagal', xhr.responseJSON?.message || 'Tanggal acuan gagal disimpan.', 'error'));
+    });
+
+    const ageStatisticsState = { category: '', status: '', title: '', page: 1 };
+
+    function ageStatusBadgeClass(status) {
+        if (status === 'memenuhi_batas_umur') return 'bg-emerald-100 text-emerald-800';
+        if (status === 'melebihi_batas_umur') return 'bg-red-100 text-red-800';
+        return 'bg-amber-100 text-amber-800';
+    }
+
+    function loadAgeStatisticsDetails(page = 1) {
+        ageStatisticsState.page = page;
+        $('#ageStatisticsModalLoading').text('Memuat data…').removeClass('hidden');
+        $('#ageStatisticsModalEmpty, #ageStatisticsModalTableWrap').addClass('hidden');
+        $.get('{{ route("santunan-ramadhan.age-statistics-details") }}', {
+            ...currentFilterData(),
+            stat_category: ageStatisticsState.category || null,
+            stat_status: ageStatisticsState.status || null,
+            page
+        }).done(function (response) {
+            const pagination = response.pagination;
+            $('#ageStatisticsModalTitle').text(ageStatisticsState.title);
+            $('#ageStatisticsModalCount').text(`${pagination.total} data`);
+            $('#ageStatisticsModalReference').text(response.setting.tanggal_acuan_display);
+            $('#ageStatisticsPage').text(`Halaman ${pagination.current_page} dari ${Math.max(pagination.last_page, 1)}`);
+            $('#ageStatisticsPrev').prop('disabled', pagination.current_page <= 1);
+            $('#ageStatisticsNext').prop('disabled', pagination.current_page >= pagination.last_page);
+            $('#ageStatisticsModalLoading').addClass('hidden');
+
+            if (!response.data.length) {
+                $('#ageStatisticsModalEmpty').removeClass('hidden');
+                return;
+            }
+
+            const start = (pagination.current_page - 1) * pagination.per_page;
+            $('#ageStatisticsModalRows').html(response.data.map((row, index) => `
+                <tr class="border-b border-slate-200 ${row.status === 'melebihi_batas_umur' ? 'age-over-limit-row' : ''}">
+                    <td class="p-3">${start + index + 1}</td>
+                    <td class="p-3 font-semibold text-slate-900">${escapeHtml(row.nama_lengkap)}</td>
+                    <td class="p-3">${escapeHtml(row.kategori_label)}</td>
+                    <td class="p-3">${escapeHtml(row.jenis_kelamin)}</td>
+                    <td class="p-3">${escapeHtml(row.tanggal_lahir)}</td>
+                    <td class="p-3">${escapeHtml(row.umur)}</td>
+                    <td class="p-3"><span class="inline-block rounded-full px-2 py-1 text-xs font-bold ${ageStatusBadgeClass(row.status)}">${escapeHtml(row.status_label)}</span></td>
+                    <td class="p-3">${escapeHtml(row.rt_rw)}</td>
+                    <td class="p-3">${escapeHtml(row.pic)}</td>
+                    <td class="p-3">${escapeHtml(row.sumber_informasi)}</td>
+                </tr>`).join(''));
+            $('#ageStatisticsModalTableWrap').removeClass('hidden');
+        }).fail(xhr => {
+            $('#ageStatisticsModalLoading').text(xhr.responseJSON?.message || 'Data detail gagal dimuat.');
+        });
+    }
+
+    $('.age-stat-card').on('click', function () {
+        ageStatisticsState.category = String($(this).data('category') || '');
+        ageStatisticsState.status = String($(this).data('status') || '');
+        ageStatisticsState.title = String($(this).data('title') || 'Detail Statistik Usia');
+        document.getElementById('ageStatisticsModal').showModal();
+        loadAgeStatisticsDetails(1);
+    });
+    $('#closeAgeStatisticsModal').on('click', () => document.getElementById('ageStatisticsModal').close());
+    $('#ageStatisticsPrev').on('click', () => loadAgeStatisticsDetails(ageStatisticsState.page - 1));
+    $('#ageStatisticsNext').on('click', () => loadAgeStatisticsDetails(ageStatisticsState.page + 1));
+
+    function loadSourceInformationManager(afterLoad = null) {
+        const year = Number($('#filterTahun').val());
+        const scope = $('#sourceInformationAllYears').is(':checked') ? 'all' : 'year';
+        $('#sourceInformationLoading').text('Memuat sumber informasi…').removeClass('hidden');
+        $('#sourceInformationEmpty, #sourceInformationTableWrap').addClass('hidden');
+
+        $.get('{{ route("santunan-ramadhan.source-information.index") }}', { tahun: year, scope })
+            .done(function (response) {
+                $('#sourceInformationLoading').addClass('hidden');
+                $('#sourceInformationSummary').text(
+                    `${response.total_unique} nama unik · ${response.total_recipients} penerima · ${scope === 'all' ? 'seluruh tahun' : 'tahun ' + year}`
+                );
+                if (!response.items.length) {
+                    $('#sourceInformationEmpty').removeClass('hidden');
+                    return;
+                }
+
+                $('#sourceInformationRows').html(response.items.map(item => {
+                    const years = Object.entries(item.tahun).map(([itemYear, count]) => `${itemYear}: ${count}`).join(', ');
+                    return `<tr class="border-b border-slate-200">
+                        <td class="p-3 font-semibold text-slate-900">${escapeHtml(item.nama)}</td>
+                        <td class="p-3">${item.jumlah}</td>
+                        <td class="p-3">${escapeHtml(years)}</td>
+                        <td class="p-3 text-center"><button type="button" class="rename-source-information source-manager-edit rounded-lg px-4 py-2 font-semibold" data-name="${escapeHtml(item.nama)}" data-count="${item.jumlah}">Ubah Nama</button></td>
+                    </tr>`;
+                }).join(''));
+                $('#sourceInformationTableWrap').removeClass('hidden');
+            })
+            .fail(xhr => $('#sourceInformationLoading').text(xhr.responseJSON?.message || 'Daftar Sumber Informasi gagal dimuat.'))
+            .always(() => { if (typeof afterLoad === 'function') afterLoad(); });
+    }
+
+    $('#openSourceInformationManager').on('click', function () {
+        $('#sourceInformationAllYears').prop('checked', false);
+        document.getElementById('sourceInformationModal').showModal();
+        loadSourceInformationManager();
+    });
+    $('#closeSourceInformationModal').on('click', () => document.getElementById('sourceInformationModal').close());
+    $('#sourceInformationAllYears').on('change', loadSourceInformationManager);
+
+    $(document).on('click', '.rename-source-information', async function () {
+        const oldName = String($(this).data('name'));
+        const count = Number($(this).data('count'));
+        const scope = $('#sourceInformationAllYears').is(':checked') ? 'all' : 'year';
+        const year = Number($('#filterTahun').val());
+        const managerModal = document.getElementById('sourceInformationModal');
+        const tableWrap = document.getElementById('sourceInformationTableWrap');
+        const previousScrollTop = tableWrap.scrollTop;
+        const restoreManager = refresh => {
+            if (!managerModal.open) managerModal.showModal();
+            const restoreScroll = () => requestAnimationFrame(() => { tableWrap.scrollTop = previousScrollTop; });
+            if (refresh) loadSourceInformationManager(restoreScroll);
+            else restoreScroll();
+        };
+
+        managerModal.close();
+        const editor = await Swal.fire({
+            title: 'Ubah Nama Sumber Informasi',
+            text: `${count} data akan terdampak pada ${scope === 'all' ? 'seluruh tahun program' : 'tahun ' + year}.`,
+            input: 'text',
+            inputValue: oldName,
+            showCancelButton: true,
+            confirmButtonText: 'Lanjutkan',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#0369a1',
+            cancelButtonColor: '#64748b',
+            inputValidator: value => {
+                const normalized = String(value || '').trim().replace(/\s+/g, ' ');
+                if (normalized.length < 2) return 'Nama baru minimal 2 karakter.';
+                if (normalized === oldName) return 'Nama baru harus berbeda dari nama lama.';
+            }
+        });
+        if (!editor.isConfirmed) {
+            restoreManager(false);
+            return;
+        }
+
+        const newName = String(editor.value).trim().replace(/\s+/g, ' ');
+        const confirmation = await Swal.fire({
+            icon: 'warning',
+            title: 'Konfirmasi Bulk Rename',
+            text: `Ubah “${oldName}” menjadi “${newName}” pada ${count} data?`,
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Ubah Nama',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#15803d',
+            cancelButtonColor: '#64748b'
+        });
+        if (!confirmation.isConfirmed) {
+            restoreManager(false);
+            return;
+        }
+
+        $.ajax({
+            url: '{{ route("santunan-ramadhan.source-information.rename") }}',
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            data: { tahun_program: year, scope, nama_lama: oldName, nama_baru: newName }
+        }).done(function (response) {
+            const activeSource = $('#filterSumber').val();
+            $.get('{{ route("santunan-ramadhan.filter-options") }}', { tahun: year }).done(function (options) {
+                replaceOptions('#filterSumber', 'Semua sumber', options.sources);
+                replaceOptions('#filterSumberExport', 'Pilih Sumber Informasi', options.sources);
+                if (activeSource === response.old_name) $('#filterSumber').val(response.new_name);
+                syncExportMode();
+                refreshDataViews();
+            });
+            Swal.fire('Berhasil', response.message, 'success').then(() => restoreManager(true));
+        }).fail(xhr => {
+            Swal.fire('Gagal', xhr.responseJSON?.message || Object.values(xhr.responseJSON?.errors || {}).flat().join('\n') || 'Nama gagal diperbarui.', 'error')
+                .then(() => restoreManager(false));
+        });
     });
 
     // Fungsi hapus data
@@ -1681,11 +1959,7 @@
             url: '{{ route("santunan-ramadhan.edit", ":id") }}'.replace(':id', id),
             method: 'GET',
             success: function (row) {
-                let tanggalLahir = 'Belum diisi';
-                if (row.tanggal_lahir) {
-                    const parts = row.tanggal_lahir.split('-');
-                    tanggalLahir = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
+                const tanggalLahir = row.tanggal_lahir ? formatDateIdFromApi(row.tanggal_lahir) : '-';
 
                 const kategori = row.kategori === 'yatim_dhuafa' ? 'YATIM YANG DHUAFA' : 'DHUAFA';
                 const jenisKelamin = row.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan';
@@ -1742,11 +2016,7 @@
                 $('#editCatatan').val(row.catatan_tambahan || '');
 
                 // Tanggal lahir
-                let tglDisplay = '';
-                if (row.tanggal_lahir) {
-                    const parts = row.tanggal_lahir.split('-');
-                    tglDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
+                const tglDisplay = row.tanggal_lahir ? formatDateIdFromApi(row.tanggal_lahir) : '';
                 $('#editTanggalLahirText').val(tglDisplay);
                 $('#editTanggalLahirHidden').val(row.tanggal_lahir || '');
 
@@ -2225,8 +2495,49 @@
     #tabelYatimDhuafa tbody tr.age-over-limit-row + tr.child,
     #tabelYatimDhuafa tbody tr.age-over-limit-row + tr.child:hover,
     .grouped-recipient-table tr.age-over-limit-row,
-    .grouped-recipient-table tr.age-over-limit-row:hover {
+    .grouped-recipient-table tr.age-over-limit-row:hover,
+    #ageStatisticsModal tr.age-over-limit-row,
+    #ageStatisticsModal tr.age-over-limit-row:hover {
         background-color: rgba(254, 202, 202, 0.58) !important;
+    }
+
+    #sourceInformationModal .source-manager-edit {
+        background-color: #0369a1;
+        color: #ffffff;
+    }
+
+    #sourceInformationModal .source-manager-edit:hover {
+        background-color: #075985;
+    }
+
+    #sourceInformationModal .source-manager-edit:active {
+        background-color: #0c4a6e;
+    }
+
+    #sourceInformationModal .source-manager-close {
+        background-color: #e2e8f0;
+        color: #334155;
+    }
+
+    #sourceInformationModal .source-manager-close:hover {
+        background-color: #cbd5e1;
+        color: #0f172a;
+    }
+
+    #sourceInformationModal .source-manager-close:active {
+        background-color: #94a3b8;
+    }
+
+    #sourceInformationModal .source-manager-edit:focus-visible,
+    #sourceInformationModal .source-manager-close:focus-visible {
+        outline: 3px solid rgba(14, 165, 233, 0.4);
+        outline-offset: 2px;
+    }
+
+    #sourceInformationModal .source-manager-edit:disabled,
+    #sourceInformationModal .source-manager-close:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
     }
 
     #tabelYatimDhuafa td.control::before {

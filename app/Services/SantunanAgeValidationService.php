@@ -11,10 +11,10 @@ use IntlDateFormatter;
 
 class SantunanAgeValidationService
 {
-    public const CATEGORY = 'yatim_dhuafa';
-    public const ELIGIBLE = 'eligible';
-    public const OVER_LIMIT = 'over_limit';
-    public const NEEDS_VERIFICATION = 'needs_verification';
+    public const CATEGORIES = ['dhuafa', 'yatim_dhuafa'];
+    public const ELIGIBLE = 'memenuhi_batas_umur';
+    public const OVER_LIMIT = 'melebihi_batas_umur';
+    public const NEEDS_VERIFICATION = 'perlu_verifikasi';
 
     public function settingForYear(int $year): SantunanRamadhanAgeSetting
     {
@@ -77,7 +77,7 @@ class SantunanAgeValidationService
 
     public function evaluate($record, SantunanRamadhanAgeSetting $setting): array
     {
-        if ($record->kategori !== self::CATEGORY) {
+        if (! in_array($record->kategori, self::CATEGORIES, true)) {
             return ['status' => null, 'label' => 'Tidak berlaku', 'age' => null];
         }
 
@@ -105,7 +105,7 @@ class SantunanAgeValidationService
         $cutoff = CarbonImmutable::parse($setting->tanggal_acuan)
             ->subYearsNoOverflow($setting->batas_tahun)->subMonthsNoOverflow($setting->batas_bulan)->toDateString();
 
-        $query->where('santunan_participations.kategori', self::CATEGORY);
+        $query->whereIn('santunan_participations.kategori', self::CATEGORIES);
 
         return match ($status) {
             self::ELIGIBLE => $query->whereNotNull('santunan_persons.tanggal_lahir')
