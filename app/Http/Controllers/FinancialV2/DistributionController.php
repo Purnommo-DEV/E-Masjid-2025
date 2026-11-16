@@ -399,6 +399,266 @@ final class DistributionController
         return view('masjid.mrj.admin.financial-v2.distributions.show', compact('entity', 'distribution', 'total', 'people', 'replacementCandidates', 'realizations', 'continuity'));
     }
 
+    public function export(Request $request, string $distribution)
+    {
+        $entity = $this->context($request);
+        $distribution = Distribution::forEntity($entity->id)
+            ->with(['program', 'items.beneficiary', 'items.latestIdentityCorrection.correctedBeneficiary'])
+            ->findOrFail($distribution);
+
+        $items = $distribution->items->unique('id')->sort(function (DistributionItem $left, DistributionItem $right): int {
+            $leftIdentity = $left->effective_identity_snapshot;
+            $rightIdentity = $right->effective_identity_snapshot;
+            foreach (['rw', 'rt', 'display_name'] as $field) {
+                $comparison = strnatcasecmp(trim((string) ($leftIdentity[$field] ?? '')), trim((string) ($rightIdentity[$field] ?? '')));
+                if ($comparison !== 0) return $comparison;
+            }
+
+            return strcmp((string) $left->id, (string) $right->id);
+        })->values();
+
+        $allRegionsMissing = $items->isNotEmpty() && $items->every(function (DistributionItem $item): bool {
+            $identity = $item->effective_identity_snapshot;
+
+            return trim((string) ($identity['rt'] ?? '')) === '' && trim((string) ($identity['rw'] ?? '')) === '';
+        });
+        $groups = $allRegionsMissing
+            ? collect([['label' => null, 'items' => $items]])
+            : $items->groupBy(function (DistributionItem $item): string {
+                $identity = $item->effective_identity_snapshot;
+                $rt = trim((string) ($identity['rt'] ?? ''));
+                $rw = trim((string) ($identity['rw'] ?? ''));
+
+                return $rt === '' || $rw === '' ? '__missing__' : mb_strtolower($rw.'|'.$rt, 'UTF-8');
+            })->map(function ($members, string $key): array {
+                $identity = $members->first()->effective_identity_snapshot;
+
+                return [
+                    'label' => $key === '__missing__' ? 'RT/RW Belum Diisi' : 'RT '.trim((string) $identity['rt']).' / RW '.trim((string) $identity['rw']),
+                    'items' => $members->sort(function (DistributionItem $left, DistributionItem $right): int {
+                        $comparison = strnatcasecmp(
+                            trim((string) ($left->effective_identity_snapshot['display_name'] ?? '')),
+                            trim((string) ($right->effective_identity_snapshot['display_name'] ?? ''))
+                        );
+
+                        return $comparison !== 0 ? $comparison : strcmp((string) $left->id, (string) $right->id);
+                    })->values(),
+                ];
+            })->values();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Penerima Penyaluran');
+        $sheet->mergeCells('A1:K1')->setCellValueExplicit('A1', 'DAFTAR PENERIMA PENYALURAN SANTUNAN', DataType::TYPE_STRING);
+        $sheet->mergeCells('A2:K2')->setCellValueExplicit('A2', 'Program: '.$distribution->program->name.' | Penyaluran: '.$distribution->title, DataType::TYPE_STRING);
+        $sheet->mergeCells('A3:K3')->setCellValueExplicit('A3', 'Periode: '.$distribution->period_label.' ('.$distribution->starts_on->format('d/m/Y').' - '.$distribution->ends_on->format('d/m/Y').')', DataType::TYPE_STRING);
+        $sheet->mergeCells('A4:K4')->setCellValueExplicit('A4', 'Entity: '.$entity->name.' | Diekspor: '.now()->format('d/m/Y H:i').' WIB', DataType::TYPE_STRING);
+
+        $headers = ['No.', 'Nama Penerima', 'Kategori', 'Alamat', 'RT', 'RW', 'PIC/Koordinator', 'Kontak', 'Nominal', 'Status Penyaluran', 'Keterangan'];
+        $row = 6;
+        $number = 0;
+        $headerRows = [];
+        foreach ($groups as $group) {
+            if ($group['label'] !== null) {
+                $sheet->mergeCells("A{$row}:K{$row}")->setCellValueExplicit("A{$row}", $group['label'], DataType::TYPE_STRING);
+                $sheet->getStyle("A{$row}:K{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFD1FAE5');
+                $sheet->getStyle("A{$row}:K{$row}")->getFont()->setBold(true)->getColor()->setARGB('FF064E3B');
+                $row++;
+            }
+            $sheet->fromArray($headers, null, "A{$row}");
+            $headerRows[] = $row;
+            $sheet->getStyle("A{$row}:K{$row}")->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle("A{$row}:K{$row}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF047857');
+            $row++;
+
+            foreach ($group['items'] as $item) {
+                $number++;
+                $identity = $item->effective_identity_snapshot;
+                $values = [
+                    $number,
+                    (string) ($identity['display_name'] ?? ''),
+                    $item->beneficiary_type_resolution['label'],
+                    (string) ($identity['address'] ?? ''),
+                    (string) ($identity['rt'] ?? ''),
+                    (string) ($identity['rw'] ?? ''),
+                    (string) ($identity['rt_coordinator_name'] ?? ''),
+                    (string) ($identity['contact_reference'] ?? ''),
+                    (float) $item->amount,
+                    strtoupper((string) $distribution->status),
+                    (string) ($item->notes ?? ''),
+                ];
+                foreach ($values as $columnIndex => $value) {
+                    $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex + 1).$row;
+                    if (is_string($value)) $sheet->setCellValueExplicit($cell, $value, DataType::TYPE_STRING);
+                    else $sheet->setCellValue($cell, $value);
+                }
+                $row++;
+            }
+        }
+
+        if ($groups->isEmpty()) {
+            $sheet->fromArray($headers, null, 'A6');
+            $headerRows[] = 6;
+            $sheet->getStyle('A6:K6')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+            $sheet->getStyle('A6:K6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF047857');
+            $sheet->mergeCells('A7:K7')->setCellValueExplicit('A7', 'Belum ada penerima pada penyaluran ini.', DataType::TYPE_STRING);
+            $row = 8;
+        }
+
+        $lastRow = max(6, $row - 1);
+        $firstHeaderRow = $headerRows[0];
+        $sheet->getStyle('A1:K1')->getFont()->setBold(true)->setSize(14)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1:K1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FF065F46');
+        $sheet->getStyle('A1:K4')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("A6:K{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FFCBD5E1');
+        $sheet->getStyle("A6:K{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+        $sheet->getStyle("I6:I{$lastRow}")->getNumberFormat()->setFormatCode('[$Rp-421] #,##0.00');
+        foreach (['A' => 7, 'B' => 28, 'C' => 18, 'D' => 36, 'E' => 8, 'F' => 8, 'G' => 24, 'H' => 18, 'I' => 18, 'J' => 18, 'K' => 30] as $column => $width) {
+            $sheet->getColumnDimension($column)->setWidth($width);
+        }
+        $sheet->freezePane('A'.($firstHeaderRow + 1));
+        $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setPaperSize(PageSetup::PAPERSIZE_A4)->setFitToWidth(1)->setFitToHeight(0);
+        $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd($firstHeaderRow, $firstHeaderRow)->setPrintArea("A1:K{$lastRow}");
+        $sheet->getPageMargins()->setTop(0.5)->setRight(0.3)->setBottom(0.5)->setLeft(0.3);
+
+        $filename = 'Daftar-Penerima-Penyaluran-'.Str::slug($distribution->title).'-'.now()->format('Ymd').'.xlsx';
+
+        return response()->streamDownload(function () use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $filename, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+    }
+
+    public function exportReference(Request $request, string $distribution)
+    {
+        $entity = $this->context($request);
+        $distribution = Distribution::forEntity($entity->id)
+            ->with(['items.beneficiary', 'items.latestIdentityCorrection.correctedBeneficiary'])
+            ->findOrFail($distribution);
+
+        $items = $distribution->items->unique('id')->sort(function (DistributionItem $left, DistributionItem $right): int {
+            $leftIdentity = $left->effective_identity_snapshot;
+            $rightIdentity = $right->effective_identity_snapshot;
+            foreach (['rw', 'rt', 'display_name'] as $field) {
+                $comparison = strnatcasecmp(trim((string) ($leftIdentity[$field] ?? '')), trim((string) ($rightIdentity[$field] ?? '')));
+                if ($comparison !== 0) return $comparison;
+            }
+
+            return strcmp((string) $left->id, (string) $right->id);
+        })->values();
+
+        $groups = $items->groupBy(function (DistributionItem $item): string {
+                $identity = $item->effective_identity_snapshot;
+                $rt = trim((string) ($identity['rt'] ?? ''));
+                $rw = trim((string) ($identity['rw'] ?? ''));
+
+                return $rt === '' && $rw === '' ? '__missing__' : mb_strtolower($rw.'|'.$rt, 'UTF-8');
+            })->map(function ($members, string $key): array {
+                $identity = $members->first()->effective_identity_snapshot;
+                $pic = $members->map(fn (DistributionItem $item): string => trim((string) ($item->effective_identity_snapshot['rt_coordinator_name'] ?? '')))
+                    ->filter()->unique(fn (string $value): string => mb_strtolower($value, 'UTF-8'))->implode(', ');
+                $region = $key === '__missing__'
+                    ? 'RT/RW Belum Diisi'
+                    : 'RT '.(trim((string) ($identity['rt'] ?? '')) ?: '—').' / RW '.(trim((string) ($identity['rw'] ?? '')) ?: '—');
+                $sortedMembers = $members->unique('id')->sort(function (DistributionItem $left, DistributionItem $right): int {
+                    $comparison = strnatcasecmp(
+                        trim((string) ($left->effective_identity_snapshot['display_name'] ?? '')),
+                        trim((string) ($right->effective_identity_snapshot['display_name'] ?? ''))
+                    );
+
+                    return $comparison !== 0 ? $comparison : strcmp((string) $left->id, (string) $right->id);
+                })->values();
+
+                return [
+                    'label' => $pic === '' ? $region : $region.' - '.$pic,
+                    'items' => $sortedMembers,
+                    'recipient_count' => $sortedMembers->count(),
+                ];
+            })->values();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Acuan Penyaluran');
+        $sheet->mergeCells('A1:F1')->setCellValueExplicit('A1', 'DAFTAR PENERIMA PENYALURAN SANTUNAN', DataType::TYPE_STRING);
+        $sheet->mergeCells('A2:F2')->setCellValueExplicit('A2', 'Periode:', DataType::TYPE_STRING);
+        $sheet->mergeCells('A3:F3')->setCellValueExplicit('A3', 'Masjid Raudhotul Jannah TCE', DataType::TYPE_STRING);
+        $sheet->fromArray(['No. Total', 'No.', 'Nama', 'PIC', 'TTD', 'Catatan'], null, 'A5');
+
+        $row = 6;
+        $totalNumber = 0;
+        $groupHeadingRows = [];
+        $pastelColors = [
+            'FFFFE4E6', 'FFDBEAFE', 'FFDCFCE7', 'FFFEF3C7',
+            'FFF3E8FF', 'FFCFFAFE', 'FFFFEDD5', 'FFE0E7FF',
+            'FFFCE7F3', 'FFECFCCB', 'FFCCFBF1', 'FFF1F5F9',
+            'FFFDE68A', 'FFDDEAFE', 'FFE9D5FF', 'FFFECACA',
+        ];
+        foreach ($groups as $groupIndex => $group) {
+            $heading = $group['label'].' | Total Penerima: '.$group['recipient_count'].' Orang | Total Penerima (Aktual): ______ Orang';
+            $sheet->mergeCells("A{$row}:F{$row}")->setCellValueExplicit("A{$row}", $heading, DataType::TYPE_STRING);
+            $groupHeadingRows[$row] = $pastelColors[$groupIndex % count($pastelColors)];
+            $row++;
+
+            foreach ($group['items'] as $itemIndex => $item) {
+                $totalNumber++;
+                $identity = $item->effective_identity_snapshot;
+                $values = [
+                    $totalNumber,
+                    $itemIndex + 1,
+                    (string) ($identity['display_name'] ?? ''),
+                    (string) ($identity['rt_coordinator_name'] ?? ''),
+                    '',
+                    (string) ($item->notes ?? ''),
+                ];
+                foreach ($values as $columnIndex => $value) {
+                    $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex + 1).$row;
+                    if (is_string($value)) $sheet->setCellValueExplicit($cell, $value, DataType::TYPE_STRING);
+                    else $sheet->setCellValue($cell, $value);
+                }
+                $row++;
+            }
+        }
+
+        if ($groups->isEmpty()) {
+            $sheet->mergeCells('A6:F6')->setCellValueExplicit('A6', 'Belum ada penerima pada penyaluran ini.', DataType::TYPE_STRING);
+            $row = 7;
+        }
+
+        $lastRow = max(5, $row - 1);
+        $sheet->getDefaultRowDimension()->setRowHeight(16);
+        $sheet->getStyle("A1:F{$lastRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1:F1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1:F3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A5:F5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:F5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("A5:F{$lastRow}")->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FF4B5563');
+        $sheet->getStyle("A5:F{$lastRow}")->getAlignment()->setVertical(Alignment::VERTICAL_CENTER);
+        $sheet->getStyle("A6:B{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("E6:E{$lastRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("F6:F{$lastRow}")->getAlignment()->setWrapText(true);
+        foreach ($groupHeadingRows as $headingRow => $color) {
+            $sheet->getStyle("A{$headingRow}:F{$headingRow}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$headingRow}:F{$headingRow}")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB($color);
+            $sheet->getStyle("A{$headingRow}:F{$headingRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)->setWrapText(false)->setShrinkToFit(true);
+            $sheet->getStyle("A{$headingRow}:F{$headingRow}")->getBorders()->getOutline()->setBorderStyle(Border::BORDER_THIN)->getColor()->setARGB('FF4B5563');
+        }
+        foreach (['A' => 10, 'B' => 6, 'C' => 24, 'D' => 18, 'E' => 18, 'F' => 25] as $column => $width) {
+            $sheet->getColumnDimension($column)->setWidth($width);
+        }
+        $sheet->freezePane('A6');
+        $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)->setPaperSize(PageSetup::PAPERSIZE_A4)->setFitToPage(true)->setFitToWidth(1)->setFitToHeight(0);
+        $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(5, 5)->setPrintArea("A1:F{$lastRow}")->setHorizontalCentered(true);
+        $sheet->getPageMargins()->setTop(0.3)->setRight(0.3)->setBottom(0.3)->setLeft(0.3)->setHeader(0.2)->setFooter(0.2);
+        $sheet->getHeaderFooter()->setOddFooter('&CHalaman &P dari &N');
+
+        return response()->streamDownload(function () use ($spreadsheet): void {
+            (new Xlsx($spreadsheet))->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, 'MRJ_ZISWAF_Daftar_Penerima_Bantuan_Bulanan_Zakat_Maal_Dhuafa.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
     public function updatePeriodLabel(Request $request, string $distribution)
     {
         $entity = $this->context($request);

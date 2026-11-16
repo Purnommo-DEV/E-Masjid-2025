@@ -482,7 +482,7 @@
                     <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Total operasional bukan tambahan pengeluaran finansial. Actual tertaut hanya berasal dari realisasi utuh yang lolos validasi terhadap transaksi posted dalam cakupan dana.</p>
                 </div>
                 <div class="flex shrink-0 gap-3">
-                    <div class="rounded-xl bg-emerald-50 px-4 py-3 text-center"><strong class="block text-2xl text-emerald-900">{{ $report['distributions']['distribution_events'] }}</strong><span class="text-xs font-semibold text-emerald-700">penyaluran</span></div>
+                    <div class="rounded-xl bg-emerald-50 px-4 py-3 text-center"><strong class="block text-2xl text-emerald-900">{{ $operationalDistributions['distribution_events'] }}</strong><span class="text-xs font-semibold text-emerald-700">penyaluran</span></div>
                 </div>
             </div>
         </div>
@@ -490,7 +490,7 @@
         <div class="p-5 sm:p-6">
             <h3 class="text-sm font-bold text-slate-900">Ringkasan per program</h3>
             <div class="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                @forelse ($report['distributions']['programs'] as $program)
+                @forelse ($operationalDistributions['programs'] as $program)
                     <article class="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 transition hover:border-emerald-300 hover:bg-emerald-50/30">
                         <h4 class="break-words font-bold text-slate-900">{{ $program['program_name'] }}</h4>
                         <p class="mt-1 text-sm text-slate-500">{{ $program['distribution_events'] }} kegiatan · {{ $program['unique_beneficiaries'] }} penerima unik</p>
@@ -501,9 +501,9 @@
                 @endforelse
             </div>
 
-            <div class="mt-7 flex flex-col items-start gap-1 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:gap-3"><h3 class="text-sm font-bold text-slate-900">Setiap realisasi penyaluran</h3><span class="text-xs text-slate-500">{{ count($report['distributions']['events']) }} kegiatan</span></div>
+            <div class="mt-7 flex flex-col items-start gap-1 min-[360px]:flex-row min-[360px]:items-center min-[360px]:justify-between min-[360px]:gap-3"><h3 class="text-sm font-bold text-slate-900">Setiap realisasi penyaluran</h3><span class="text-xs text-slate-500">{{ count($operationalDistributions['events']) }} kegiatan</span></div>
             <div class="mt-3 grid gap-4 md:grid-cols-2">
-                @forelse ($report['distributions']['events'] as $event)
+                @forelse ($operationalDistributions['events'] as $event)
                     <article class="flex min-w-0 flex-col justify-between gap-5 rounded-2xl border border-slate-200 p-5 transition hover:border-emerald-300 hover:shadow-sm">
                         <div><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">{{ $event['program_name'] }}</p><h4 class="mt-1 break-words text-lg font-bold text-slate-900">{{ $event['period'] }}</h4><p class="mt-2 text-sm text-slate-500">{{ $event['recipient_count'] }} penerima · {{ \Carbon\Carbon::parse($event['from'])->format('d/m/Y') }}–{{ \Carbon\Carbon::parse($event['through'])->format('d/m/Y') }}</p><div class="mt-3 flex flex-wrap gap-2"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold uppercase text-slate-700">{{ $event['operational_status'] }}</span><span class="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold uppercase text-emerald-800">{{ $event['financial_status'] }}</span></div></div>
                         <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div class="min-w-0 text-xs leading-5 text-slate-500"><span class="block break-words">Operasional <strong class="whitespace-nowrap font-semibold text-slate-700">{{ $rp($event['operational_total']) }}</strong></span><span class="mt-1 block break-words">Actual <strong class="whitespace-nowrap font-semibold text-emerald-800">{{ $rp($event['actual_amount']) }}</strong></span></div><a class="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-lg bg-emerald-700 px-4 text-center text-sm font-bold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 sm:w-auto" href="{{ route('internal.ziswaf.distributions.show', $event['distribution_id']) }}?{{ http_build_query($query) }}">Rincian penyaluran</a></div>

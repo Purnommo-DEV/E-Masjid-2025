@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\DecimalAmount;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
+use App\Domain\FinancialV2\Reporting\DistributionReportingService;
 use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
 use App\Domain\FinancialV2\Reporting\PublicZiswafReportService;
 use App\Domain\FinancialV2\Reporting\ZiswafFundScope;
@@ -32,6 +33,7 @@ final class InternalZiswafDashboardController
         private readonly ZiswafFundScope $fundScope,
         private readonly PublicZiswafReportService $publicReports,
         private readonly ZiswafRunningBalanceService $runningBalances,
+        private readonly DistributionReportingService $distributionReports,
     ) {}
 
     public function preview()
@@ -94,6 +96,10 @@ final class InternalZiswafDashboardController
         $report = $summary['report'];
         $positionReport = $summary['positionReport'];
         $runningBalance = $summary['runningBalance'];
+        $operationalDistributions = $this->distributionReports->operationalScope(
+            $entity->id,
+            $this->fundScope->ids($entity),
+        );
         $balanceRows = collect($runningBalance['rows']);
         $transactions = collect($report['transactions']);
         $transactionIds = $transactions->pluck('transaction_id')
@@ -153,6 +159,7 @@ final class InternalZiswafDashboardController
             'allocation' => $summary['allocation'], 'realization' => $summary['realization'],
             'remainingAllocation' => $summary['remainingAllocation'],
             'transactions' => $transactions,
+            'operationalDistributions' => $operationalDistributions,
             'options' => $this->options($entity),
         ]);
     }

@@ -16,6 +16,27 @@ final class DistributionReportingService
         private readonly DistributionCorrectionReadService $distributionCorrections,
     ) {}
 
+    /**
+     * Unfiltered operational scope for one Entity. Page-level report filters
+     * intentionally do not enter this read model.
+     */
+    public function operationalScope(string $entityId, array $fundIds): array
+    {
+        $bounds = DB::table('financial_v2_distributions')
+            ->where('accounting_entity_id', $entityId)
+            ->selectRaw('MIN(starts_on) as starts_on, MAX(ends_on) as ends_on')
+            ->first();
+
+        if ($bounds === null || $bounds->starts_on === null || $bounds->ends_on === null) {
+            return ['events' => [], 'programs' => [], 'regions' => [], 'unique_beneficiaries' => 0, 'distribution_events' => 0];
+        }
+
+        $latestAccountingDate = $this->ledger->latestAccountingDate($entityId);
+        $through = max((string) $bounds->ends_on, (string) ($latestAccountingDate ?: $bounds->ends_on));
+
+        return $this->report($entityId, (string) $bounds->starts_on, $through, $fundIds);
+    }
+
     public function report(string $entityId, string $from, string $through, array $fundIds, ?string $programId = null, bool $public = false, bool $fundFiltered = false): array
     {
         $itemTotals = DB::table('financial_v2_distribution_items')->select('distribution_id')
