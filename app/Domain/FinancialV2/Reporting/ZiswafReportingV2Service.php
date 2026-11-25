@@ -41,6 +41,9 @@ final class ZiswafReportingV2Service
     {
         $this->assertPeriod($from, $through);
         $scopeFundIds = $this->fundScope($entity, $fundIds);
+        if ($filters['internal_ziswaf_scope'] ?? false) {
+            $scopeFundIds = array_values(array_intersect($scopeFundIds, $this->fundScope->ids($entity)));
+        }
         $filterFundId = $this->filterId($filters ?? [], 'fund_id');
         if ($filterFundId && ! in_array($filterFundId, $scopeFundIds, true)) {
             $scopeFundIds = [];
@@ -74,7 +77,7 @@ final class ZiswafReportingV2Service
                 ->map(fn (array $row): array => [
                     'fund_id' => $row['fund_id'], 'fund_code' => $row['fund_code'], 'fund_name' => $row['fund_name'], 'amount' => $row['actual_expense'],
                 ]);
-        $programs = $this->programRows($entity, $from, $through, $fundIdsForFacts, $fundingRows, $programId);
+        $programs = $this->programRows($entity, $from, $through, $fundIdsForFacts, $fundingRows, $programId, (bool) ($filters['internal_ziswaf_scope'] ?? false));
         $summary = $this->summary($fundRows);
         $summary['planned_usage'] = DecimalAmount::sum($programs->pluck('remaining'));
         $allProgramActual = DecimalAmount::sum($allProgramFundingRows->pluck('actual_expense'));
@@ -92,7 +95,7 @@ final class ZiswafReportingV2Service
                 'fund_id' => $row['fund_id'], 'fund_code' => $row['code'], 'fund_name' => $row['name'], 'amount' => $row['receipts'],
             ])->all(),
             'programs' => $programs->values()->all(),
-            'distributions' => $this->distributions->report($entity->id, $from, $through, $fundIdsForFacts, $programId, false, $filterFundId !== null),
+            'distributions' => $this->distributions->report($entity->id, $from, $through, $fundIdsForFacts, $programId, false, $filterFundId !== null, (bool) ($filters['internal_ziswaf_scope'] ?? false)),
             'non_program_expenses' => $nonProgramByFund->all(),
             'transactions' => $this->transactionHistory($entity, $from, $through, $fundIdsForFacts, $filters ?? []),
             'diagnostics' => [
@@ -183,9 +186,9 @@ final class ZiswafReportingV2Service
      * @param  Collection<int, array<string, mixed>>  $fundingRows
      * @return Collection<int, array<string, mixed>>
      */
-    private function programRows(AccountingEntity $entity, string $from, string $through, array $fundIds, Collection $fundingRows, ?string $onlyProgramId): Collection
+    private function programRows(AccountingEntity $entity, string $from, string $through, array $fundIds, Collection $fundingRows, ?string $onlyProgramId, bool $restricted = false): Collection
     {
-        $plans = $this->planRows($entity, $from, $through, $fundIds, $onlyProgramId);
+        $plans = $this->planRows($entity, $from, $through, $fundIds, $onlyProgramId, $restricted);
         $actualByProgram = $fundingRows->groupBy('program_id')->map(fn (Collection $rows): string => DecimalAmount::sum($rows->pluck('actual_expense')));
         $programMeta = Program::query()
             ->where('accounting_entity_id', $entity->id)
@@ -225,7 +228,7 @@ final class ZiswafReportingV2Service
      * @param  array<int, string>  $fundIds
      * @return Collection<string, array<string, mixed>>
      */
-    private function planRows(AccountingEntity $entity, string $from, string $through, array $fundIds, ?string $onlyProgramId): Collection
+    private function planRows(AccountingEntity $entity, string $from, string $through, array $fundIds, ?string $onlyProgramId, bool $restricted = false): Collection
     {
         if ($fundIds === []) {
             return collect();
@@ -242,14 +245,14 @@ final class ZiswafReportingV2Service
                     ->where(fn ($effective) => $effective->whereNull('effective_to')->orWhereDate('effective_to', '>=', $from));
             })
             ->get();
-        $realized = $this->postedRealizationByVersion($entity->id, $through);
+        $realized = $this->postedRealizationByVersion($entity->id, $through, $restricted ? $fundIds : null);
 
-        return $allocations->flatMap(function (BudgetAllocation $allocation) use ($from, $through, $fundIds, $realized): Collection {
+        return $allocations->flatMap(function (BudgetAllocation $allocation) use ($from, $through, $fundIds, $realized, $restricted): Collection {
             return $allocation->versions
                 ->filter(fn ($version): bool => ! in_array($version->status, ['cancelled', 'superseded'], true)
                     && $version->effective_from?->toDateString() <= $through
                     && (! $version->effective_to || $version->effective_to->toDateString() >= $from))
-                ->map(function ($version) use ($allocation, $fundIds, $realized): array {
+                ->map(function ($version) use ($allocation, $fundIds, $realized, $restricted): array {
                     $fundings = $version->fundings->isNotEmpty()
                         ? $version->fundings->map(fn (BudgetAllocationFunding $funding): array => [
                             'fund_id' => $funding->fund_id, 'fund_code' => $funding->fund?->code ?? '—', 'fund_name' => $funding->fund?->name ?? 'Dana', 'allocated' => $this->amount($funding->amount),
@@ -258,13 +261,16 @@ final class ZiswafReportingV2Service
                     if ($fundings->pluck('fund_id')->intersect($fundIds)->isEmpty()) {
                         return [];
                     }
+                    $allocated = $restricted
+                        ? DecimalAmount::sum($fundings->whereIn('fund_id', $fundIds)->pluck('allocated'))
+                        : $this->amount($version->allocated_amount);
 
                     return [
                         'program_id' => $allocation->program_id,
                         'program_code' => $allocation->program?->code ?? '—',
                         'program_name' => $allocation->program?->name ?? 'Program',
-                        'budget' => $this->amount($version->allocated_amount),
-                        'allocation' => $this->amount($version->allocated_amount),
+                        'budget' => $allocated,
+                        'allocation' => $allocated,
                         'realization' => $realized->get($version->id, '0.00'),
                         'status' => $allocation->status === 'submitted' ? 'submitted' : $version->status,
                         'funding_sources' => $fundings->whereIn('fund_id', $fundIds)->values()->all(),
@@ -285,7 +291,7 @@ final class ZiswafReportingV2Service
     }
 
     /** @return Collection<string, string> */
-    private function postedRealizationByVersion(string $entityId, string $through): Collection
+    private function postedRealizationByVersion(string $entityId, string $through, ?array $fundIds = null): Collection
     {
         $cashOutTypes = $this->definitions->cashOutTypes();
         $placeholders = implode(', ', array_fill(0, max(1, count($cashOutTypes)), '?'));
@@ -297,6 +303,7 @@ final class ZiswafReportingV2Service
             ->where('account.account_class', 'expense')
             ->where('realization.status', 'recorded')
             ->whereNotNull('realization.budget_allocation_version_id')
+            ->when($fundIds !== null, fn ($query) => $query->whereIn('ledger.fund_id', $fundIds))
             ->whereRaw($effectiveType.' IN ('.$placeholders.')', $cashOutTypes)
             ->select('realization.budget_allocation_version_id')
             ->selectRaw('COALESCE(SUM(ledger.signed_amount), 0) as realized_amount')
@@ -360,6 +367,9 @@ final class ZiswafReportingV2Service
     {
         if ($fundIds === []) {
             return [];
+        }
+        if ($filters['internal_ziswaf_scope'] ?? false) {
+            return $this->internalTransactionHistory($entity, $from, $through, $fundIds, $filters);
         }
         $cashIn = $this->definitions->cashInTypes();
         $cashOut = $this->definitions->cashOutTypes();
@@ -433,6 +443,34 @@ final class ZiswafReportingV2Service
                     'accounting_date_corrected' => in_array($row->transaction_id, $replacementCorrectionTransactions, true),
                 ];
             })->all();
+    }
+
+    /** Internal grant projection; other report consumers retain their existing contract. */
+    private function internalTransactionHistory(AccountingEntity $entity, string $from, string $through, array $fundIds, array $filters): array
+    {
+        $movement = (new ZiswafRunningBalanceService($this->reports, $this->correctionVisibility))
+            ->report($entity, $from, $through, $fundIds, $filters['type'] ?? null, true);
+        $dimensions = $this->postedLedger->ledger($entity->id, $through)
+            ->leftJoin('financial_v2_programs as scoped_program', 'scoped_program.id', '=', 'ledger.program_id')
+            ->leftJoin('financial_v2_categories as scoped_category', 'scoped_category.id', '=', 'financial_transaction.category_id')
+            ->where('ledger.accounting_date', '>=', $from)->whereIn('ledger.fund_id', $fundIds)
+            ->when($filters['program_id'] ?? null, fn ($query, $id) => $query->where('ledger.program_id', $id))
+            ->when($filters['category_id'] ?? null, fn ($query, $id) => $query->where('financial_transaction.category_id', $id))
+            ->get(['journal.id as journal_id', 'scoped_program.name as program', 'scoped_category.name as category'])
+            ->groupBy('journal_id');
+        $rows = collect($movement['rows'])->filter(fn (array $row): bool => $dimensions->has($row['journal_id']))
+            ->map(function (array $row) use ($dimensions): array {
+                $meta = $dimensions->get($row['journal_id']);
+
+                return $row + [
+                    'status' => 'POSTED',
+                    'category' => $meta->pluck('category')->filter()->unique()->join(', ') ?: '—',
+                    'program' => $meta->pluck('program')->filter()->unique()->join(', ') ?: 'Non-Program',
+                    'accounting_date_corrected' => $row['business_date_corrected'],
+                ];
+            })->sortByDesc('posting_sequence')->sortByDesc('date')->values()->all();
+
+        return (new InternalZiswafScope($this->postedLedger))->redactRows($entity->id, $this->fundScope->ids($entity), $rows);
     }
 
     /** @return array<int, string> */

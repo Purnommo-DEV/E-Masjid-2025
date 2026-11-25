@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FinancialV2;
 
 use App\Domain\FinancialV2\Reporting\PublicZiswafReportService;
 use App\Support\FinancialDate;
+use App\Support\ZiswafPdfQrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
@@ -35,6 +36,7 @@ final class PublicZiswafReportController
 
         $pdf = Pdf::loadView('masjid.mrj.guest.financial-v2.ziswaf-report-pdf', [
             'report' => $report,
+            'reportQr' => (new ZiswafPdfQrCode)->report(),
         ])->setPaper('a4', 'portrait');
         $pdf->render();
 
@@ -76,6 +78,7 @@ final class PublicZiswafReportController
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
             // Backward-compatible public links from the first ZISWAF report.
             'as_of' => ['nullable', 'date_format:Y-m-d'],
+            'fund_page' => ['nullable', 'integer', 'min:1'],
         ]);
     }
 }

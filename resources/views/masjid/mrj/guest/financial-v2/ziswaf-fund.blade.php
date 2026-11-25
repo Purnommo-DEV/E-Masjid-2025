@@ -3,7 +3,7 @@
 @section('title', $report['fund']['name'].' — Laporan Dana ZISWAF')
 
 @php
-    $rupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
+    $rupiah = static fn (string $amount): string => \App\Support\ZiswafAmount::rupiah($amount, true);
     $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
     $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->format('d/m/Y H:i') : null;
     $amountClass = static fn (string $kind): string => match ($kind) {
@@ -13,10 +13,10 @@
         default => 'text-slate-700',
     };
     $amountPrefix = static fn (string $kind, string $amount): string => match ($kind) {
-        'receipt' => '+ ',
-        'expense' => '− ',
+        'receipt' => str_starts_with($amount, '-') ? '− ' : '+ ',
+        'expense' => str_starts_with($amount, '-') ? '+ ' : '− ',
         'transfer' => str_starts_with($amount, '-') ? 'Keluar ' : 'Masuk ',
-        default => '',
+        default => str_starts_with($amount, '-') ? '− ' : '',
     };
     $transferSummary = static function (string $amount) use ($rupiah): string {
         if ($amount === '0.00') {
@@ -49,7 +49,7 @@
     <main class="ziswaf-public-report min-h-screen bg-gradient-to-b from-emerald-50 via-white to-emerald-50 px-4 py-8 sm:px-6 sm:py-12">
         <div class="mx-auto max-w-5xl">
             <div class="public-report-actions no-print mb-6 flex flex-wrap items-center justify-between gap-3">
-                <a class="inline-flex rounded-xl px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-600" href="{{ route('public.ziswaf.index', ['as_of' => $report['as_of']]) }}">← Kembali ke laporan ZISWAF</a>
+                <a class="inline-flex rounded-xl px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-600" href="{{ route('public.ziswaf.index', ['from' => $report['period_from'], 'to' => $report['as_of']]) }}">← Kembali ke laporan ZISWAF</a>
                 <button class="rounded-xl border border-emerald-700 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-600" type="button" onclick="window.print()">Cetak rincian</button>
             </div>
 
@@ -95,6 +95,21 @@
                         <p class="rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Belum ada mutasi resmi untuk Dana ini pada tanggal laporan yang dipilih.</p>
                     @endforelse
                 </div>
+                @if (isset($report['history_pagination']) && $report['history_pagination']->hasPages())
+                    <nav class="no-print mt-5 flex items-center justify-between gap-3 text-sm" aria-label="Halaman riwayat dana">
+                        @if ($report['history_pagination']->previousPageUrl())
+                            <a class="rounded-xl border border-emerald-200 px-4 py-2 font-semibold text-emerald-800" href="{{ $report['history_pagination']->previousPageUrl() }}">← Sebelumnya</a>
+                        @else
+                            <span></span>
+                        @endif
+                        <span>{{ $report['history_pagination']->currentPage() }} / {{ $report['history_pagination']->lastPage() }}</span>
+                        @if ($report['history_pagination']->nextPageUrl())
+                            <a class="rounded-xl border border-emerald-200 px-4 py-2 font-semibold text-emerald-800" href="{{ $report['history_pagination']->nextPageUrl() }}">Berikutnya →</a>
+                        @else
+                            <span></span>
+                        @endif
+                    </nav>
+                @endif
             </section>
 
             @if ($report['source_opening_history'] !== [])

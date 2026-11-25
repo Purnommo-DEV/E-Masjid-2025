@@ -131,7 +131,7 @@ final class FundHistoryReadService
             $pageOpening,
             empty($filters['transaction_type_code']),
         );
-        $sourceHistory = $this->historicalSourceHistory($entity, $fund);
+        $sourceHistory = $this->historicalSourceHistory($entity, $fund, $filters['source_through'] ?? null);
 
         $running = $pageOpening;
         $history->setCollection($rows->map(function (object $row) use (&$running, $sourceHistory): array {
@@ -233,7 +233,7 @@ final class FundHistoryReadService
      *
      * @return array{rows: array<int, array<string, mixed>>, account_positions: array<int, array<string, mixed>>, source_fund_balance: string, source_fund_reference: string, opening_source_balance: string, opening_source_reference: string, historical_movement: string, current_source_balance: string, current_source_reference: string, account_position_total: string, activity_balance: string, reconciled_balance: string, difference: string, source_filename: string}
      */
-    private function historicalSourceHistory(AccountingEntity $entity, Fund $fund): array
+    private function historicalSourceHistory(AccountingEntity $entity, Fund $fund, ?string $through = null): array
     {
         if ($entity->code !== 'MRJ-ACTUAL') {
             return [
@@ -257,6 +257,7 @@ final class FundHistoryReadService
         $sourceEntries = HistoricalFundHistory::query()
             ->where('accounting_entity_id', $entity->id)
             ->where('fund_id', $fund->id)
+            ->when($through !== null, fn ($query) => $query->where('effective_date', '<=', $through))
             ->with('updatedBy:id,name')
             ->orderBy('source_sequence')
             ->orderBy('created_at')

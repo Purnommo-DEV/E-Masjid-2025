@@ -16,6 +16,11 @@
         .first-page-masthead strong { color: #064e3b; display: block; font-size: 10pt; }
         .first-page-masthead span { color: #5f7469; display: block; font-size: 8pt; line-height: 1.45; margin-top: 2pt; }
         .hero { border-bottom: 2px solid #047857; margin-bottom: 14pt; padding: 0 0 12pt; }
+        .hero { page-break-inside: avoid; }
+        .hero-table td { padding: 0; vertical-align: middle; }
+        .hero-table .report-qr { width: 84pt; padding-left: 12pt; text-align: center; }
+        .report-qr img { display: block; width: 72pt; height: 72pt; margin: 0 auto; }
+        .report-qr p { color: #567267; font-size: 6.5pt; line-height: 1.4; margin-top: 3pt; }
         .kicker { color: #047857; font-size: 8pt; font-weight: bold; letter-spacing: 1.2px; text-transform: uppercase; }
         .summary { border-collapse: separate; border-spacing: 6pt; margin: 0 -6pt; width: calc(100% + 12pt); }
         .summary td { background: #f0fdf4; border: 1px solid #cce9da; padding: 10pt; vertical-align: top; width: 33.33%; }
@@ -64,13 +69,7 @@
 </head>
 <body>
 @php
-    $rupiah = static function (string $amount): string {
-        $negative = str_starts_with($amount, '-');
-        $normalized = ltrim($amount, '-');
-        [$integer, $decimal] = array_pad(explode('.', $normalized, 2), 2, '00');
-
-        return ($negative ? '- ' : '').'Rp'.number_format((int) $integer, 0, ',', '.').','.$decimal;
-    };
+    $rupiah = static fn (string $amount): string => \App\Support\ZiswafAmount::rupiah($amount, true);
     $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
     $sourceDate = static fn (array $entry): string => filled($entry['date_label'] ?? null)
         ? $entry['date_label']
@@ -107,10 +106,20 @@
 </div>
 
 <section class="hero">
-    <p class="kicker">Transparansi keuangan jamaah</p>
-    <h1>LAPORAN DANA ZISWAF</h1>
-    <p class="report-meta">Masjid Raudhotul Jannah - Taman Cipulir Estate</p>
-    <p class="report-meta">Periode {{ $date($report['period_from']) }} s.d. {{ $date($report['as_of']) }} | Terakhir diperbarui {{ $updated }}</p>
+    <table class="hero-table"><tr>
+        <td>
+            <p class="kicker">Transparansi keuangan jamaah</p>
+            <h1>LAPORAN DANA ZISWAF</h1>
+            <p class="report-meta">Masjid Raudhotul Jannah - Taman Cipulir Estate</p>
+            <p class="report-meta">Periode {{ $date($report['period_from']) }} s.d. {{ $date($report['as_of']) }} | Terakhir diperbarui {{ $updated }}</p>
+        </td>
+        @isset($reportQr)
+            <td class="report-qr">
+                <a href="{{ $reportQr['url'] }}"><img src="{{ $reportQr['image'] }}" alt="QR laporan ZISWAF"></a>
+                <p>Scan untuk melihat laporan ZISWAF</p>
+            </td>
+        @endisset
+    </tr></table>
 </section>
 
 <h2>Ringkasan Saldo</h2>

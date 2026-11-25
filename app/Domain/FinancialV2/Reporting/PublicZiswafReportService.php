@@ -9,6 +9,7 @@ use App\Models\FinancialV2\Fund;
 use App\Models\FinancialV2\HistoricalFundHistory;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Read-only public presentation of the governed ZISWAF disclosure scope.
@@ -126,7 +127,20 @@ final class PublicZiswafReportService
             'from' => $from,
             'through' => $through,
             'per_page' => 50,
+            'source_through' => $through,
         ]);
+        $permissions = (new InternalZiswafScope($this->postedLedger))->permissions(
+            $entity->id, $this->fundScope->ids($entity), collect($history['history']->items())->pluck('transaction_id')->all(),
+        );
+        $officialHistory = collect($history['history']->items())->map(function (array $item) use ($permissions): array {
+            if (! ($permissions[$item['transaction_id']]['complete'] ?? false)) {
+                $item['description'] = 'Transaksi dana ZISWAF';
+            }
+
+            return $this->officialHistoryItem($item);
+        })->values();
+        $pagination = clone $history['history'];
+        $pagination->setCollection($officialHistory);
 
         return [
             'entity_name' => $entity->name,
@@ -134,10 +148,8 @@ final class PublicZiswafReportService
             'as_of' => $through,
             'updated_at' => $this->latestPostedAt($entity, $through),
             'fund' => $this->fundCard($fund, is_array($row) ? $row : []),
-            'official_history' => collect($history['history']->items())
-                ->map(fn (array $item): array => $this->officialHistoryItem($item))
-                ->values()
-                ->all(),
+            'official_history' => $officialHistory->all(),
+            'history_pagination' => $pagination,
             'source_opening_history' => collect($history['source_history']['rows'] ?? [])
                 ->filter(fn (array $item): bool => in_array($item['entry_kind'], ['opening', 'receipt', 'usage', 'adjustment_in', 'adjustment_out'], true) && $item['status'] !== 'void')
                 ->map(fn (array $item): array => [
@@ -181,7 +193,7 @@ final class PublicZiswafReportService
         $earliest = $this->postedLedger->ledger($entity->id, $through)->min('ledger.accounting_date');
         $from = $requestedFrom ?: ($earliest ?: $through);
         if ($from > $through) {
-            throw new \InvalidArgumentException('Tanggal mulai laporan tidak boleh melewati tanggal akhir.');
+            throw ValidationException::withMessages(['to' => 'Tanggal akhir laporan tidak boleh mendahului tanggal mulai.']);
         }
 
         return [$from, $through];
@@ -284,6 +296,9 @@ final class PublicZiswafReportService
         }
 
         $running = $openingByFund;
+        $permissions = (new InternalZiswafScope($this->postedLedger))->permissions(
+            $entity->id, $funds->pluck('id')->all(), array_column($movementRows, 'transaction_id'),
+        );
         foreach ($officialGroups as $row) {
             if (DecimalAmount::equals($row['fund_balance_delta'], '0.00')) {
                 continue;
@@ -303,9 +318,14 @@ final class PublicZiswafReportService
                 'journal_key' => $row['journal_id'],
                 'source_reference' => $row['source_reference'],
                 'date' => $row['accounting_date'],
-                'description' => $kind === 'opening' ? 'Saldo awal yang tercatat resmi' : $row['description'],
+                'description' => $kind === 'opening' ? 'Saldo awal yang tercatat resmi'
+                    : (($permissions[$row['transaction_id']]['complete'] ?? false) ? $row['description'] : 'Transaksi dana ZISWAF'),
                 'kind' => $kind,
-                'amount' => $this->absoluteAmount($row['fund_balance_delta']),
+                // Keep reversal signs in receipt/payment columns. Transfer
+                // direction continues to use the signed delta separately.
+                'amount' => $kind === 'expense'
+                    ? DecimalAmount::negate($row['fund_balance_delta'])
+                    : ($kind === 'transfer' ? $this->absoluteAmount($row['fund_balance_delta']) : $row['fund_balance_delta']),
                 'delta' => $row['fund_balance_delta'],
                 'running_balance' => $running[$fundId],
             ];
@@ -395,9 +415,9 @@ final class PublicZiswafReportService
             $amount = DecimalAmount::normalize((string) ($isReversal ? $row->original_gross_amount : $row->gross_amount));
 
             return [
-                'event_id' => 'ift:'.$sourceReference,
+                'event_id' => 'ift:'.$row->journal_id,
                 'category' => 'Pemindahan Dana',
-                'description' => 'Pemindahan antar peruntukan Dana.',
+                'description' => $isReversal ? 'Pembalikan pemindahan antar peruntukan Dana.' : 'Pemindahan antar peruntukan Dana.',
                 'from' => $fromName,
                 'to' => $toName,
                 'amount' => $amount,

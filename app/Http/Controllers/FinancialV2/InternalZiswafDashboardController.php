@@ -6,6 +6,7 @@ use App\Domain\FinancialV2\DecimalAmount;
 use App\Domain\FinancialV2\Reporting\FinancialReportService;
 use App\Domain\FinancialV2\Reporting\DistributionReportingService;
 use App\Domain\FinancialV2\Reporting\PostedLedgerQuery;
+use App\Domain\FinancialV2\Reporting\InternalZiswafScope;
 use App\Domain\FinancialV2\Reporting\PublicZiswafReportService;
 use App\Domain\FinancialV2\Reporting\ZiswafFundScope;
 use App\Domain\FinancialV2\Reporting\ZiswafReportingV2Service;
@@ -16,13 +17,16 @@ use App\Models\FinancialV2\Attachment;
 use App\Models\FinancialV2\AttachmentLink;
 use App\Models\FinancialV2\Distribution;
 use App\Models\FinancialV2\FinancialTransaction;
+use App\Models\FinancialV2\FundRealization;
 use App\Models\FinancialV2\TransactionType;
+use App\Support\ZiswafPdfQrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 final class InternalZiswafDashboardController
 {
@@ -99,6 +103,7 @@ final class InternalZiswafDashboardController
         $operationalDistributions = $this->distributionReports->operationalScope(
             $entity->id,
             $this->fundScope->ids($entity),
+            true,
         );
         $balanceRows = collect($runningBalance['rows']);
         $transactions = collect($report['transactions']);
@@ -136,7 +141,7 @@ final class InternalZiswafDashboardController
                 'accounting_date' => $accountingDate,
                 'display_date' => ($row['accounting_date_corrected'] ?? false) ? $accountingDate : $effectiveBusinessDate,
                 'business_date_corrected' => $transaction?->latestDateCorrection !== null,
-                'attachment_count' => (int) $attachmentCounts->get($row['transaction_id'], 0),
+                'attachment_count' => ($row['complete_access'] ?? false) ? (int) $attachmentCounts->get($row['transaction_id'], 0) : 0,
             ];
         })->sort(function (array $left, array $right): int {
             $dateOrder = strcmp((string) $right['accounting_date'], (string) $left['accounting_date']);
@@ -173,12 +178,21 @@ final class InternalZiswafDashboardController
         $logoDataUri = is_file($logoPath)
             ? 'data:image/png;base64,'.base64_encode((string) file_get_contents($logoPath))
             : null;
+        $qr = new ZiswafPdfQrCode;
+        $distributionQrCodes = [];
+        foreach ($summary['report']['distributions']['events'] as $event) {
+            if (($code = $qr->distribution($event)) !== null) {
+                $distributionQrCodes[$event['distribution_id']] = $code;
+            }
+        }
 
         $pdf = Pdf::loadView('masjid.mrj.guest.financial-v2.internal-ziswaf-summary-pdf', [
             ...$summary,
             'filters' => $input + ['from' => $summary['from'], 'through' => $summary['through']],
             'generatedAt' => $generatedAt,
             'logoDataUri' => $logoDataUri,
+            'reportQr' => $qr->report(),
+            'distributionQrCodes' => $distributionQrCodes,
         ])->setPaper('a4', 'portrait');
         $pdf->render();
 
@@ -204,20 +218,51 @@ final class InternalZiswafDashboardController
     {
         $entity = $this->entity();
         abort_unless($transaction->accounting_entity_id === $entity->id, 404);
+        $grantFundIds = $this->fundScope->ids($entity);
+        $permission = (new InternalZiswafScope($this->ledger))->permissions($entity->id, $grantFundIds, [$transaction->id])[$transaction->id] ?? [];
+        abort_unless($permission['accessible'] ?? false, 404);
         $transaction->load(['type', 'splits.fund', 'primaryFinancialAccount', 'counterparty', 'category', 'latestDateCorrection', 'realization.budgetAllocationVersion.allocation.program']);
+        $input = $this->validated($request);
+        $fundIds = isset($input['fund_id']) ? array_values(array_intersect($grantFundIds, [$input['fund_id']])) : $grantFundIds;
+        $dates = $this->ledger->journals($entity->id, '9999-12-31')->where('financial_transaction.id', $transaction->id)
+            ->get(['journal.accounting_date']);
+        $history = $this->reports->report($entity, $dates->min('accounting_date'), $dates->max('accounting_date'), $fundIds, [
+            'internal_ziswaf_scope' => true,
+            ...array_intersect_key($input, array_flip(['fund_id', 'type', 'program_id', 'category_id'])),
+        ]);
+        $row = collect($history['transactions'])->firstWhere('transaction_id', $transaction->id);
+        abort_unless($row !== null, 404);
+        $transactionSummary = [
+            'id' => $transaction->id,
+            'description' => $row['description'], 'fund' => $row['fund'], 'type' => $row['type'],
+            'status' => $transaction->status,
+            'amount' => $row['delta'],
+            'gross_amount' => $permission['complete'] ? $transaction->gross_amount : null,
+            'business_date' => $transaction->effective_business_date?->format('d/m/Y') ?? '—',
+            'accounting_date' => $transaction->accounting_date?->format('d/m/Y') ?? '—',
+            'business_date_corrected' => $transaction->latestDateCorrection !== null,
+            'category' => $permission['complete'] ? ($transaction->category?->name ?? '—') : '—',
+            'counterparty' => $permission['complete'] ? ($transaction->counterparty?->display_name ?? '—') : '—',
+        ];
         $attachments = AttachmentLink::query()->where('financial_v2_attachment_links.accounting_entity_id', $entity->id)
             ->where('target_type', 'transaction')->where('target_id', $transaction->id)->where('financial_v2_attachment_links.status', 'active')
             ->join('financial_v2_attachments as attachment', 'attachment.id', '=', 'financial_v2_attachment_links.attachment_id')
             ->where('attachment.status', 'active')->orderByDesc('financial_v2_attachment_links.created_at')
             ->get(['attachment.id', 'attachment.original_filename', 'attachment.media_type', 'attachment.byte_size', 'attachment.received_at', 'financial_v2_attachment_links.evidence_type']);
+        if (! $permission['complete']) {
+            $attachments = collect();
+        }
 
-        return view('masjid.mrj.guest.financial-v2.internal-ziswaf-transaction', compact('entity', 'transaction', 'attachments'));
+        return view('masjid.mrj.guest.financial-v2.internal-ziswaf-transaction', compact('entity', 'transactionSummary', 'attachments'));
     }
 
     public function distribution(Request $request, Distribution $distribution)
     {
         $entity = $this->entity();
         abort_unless($distribution->accounting_entity_id === $entity->id, 404);
+        $report = $this->reports->report($entity, $distribution->starts_on->toDateString(), $distribution->ends_on->toDateString(), $this->fundScope->ids($entity), ['internal_ziswaf_scope' => true]);
+        $reported = collect($report['distributions']['events'])->firstWhere('distribution_id', $distribution->id);
+        abort_unless($reported !== null, 404);
         $input = $request->validate([
             'q' => ['nullable', 'string', 'max:120'],
             'rt' => ['nullable', 'string', 'max:10'],
@@ -228,6 +273,10 @@ final class InternalZiswafDashboardController
             'program', 'realization.transaction.type', 'realization.transaction.splits.fund', 'realization.transaction.latestDateCorrection',
             'realization.budgetAllocationVersion.allocation.program',
         ]);
+        $distribution->setRelation('realization', FundRealization::query()->with([
+            'transaction.type', 'transaction.splits.fund', 'transaction.latestDateCorrection',
+            'budgetAllocationVersion.allocation.program',
+        ])->findOrFail($reported['effective_realization_id']));
         $latestCorrectionNumbers = DB::table('financial_v2_distribution_item_identity_corrections')
             ->select('distribution_item_id')->selectRaw('MAX(correction_no) as correction_no')->groupBy('distribution_item_id');
         $effectiveSnapshot = 'COALESCE(identity_correction.corrected_identity_snapshot, financial_v2_distribution_items.identity_snapshot)';
@@ -271,8 +320,6 @@ final class InternalZiswafDashboardController
             (string) data_get($item->effective_identity_snapshot, 'rt'), (string) data_get($item->effective_identity_snapshot, 'rw'),
             (string) data_get($item->effective_identity_snapshot, 'rt_coordinator_name')
         ));
-        $report = $this->reports->report($entity, $distribution->starts_on->toDateString(), $distribution->ends_on->toDateString());
-        $reported = collect($report['distributions']['events'])->firstWhere('distribution_id', $distribution->id);
 
         return view('masjid.mrj.guest.financial-v2.internal-ziswaf-distribution', compact(
             'entity', 'distribution', 'items', 'input', 'totalRecipients', 'operationalTotal', 'filteredCount', 'filteredTotal', 'reported', 'groups', 'pageGroups'
@@ -283,6 +330,8 @@ final class InternalZiswafDashboardController
     {
         $entity = $this->entity();
         abort_unless($transaction->accounting_entity_id === $entity->id && $attachment->accounting_entity_id === $entity->id, 404);
+        $permission = (new InternalZiswafScope($this->ledger))->permissions($entity->id, $this->fundScope->ids($entity), [$transaction->id])[$transaction->id] ?? [];
+        abort_unless($permission['complete'] ?? false, 404);
         $linked = AttachmentLink::query()->where('accounting_entity_id', $entity->id)->where('attachment_id', $attachment->id)
             ->where('target_type', 'transaction')->where('target_id', $transaction->id)->where('status', 'active')->exists();
         abort_unless($linked && $attachment->status === 'active' && Storage::disk('local')->exists($attachment->storage_reference), 404);
@@ -315,16 +364,20 @@ final class InternalZiswafDashboardController
     private function summaryContext(array $input, bool $allTimeRunningBalance = false): array
     {
         $entity = $this->entity();
-        $latest = $this->ledger->latestAccountingDate($entity->id) ?: now()->toDateString();
+        $ziswafFundIds = $this->fundScope->ids($entity);
+        $scopeDates = $this->ledger->ledger($entity->id, '9999-12-31')->whereIn('ledger.fund_id', $ziswafFundIds);
+        $latest = (clone $scopeDates)->max('ledger.accounting_date') ?: now()->toDateString();
         $today = CarbonImmutable::today();
         $from = $input['from'] ?? $today->startOfMonth()->toDateString();
         $through = $input['through'] ?? $today->endOfMonth()->toDateString();
-        $ziswafFundIds = $this->fundScope->ids($entity);
-        $report = $this->reports->report($entity, $from, $through, $ziswafFundIds, $input);
+        if ($from > $through) {
+            throw ValidationException::withMessages(['through' => 'Tanggal akhir laporan tidak boleh mendahului tanggal mulai.']);
+        }
+        $report = $this->reports->report($entity, $from, $through, $ziswafFundIds, $input + ['internal_ziswaf_scope' => true]);
         $positionReport = $this->publicReports->reportForEntity($entity, $from, $through);
         $reportFundIds = $report['funds'] === [] ? [] : collect($report['funds'])->pluck('fund_id')->all();
         $runningBalanceFrom = $allTimeRunningBalance
-            ? ($this->ledger->earliestAccountingDate($entity->id) ?: $latest)
+            ? ((clone $scopeDates)->min('ledger.accounting_date') ?: $latest)
             : $from;
         $runningBalanceThrough = $allTimeRunningBalance ? $latest : $through;
         $runningBalance = $this->runningBalances->report(
@@ -333,7 +386,9 @@ final class InternalZiswafDashboardController
             $runningBalanceThrough,
             $reportFundIds,
             $input['type'] ?? null,
+            true,
         );
+        $runningBalance['rows'] = (new InternalZiswafScope($this->ledger))->redactRows($entity->id, $ziswafFundIds, $runningBalance['rows']);
         $allocation = DecimalAmount::sum(collect($report['programs'])->pluck('allocation'));
         $realization = DecimalAmount::sum(collect($report['programs'])->pluck('realization'));
 

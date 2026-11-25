@@ -17,6 +17,14 @@
         .period { width: 175px; text-align: right; vertical-align: middle; }
         .period strong { color: #0b5137; font-size: 9px; }
         .period span { display: block; color: #65756e; margin-top: 3px; }
+        .header { page-break-inside: avoid; }
+        .header-table .report-qr { width: 112px; padding-left: 12px; text-align: center; vertical-align: middle; }
+        .pdf-qr img { display: block; width: 96px; height: 96px; margin: 0 auto; }
+        .pdf-qr p { color: #65756e; font-size: 7.5px; line-height: 1.4; margin-top: 3px; }
+        .recipient-qr { width: 112px; text-align: center; }
+        .pdf-qr { page-break-inside: avoid; }
+        .recipient-links thead { page-break-after: avoid; }
+        .recipient-links tbody tr:first-child { page-break-before: avoid; }
         .intro { background: #eff8f3; border: 1px solid #d5eadf; margin-top: 13px; padding: 9px 11px; }
         .section { margin-top: 16px; page-break-inside: auto; }
         .section-title { color: #0b5137; font-size: 12px; margin-bottom: 7px; }
@@ -44,13 +52,7 @@
 </head>
 <body>
 @php
-    $rupiah = static function ($value): string {
-        $amount = (string) $value;
-        $negative = str_starts_with($amount, '-');
-        $normalized = ltrim($amount, '-');
-        [$integer, $decimal] = array_pad(explode('.', $normalized, 2), 2, '00');
-        return ($negative ? '- ' : '').'Rp'.number_format((int) $integer, 0, ',', '.').','.str_pad(substr($decimal, 0, 2), 2, '0');
-    };
+    $rupiah = static fn ($value): string => \App\Support\ZiswafAmount::rupiah((string) $value, true);
     $date = static fn ($value): string => \Carbon\CarbonImmutable::parse($value)->format('d/m/Y');
     $selectedFund = ($filters['fund_id'] ?? null)
         ? data_get(collect($report['funds'])->firstWhere('fund_id', $filters['fund_id']), 'name', 'Dana terpilih')
@@ -69,7 +71,13 @@
         <tr>
             <td style="width:58px">@if($logoDataUri)<img class="logo" src="{{ $logoDataUri }}" alt="Logo Masjid Raudhotul Jannah">@endif</td>
             <td class="brand"><h1>Ringkasan Monitoring ZISWAF</h1><p>{{ $entity->name }} · Financial V2</p></td>
-            <td class="period"><strong>{{ $date($from) }} — {{ $date($through) }}</strong><span>Saldo terkini per {{ $date($latest) }}</span><span>Dibuat {{ $generatedAt->format('d/m/Y H:i') }} WIB</span></td>
+            <td class="period"><strong>{{ $date($from) }} — {{ $date($through) }}</strong><span>Posisi per {{ $date($through) }}</span><span>Dibuat {{ $generatedAt->format('d/m/Y H:i') }} WIB</span></td>
+            @isset($reportQr)
+                <td class="report-qr pdf-qr">
+                    <a href="{{ $reportQr['url'] }}"><img src="{{ $reportQr['image'] }}" alt="QR laporan ZISWAF"></a>
+                    <p>Scan untuk melihat laporan ZISWAF</p>
+                </td>
+            @endisset
         </tr>
     </table>
 </div>
@@ -149,6 +157,24 @@
         <tr><td colspan="5" class="center muted">Belum ada penyaluran dalam cakupan filter.</td></tr>
     @endforelse
     </tbody></table>
+    @if (!empty($distributionQrCodes))
+        <table class="data recipient-links" style="margin-top:10px"><thead><tr><th>Penyaluran</th><th class="center">Penerima</th><th class="recipient-qr">Detail penerima</th></tr></thead><tbody>
+        @foreach ($report['distributions']['events'] as $event)
+            @if (isset($distributionQrCodes[$event['distribution_id']]))
+                @php($recipientQr = $distributionQrCodes[$event['distribution_id']])
+                <tr>
+                    <td><strong>{{ $event['program_name'] }}</strong><br>{{ $event['period'] }}<br><span class="muted">{{ $date($event['from']) }} - {{ $date($event['through']) }}</span></td>
+                    <td class="center">{{ $event['recipient_count'] }}</td>
+                    <td class="recipient-qr pdf-qr">
+                        <a href="{{ $recipientQr['url'] }}"><img src="{{ $recipientQr['image'] }}" alt="QR detail penerima penyaluran"></a>
+                        <p>Scan untuk melihat detail penerima</p>
+                    </td>
+                </tr>
+            @endif
+        @endforeach
+        </tbody></table>
+        <p class="confidential">Detail penerima memerlukan sesi internal DKM yang valid. Gunakan tautan akses resmi pengelola, lalu pindai ulang QR code.</p>
+    @endif
     <p class="confidential">Dokumen internal DKM. Actual bersumber dari Financial V2 posted ledger. Total operasional bukan tambahan pengeluaran finansial.</p>
 </div>
 </body>

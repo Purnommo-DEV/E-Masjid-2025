@@ -3,7 +3,7 @@
 <body class="min-h-screen overflow-x-hidden bg-slate-50 text-slate-900">
 @include(guest_layout('_navbar'))
 @php
-$rp=static fn($n)=>'Rp'.number_format((float)$n,0,',','.');
+$rp=static fn($n)=>\App\Support\ZiswafAmount::rupiah((string)$n);
 $transaction=$distribution->realization?->transaction;
 $actual=$reported['actual_amount']??'0.00';
 $snapshot=static fn($item,$key,$fallback='—')=>filled(data_get($item->effective_identity_snapshot,$key))?data_get($item->effective_identity_snapshot,$key):$fallback;

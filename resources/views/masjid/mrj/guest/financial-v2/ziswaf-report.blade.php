@@ -3,7 +3,7 @@
 @section('title', 'Laporan Dana ZISWAF')
 
 @php
-    $rupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
+    $rupiah = static fn (string $amount): string => \App\Support\ZiswafAmount::rupiah($amount, true);
     $date = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
     $updated = $report['updated_at'] ? \Carbon\Carbon::parse($report['updated_at'])->format('d/m/Y H:i') : null;
     $transferLabel = static function (string $amount) use ($rupiah): string {
@@ -68,6 +68,11 @@
                 </div>
             </header>
 
+            @if (isset($errors) && $errors->any())
+                <div role="alert" class="no-print mt-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                    @foreach ($errors->all() as $message)<p>{{ $message }}</p>@endforeach
+                </div>
+            @endif
             <form class="public-report-actions no-print mt-6 flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between" method="GET" action="{{ route('public.ziswaf.index') }}">
                 <div class="grid w-full grid-cols-1 items-end gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:max-w-xl">
                     <label class="min-w-0 text-sm font-semibold text-slate-700" for="from">

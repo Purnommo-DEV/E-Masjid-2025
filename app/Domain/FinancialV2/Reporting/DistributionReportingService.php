@@ -20,7 +20,7 @@ final class DistributionReportingService
      * Unfiltered operational scope for one Entity. Page-level report filters
      * intentionally do not enter this read model.
      */
-    public function operationalScope(string $entityId, array $fundIds): array
+    public function operationalScope(string $entityId, array $fundIds, bool $restricted = false): array
     {
         $bounds = DB::table('financial_v2_distributions')
             ->where('accounting_entity_id', $entityId)
@@ -34,10 +34,10 @@ final class DistributionReportingService
         $latestAccountingDate = $this->ledger->latestAccountingDate($entityId);
         $through = max((string) $bounds->ends_on, (string) ($latestAccountingDate ?: $bounds->ends_on));
 
-        return $this->report($entityId, (string) $bounds->starts_on, $through, $fundIds);
+        return $this->report($entityId, (string) $bounds->starts_on, $through, $fundIds, restricted: $restricted);
     }
 
-    public function report(string $entityId, string $from, string $through, array $fundIds, ?string $programId = null, bool $public = false, bool $fundFiltered = false): array
+    public function report(string $entityId, string $from, string $through, array $fundIds, ?string $programId = null, bool $public = false, bool $fundFiltered = false, bool $restricted = false): array
     {
         $itemTotals = DB::table('financial_v2_distribution_items')->select('distribution_id')
             ->selectRaw('COUNT(*) as recipient_count, SUM(amount) as operational_total')->groupBy('distribution_id');
@@ -47,6 +47,7 @@ final class DistributionReportingService
             ->leftJoin('financial_v2_fund_realizations as realization', 'realization.id', '=', 'distribution.realization_id')
             ->leftJoin('financial_v2_transactions as transaction', 'transaction.id', '=', 'realization.transaction_id')
             ->where('distribution.accounting_entity_id', $entityId)
+            ->when($restricted, fn ($query) => $query->where('program.accounting_entity_id', $entityId))
             ->where('distribution.starts_on', '<=', $through)->where('distribution.ends_on', '>=', $from)
             ->when($programId, fn ($q) => $q->where('distribution.program_id', $programId))
             ->select('distribution.id', 'distribution.program_id', 'distribution.realization_id', 'program.name as program_name', 'distribution.period_label', 'distribution.starts_on', 'distribution.ends_on', 'distribution.status', 'items.recipient_count', 'items.operational_total', 'transaction.id as transaction_id', 'transaction.status as financial_status', 'transaction.gross_amount', 'realization.status as realization_status')
@@ -78,26 +79,38 @@ final class DistributionReportingService
             $event->gross_amount = $fact->gross_amount;
             $event->realization_status = $fact->realization_status;
         });
+        $permissions = $restricted
+            ? (new InternalZiswafScope($this->ledger))->permissions($entityId, $fundIds, $events->pluck('transaction_id')->filter()->all())
+            : [];
 
         // Same expense/type source as canonical programExpenseFunding, never item amounts as actuals.
         // A Distribution selected by its operational period may be backed by an
         // accounting-date replacement before $from. Its linked realization is
         // therefore cumulative through $through, while still constrained to
         // the one verified effective transaction resolved above.
+        $factTransaction = $restricted ? 'COALESCE(original_transaction.id, financial_transaction.id)' : 'financial_transaction.id';
         $facts = $this->ledger->ledger($entityId, $through)
             ->join('financial_v2_accounts as account', 'account.id', '=', 'ledger.account_id')
             ->where('account.account_class', 'expense')
-            ->whereIn('transaction_type.code', $this->definitions->cashOutTypes())
-            ->whereIn('financial_transaction.id', $events->pluck('transaction_id')->filter())
-            ->select('financial_transaction.id as transaction_id', 'ledger.program_id', 'ledger.fund_id')
+            ->when($restricted,
+                fn ($query) => $query->whereIn(DB::raw('COALESCE(original_transaction_type.code, transaction_type.code)'), $this->definitions->cashOutTypes()),
+                fn ($query) => $query->whereIn('transaction_type.code', $this->definitions->cashOutTypes()))
+            ->whereIn(DB::raw($factTransaction), $events->pluck('transaction_id')->filter())
+            ->select('ledger.program_id', 'ledger.fund_id')
+            ->selectRaw($factTransaction.' as transaction_id')
             ->selectRaw('SUM(ledger.signed_amount) as actual_amount')
-            ->groupBy('financial_transaction.id', 'ledger.program_id', 'ledger.fund_id')->get()->groupBy('transaction_id');
+            ->groupBy(DB::raw($factTransaction), 'ledger.program_id', 'ledger.fund_id')->get()->groupBy('transaction_id');
         $splits = DB::table('financial_v2_transaction_splits')->whereIn('transaction_id', $events->pluck('transaction_id')->filter())
             ->select('transaction_id', 'program_id', 'fund_id', 'split_amount')->get()->groupBy('transaction_id');
 
         $acceptedIds = [];
         $rows = [];
         foreach ($events as $event) {
+            // Recipient snapshots, totals, and documents are indivisible. A
+            // restricted grant may only see an entirely in-scope posted event.
+            if ($restricted && ! ($permissions[$event->transaction_id]['complete'] ?? false)) {
+                continue;
+            }
             $parts = $splits->get($event->transaction_id, collect());
             $inScope = $parts->isNotEmpty() && $parts->every(fn ($part) => $part->program_id === $event->program_id && in_array($part->fund_id, $fundIds, true));
             if (($public || $fundFiltered) && ! $inScope) {
@@ -106,7 +119,7 @@ final class DistributionReportingService
             $ledgerRows = $facts->get($event->transaction_id, collect());
             $actual = DecimalAmount::sum($ledgerRows->pluck('actual_amount'));
             $operational = DecimalAmount::normalize((string) ($event->operational_total ?? 0));
-            $posted = $event->status === 'finalized' && $event->financial_status === 'posted' && $event->realization_status === 'recorded'
+            $posted = $event->status === 'finalized' && ($restricted || ($event->financial_status === 'posted' && $event->realization_status === 'recorded'))
                 && $inScope && $ledgerRows->isNotEmpty() && (int) $event->recipient_count > 0
                 && $ledgerRows->every(fn ($row) => $row->program_id === $event->program_id && in_array($row->fund_id, $fundIds, true))
                 && DecimalAmount::equals($actual, $operational) && DecimalAmount::equals($actual, (string) $event->gross_amount)
@@ -120,6 +133,9 @@ final class DistributionReportingService
                 'actual_amount' => $posted ? $actual : '0.00'];
             if (! $public) {
                 $row += ['distribution_id' => $event->id, 'operational_total' => $operational, 'operational_status' => $event->status, 'financial_status' => $event->financial_status ?? 'unposted'];
+            }
+            if ($restricted) {
+                $row['effective_realization_id'] = $effectiveRealizationIds->get($event->id) ?? $event->realization_id;
             }
             $rows[] = $row;
         }

@@ -28,8 +28,8 @@
 <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
 @include(guest_layout('_navbar'))
 @php
-    $rp = static fn ($n) => 'Rp' . number_format((float) $n, 0, ',', '.');
-    $positionRupiah = static fn (string $amount): string => 'Rp'.number_format((float) $amount, 2, ',', '.');
+    $rp = static fn ($n) => \App\Support\ZiswafAmount::rupiah((string) $n);
+    $positionRupiah = static fn (string $amount): string => \App\Support\ZiswafAmount::rupiah($amount, true);
     $positionDate = static fn (string $value): string => \Carbon\Carbon::parse($value)->locale('id')->format('d/m/Y');
     $query = collect($filters)->except(['page', 'balance_page'])->filter(fn ($v) => $v !== null && $v !== '')->all();
     $exportQuery = collect($filters)->only(['from', 'through', 'fund_id', 'program_id', 'category_id', 'type', 'status'])
@@ -75,6 +75,11 @@
 </header>
 
 <main class="mx-auto max-w-7xl space-y-6 px-4 pb-10 pt-6 sm:px-6 lg:px-8 lg:py-8">
+    @if (isset($errors) && $errors->any())
+        <div role="alert" class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            @foreach ($errors->all() as $message)<p>{{ $message }}</p>@endforeach
+        </div>
+    @endif
     {{-- Filter laporan --}}
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">

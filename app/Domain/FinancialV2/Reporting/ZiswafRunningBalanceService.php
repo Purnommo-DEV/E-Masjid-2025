@@ -17,14 +17,14 @@ final class ZiswafRunningBalanceService
      * @param  array<int, string>  $fundIds
      * @return array{opening_balance:string, closing_balance:string, rows:array<int, array<string, mixed>>}
      */
-    public function report(AccountingEntity $entity, string $from, string $through, array $fundIds, ?string $displayType = null): array
+    public function report(AccountingEntity $entity, string $from, string $through, array $fundIds, ?string $displayType = null, bool $includeTechnicalCorrections = false): array
     {
         $feed = $this->reports->fundMovementsForFunds($entity->id, $from, $through, $fundIds);
         $opening = DecimalAmount::sum(array_values($feed['opening_by_fund']));
         $allMovementLines = collect($feed['rows']);
         $officialClosing = DecimalAmount::add($opening, DecimalAmount::sum($allMovementLines->pluck('fund_balance_delta')));
         $correctionProjection = $this->correctionVisibility->operationalProjection($entity->id);
-        $hiddenIds = $correctionProjection['hidden_transaction_ids'];
+        $hiddenIds = $includeTechnicalCorrections ? [] : $correctionProjection['hidden_transaction_ids'];
         $replacementIds = $correctionProjection['replacement_transaction_ids'];
 
         $effectiveMovementLines = $allMovementLines
