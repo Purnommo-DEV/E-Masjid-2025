@@ -40,16 +40,16 @@ final class InternalZiswafDashboardController
         private readonly DistributionReportingService $distributionReports,
     ) {}
 
-    public function preview()
+    public function preview(Request $request)
     {
-        return $this->landingResponse();
+        return $this->landingResponse(returningToDistribution: InternalZiswafDashboardAccess::intendedDistribution($request) !== null);
     }
 
     public function access(Request $request, string $token)
     {
         $this->assertValidAccessToken($token);
 
-        return $this->landingResponse($token);
+        return $this->landingResponse($token, InternalZiswafDashboardAccess::intendedDistribution($request) !== null);
     }
 
     public function exchange(Request $request)
@@ -64,7 +64,11 @@ final class InternalZiswafDashboardController
             'expires_at' => now()->addMinutes(max(5, (int) config('financial_reporting.internal_ziswaf_dashboard.session_minutes', 120)))->timestamp,
         ]);
 
-        return redirect()->route('internal.ziswaf.dashboard');
+        $distribution = InternalZiswafDashboardAccess::intendedDistribution($request, consume: true);
+
+        return $distribution !== null
+            ? redirect()->route('internal.ziswaf.distributions.show', ['distribution' => $distribution])
+            : redirect()->route('internal.ziswaf.dashboard');
     }
 
     private function assertValidAccessToken(string $token): void
@@ -73,13 +77,14 @@ final class InternalZiswafDashboardController
         abort_unless(preg_match('/^[a-f0-9]{64}$/', $hash) && hash_equals($hash, hash('sha256', $token)), 404);
     }
 
-    private function landingResponse(?string $token = null)
+    private function landingResponse(?string $token = null, bool $returningToDistribution = false)
     {
         $response = response()->view('masjid.mrj.guest.financial-v2.internal-ziswaf-access', [
             'accessToken' => $token,
+            'returningToDistribution' => $returningToDistribution,
         ]);
-        $response->headers->set('Cache-Control', $token === null ? 'public, max-age=3600' : 'private, no-store, max-age=0');
-        if ($token !== null) {
+        $response->headers->set('Cache-Control', $token === null && ! $returningToDistribution ? 'public, max-age=3600' : 'private, no-store, max-age=0');
+        if ($token !== null || $returningToDistribution) {
             $response->headers->set('Pragma', 'no-cache');
         }
         $response->headers->set('Referrer-Policy', 'no-referrer');

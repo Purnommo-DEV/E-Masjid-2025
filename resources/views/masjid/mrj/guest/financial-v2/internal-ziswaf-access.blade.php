@@ -36,6 +36,11 @@
             <p class="mt-3 text-sm leading-6 text-emerald-100">Ringkasan penerimaan, penyaluran, dan posisi dana ZISWAF Masjid Raudhotul Jannah.</p>
         </div>
         <div class="space-y-5 px-6 py-7 sm:px-10 sm:py-8">
+            @if($returningToDistribution ?? false)
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                    Untuk melihat detail penerima, buka tautan akses resmi dari pengelola DKM di browser yang sama. Setelah validasi akses berhasil, Anda akan diarahkan kembali ke penyaluran yang dipindai. Tujuan disimpan selama 15 menit.
+                </div>
+            @endif
             @if($accessToken !== null)
                 <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
                     Halaman ini belum membuka dashboard. Tekan tombol di bawah untuk memvalidasi akses dan membentuk sesi internal terbatas.

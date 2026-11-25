@@ -312,11 +312,11 @@ Route::get('/laporan-ziswaf-v2', [PublicZiswafReportingV2Controller::class, 'ind
     ->name('public.ziswaf-v2.index');
 
 Route::get('/internal/ziswaf/preview', [InternalZiswafDashboardController::class, 'preview'])
-    ->middleware('throttle:60,1')->name('internal.ziswaf.preview');
+    ->middleware('throttle:60,1,ziswaf-preview')->name('internal.ziswaf.preview');
 Route::get('/internal/ziswaf/access/{token}', [InternalZiswafDashboardController::class, 'access'])
-    ->middleware('throttle:5,1')->where('token', '[A-HJ-NP-Za-km-z2-9]{5,10}')->name('internal.ziswaf.access');
+    ->middleware('throttle:5,1,ziswaf-access')->where('token', '[A-HJ-NP-Za-km-z2-9]{5,10}')->name('internal.ziswaf.access');
 Route::post('/internal/ziswaf/access', [InternalZiswafDashboardController::class, 'exchange'])
-    ->middleware('throttle:5,1')->name('internal.ziswaf.exchange');
+    ->middleware('throttle:5,1,ziswaf-access')->name('internal.ziswaf.exchange');
 Route::middleware(['internal.ziswaf', 'throttle:120,1'])->prefix('internal/ziswaf')->name('internal.ziswaf.')->group(function () {
     Route::get('/', [InternalZiswafDashboardController::class, 'index'])->name('dashboard');
     Route::get('/ringkasan.pdf', [InternalZiswafDashboardController::class, 'summaryPdf'])->name('summary.pdf');
