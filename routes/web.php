@@ -46,6 +46,7 @@ use App\Http\Controllers\FinancialV2\PlanningController;
 use App\Http\Controllers\FinancialV2\PublicZiswafReportController;
 use App\Http\Controllers\FinancialV2\PublicZiswafReportingV2Controller;
 use App\Http\Controllers\FinancialV2\ZiswafReportingV2Controller;
+use App\Http\Controllers\FinancialV2\ZiswafDistributionShareController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\User\AcaraGuestController;
 use App\Http\Controllers\User\BeritaGuestController;
@@ -299,6 +300,10 @@ Route::get('/donor-darah/success', function () {
 // Public Financial V2 disclosure. These endpoints are intentionally outside
 // the admin middleware and have no writer route or legacy financial source.
 Route::prefix('laporan-ziswaf')->name('public.ziswaf.')->group(function () {
+    Route::get('/penyaluran/{entity}/{distribution}', ZiswafDistributionShareController::class)
+        ->whereUuid(['entity', 'distribution'])
+        ->middleware(['signed', 'throttle:60,1,ziswaf-share'])
+        ->name('distribution.share');
     Route::get('/', [PublicZiswafReportController::class, 'index'])->name('index');
     Route::get('/cetak', [PublicZiswafReportController::class, 'pdf'])->name('pdf');
     Route::get('/dana/{fundCode}', [PublicZiswafReportController::class, 'fund'])
