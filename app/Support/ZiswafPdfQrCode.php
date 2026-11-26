@@ -2,13 +2,15 @@
 
 namespace App\Support;
 
+use App\Domain\FinancialV2\DecimalAmount;
 use BaconQrCode\Common\ErrorCorrectionLevel;
 use BaconQrCode\Renderer\GDLibRenderer;
 use BaconQrCode\Writer;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use LogicException;
 
-/** Local PNGs for PDF navigation only. These links never convey authorization. */
+/** Local PNGs; distribution links authorize only the redacted share page. */
 final class ZiswafPdfQrCode
 {
     /** @return array{url:string,image:string} */
@@ -18,14 +20,26 @@ final class ZiswafPdfQrCode
     }
 
     /** Only call with events already admitted by the restricted report. */
-    public function distribution(array $event): ?array
+    public function distribution(array $event, ?string $entityId = null): ?array
     {
         $id = $event['distribution_id'] ?? null;
-        if (! is_string($id) || ! Str::isUuid($id) || (int) ($event['recipient_count'] ?? 0) < 1) {
+        $entityId ??= (string) config('financial_reporting.internal_ziswaf_dashboard.entity_id');
+        if (! is_string($id) || ! Str::isUuid($id) || ! Str::isUuid($entityId) || ! self::shareable($event)) {
             return null;
         }
 
-        return $this->encode(route('internal.ziswaf.distributions.show', ['distribution' => $id]));
+        return $this->encode(URL::temporarySignedRoute('public.ziswaf.distribution.share', now()->addDays(365), [
+            'entity' => $entityId, 'distribution' => $id,
+        ]));
+    }
+
+    /** A finalized, fully reconciled event from the existing restricted report. */
+    public static function shareable(array $event): bool
+    {
+        return ($event['operational_status'] ?? null) === 'finalized'
+            && (int) ($event['recipient_count'] ?? 0) > 0
+            && DecimalAmount::compare((string) ($event['actual_amount'] ?? '0.00'), '0.00') > 0
+            && DecimalAmount::equals((string) $event['actual_amount'], (string) ($event['operational_total'] ?? '0.00'));
     }
 
     /** @return array{url:string,image:string} */

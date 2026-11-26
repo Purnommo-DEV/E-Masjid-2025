@@ -21,8 +21,10 @@
         .header-table .report-qr { width: 112px; padding-left: 12px; text-align: center; vertical-align: middle; }
         .pdf-qr img { display: block; width: 96px; height: 96px; margin: 0 auto; }
         .pdf-qr p { color: #65756e; font-size: 7.5px; line-height: 1.4; margin-top: 3px; }
-        .recipient-qr { width: 112px; text-align: center; }
+        .recipient-qr { width: 136px; text-align: center; }
+        .recipient-qr img { width: 120px; height: 120px; }
         .pdf-qr { page-break-inside: avoid; }
+        .qr-button { display: inline-block; background: #047857; color: #fff; border-radius: 4px; padding: 6px 7px; font-size: 7.5px; line-height: 1.4; text-decoration: none; margin-top: 5px; }
         .recipient-links thead { page-break-after: avoid; }
         .recipient-links tbody tr:first-child { page-break-before: avoid; }
         .intro { background: #eff8f3; border: 1px solid #d5eadf; margin-top: 13px; padding: 9px 11px; }
@@ -76,6 +78,7 @@
                 <td class="report-qr pdf-qr">
                     <a href="{{ $reportQr['url'] }}"><img src="{{ $reportQr['image'] }}" alt="QR laporan ZISWAF"></a>
                     <p>Scan untuk melihat laporan ZISWAF</p>
+                    <a class="qr-button" href="{{ $reportQr['url'] }}">Lihat Laporan ZISWAF</a>
                 </td>
             @endisset
         </tr>
@@ -168,12 +171,13 @@
                     <td class="recipient-qr pdf-qr">
                         <a href="{{ $recipientQr['url'] }}"><img src="{{ $recipientQr['image'] }}" alt="QR detail penerima penyaluran"></a>
                         <p>Scan untuk melihat detail penerima</p>
+                        <a class="qr-button" href="{{ $recipientQr['url'] }}">Lihat Detail Penerima</a>
                     </td>
                 </tr>
             @endif
         @endforeach
         </tbody></table>
-        <p class="confidential">Detail penerima memerlukan sesi internal DKM yang valid. Gunakan tautan akses resmi pengelola, lalu pindai ulang QR code.</p>
+        <p class="confidential">Tautan penyaluran berlaku 365 hari sejak PDF dibuat dan hanya membuka ringkasan tanpa identitas pribadi penerima.</p>
     @endif
     <p class="confidential">Dokumen internal DKM. Actual bersumber dari Financial V2 posted ledger. Total operasional bukan tambahan pengeluaran finansial.</p>
 </div>

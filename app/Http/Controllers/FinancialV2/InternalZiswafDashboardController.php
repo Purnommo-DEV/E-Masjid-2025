@@ -186,7 +186,7 @@ final class InternalZiswafDashboardController
         $qr = new ZiswafPdfQrCode;
         $distributionQrCodes = [];
         foreach ($summary['report']['distributions']['events'] as $event) {
-            if (($code = $qr->distribution($event)) !== null) {
+            if (($code = $qr->distribution($event, $summary['entity']->id)) !== null) {
                 $distributionQrCodes[$event['distribution_id']] = $code;
             }
         }

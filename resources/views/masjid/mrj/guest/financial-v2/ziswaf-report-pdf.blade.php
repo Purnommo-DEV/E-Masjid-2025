@@ -21,6 +21,7 @@
         .hero-table .report-qr { width: 84pt; padding-left: 12pt; text-align: center; }
         .report-qr img { display: block; width: 72pt; height: 72pt; margin: 0 auto; }
         .report-qr p { color: #567267; font-size: 6.5pt; line-height: 1.4; margin-top: 3pt; }
+        .qr-button { display: inline-block; background: #047857; color: #fff; border-radius: 3pt; padding: 5pt 6pt; font-size: 6.5pt; line-height: 1.4; text-decoration: none; margin-top: 4pt; }
         .kicker { color: #047857; font-size: 8pt; font-weight: bold; letter-spacing: 1.2px; text-transform: uppercase; }
         .summary { border-collapse: separate; border-spacing: 6pt; margin: 0 -6pt; width: calc(100% + 12pt); }
         .summary td { background: #f0fdf4; border: 1px solid #cce9da; padding: 10pt; vertical-align: top; width: 33.33%; }
@@ -117,6 +118,7 @@
             <td class="report-qr">
                 <a href="{{ $reportQr['url'] }}"><img src="{{ $reportQr['image'] }}" alt="QR laporan ZISWAF"></a>
                 <p>Scan untuk melihat laporan ZISWAF</p>
+                <a class="qr-button" href="{{ $reportQr['url'] }}">Lihat Laporan ZISWAF</a>
             </td>
         @endisset
     </tr></table>
