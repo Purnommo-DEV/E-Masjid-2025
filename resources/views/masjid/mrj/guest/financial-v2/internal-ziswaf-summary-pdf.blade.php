@@ -177,7 +177,7 @@
             @endif
         @endforeach
         </tbody></table>
-        <p class="confidential">Tautan penyaluran berlaku 365 hari sejak PDF dibuat dan hanya membuka ringkasan tanpa identitas pribadi penerima.</p>
+        <p class="confidential">Tautan penyaluran bertanda tangan tidak memiliki batas waktu dan hanya membuka detail penyaluran terkait dengan informasi penerima yang diizinkan untuk dibagikan.</p>
     @endif
     <p class="confidential">Dokumen internal DKM. Actual bersumber dari Financial V2 posted ledger. Total operasional bukan tambahan pengeluaran finansial.</p>
 </div>

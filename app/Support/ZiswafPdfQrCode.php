@@ -28,7 +28,7 @@ final class ZiswafPdfQrCode
             return null;
         }
 
-        return $this->encode(URL::temporarySignedRoute('public.ziswaf.distribution.share', now()->addDays(365), [
+        return $this->encode(URL::signedRoute('public.ziswaf.distribution.share', [
             'entity' => $entityId, 'distribution' => $id,
         ]));
     }
